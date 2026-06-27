@@ -461,6 +461,10 @@
     <string name="ai_attach_image">Прикрепить изображение</string>
     <string name="ai_pick_from_gallery">Выбрать из галереи</string>
     <string name="ai_take_photo">Сделать фото</string>
+    <string name="ai_attach_file">Прикрепить файл</string>
+    <string name="ai_pick_file">Выбрать файл</string>
+    <string name="ai_uploading_file">Загрузка файла…</string>
+    <string name="ai_upload_failed">Ошибка загрузки</string>
     <string name="ai_my_agents">Мои агенты</string>
     <string name="ai_preset_added">\"%s\" добавлен в Мои агенты</string>
 
@@ -679,6 +683,11 @@
     <string name="ai_api_key_hint">API ключ (необязательно)</string>
     <string name="ai_model_hint">Модель (переопределение)</string>
     <string name="ai_settings_saved">Настройки сохранены</string>
+    <string name="ai_toolbar_api_key_status">Ключ: %s</string>
+    <string name="ai_toolbar_server_key">Серверный ключ</string>
+    <string name="ai_toolbar_no_key">Нет ключа</string>
+    <string name="marketplace_favorite">Избранное</string>
+    <string name="marketplace_favorites">Избранные</string>
     <string name="ai_v2_agent_name">Имя агента</string>
     <string name="ai_v2_agent_description">Описание</string>
     <string name="ai_v2_provider_type">Тип провайдера</string>
@@ -715,6 +724,8 @@
     <string name="marketplace_usage">Статистика</string>
     <string name="marketplace_tokens">Токенов</string>
     <string name="marketplace_requests">Запросов</string>
+    <string name="marketplace_tokens_count">%s токенов</string>
+    <string name="marketplace_requests_count">%d запросов</string>
     <string name="marketplace_avg_request">Ср. на запрос</string>
     <string name="marketplace_no_data">Пока нет данных</string>
     <string name="marketplace_no_data_desc">Статистика появится после использования AI чатов</string>

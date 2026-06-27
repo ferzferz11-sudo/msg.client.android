@@ -646,7 +646,7 @@ private fun parseAgentInfoV2(bytes: ByteArray): AgentInfoV2Proto? {
         var capsImages = false; var capsTools = false; var capsStreaming = false; var capsMaxTokens = 0
         var installCount = 0; var avgRating = 0f; var reviewCount = 0
         val tags = mutableListOf<String>()
-        var originalAgentId = ""; var version = 0; var shareCode = ""
+        var originalAgentId = ""; var version = 0; var shareCode = ""; var providerConfig = ""
         while (!inner.isAtEnd) {
             val innerTag = inner.readTag()
             if (innerTag == 0) break
@@ -689,13 +689,14 @@ private fun parseAgentInfoV2(bytes: ByteArray): AgentInfoV2Proto? {
                 19 -> originalAgentId = inner.readString()
                 20 -> version = inner.readInt32()
                 21 -> shareCode = inner.readString()
+                22 -> providerConfig = inner.readString()
                 else -> inner.skipField(innerTag)
             }
         }
         AgentInfoV2Proto(id, name, desc, providerType, model, sysPrompt, toolsEnabled, ragEnabled,
             isPreset, isPublic, maxTokens, temperature, createdBy,
             AgentCapabilitiesV2Proto(capsImages, capsTools, capsStreaming, capsMaxTokens),
-            installCount, avgRating, reviewCount, tags, originalAgentId, version, shareCode)
+            installCount, avgRating, reviewCount, tags, originalAgentId, version, shareCode, providerConfig)
     } catch (_: Exception) {
         null
     }

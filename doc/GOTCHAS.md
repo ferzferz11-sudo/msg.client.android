@@ -182,7 +182,8 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 
 ## AI Agent Setup Form
 
-- **`providerConfig` not returned by server** — `AgentInfoV2` proto lacks `provider_config` field. API key is sent on Create/Update but not returned on Get/List. Server needs field 22 `string provider_config = 22;` to display key in edit form
+- **`providerConfig` field 22 IS returned by server** — `AgentInfoV2` proto includes `string provider_config = 22`. Server `agentToProto()` marshals `ProviderConfig` as JSON. For preset agents: `{"api_key_source": "server", ...}` (no `api_key`). For user agents: `{"api_key": "sk-...", ...}`
+- **`AiAgentSetupActivity` checks `api_key_source`** — shows "Server key" placeholder for preset agents, masked key for user agents with keys
 - **Temperature slider** uses `addOnChangeListener` — fires during programmatic `setValue()` in `observeState()`. Use `isLoaded` flag to suppress change tracking during initial load
 - **Save button as floating overlay** — added dynamically to `FrameLayout` (root content) with `Gravity.BOTTOM | CENTER_HORIZONTAL`. WindowInsetsListener adjusts `bottomMargin` for keyboard/nav bar
 
@@ -197,3 +198,4 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **CheckBox replaced with ImageView toggle** — CheckBox's internal button drawable has intrinsic size that resists `minimumWidth/Height = 0`. ImageView gives exact 22dp control
 - **ScrollView needs `layout_weight=1`** — `wrap_content` + programmatic maxHeight broke touch events. Use weight-based layout in parent LinearLayout
 - **`selectedAgents` must NOT be cleared in `buildContent()`** — called from `loadPresetAgents()` callback. Clear only in `buildAndShow()`/`rebuildContent()`, restore checkbox states at end of `buildContent()`
+- **Presets removed from bottom sheet (v1.3.0.22)** — only user agents shown. Presets accessible via AiV2AgentListActivity. Loading/empty states added.

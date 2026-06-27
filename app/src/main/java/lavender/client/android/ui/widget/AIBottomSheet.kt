@@ -18,17 +18,11 @@ import lavender.client.android.theme.ThemeUtils
  * AI Bottom Sheet — redesigned flow:
  *
  * Layout (top to bottom):
- * 1. "Добавить агента" section
- *    - List of preset agents with checkboxes (for quick chat creation)
- *    - "Создать своего агента" button
- * 2. Divider
- * 3. "Создать чат" section
- *    - Shows selected agents from checkboxes above
- *    - "Начать чат" button (creates chat with selected agents)
- * 4. Divider
- * 5. Remote Agents
- * 6. Divider
- * 7. Notifications (at the bottom)
+ * 1. "My Agents" section
+ *    - List of user's custom agents with checkboxes (for quick chat creation)
+ * 2. "Manage agents" button → AiV2AgentListActivity
+ * 3. "Create custom agent" button → AiAgentSetupActivity
+ * 4. Footer: summary, hint, "Start chat" button
  */
 class AIBottomSheet(
     context: Context,
@@ -42,7 +36,6 @@ class AIBottomSheet(
 ) : StandardBottomSheet(context, R.layout.widget_ai_bottom_sheet, theme) {
 
     private val selectedAgents = mutableSetOf<AiV2Agent>()
-    private var presetAgents = listOf<AiV2Agent>()
     private var myAgents = listOf<AiV2Agent>()
     private var isLoadingAgents = true
     private val agentCheckBoxes = mutableListOf<Pair<AiV2Agent, ImageView>>()
@@ -76,13 +69,11 @@ class AIBottomSheet(
         val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
         agentLoadJob = scope.launch {
             try {
-                val agents = AiV2ChatUseCase.listAgents(includePublic = true)
-                presetAgents = agents.filter { it.isPreset }
-                myAgents = agents.filter { !it.isPreset }
-                android.util.Log.d("AIBottomSheet", "Loaded ${agents.size} agents, ${presetAgents.size} presets, ${myAgents.size} my agents")
+                val agents = AiV2ChatUseCase.listAgents(includePublic = false)
+                myAgents = agents
+                android.util.Log.d("AIBottomSheet", "Loaded ${myAgents.size} my agents")
             } catch (e: Exception) {
                 android.util.Log.e("AIBottomSheet", "Failed to load agents: ${e.message}", e)
-                presetAgents = emptyList()
                 myAgents = emptyList()
             }
             isLoadingAgents = false
@@ -108,97 +99,28 @@ class AIBottomSheet(
 
         titleView?.text = context.getString(R.string.ai_sheet_title)
 
-        // === Section 1: Presets (quick chat with checkboxes) ===
-        if (presetAgents.isNotEmpty()) {
-            val presetsHeader = TextView(context).apply {
-                text = context.getString(R.string.presets)
-                textSize = 13f
+        // === Section 1: My Agents (quick chat with checkboxes) ===
+        if (isLoadingAgents) {
+            val loadingText = TextView(context).apply {
+                text = context.getString(R.string.ai_loading_agents)
+                textSize = 14f
                 setTextColor(txtColor)
                 alpha = 0.6f
-                setPadding(dp(16), dp(8), dp(16), dp(4))
+                setPadding(dp(16), dp(16), dp(16), dp(16))
+                gravity = android.view.Gravity.CENTER
             }
-            contentContainer?.addView(presetsHeader)
-
-            for (agent in presetAgents) {
-                val row = LayoutInflater.from(context)
-                    .inflate(R.layout.widget_action_item, contentContainer, false)
-                val icon = row.findViewById<ImageView>(R.id.actionIcon)
-                val text = row.findViewById<TextView>(R.id.actionText)
-                val badge = row.findViewById<TextView>(R.id.actionBadge)
-                val checkView = createCheckView(primColor) {
-                    if (it) selectedAgents.add(agent) else selectedAgents.remove(agent)
-                    updateCreateChatButton()
-                }
-                icon.setImageResource(R.drawable.ic_agents)
-                icon.imageTintList = ColorStateList.valueOf(primColor)
-                val displayName = agent.name.ifEmpty { agent.id }
-                text.text = "${getAgentEmoji(agent.id)} $displayName"
-                text.setTextColor(txtColor)
-                badge.visibility = View.GONE
-
-                row.setOnLongClickListener {
-                    onOpenAgentSettings(agent.id)
-                    dismiss()
-                    true
-                }
-                row.setOnClickListener { checkView.performClick() }
-
-                val container = row.findViewById<android.widget.LinearLayout>(R.id.actionRoot)
-                container?.addView(checkView, 1)
-
-                row.setBackgroundResource(R.drawable.bg_action_item_hover)
-                contentContainer?.addView(row)
-                agentCheckBoxes.add(agent to checkView)
+            contentContainer?.addView(loadingText)
+        } else if (myAgents.isEmpty()) {
+            val emptyText = TextView(context).apply {
+                text = context.getString(R.string.ai_no_agents)
+                textSize = 14f
+                setTextColor(txtColor)
+                alpha = 0.6f
+                setPadding(dp(16), dp(16), dp(16), dp(16))
+                gravity = android.view.Gravity.CENTER
             }
-        }
-
-        // === Divider ===
-        val divider2 = LayoutInflater.from(context)
-            .inflate(R.layout.widget_section_divider, contentContainer, false)
-        contentContainer?.addView(divider2)
-
-        // === Section 3: AI Agents (manage) ===
-        val aiAgentsOpen = LayoutInflater.from(context)
-            .inflate(R.layout.widget_action_item, contentContainer, false)
-        val aiAgentsIcon = aiAgentsOpen.findViewById<ImageView>(R.id.actionIcon)
-        val aiAgentsText = aiAgentsOpen.findViewById<TextView>(R.id.actionText)
-        val aiAgentsBadge = aiAgentsOpen.findViewById<TextView>(R.id.actionBadge)
-        aiAgentsIcon.setImageResource(R.drawable.ic_agents)
-        aiAgentsIcon.imageTintList = ColorStateList.valueOf(primColor)
-        aiAgentsText.text = context.getString(R.string.ai_manage_agents)
-        aiAgentsText.setTextColor(primColor)
-        aiAgentsBadge.visibility = View.GONE
-        aiAgentsOpen.setOnClickListener {
-            onOpenAiAgentList()
-            dismiss()
-        }
-        aiAgentsOpen.setBackgroundResource(R.drawable.bg_action_item_hover)
-        contentContainer?.addView(aiAgentsOpen)
-
-        // === "Создать своего агента" button ===
-        val addCustomAgent = LayoutInflater.from(context)
-            .inflate(R.layout.widget_action_item, contentContainer, false)
-        val addCustomIcon = addCustomAgent.findViewById<ImageView>(R.id.actionIcon)
-        val addCustomText = addCustomAgent.findViewById<TextView>(R.id.actionText)
-        val addCustomBadge = addCustomAgent.findViewById<TextView>(R.id.actionBadge)
-        addCustomIcon.setImageResource(R.drawable.ic_add)
-        addCustomIcon.imageTintList = ColorStateList.valueOf(primColor)
-        addCustomText.text = context.getString(R.string.ai_create_custom_agent)
-        addCustomText.setTextColor(primColor)
-        addCustomBadge.visibility = View.GONE
-        addCustomAgent.setOnClickListener {
-            onAddCustomAgent()
-            dismiss()
-        }
-        addCustomAgent.setBackgroundResource(R.drawable.bg_action_item_hover)
-        contentContainer?.addView(addCustomAgent)
-
-        // === Section 4: My Agents (quick chat) ===
-        if (myAgents.isNotEmpty()) {
-            val divider3 = LayoutInflater.from(context)
-                .inflate(R.layout.widget_section_divider, contentContainer, false)
-            contentContainer?.addView(divider3)
-
+            contentContainer?.addView(emptyText)
+        } else {
             val myAgentsHeader = TextView(context).apply {
                 text = context.getString(R.string.ai_my_agents)
                 textSize = 13f
@@ -240,6 +162,42 @@ class AIBottomSheet(
                 agentCheckBoxes.add(agent to checkView)
             }
         }
+
+        // === Section 3: AI Agents (manage) ===
+        val aiAgentsOpen = LayoutInflater.from(context)
+            .inflate(R.layout.widget_action_item, contentContainer, false)
+        val aiAgentsIcon = aiAgentsOpen.findViewById<ImageView>(R.id.actionIcon)
+        val aiAgentsText = aiAgentsOpen.findViewById<TextView>(R.id.actionText)
+        val aiAgentsBadge = aiAgentsOpen.findViewById<TextView>(R.id.actionBadge)
+        aiAgentsIcon.setImageResource(R.drawable.ic_agents)
+        aiAgentsIcon.imageTintList = ColorStateList.valueOf(primColor)
+        aiAgentsText.text = context.getString(R.string.ai_manage_agents)
+        aiAgentsText.setTextColor(primColor)
+        aiAgentsBadge.visibility = View.GONE
+        aiAgentsOpen.setOnClickListener {
+            onOpenAiAgentList()
+            dismiss()
+        }
+        aiAgentsOpen.setBackgroundResource(R.drawable.bg_action_item_hover)
+        contentContainer?.addView(aiAgentsOpen)
+
+        // === "Создать своего агента" button ===
+        val addCustomAgent = LayoutInflater.from(context)
+            .inflate(R.layout.widget_action_item, contentContainer, false)
+        val addCustomIcon = addCustomAgent.findViewById<ImageView>(R.id.actionIcon)
+        val addCustomText = addCustomAgent.findViewById<TextView>(R.id.actionText)
+        val addCustomBadge = addCustomAgent.findViewById<TextView>(R.id.actionBadge)
+        addCustomIcon.setImageResource(R.drawable.ic_add)
+        addCustomIcon.imageTintList = ColorStateList.valueOf(primColor)
+        addCustomText.text = context.getString(R.string.ai_create_custom_agent)
+        addCustomText.setTextColor(primColor)
+        addCustomBadge.visibility = View.GONE
+        addCustomAgent.setOnClickListener {
+            onAddCustomAgent()
+            dismiss()
+        }
+        addCustomAgent.setBackgroundResource(R.drawable.bg_action_item_hover)
+        contentContainer?.addView(addCustomAgent)
 
         // === Summary + Create chat button in fixed footer ===
         summaryText = TextView(context).apply {

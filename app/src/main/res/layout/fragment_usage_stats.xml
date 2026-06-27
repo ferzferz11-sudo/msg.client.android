@@ -40,7 +40,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Tokens"
+                    android:text="@string/marketplace_tokens"
                     android:textSize="12sp"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -77,7 +77,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Requests"
+                    android:text="@string/marketplace_requests"
                     android:textSize="12sp"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -113,7 +113,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Avg/Request"
+                    android:text="@string/marketplace_avg_request"
                     android:textSize="12sp"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -144,7 +144,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="No data yet"
+            android:text="@string/marketplace_no_data"
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="?attr/colorOnSurface"
@@ -153,7 +153,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Usage stats will appear after using AI chats"
+            android:text="@string/marketplace_no_data_desc"
             android:textSize="14sp"
             android:textColor="?attr/colorOnSurfaceVariant"
             android:textAlignment="center" />

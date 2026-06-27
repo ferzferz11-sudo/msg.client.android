@@ -2,6 +2,8 @@ package lavender.client.android.data.db
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import lavender.client.android.data.ai.AiProviderType
+import lavender.client.android.data.ai.MarketplaceAgent
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.models.Reaction
@@ -145,4 +147,48 @@ fun ChatEntity.toDomain(): ChatInfo = ChatInfo(
     allowMembersToAdd, conferenceStartTime = 0L,
     isSecret, peerPublicKey, e2eeReady, activeAgentId, agentMode,
     isPinned, isArchived, pinnedAt
+)
+
+@Entity(tableName = "marketplace_agents")
+data class MarketplaceAgentEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val description: String,
+    val providerType: String,
+    val model: String,
+    val toolsEnabled: Boolean,
+    val ragEnabled: Boolean,
+    val isPreset: Boolean,
+    val isPublic: Boolean,
+    val avgRating: Float,
+    val installCount: Int,
+    val cachedAt: Long = System.currentTimeMillis()
+)
+
+fun MarketplaceAgent.toEntity(): MarketplaceAgentEntity = MarketplaceAgentEntity(
+    id = id,
+    name = name,
+    description = description,
+    providerType = providerType.value,
+    model = model,
+    toolsEnabled = toolsEnabled,
+    ragEnabled = ragEnabled,
+    isPreset = isPreset,
+    isPublic = isPublic,
+    avgRating = avgRating,
+    installCount = installCount
+)
+
+fun MarketplaceAgentEntity.toDomain(): MarketplaceAgent = MarketplaceAgent(
+    id = id,
+    name = name,
+    description = description,
+    providerType = AiProviderType.fromString(providerType),
+    model = model,
+    toolsEnabled = toolsEnabled,
+    ragEnabled = ragEnabled,
+    isPreset = isPreset,
+    isPublic = isPublic,
+    avgRating = avgRating,
+    installCount = installCount
 )

@@ -429,12 +429,15 @@ internal fun showAIBottomSheet(activity: ChatListActivity) {
             activity.startActivity(Intent(activity, lavender.client.android.ui.ai.AiAgentSetupActivity::class.java))
         },
         onOpenAiAgentList = {
+            activity.shouldReopenAIBottomSheet = true
             activity.startActivity(Intent(activity, lavender.client.android.ui.ai.AiV2AgentListActivity::class.java))
         },
         onOpenRemoteAgents = {
+            activity.shouldReopenAIBottomSheet = true
             activity.startActivity(Intent(activity, lavender.client.android.ui.remote.RemoteAgentActivity::class.java))
         },
         onOpenAgentSettings = { agentId ->
+            activity.shouldReopenAIBottomSheet = true
             val intent = Intent(activity, lavender.client.android.ui.ai.AiAgentSetupActivity::class.java).apply {
                 putExtra("AGENT_ID", agentId)
             }

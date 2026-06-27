@@ -68,3 +68,24 @@ interface ChatDao {
     @Query("DELETE FROM chats WHERE id NOT IN (:chatIds)")
     suspend fun deleteChatsNotInList(chatIds: List<String>)
 }
+
+@Dao
+interface MarketplaceDao {
+    @Query("SELECT * FROM marketplace_agents ORDER BY avgRating DESC")
+    suspend fun getAll(): List<MarketplaceAgentEntity>
+
+    @Query("SELECT * FROM marketplace_agents WHERE name LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%' ORDER BY avgRating DESC")
+    suspend fun search(query: String): List<MarketplaceAgentEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(agents: List<MarketplaceAgentEntity>)
+
+    @Query("DELETE FROM marketplace_agents")
+    suspend fun clearAll()
+
+    @Transaction
+    suspend fun sync(agents: List<MarketplaceAgentEntity>) {
+        clearAll()
+        insertAll(agents)
+    }
+}

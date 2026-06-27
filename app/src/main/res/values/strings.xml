@@ -374,6 +374,11 @@
     <string name="ai_api_key_hint">API Key (optional)</string>
     <string name="ai_model_hint">Model (optional override)</string>
     <string name="ai_settings_saved">Settings saved</string>
+    <string name="ai_toolbar_api_key_status">Key: %s</string>
+    <string name="ai_toolbar_server_key">Server key</string>
+    <string name="ai_toolbar_no_key">No key</string>
+    <string name="marketplace_favorite">Favorite</string>
+    <string name="marketplace_favorites">Favorites</string>
     <string name="ai_v2_agent_name">Agent Name</string>
     <string name="ai_v2_agent_description">Description</string>
     <string name="ai_v2_provider_type">Provider Type</string>
@@ -410,6 +415,8 @@
     <string name="marketplace_usage">Usage</string>
     <string name="marketplace_tokens">Tokens</string>
     <string name="marketplace_requests">Requests</string>
+    <string name="marketplace_tokens_count">%s tokens</string>
+    <string name="marketplace_requests_count">%d requests</string>
     <string name="marketplace_avg_request">Avg/Request</string>
     <string name="marketplace_no_data">No data yet</string>
     <string name="marketplace_no_data_desc">Usage stats will appear after using AI chats</string>
@@ -529,6 +536,10 @@
     <string name="ai_attach_image">Attach Image</string>
     <string name="ai_pick_from_gallery">Pick from Gallery</string>
     <string name="ai_take_photo">Take Photo</string>
+    <string name="ai_attach_file">Attach File</string>
+    <string name="ai_pick_file">Pick File</string>
+    <string name="ai_uploading_file">Uploading file…</string>
+    <string name="ai_upload_failed">Upload failed</string>
     <string name="ai_my_agents">My Agents</string>
     <string name="ai_preset_added">Added \"%s\" to My Agents</string>
 

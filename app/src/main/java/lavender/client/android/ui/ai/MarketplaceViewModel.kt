@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import lavender.client.android.data.ai.AiV2ChatUseCase
+import lavender.client.android.data.ai.FavoriteAgentsManager
 import lavender.client.android.data.ai.MarketplaceAgent
 
 enum class SortOption(val label: String) {
@@ -38,6 +39,9 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _filterToolsEnabled = MutableStateFlow<Boolean?>(null)
     val filterToolsEnabled: StateFlow<Boolean?> = _filterToolsEnabled.asStateFlow()
+
+    private val _showFavoritesOnly = MutableStateFlow(false)
+    val showFavoritesOnly: StateFlow<Boolean> = _showFavoritesOnly.asStateFlow()
 
     private var currentOffset = 0
     private var totalAgents = 0
@@ -108,12 +112,26 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
         applyFiltersAndSort()
     }
 
+    fun toggleFavoritesOnly() {
+        _showFavoritesOnly.value = !_showFavoritesOnly.value
+        applyFiltersAndSort()
+    }
+
     fun clearError() {
         _error.value = null
     }
 
+    fun refreshFavorites() {
+        applyFiltersAndSort()
+    }
+
     private fun applyFiltersAndSort() {
         var filtered = allAgents.toList()
+
+        if (_showFavoritesOnly.value) {
+            val favIds = FavoriteAgentsManager.getFavorites(getApplication())
+            filtered = filtered.filter { it.id in favIds }
+        }
 
         _filterProvider.value?.let { provider ->
             if (provider.isNotEmpty()) {

@@ -191,7 +191,7 @@ class AiAgentSetupActivity : AppCompatActivity() {
         val isPublic = publicSwitch.isChecked
 
         val providerConfig = JSONObject().apply {
-            if (apiKey.isNotEmpty()) put("apiKey", apiKey)
+            if (apiKey.isNotEmpty()) put("api_key", apiKey)
         }.toString()
 
         if (editAgentId.isEmpty()) {
@@ -245,8 +245,23 @@ class AiAgentSetupActivity : AppCompatActivity() {
                 maxTokensInput.setText(it.maxTokens.toString())
                 try {
                     val config = JSONObject(it.providerConfig)
-                    agentApiKeyInput.setText(config.optString("apiKey", ""))
-                } catch (_: Exception) {}
+                    val keySource = config.optString("api_key_source", "")
+                    val key = config.optString("apiKey", "").ifEmpty { config.optString("api_key", "") }
+                    if (key.isNotEmpty()) {
+                        val masked = if (key.length > 8) key.take(4) + "..." + key.takeLast(4) else key
+                        agentApiKeyInput.setText(key)
+                        agentApiKeyInput.hint = getString(R.string.ai_toolbar_api_key_status, masked)
+                    } else if (keySource == "server") {
+                        agentApiKeyInput.setText("")
+                        agentApiKeyInput.hint = getString(R.string.ai_toolbar_server_key)
+                    } else {
+                        agentApiKeyInput.setText("")
+                        agentApiKeyInput.hint = getString(R.string.ai_agent_api_key)
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.w("AiAgentSetup", "Failed to parse providerConfig: ${it.providerConfig}", e)
+                    agentApiKeyInput.hint = getString(R.string.ai_agent_api_key)
+                }
                 isLoaded = true
             }
         }

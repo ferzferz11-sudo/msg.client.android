@@ -61,7 +61,8 @@ data class AgentInfoV2Proto(
     val tags: List<String> = emptyList(),
     val originalAgentId: String = "",
     val version: Int = 0,
-    val shareCode: String = ""
+    val shareCode: String = "",
+    val providerConfig: String = ""
 )
 
 data class AgentCapabilitiesV2Proto(

@@ -458,7 +458,7 @@ Error handling:
   └── No Toast — errors visible in chat history
 ```
 
-### AIBottomSheet Redesign Pattern (v1.3.0.20)
+### AIBottomSheet Redesign Pattern (v1.3.0.22)
 ```
 AIBottomSheet — agent selection for AI chats
   ├── ScrollView (layout_weight=1, fillViewport) — scrollable agent list
@@ -467,17 +467,17 @@ AIBottomSheet — agent selection for AI chats
   │   ├── longPressHint
   │   └── startSelectedBtn (always visible, disabled until selection)
   ├── Sections:
-  │   ├── Presets (header + rows with ImageView toggle)
-  │   ├── Divider
+  │   ├── Loading indicator (when isLoadingAgents)
+  │   ├── Empty state "No agents" (when myAgents empty)
+  │   ├── My Agents (header + rows with ImageView toggle)
   │   ├── Manage agents button → AiV2AgentListActivity
-  │   ├── Create custom agent button → AiAgentSetupActivity
-  │   ├── Divider
-  │   └── My Agents (header + rows with ImageView toggle)
+  │   └── Create custom agent button → AiAgentSetupActivity
   └── Tap row → toggle checkView (ImageView), long press → settings
 
 ImageView toggle: 22dp fixed, ic_check_box_outline / ic_checked_small
 buildContent() does NOT clear selectedAgents — only buildAndShow() does
 Restore states at end of buildContent(): if (agent in selectedAgents) restoreCheckState()
+Presets removed — accessible via AiV2AgentListActivity only
 ```
 
 ---
@@ -502,4 +502,5 @@ Restore states at end of buildContent(): if (agent in selectedAgents) restoreChe
 16. AI v2 RPC: all methods under `messenger.ChatService/*` (NOT `AIService`)
 17. Unread count: based on `user_chat_metadata.last_read_at`, NOT `messages.is_read`
 18. ProfileService v2: profile/avatar/delete/settings via `messenger.ProfileService/*` (JWT context)
+19. **ALWAYS verify against server code**: Before any gRPC/marshaller change, check `/Users/paveld/LavenderMessenger-server/doc/CLIENT_INTEGRATION.md` AND the actual server source code at `/Users/paveld/LavenderMessenger-server/`.
 19. CHANGELOG: do NOT list documentation changes (README, doc/, comments) — only code changes

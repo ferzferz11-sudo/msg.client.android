@@ -11,6 +11,7 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import lavender.client.android.R
 import lavender.client.android.data.ai.AiV2Agent
+import lavender.client.android.data.ai.FavoriteAgentsManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 
@@ -18,12 +19,15 @@ class AiV2AgentListAdapter(
     private val onItemClick: (AiV2Agent) -> Unit,
     private val onDeleteClick: ((AiV2Agent) -> Unit)? = null,
     private val onItemLongClick: ((AiV2Agent) -> Unit)? = null,
-    private val onAddClick: ((AiV2Agent) -> Unit)? = null
+    private val onAddClick: ((AiV2Agent) -> Unit)? = null,
+    private val onFavoriteClick: ((AiV2Agent) -> Unit)? = null
 ) : RecyclerView.Adapter<AiV2AgentListAdapter.ViewHolder>() {
 
     private val items = mutableListOf<AiV2Agent>()
+    private var showFavoritesButton = false
 
-    fun submitList(agents: List<AiV2Agent>) {
+    fun submitList(agents: List<AiV2Agent>, showFavorites: Boolean = false) {
+        showFavoritesButton = showFavorites
         items.clear()
         items.addAll(agents)
         notifyDataSetChanged()
@@ -50,6 +54,7 @@ class AiV2AgentListAdapter(
         private val toolsIndicator: TextView = itemView.findViewById(R.id.toolsIndicator)
         private val ragIndicator: TextView = itemView.findViewById(R.id.ragIndicator)
         private val deleteButton: ImageButton = itemView.findViewById(R.id.deleteButton)
+        private val btnFavorite: ImageButton = itemView.findViewById(R.id.btnFavorite)
 
         fun bind(agent: AiV2Agent) {
             agentIcon.text = getAgentEmoji(agent.id)
@@ -59,6 +64,24 @@ class AiV2AgentListAdapter(
             agentModel.text = agent.model
             toolsIndicator.visibility = if (agent.toolsEnabled) View.VISIBLE else View.GONE
             ragIndicator.visibility = if (agent.ragEnabled) View.VISIBLE else View.GONE
+
+            if (showFavoritesButton) {
+                btnFavorite.visibility = View.VISIBLE
+                val isFav = FavoriteAgentsManager.isFavorite(itemView.context, agent.id)
+                btnFavorite.setImageResource(
+                    if (isFav) R.drawable.ic_star_filled else R.drawable.ic_star_outline
+                )
+                btnFavorite.setOnClickListener {
+                    FavoriteAgentsManager.toggleFavorite(itemView.context, agent.id)
+                    val nowFav = FavoriteAgentsManager.isFavorite(itemView.context, agent.id)
+                    btnFavorite.setImageResource(
+                        if (nowFav) R.drawable.ic_star_filled else R.drawable.ic_star_outline
+                    )
+                    onFavoriteClick?.invoke(agent)
+                }
+            } else {
+                btnFavorite.visibility = View.GONE
+            }
 
             if (agent.isPreset) {
                 deleteButton.setImageResource(R.drawable.ic_add)

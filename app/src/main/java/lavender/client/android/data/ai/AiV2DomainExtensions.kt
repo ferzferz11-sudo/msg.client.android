@@ -11,6 +11,7 @@ fun AgentInfoV2Proto.toDomain(): AiV2Agent = AiV2Agent(
     providerType = AiProviderType.fromString(providerType),
     model = model,
     systemPrompt = systemPrompt,
+    providerConfig = providerConfig,
     toolsEnabled = toolsEnabled,
     ragEnabled = ragEnabled,
     isPreset = isPreset,

@@ -49,6 +49,11 @@
             android:layout_height="wrap_content"
             android:text="@string/remote_agent_title" />
 
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/marketplace_usage" />
+
     </com.google.android.material.tabs.TabLayout>
 
     <!-- Search bar for Marketplace -->
@@ -120,6 +125,14 @@
             app:chipSpacingHorizontal="6dp">
 
             <com.google.android.material.chip.Chip
+                android:id="@+id/chipFilterFavorites"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/marketplace_favorites"
+                android:textSize="12sp" />
+
+            <com.google.android.material.chip.Chip
                 android:id="@+id/chipFilterTools"
                 style="@style/Widget.Material3.Chip.Filter"
                 android:layout_width="wrap_content"
@@ -176,6 +189,16 @@
 
     <FrameLayout
         android:id="@+id/remoteAgentContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/tabLayout"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <FrameLayout
+        android:id="@+id/usageStatsContainer"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:visibility="gone"

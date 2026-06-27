@@ -107,7 +107,8 @@ class AiV2ChatViewModel(application: Application) : AndroidViewModel(application
         sessionId: String,
         message: String,
         agentId: String = "",
-        imageUri: String? = null
+        imageUri: String? = null,
+        images: List<ByteArray> = emptyList()
     ) {
         if (_sessionId.value.isEmpty() && sessionId.isEmpty()) {
             // New session — will be set from server response
@@ -122,7 +123,8 @@ class AiV2ChatViewModel(application: Application) : AndroidViewModel(application
                     sessionId = _sessionId.value,
                     message = message,
                     agentId = agentId,
-                    imageUri = imageUri,
+                    images = images,
+                    imageUri = if (images.isEmpty()) imageUri else null,
                     scope = viewModelScope
                 )
             } catch (e: Exception) {

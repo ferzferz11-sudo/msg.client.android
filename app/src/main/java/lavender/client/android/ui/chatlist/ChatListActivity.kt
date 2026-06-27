@@ -89,6 +89,7 @@ class ChatListActivity : AppCompatActivity() {
 
     // AI Bottom Sheet
     internal var aiBottomSheet: AIBottomSheet? = null
+    internal var shouldReopenAIBottomSheet = false
 
     // Update
     internal var updateCoordinator: UpdateCoordinator? = null
@@ -306,6 +307,12 @@ class ChatListActivity : AppCompatActivity() {
         // Pre-load users for add contact/create chat sheets
         if (GrpcClient.connectionStatus.value == ConnectionStatus.READY) {
             GrpcClient.loadUsers()
+        }
+
+        // Re-open AI bottom sheet after returning from agent management
+        if (shouldReopenAIBottomSheet) {
+            shouldReopenAIBottomSheet = false
+            showAIBottomSheet()
         }
     }
 

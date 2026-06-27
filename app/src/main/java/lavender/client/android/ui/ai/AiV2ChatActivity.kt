@@ -19,16 +19,25 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.R
 import lavender.client.android.data.ai.AiV2ChatMessage
 import lavender.client.android.data.ai.RateLimitCache
+import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.data.session.SessionManager
+import lavender.client.android.network.HttpClient
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.chat.widget.ChatMessageAdapter
 import lavender.client.android.ui.chat.widget.ChatMessageItem
 import lavender.client.android.ui.chat.widget.ChatWidget
 import lavender.client.android.ui.widget.CommandBottomSheet
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 
 class AiV2ChatActivity : AppCompatActivity() {
 
@@ -60,6 +69,12 @@ class AiV2ChatActivity : AppCompatActivity() {
         if (success) {
             pendingImageUri?.let { handleImageSelected(it) }
         }
+    }
+
+    private val filePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { handleFileSelected(it) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -247,14 +262,16 @@ class AiV2ChatActivity : AppCompatActivity() {
     private fun showImagePickerDialog() {
         val options = arrayOf(
             getString(R.string.ai_pick_from_gallery),
-            getString(R.string.ai_take_photo)
+            getString(R.string.ai_take_photo),
+            getString(R.string.ai_pick_file)
         )
         androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle(getString(R.string.ai_attach_image))
+            .setTitle(getString(R.string.attach_file))
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> imagePickerLauncher.launch("image/*")
                     1 -> openCamera()
+                    2 -> filePickerLauncher.launch("*/*")
                 }
             }
             .show()
@@ -282,26 +299,141 @@ class AiV2ChatActivity : AppCompatActivity() {
             return
         }
 
-        rateLimitCache.recordRequest(agentId)
+        progressBar.visibility = View.VISIBLE
 
-        val userMessage = AiV2ChatMessage(
-            sessionId = sessionId,
-            role = "user",
-            content = message,
-            imageUrl = imageUri.toString(),
-            timestamp = System.currentTimeMillis()
-        )
-        viewModel.addMessage(userMessage)
+        lifecycleScope.launch {
+            try {
+                val imageBytes = withContext(Dispatchers.IO) {
+                    contentResolver.openInputStream(imageUri)?.use { it.readBytes() }
+                }
+                if (imageBytes == null || imageBytes.isEmpty()) {
+                    Toast.makeText(this@AiV2ChatActivity, getString(R.string.ai_upload_failed), Toast.LENGTH_SHORT).show()
+                    progressBar.visibility = View.GONE
+                    return@launch
+                }
 
-        viewModel.sendMessage(
-            userId = userId,
-            sessionId = sessionId,
-            message = message,
-            agentId = agentId,
-            imageUri = imageUri.toString()
-        )
+                rateLimitCache.recordRequest(agentId)
 
-        chatWidget.messageInput.setText("")
+                val userMessage = AiV2ChatMessage(
+                    sessionId = sessionId,
+                    role = "user",
+                    content = message,
+                    imageUrl = imageUri.toString(),
+                    timestamp = System.currentTimeMillis()
+                )
+                viewModel.addMessage(userMessage)
+
+                viewModel.sendMessage(
+                    userId = userId,
+                    sessionId = sessionId,
+                    message = message,
+                    agentId = agentId,
+                    images = listOf(imageBytes)
+                )
+
+                chatWidget.messageInput.setText("")
+            } catch (e: Exception) {
+                Toast.makeText(this@AiV2ChatActivity, getString(R.string.ai_upload_failed), Toast.LENGTH_SHORT).show()
+            } finally {
+                progressBar.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun handleFileSelected(uri: Uri) {
+        val message = chatWidget.messageInput.text.toString().trim()
+        uploadAndSendFile(message, uri)
+    }
+
+    private fun uploadAndSendFile(message: String, fileUri: Uri) {
+        if (!canSendRequest()) {
+            val waitMs = rateLimitCache.getTimeUntilReset(agentId)
+            showRateLimitUI(waitMs)
+            return
+        }
+
+        progressBar.visibility = View.VISIBLE
+
+        lifecycleScope.launch {
+            try {
+                val url = withContext(Dispatchers.IO) {
+                    uploadFile(fileUri)
+                }
+                if (url.isNotEmpty()) {
+                    val fileName = getFileName(fileUri) ?: "file"
+                    val text = if (message.isNotEmpty()) "$message\n\nFile: $fileName\n$url" else "File: $fileName\n$url"
+                    rateLimitCache.recordRequest(agentId)
+
+                    val userMessage = AiV2ChatMessage(
+                        sessionId = sessionId,
+                        role = "user",
+                        content = text,
+                        timestamp = System.currentTimeMillis()
+                    )
+                    viewModel.addMessage(userMessage)
+
+                    viewModel.sendMessage(
+                        userId = userId,
+                        sessionId = sessionId,
+                        message = text,
+                        agentId = agentId
+                    )
+
+                    chatWidget.messageInput.setText("")
+                } else {
+                    Toast.makeText(this@AiV2ChatActivity, getString(R.string.ai_upload_failed), Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@AiV2ChatActivity, getString(R.string.ai_upload_failed), Toast.LENGTH_SHORT).show()
+            } finally {
+                progressBar.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun uploadFile(uri: Uri): String {
+        val contentResolver = contentResolver
+        val inputStream = contentResolver.openInputStream(uri) ?: return ""
+        val bytes = inputStream.use { it.readBytes() }
+        val fileName = getFileName(uri) ?: "file"
+
+        val body = MultipartBody.Part.createFormData("file", fileName,
+            bytes.toRequestBody("application/octet-stream".toMediaTypeOrNull()))
+
+        val serverUrl = CredentialStore.getHttpServerUrl(this)
+        val request = Request.Builder()
+            .url("$serverUrl/upload-file")
+            .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build())
+            .build()
+
+        val response = HttpClient.client.newCall(request).execute()
+        val responseBody = response.body.string()
+
+        return if (response.isSuccessful) {
+            try {
+                JSONObject(responseBody).getString("url")
+            } catch (_: Exception) {
+                if (responseBody.startsWith("http")) responseBody else ""
+            }
+        } else ""
+    }
+
+    private fun getFileName(uri: Uri): String? {
+        var name: String? = null
+        if (uri.scheme == "content") {
+            contentResolver.query(uri, null, null, null, null)?.use {
+                if (it.moveToFirst()) {
+                    val idx = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (idx != -1) name = it.getString(idx)
+                }
+            }
+        }
+        if (name == null) {
+            name = uri.path
+            val c = name?.lastIndexOf('/') ?: -1
+            if (c != -1) name = name?.substring(c + 1)
+        }
+        return name
     }
 
     private fun observeState() {

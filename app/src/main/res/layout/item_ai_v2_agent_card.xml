@@ -103,6 +103,17 @@
         </LinearLayout>
 
         <ImageButton
+            android:id="@+id/btnFavorite"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_star_outline"
+            android:scaleType="centerInside"
+            android:contentDescription="@string/marketplace_favorite"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <ImageButton
             android:id="@+id/deleteButton"
             android:layout_width="40dp"
             android:layout_height="40dp"

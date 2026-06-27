@@ -46,14 +46,26 @@ class AiChatSettingsActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val settings = AiV2ChatUseCase.getChatSettings(sessionId)
-                if (settings != null) {
-                    apiKeyInput.setText(settings.userApiKey)
-                    modelInput.setText(settings.model)
-                }
+                apiKeyInput.setText(settings.userApiKey)
+                modelInput.setText(settings.model)
+                updateToolbarSubtitle(settings.userApiKey, settings.isUsingCustomKey)
             } catch (e: Exception) {
                 Toast.makeText(this@AiChatSettingsActivity, e.message ?: "Failed to load settings", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun updateToolbarSubtitle(apiKey: String, isUsingCustomKey: Boolean) {
+        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
+        val subtitle = when {
+            apiKey.isNotEmpty() && isUsingCustomKey -> {
+                val masked = if (apiKey.length > 8) apiKey.take(4) + "..." + apiKey.takeLast(4) else apiKey
+                getString(R.string.ai_toolbar_api_key_status, masked)
+            }
+            apiKey.isEmpty() -> getString(R.string.ai_toolbar_server_key)
+            else -> getString(R.string.ai_toolbar_no_key)
+        }
+        toolbar.subtitle = subtitle
     }
 
     private fun saveSettings() {
@@ -64,6 +76,7 @@ class AiChatSettingsActivity : AppCompatActivity() {
             try {
                 val result = AiV2ChatUseCase.updateChatSettings(sessionId, apiKey, model)
                 if (result.success) {
+                    updateToolbarSubtitle(apiKey, apiKey.isNotEmpty())
                     Toast.makeText(this@AiChatSettingsActivity, getString(R.string.ai_settings_saved), Toast.LENGTH_SHORT).show()
                     finish()
                 } else {

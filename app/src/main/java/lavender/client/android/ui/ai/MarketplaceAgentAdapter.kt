@@ -3,14 +3,17 @@ package lavender.client.android.ui.ai
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageButton
 import android.widget.RatingBar
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import lavender.client.android.R
+import lavender.client.android.data.ai.FavoriteAgentsManager
 import lavender.client.android.data.ai.MarketplaceAgent
 
 class MarketplaceAgentAdapter(
-    private val onItemClick: (MarketplaceAgent) -> Unit
+    private val onItemClick: (MarketplaceAgent) -> Unit,
+    private val onFavoriteClick: (MarketplaceAgent) -> Unit = {}
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private val items = mutableListOf<Any>()
@@ -69,6 +72,7 @@ class MarketplaceAgentAdapter(
         private val agentRating: RatingBar = itemView.findViewById(R.id.agentRating)
         private val ratingText: TextView = itemView.findViewById(R.id.ratingText)
         private val installCount: TextView = itemView.findViewById(R.id.installCount)
+        private val btnFavorite: ImageButton = itemView.findViewById(R.id.btnFavorite)
 
         fun bind(agent: MarketplaceAgent) {
             agentIcon.text = getAgentEmoji(agent.providerType.value)
@@ -79,7 +83,21 @@ class MarketplaceAgentAdapter(
             ratingText.text = String.format("%.1f", agent.avgRating)
             installCount.text = "${agent.installCount} installs"
 
+            updateFavoriteIcon(agent.id)
+
             itemView.setOnClickListener { onItemClick(agent) }
+            btnFavorite.setOnClickListener {
+                FavoriteAgentsManager.toggleFavorite(itemView.context, agent.id)
+                updateFavoriteIcon(agent.id)
+                onFavoriteClick(agent)
+            }
+        }
+
+        private fun updateFavoriteIcon(agentId: String) {
+            val isFav = FavoriteAgentsManager.isFavorite(itemView.context, agentId)
+            btnFavorite.setImageResource(
+                if (isFav) R.drawable.ic_star_filled else R.drawable.ic_star_outline
+            )
         }
 
         private fun getAgentEmoji(providerType: String): String {

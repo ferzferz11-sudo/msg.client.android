@@ -37,6 +37,7 @@ class AiV2AgentListActivity : AppCompatActivity() {
     private lateinit var sortFilterBar: View
     private lateinit var marketplaceViewModel: MarketplaceViewModel
     private lateinit var remoteAgentContainer: View
+    private lateinit var usageStatsContainer: View
 
     private var allAgents = listOf<AiV2Agent>()
     private var currentTab = 0
@@ -56,6 +57,7 @@ class AiV2AgentListActivity : AppCompatActivity() {
         setupSwipeRefresh()
         setupFab()
         setupSearch()
+        setupFilters()
         observeMarketplace()
         ThemeUi.bind(this, SessionManager.session.value.username)
 
@@ -71,6 +73,7 @@ class AiV2AgentListActivity : AppCompatActivity() {
         searchInput = findViewById(R.id.searchInput)
         sortFilterBar = findViewById(R.id.sortFilterBar)
         remoteAgentContainer = findViewById(R.id.remoteAgentContainer)
+        usageStatsContainer = findViewById(R.id.usageStatsContainer)
     }
 
     private fun setupToolbar() {
@@ -92,6 +95,18 @@ class AiV2AgentListActivity : AppCompatActivity() {
     }
 
     private fun onTabChanged() {
+        usageStatsContainer.visibility = View.GONE
+        remoteAgentContainer.visibility = View.GONE
+        recyclerView.visibility = View.VISIBLE
+        swipeRefresh.visibility = View.VISIBLE
+        showingRemoteSettings = false
+
+        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
+        toolbar.title = getString(R.string.ai_v2_agents)
+        toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
+        toolbar.setNavigationOnClickListener { finish() }
+        tabLayout.visibility = View.VISIBLE
+
         when (currentTab) {
             0 -> {
                 searchLayout.visibility = View.GONE
@@ -112,6 +127,11 @@ class AiV2AgentListActivity : AppCompatActivity() {
                 searchLayout.visibility = View.GONE
                 sortFilterBar.visibility = View.GONE
                 showRemoteAgent()
+            }
+            4 -> {
+                searchLayout.visibility = View.GONE
+                sortFilterBar.visibility = View.GONE
+                showUsageStats()
             }
         }
     }
@@ -160,6 +180,12 @@ class AiV2AgentListActivity : AppCompatActivity() {
         })
     }
 
+    private fun setupFilters() {
+        findViewById<com.google.android.material.chip.Chip>(R.id.chipFilterFavorites).setOnCheckedChangeListener { _, _ ->
+            marketplaceViewModel.toggleFavoritesOnly()
+        }
+    }
+
     private fun observeMarketplace() {
         lifecycleScope.launch {
             marketplaceViewModel.agents.collect { agents ->
@@ -176,7 +202,7 @@ class AiV2AgentListActivity : AppCompatActivity() {
                             isPreset = mp.isPreset,
                             isPublic = mp.isPublic
                         )
-                    })
+                    }, showFavorites = true)
                 }
             }
         }
@@ -248,6 +274,27 @@ class AiV2AgentListActivity : AppCompatActivity() {
                 Toast.makeText(this@AiV2AgentListActivity, "Failed to load remote agents", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun showUsageStats() {
+        recyclerView.visibility = View.GONE
+        swipeRefresh.visibility = View.GONE
+        usageStatsContainer.visibility = View.VISIBLE
+
+        if (supportFragmentManager.findFragmentById(R.id.usageStatsContainer) == null) {
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.usageStatsContainer, UsageStatsFragment())
+                .commit()
+        }
+    }
+
+    private fun hideUsageStats() {
+        supportFragmentManager.fragments.filterIsInstance<UsageStatsFragment>().forEach { f ->
+            supportFragmentManager.beginTransaction().remove(f).commit()
+        }
+        usageStatsContainer.visibility = View.GONE
+        recyclerView.visibility = View.VISIBLE
+        swipeRefresh.visibility = View.VISIBLE
     }
 
     private fun onAgentClick(agent: AiV2Agent) {

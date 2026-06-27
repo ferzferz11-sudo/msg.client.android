@@ -2,6 +2,9 @@ package lavender.client.android.data.ai
 
 import android.util.Log
 import kotlinx.coroutines.*
+import lavender.client.android.data.db.MarketplaceAgentEntity
+import lavender.client.android.data.db.toDomain
+import lavender.client.android.data.db.toEntity
 import lavender.client.android.data.grpc.RealGrpcClient
 import lavender.client.android.data.proto.*
 
@@ -266,9 +269,30 @@ object AiV2ChatUseCase {
         return try {
             val response = RealGrpcClient.aiV2Client.listMarketplaceAgents(query, limit, offset)
             val agents = response.agents.map { it.toMarketplaceAgent() }
+
+            if (query.isEmpty() && offset == 0) {
+                withContext(Dispatchers.IO) {
+                    val ctx = RealGrpcClient.appContext ?: return@withContext
+                    val db = lavender.client.android.data.db.AppDatabase.getDatabase(ctx)
+                    db.marketplaceDao().sync(agents.map { it.toEntity() })
+                }
+            }
+
             Result.success(agents to response.total)
         } catch (e: Exception) {
             Log.e(TAG, "listMarketplaceAgents error", e)
+            if (query.isEmpty()) {
+                try {
+                    val cached = withContext(Dispatchers.IO) {
+                        val ctx = RealGrpcClient.appContext ?: return@withContext emptyList()
+                        val db = lavender.client.android.data.db.AppDatabase.getDatabase(ctx)
+                        db.marketplaceDao().getAll().map { it.toDomain() }
+                    }
+                    if (cached.isNotEmpty()) {
+                        return Result.success(cached to cached.size)
+                    }
+                } catch (_: Exception) {}
+            }
             Result.failure(e)
         }
     }

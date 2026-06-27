@@ -10,6 +10,7 @@ import lavender.client.android.data.ai.AiV2Agent
 import lavender.client.android.data.ai.AiV2ChatUseCase
 import lavender.client.android.data.proto.CreateAIAgentRequestProto
 import lavender.client.android.data.proto.UpdateAIAgentRequestProto
+import org.json.JSONObject
 
 /**
  * AiV2AgentCreateEditViewModel — ViewModel for creating/editing AI v2 agents.
@@ -28,7 +29,31 @@ class AiV2AgentCreateEditViewModel(application: Application) : AndroidViewModel(
     fun loadAgent(agentId: String) {
         viewModelScope.launch {
             try {
-                val agent = AiV2ChatUseCase.getAgent(agentId)
+                var agent = AiV2ChatUseCase.getAgent(agentId)
+
+                if (agent != null) {
+                    val hasUserKey = try {
+                        val config = JSONObject(agent.providerConfig)
+                        config.optString("api_key", "").isNotEmpty() ||
+                            config.optString("apiKey", "").isNotEmpty()
+                    } catch (_: Exception) { false }
+
+                    if (!hasUserKey) {
+                        val chatSession = AiV2ChatUseCase.listAIChats().firstOrNull { it.agentId == agentId }
+                        if (chatSession != null) {
+                            try {
+                                val settings = AiV2ChatUseCase.getChatSettings(chatSession.id)
+                                if (settings.userApiKey.isNotEmpty()) {
+                                    val config = JSONObject().apply {
+                                        put("api_key", settings.userApiKey)
+                                    }.toString()
+                                    agent = agent.copy(providerConfig = config)
+                                }
+                            } catch (_: Exception) {}
+                        }
+                    }
+                }
+
                 _agent.value = agent
             } catch (e: Exception) {
                 _error.value = e.message ?: "Failed to load agent"
