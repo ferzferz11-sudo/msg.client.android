@@ -63,3 +63,7 @@ Lavender Messenger — Android client. Kotlin, gRPC, AI v2 marketplace, secret c
 - **AI chat error propagation**: Errors shown as chat messages (⚠️ prefix). Rate limit gets dedicated StateFlow.
 - **ChatWidget button defaults are both GONE**: Activities must manually toggle via TextWatcher.
 - **AI chat list is separate from server chat list**: `GetUserChatsV2` excludes AI chats.
+- **Messages V2 migration complete (v1.3.1.01)**: All v1 message RPCs removed. Only v2: ChatV2 stream, GetHistoryV2, SendMessageV2, EditMessageV2, DeleteMessageV2, SetReactionV2, SearchMessages.
+- **Message ID sync critical**: Server returns its own ID in SendMessageV2Response. Client MUST update local message + Room DB with server ID to prevent duplicates on re-entry.
+- **Single reconnection path**: Only ChatKeepAliveService triggers reconnection. Stream handlers set FAILED status, ChatKeepAliveService detects and calls connect(). No retry loops in stream handlers.
+- **Favorites is virtual room**: `favorites_<username>` — messages stored in messages_v2. GetHistoryV2 returns them. getFavorites() uses v2 marshallers with UUID→username resolution.
