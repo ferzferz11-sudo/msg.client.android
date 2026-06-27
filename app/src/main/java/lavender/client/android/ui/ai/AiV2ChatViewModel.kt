@@ -58,9 +58,10 @@ class AiV2ChatViewModel(application: Application) : AndroidViewModel(application
             if (message.error.contains("rate limit", ignoreCase = true)) {
                 _rateLimitEvent.value = true
             }
+            val errorText = formatAiError(message.error)
             val errorMsg = AiV2ChatMessage(
                 role = "assistant",
-                content = "\u26A0\uFE0F ${message.error}",
+                content = errorText,
                 agentId = message.agentId,
                 agentName = message.agentName,
                 timestamp = System.currentTimeMillis()
@@ -130,7 +131,7 @@ class AiV2ChatViewModel(application: Application) : AndroidViewModel(application
             } catch (e: Exception) {
                 val errorMsg = AiV2ChatMessage(
                     role = "assistant",
-                    content = "\u26A0\uFE0F ${e.message ?: "Unknown error"}",
+                    content = formatAiError(e.message ?: "Unknown error"),
                     timestamp = System.currentTimeMillis()
                 )
                 _messages.value = _messages.value + errorMsg
@@ -149,7 +150,7 @@ class AiV2ChatViewModel(application: Application) : AndroidViewModel(application
             } catch (e: Exception) {
                 val errorMsg = AiV2ChatMessage(
                     role = "assistant",
-                    content = "\u26A0\uFE0F ${e.message ?: "Failed to load history"}",
+                    content = formatAiError(e.message ?: "Failed to load history"),
                     timestamp = System.currentTimeMillis()
                 )
                 _messages.value = _messages.value + errorMsg
@@ -159,6 +160,14 @@ class AiV2ChatViewModel(application: Application) : AndroidViewModel(application
 
     fun clearError() {
         _error.value = null
+    }
+
+    private fun formatAiError(error: String): String {
+        if (error.contains("PARTNER_API_BUDGET_EXHAUSTED", ignoreCase = true) ||
+            error.contains("402", ignoreCase = true) && error.contains("budget", ignoreCase = true)) {
+            return "\u26A0\uFE0F Бюджет API для генерации изображений исчерпан. Пополните баланс в панели управления API и попробуйте снова."
+        }
+        return "\u26A0\uFE0F $error"
     }
 
     fun clearRateLimitEvent() {
