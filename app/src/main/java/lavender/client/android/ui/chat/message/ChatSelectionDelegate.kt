@@ -135,7 +135,7 @@ class ChatSelectionDelegate(
         val sm = adapter?.getSelectedMessages() ?: return
         val sheet = StandardBottomSheet(activity, R.layout.dialog_delete_messages)
         sheet.setTitle(activity.getString(R.string.delete_messages_title))
-        sheet.findViewById<TextView>(R.id.tvMessageText)?.text =
+        sheet.findViewById<TextView>(R.id.messageText)?.text =
             activity.getString(R.string.delete_messages_confirm, sm.size)
         sheet.findViewById<View>(R.id.btnCancel)?.setOnClickListener { sheet.dismiss() }
         sheet.findViewById<View>(R.id.btnDelete)?.setOnClickListener {
