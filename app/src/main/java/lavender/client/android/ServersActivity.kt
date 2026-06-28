@@ -172,16 +172,16 @@ class ServersActivity : AppCompatActivity() {
             val defaultServers = listOf(
                 CredentialStore.ServerEntry(
                     id = "default-server-1",
-                    name = "Lava Germany",
-                    host = "13.140.25.249",
-                    port = 50051,
+                    name = ServerConfig.PROD.label,
+                    host = ServerConfig.PROD.host,
+                    port = ServerConfig.PROD.grpcPort,
                     isDefault = true
                 ),
                 CredentialStore.ServerEntry(
                     id = "default-server-2",
-                    name = "Lava Germany dev",
-                    host = "13.140.25.249",
-                    port = 50052,
+                    name = ServerConfig.DEV.label,
+                    host = ServerConfig.DEV.host,
+                    port = ServerConfig.DEV.grpcPort,
                     isDefault = false
                 )
             )

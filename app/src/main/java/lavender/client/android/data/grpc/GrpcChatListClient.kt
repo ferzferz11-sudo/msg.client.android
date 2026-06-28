@@ -32,9 +32,11 @@ class GrpcChatListClient(
             callback(emptyList())
             return
         }
+        // v1/v2 endpoint selection based on server capability negotiation
+        val endpoint = if (ProfileClient.isChatV2Supported()) "messenger.ChatService/GetChatsV2" else "messenger.ChatService/GetChats"
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetChatsRequestProto, GetChatsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetChats")
+            .setFullMethodName(endpoint)
             .setRequestMarshaller(GetChatsRequestMarshaller())
             .setResponseMarshaller(GetChatsResponseMarshaller())
             .build()

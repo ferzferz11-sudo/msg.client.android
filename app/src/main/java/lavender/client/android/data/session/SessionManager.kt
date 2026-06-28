@@ -543,7 +543,7 @@ object SessionManager {
         CredentialStore.clear(context)
 
         // Always reset to prod server on logout
-        CredentialStore.setServerAddress(context, "13.140.25.249:50051")
+        CredentialStore.setServerAddress(context, ServerConfig.PROD.grpcAddress)
 
         // Clear non-sensitive legacy prefs but keep username for pre-fill
         CredentialStore.getLegacyPrefs(context).edit {

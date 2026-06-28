@@ -23,7 +23,7 @@ class GrpcServerDiscoveryClient(
     companion object {
         private const val TAG = "GrpcServerDiscoveryClient"
         private const val BOOTSTRAP_HOST = "13.140.25.249"
-        private const val BOOTSTRAP_PORT = 50051
+        private const val BOOTSTRAP_PORT = lavender.client.android.data.session.ServerConfig.PROD.grpcPort
     }
 
     // ======= Fetch Server List =======

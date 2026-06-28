@@ -22,16 +22,17 @@ internal fun showAuthChoiceDialog(activity: ChatListActivity) {
     var serverName: String
 
     if (serverAddress.isEmpty()) {
-        serverAddress = "13.140.25.249:50051"
-        host = "13.140.25.249"
-        port = 50051
+        val prod = ServerConfig.PROD
+        serverAddress = prod.grpcAddress
+        host = prod.host
+        port = prod.grpcPort
         serverName = "Lava Germany"
         CredentialStore.setServerAddress(activity, serverAddress)
     } else {
         val parts = serverAddress.split(":")
         host = parts[0]
-        port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-        serverName = if (port == 50052) "Lava Germany dev" else "Lava Germany"
+        port = parts.getOrNull(1)?.toIntOrNull() ?: ServerConfig.PROD.grpcPort
+        serverName = if (ServerConfig.isDevServer(port)) "Lava Germany dev" else "Lava Germany"
     }
 
     var isTransitioning = false

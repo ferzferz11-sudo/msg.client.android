@@ -239,7 +239,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     private fun fetchTurnCredentials(callback: (List<PeerConnection.IceServer>) -> Unit) {
         Thread {
             try {
-                val url = java.net.URL("http://13.140.25.249:8082/turn-credentials")
+                val url = java.net.URL("${ServerConfig.PROD.httpUrl}/turn-credentials")
                 val connection = url.openConnection() as java.net.HttpURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 5000
