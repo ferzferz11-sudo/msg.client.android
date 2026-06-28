@@ -1,5 +1,24 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.06] - 2026-06-29
+
+### Splash freeze fix + Duplicate message fix + Push notification deep link
+
+**Исправлено:**
+- Splash screen зависал при запуске — `SessionManager.waitForConnectionAndReLogin()` использовал `latch.await(8, SECONDS)` на Main thread, блокируя UI до 8 секунд при обновлении JWT токена. Убран latch, callback обрабатывает результат асинхронно
+- Splash screen зависал если biometric prompt зависал без callback — добавлен 15s timeout с принудительным переходом в чат
+- Splash screen зависал если цепочка анимаций ломалась — добавлен 5s safety timeout
+- Дубликат сообщения при реакции — race condition между `sendMessageV2` response (temp ID → server ID) и ChatV2 stream (server ID уже добавлен). Добавлен дедупликационный фильтр после обновления ID
+- Push notification deep link: если пользователь уже в `NewChatActivity` и нажимает уведомление на другой чат — не переключался. Добавлен `onNewIntent()` с `startChatV2` + `markRead` + обновление toolbar
+
+**Изменено:**
+- `SessionManager.kt` — убран `CountDownLatch` + `latch.await(8s)` из `waitForConnectionAndReLogin()`
+- `SplashActivity.kt` — +`import android.util.Log`, +15s biometric timeout, +5s splash timeout
+- `GrpcMessageV2Client.kt` — dedup фильтр в `sendMessageV2` response handler
+- `NewChatActivity.kt` — `onNewIntent()` обновлён: +`startChatV2`, +`markRead`, +toolbar update
+
+---
+
 ## [1.3.1.05] - 2026-06-29
 
 ### Read status + Reactions persistence + Real-time messages + Chat list UX + Admin Sessions + Delete Messages v2

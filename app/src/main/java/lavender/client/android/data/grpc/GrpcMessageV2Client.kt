@@ -306,12 +306,14 @@ class GrpcMessageV2Client(
                     val serverMsg = response.message
                     val serverId = serverMsg.id
                     messages.update { current ->
-                        current.map {
+                        val updated = current.map {
                             if (it.id == message.id) {
                                 val newId = if (serverId.isNotEmpty() && serverId != message.id) serverId else it.id
                                 it.copy(id = newId, isSent = true)
                             } else it
                         }
+                        val seen = mutableSetOf<String>()
+                        updated.filter { msg -> msg.id !in seen && seen.add(msg.id) }
                     }
                     if (serverId.isNotEmpty() && serverId != message.id) {
                         scope.launch(Dispatchers.IO) {

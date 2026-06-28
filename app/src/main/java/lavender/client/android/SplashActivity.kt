@@ -2,6 +2,7 @@ package lavender.client.android
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.util.Log
 import lavender.client.android.ui.chatlist.ChatListActivity
 import android.os.Bundle
 import android.view.animation.AccelerateDecelerateInterpolator
@@ -61,6 +62,14 @@ class SplashActivity : AppCompatActivity() {
         val callIdFromPush = intent.getStringExtra("CALL_ID") ?: intent.getStringExtra("call_id")
 
         animateAndNavigate(shouldProceed, roomIdFromPush, callIdFromPush, session, prefs)
+
+        lifecycleScope.launch {
+            delay(5000)
+            if (!isFinishing && !isDestroyed) {
+                Log.w("SplashActivity", "Splash timeout — force navigating")
+                navigateToTarget(shouldProceed, roomIdFromPush, callIdFromPush, session, prefs)
+            }
+        }
     }
 
     private fun animateAndNavigate(
@@ -271,6 +280,15 @@ class SplashActivity : AppCompatActivity() {
             .build()
 
         biometricPrompt.authenticate(promptInfo)
+
+        lifecycleScope.launch {
+            delay(15000)
+            if (!isFinishing && !isDestroyed) {
+                Log.w("SplashActivity", "Biometric timeout — navigating anyway")
+                startActivity(Intent(this@SplashActivity, ChatListActivity::class.java))
+                finish()
+            }
+        }
     }
 
     /** Clear all local cache silently on successful login. */

@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.1.05 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-06-29
+**Версия:** v1.3.1.07 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-06-29
 
 ---
 
@@ -58,7 +58,8 @@ AIBottomSheet → agent selection with user agents only + loading/empty states +
 SuperAdminActivity → admin panel with GetAdminUserList (cursor pagination, search, sort) + GetAdminUserSessions (expandable device sessions)
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor + AuthInterceptor (HTTP)
-Session: SessionManager (ensureFreshToken BEFORE loadChats + forceTokenRefresh on pull-to-refresh)
+SplashScreen: SplashActivity → animateAndNavigate() → navigateToTarget() → biometric prompt (15s timeout) + 5s safety timeout
+Session: SessionManager (ensureFreshToken BEFORE loadChats + forceTokenRefresh on pull-to-refresh, async token refresh — no blocking Main thread)
 Chat Stream: ChatV2 bidirectional stream (messenger.ChatService/ChatV2) — JWT auth + clientVersion, system signals, typing
 Messages: v2 only — GetHistoryV2, SendMessageV2, EditMessageV2, DeleteMessageV2, SetReactionV2
 Reactions: optimistic UI → Room DB save → server response → in-memory + Room DB update → REACTION_V2 stream → Room DB save
@@ -81,48 +82,37 @@ Secret Chats: E2EE via E2EEManager (ECDH + AES-256-GCM), key exchange with retry
 
 ---
 
-## Итог сессии v1.3.1.05 (завершена)
+## Итог сессии v1.3.1.06 (завершена)
 
 ### Выполнено
 
-**1. Read status — реальный gRPC MarkRead:**
-- `RealGrpcClient.markRead()` — заглушка заменена на реальный gRPC вызов `messenger.ChatService/MarkRead`
-- `METHOD_MARK_READ` + `MarkReadRequestMarshaller`/`MarkReadResponseMarshaller`
-- Сервер обновляет `user_chat_metadata.last_read_at` + `messages.is_read`
+**1. Splash screen freeze fix:**
+- `SessionManager.waitForConnectionAndReLogin()` — убран `latch.await(8, SECONDS)`, блокировавший Main thread. Callback обрабатывает результат асинхронно
+- `SplashActivity` — добавлен 15s biometric timeout (принудительный переход если biometric завис)
+- `SplashActivity` — добавлен 5s safety timeout (принудительный переход если анимация сломалась)
 
-**2. Optimistic unread tracking:**
-- `ChatListViewModel.locallyReadChats` — запоминает ID чатов, прочитанных локально
-- Merge logic в `loadChats` уважает `locallyReadChats` — не перезаписывает stale серверными данными
+**2. Duplicate message fix:**
+- `GrpcMessageV2Client.sendMessageV2()` — race condition: temp ID → server ID в response handler, но ChatV2 stream уже добавил сообщение с server ID. Добавлен dedup фильтр после обновления ID
 
-**3. Real-time messages в активном чате:**
-- Сообщения из ChatV2 стрима добавляются в `_messages` StateFlow + Room DB
-- Дедупликация по message ID, вставка в правильную позицию по timestamp
-- Только для текущего `currentRoomId`
+**3. Push notification deep link fix:**
+- `NewChatActivity.onNewIntent()` — если пользователь уже в чате и нажимает уведомление на другой чат — теперь корректно переключается (startChatV2 + markRead + toolbar update)
 
-**4. Auto markAsRead для активного чата:**
-- При получении сообщения от другого пользователя в открытом чате — автоматический `markRead()` на сервер
-
-**5. Reaction persistence:**
-- `REACTION_V2` stream handler теперь сохраняет в Room DB
-- Merge logic мержит реакции из server + local (защита от потери реакций)
-- Room DB кеш всегда мержится с текущими сообщениями (фикс race condition)
-
-**6. Chat list UX:**
-- `scrollToPosition(0)` при новом сообщении если пользователь вверху списка
-- `onResume()` всегда вызывает `loadChats(silent = true)` при READY статусе
+**4. Backlog check:**
+- Offline mode — ✅ уже реализовано (Room DB кеш для чатов и сообщений)
+- Push notification deep link — ✅ уже реализовано (+ исправлен onNewIntent)
 
 ### Изменённые файлы (клиент)
 
 | Файл | Изменение |
 |------|-----------|
-| `RealGrpcClient.kt` | +`METHOD_MARK_READ`, +реальный gRPC в `markRead()`, +добавление стрим-сообщений в `_messages`, +auto `markRead`, +`REACTION_V2` Room DB |
-| `GrpcMessageV2Client.kt` | merge logic мержит реакции из server + local, Room DB кеш всегда мержится |
-| `ChatListViewModel.kt` | `markAsRead()` optimistic clear + `locallyReadChats` |
-| `ChatListActivity.kt` | `onResume()` всегда `loadChats(silent = true)`, `scrollToPosition(0)` |
+| `SessionManager.kt` | убран `CountDownLatch` + `latch.await(8s)` |
+| `SplashActivity.kt` | +Log import, +15s biometric timeout, +5s splash timeout |
+| `GrpcMessageV2Client.kt` | dedup фильтр в `sendMessageV2` response handler |
+| `NewChatActivity.kt` | `onNewIntent()` +startChatV2, +markRead, +toolbar update |
 
 ---
 
-## Задачи — Следующая сессия (v1.3.1.06)
+## Задачи — Следующая сессия (v1.3.1.07)
 
 ---
 

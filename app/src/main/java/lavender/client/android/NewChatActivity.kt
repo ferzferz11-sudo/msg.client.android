@@ -520,12 +520,20 @@ class NewChatActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        val newRoomId = intent.getStringExtra("ROOM_ID") ?: intent.getStringExtra("roomId") ?: return
+        if (newRoomId == roomId) return
+        roomId = newRoomId
         loadDataFromIntent()
         grpcClient.setRoomId(roomId)
         grpcClient.clearMessages()
-        grpcClient.loadHistoryV2(roomId) { _, _ -> }
         viewModel.switchRoom(roomId)
-        loadDraft()
+        viewModel.startChatV2(roomId) { _ -> viewModel.markRead(username) }
+        viewModel.markRead(username)
+        intent.getStringExtra("CHAT_NAME")?.let {
+            chatName = it
+            toolbarDelegate.configure(roomId, username, chatName, isDirect, chatType, participantsJson, creator, chatAvatarUrl, chatFullAvatarUrl, isSecret)
+            toolbarDelegate.setup()
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

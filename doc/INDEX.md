@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.1.04 | **Updated:** 2026-06-28
+**Version:** v1.3.1.06 | **Updated:** 2026-06-29
 
 ---
 
@@ -53,7 +53,7 @@
 
 ---
 
-## Architecture Overview (v1.3.1.04)
+## Architecture Overview (v1.3.1.06)
 
 ```
 GrpcClient (facade)
@@ -64,11 +64,11 @@ GrpcClient (facade)
         ├── GrpcCallClient — calls
         ├── GrpcChatClient (~250) — getChats (cursor pagination), create/delete, participants, settings
         ├── GrpcChatListV2Client (~120) — pin/unpin, search, archive
-        ├── GrpcChatAuxClient (~130) — users, FCM, mute
+        ├── GrpcChatAuxClient (~130) — users, FCM, mute, getAdminUserList, getAdminUserSessions
         ├── GrpcProfileClient — contacts, themes, devices, passwords (ChatService)
         ├── ProfileClient — profile, avatar, settings, delete (ProfileService v2, JWT)
-        ├── GrpcDraftClient, GrpcFavoritesClient
-        ├── GrpcMessageV2Client — ChatV2 stream, GetHistoryV2, SendMessageV2, Edit/Delete/ReactionV2
+        ├── GrpcDraftClient, GrpcFavoritesClient (+ parseReactions)
+        ├── GrpcMessageV2Client — messages v2 only (no v1 fallback), parseReactions (internal)
         ├── GrpcServerDiscoveryClient — server discovery
         ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools, Marketplace, Chat History)
         ├── SecretChatGrpc, ProfileClient
@@ -80,18 +80,31 @@ network/HttpClient.kt — singleton OkHttpClient (connection pool 5/5min, timeou
 network/AuthInterceptor.kt — JWT auth for HTTP requests
 
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
-NewChatActivity → 6 delegates + ChatViewModel
-AiV2ChatActivity → unified AI chat (simple/agent/pipeline) + rate limit + image support + multi-agent
+NewChatActivity → 6 delegates + ChatViewModel (v2 only)
+  └── ChatToolbarDelegate — toolbar, avatar, subtitle, navigation, E2EE status
+  └── ChatInputDelegate — text input, send, attachments, audio, emoji, mentions
+  └── ChatSelectionDelegate — selection mode, copy/pin/delete/forward
+  └── ChatSearchDelegate — in-chat search
+  └── ChatE2EEDelegate — end-to-end encryption for secret chats
+  └── ChatMessageMenuDelegate — reactions, context menu
+AiV2ChatActivity → unified AI chat + commands + rate limit + image/file support + multi-agent + errors as chat messages
 AiV2AgentListActivity → unified agent management (5 tabs: Presets/My Agents/Discover/Remote Agent/Usage)
-AiAgentSetupActivity → create/edit all agent types
-AIBottomSheet → agent selection with checkboxes + AI Agents button
+AiAgentSetupActivity → create/edit all agent types (API key, temperature, max tokens)
+AIBottomSheet → agent selection with user agents only + loading/empty states + fixed footer
+SuperAdminActivity → admin panel with GetAdminUserList (cursor pagination, search, sort) + GetAdminUserSessions (expandable device sessions)
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor + AuthInterceptor (HTTP)
-Session: SessionManager (token refresh EVERY entry point)
-AI v2: ChatWithAIV2 streaming + tool calling loop + 9 provider types + image support
+Session: SessionManager (async token refresh — no Main thread blocking)
+SplashScreen: SplashActivity → animateAndNavigate() → navigateToTarget() → biometric (15s timeout) + 5s safety timeout
+Chat Stream: ChatV2 bidirectional stream (messenger.ChatService/ChatV2) — JWT auth + clientVersion, system signals, typing
+Messages: v2 only — GetHistoryV2, SendMessageV2, EditMessageV2, DeleteMessageV2, SetReactionV2
+Reactions: optimistic UI → Room DB save → server response → in-memory + Room DB update → REACTION_V2 stream → Room DB save
+Unread: markAsRead optimistic clear + locallyReadChats tracking → gRPC MarkRead to server → server updates last_read_at
+Real-time: ChatV2 stream messages added to _messages StateFlow + Room DB, auto markAsRead for active chat
+AI v2: ChatWithAIV2 streaming + tool calling loop + 9 provider types + image/file support
 AI Chat History: GetAIV2ChatHistory + ListAIV2Chats (server-side)
 AI Marketplace: Rate, Reviews, Stats, Share, Install, Usage + Search + Pagination + Sort + Filter
-Biometric: BiometricPrompt after splash screen when enabled
+Biometric: BiometricPrompt after splash screen when enabled (15s timeout fallback)
 Chat List: Cursor-based pagination (infinite scroll), Unread highlight
 Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 Logging: clean logs, no hot-path noise, performance timing in loadChats

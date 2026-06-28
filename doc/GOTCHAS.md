@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.1.05 | **Updated:** 2026-06-28
+**Version:** v1.3.1.06 | **Updated:** 2026-06-29
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -23,13 +23,14 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 
 ## Auth & Token Management
 
-- **Token refresh has two paths:** periodic (60s via `startTokenRefresh`) and sync (`ensureFreshToken` before chat stream with 5s latch)
+- **Token refresh has two paths:** periodic (60s via `startTokenRefresh`) and async callback (no Main thread blocking)
 - **Token expiry buffers differ:** `needsRefresh()` uses 5-min buffer, `isTokenExpiredOrExpiring()` uses 60s buffer
 - **`BearerTokenInterceptor`** reads `AuthManager.getBearerToken()` per-call — always latest token, no stale-token bug
 - **Token refresh failure fallback:** if both access+refresh tokens expired, `performTokenRefresh()` attempts password re-login with saved credentials; emits logout if no saved creds
 - **Chat stream JWT failure:** refresh-first strategy — tries `GrpcClient.refreshToken()` before `AUTH_FAILED` (v2 has no password fallback)
 - **`ensureFreshToken()` blocks via CountDownLatch** — callers must use `Dispatchers.IO` to avoid ANR
 - **`initFromPrefs()`** now starts periodic token refresh for JWT sessions restored on startup
+- **NEVER block Main thread with CountDownLatch** — `waitForConnectionAndReLogin()` used `latch.await(8s)` on Dispatchers.Main, causing splash freeze. Use async callbacks instead
 
 ## Firebase & Push
 
@@ -46,6 +47,7 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **`ThemeStore.currentTheme()` may throw** — use `theme.resolveAttribute(colorOnPrimary)` for reliable theme color access
 - **`compileReleaseKotlin` vs debug:** deprecation warnings (Firebase, security-crypto) may only appear in release compilation
 - **`@file:Suppress("DEPRECATION")`** for multi-import deprecation — when a file imports multiple deprecated symbols from same library (e.g. `EncryptedSharedPreferences` + `MasterKey`)
+- **Splash biometric timeout (15s):** BiometricPrompt can hang without callback on some devices. Always add a timeout fallback that forces navigation. SplashActivity has 15s biometric + 5s general timeout
 
 ## Database & Caching
 
@@ -65,6 +67,7 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **`deleteSelectedChats()`** must `suspendCancellableCoroutine`-await each server delete before calling `loadChats()` — otherwise deleted chats reappear
 - **Auto-scroll threshold:** `lastCompletelyVisible >= itemCount - 3` to determine "near bottom"
 - **`"Поделиться в чате"` forward flow:** `ChatSelectionDelegate.forwardSelectedMessages()` → `grpcClient.getChats()` → `ListBottomSheet` + `ForwardChatAdapter`. NOT in `ChatMessageMenuDelegate`. Selection mode entered via long-press on message
+- **Duplicate message race condition:** `sendMessageV2` response handler changes temp ID → server ID, but ChatV2 stream may have already added the message with server ID. Always dedup by ID after ID update in `sendMessageV2` response handler
 
 ## Unread Count
 

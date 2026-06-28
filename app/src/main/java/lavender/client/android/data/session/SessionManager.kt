@@ -359,7 +359,6 @@ object SessionManager {
             Log.d("SessionManager", "Re-login: connection ready, refreshing tokens for $username")
             val refreshToken = AuthManager.getRefreshToken(context)
             if (!refreshToken.isNullOrEmpty()) {
-                val latch = java.util.concurrent.CountDownLatch(1)
                 GrpcClient.refreshToken(refreshToken) { response, error ->
                     if (response != null && response.accessToken.isNotEmpty()) {
                         val deviceId = AuthManager.getDeviceId(context)
@@ -388,9 +387,7 @@ object SessionManager {
                         GrpcClient.connect(host, false, port, context, forceReconnect = true)
                         loginV2(context, username, password, serverAddress, false, "", {})
                     }
-                    latch.countDown()
                 }
-                latch.await(8, java.util.concurrent.TimeUnit.SECONDS)
             } else {
                 Log.w("SessionManager", "Re-login: no refresh token, re-authenticating with password")
                 loginV2(context, username, password, serverAddress, false, "", {})
