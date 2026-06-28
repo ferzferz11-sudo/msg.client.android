@@ -1533,3 +1533,134 @@ class GetPinnedMessagesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<
         return GetPinnedMessagesResponseProto(msgs)
     }
 }
+
+// ======= Admin User List marshallers =======
+
+class AdminUserInfoMarshaller : io.grpc.MethodDescriptor.Marshaller<AdminUserInfoProto> {
+    override fun stream(value: AdminUserInfoProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.userId.isNotEmpty()) cos.writeString(1, value.userId)
+        if (value.username.isNotEmpty()) cos.writeString(2, value.username)
+        if (value.avatarUrl.isNotEmpty()) cos.writeString(3, value.avatarUrl)
+        if (value.fullAvatarUrl.isNotEmpty()) cos.writeString(4, value.fullAvatarUrl)
+        if (value.email.isNotEmpty()) cos.writeString(5, value.email)
+        if (value.isSuperAdmin) cos.writeBool(6, value.isSuperAdmin)
+        if (value.lastClientVersion.isNotEmpty()) cos.writeString(7, value.lastClientVersion)
+        value.lastSeenAt?.let { cos.writeTag(8, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED); val b = it.toByteArray(); cos.writeUInt32NoTag(b.size); cos.writeRawBytes(b) }
+        if (value.isOnline) cos.writeBool(9, value.isOnline)
+        if (value.lastMessageText.isNotEmpty()) cos.writeString(10, value.lastMessageText)
+        value.lastMessageTime?.let { cos.writeTag(11, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED); val b = it.toByteArray(); cos.writeUInt32NoTag(b.size); cos.writeRawBytes(b) }
+        if (value.lastMessageUsername.isNotEmpty()) cos.writeString(12, value.lastMessageUsername)
+        if (value.chatCount != 0) cos.writeInt32(13, value.chatCount)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): AdminUserInfoProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var userId = ""; var username = ""; var avatarUrl = ""; var fullAvatarUrl = ""; var email = ""; var isSuperAdmin = false
+        var lastClientVersion = ""; var lastSeenAt: com.google.protobuf.Timestamp? = null; var isOnline = false
+        var lastMessageText = ""; var lastMessageTime: com.google.protobuf.Timestamp? = null; var lastMessageUsername = ""; var chatCount = 0
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+            1 -> userId = cis.readString(); 2 -> username = cis.readString(); 3 -> avatarUrl = cis.readString()
+            4 -> fullAvatarUrl = cis.readString(); 5 -> email = cis.readString(); 6 -> isSuperAdmin = cis.readBool()
+            7 -> lastClientVersion = cis.readString()
+            8 -> { val len = cis.readUInt32(); lastSeenAt = com.google.protobuf.Timestamp.parseFrom(java.io.ByteArrayInputStream(cis.readRawBytes(len))) }
+            9 -> isOnline = cis.readBool(); 10 -> lastMessageText = cis.readString()
+            11 -> { val len = cis.readUInt32(); lastMessageTime = com.google.protobuf.Timestamp.parseFrom(java.io.ByteArrayInputStream(cis.readRawBytes(len))) }
+            12 -> lastMessageUsername = cis.readString(); 13 -> chatCount = cis.readInt32()
+            else -> cis.skipField(tag)
+        } }
+        return AdminUserInfoProto(userId, username, avatarUrl, fullAvatarUrl, email, isSuperAdmin, lastClientVersion, lastSeenAt, isOnline, lastMessageText, lastMessageTime, lastMessageUsername, chatCount)
+    }
+}
+
+class GetAdminUserListRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAdminUserListRequestProto> {
+    override fun stream(value: GetAdminUserListRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.query.isNotEmpty()) cos.writeString(1, value.query)
+        if (value.cursor.isNotEmpty()) cos.writeString(2, value.cursor)
+        if (value.limit != 50) cos.writeInt32(3, value.limit)
+        if (value.sortBy.isNotEmpty() && value.sortBy != "last_message") cos.writeString(4, value.sortBy)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): GetAdminUserListRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var query = ""; var cursor = ""; var limit = 50; var sortBy = "last_message"
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+            1 -> query = cis.readString(); 2 -> cursor = cis.readString(); 3 -> limit = cis.readInt32(); 4 -> sortBy = cis.readString()
+            else -> cis.skipField(tag)
+        } }
+        return GetAdminUserListRequestProto(query, cursor, limit, sortBy)
+    }
+}
+
+class GetAdminUserListResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAdminUserListResponseProto> {
+    override fun stream(v: GetAdminUserListResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetAdminUserListResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); val users = mutableListOf<AdminUserInfoProto>(); val um = AdminUserInfoMarshaller()
+        var nextCursor = ""; var hasMore = false; var serverTime: com.google.protobuf.Timestamp? = null
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+            1 -> { val len = cis.readUInt32(); users.add(um.parse(java.io.ByteArrayInputStream(cis.readRawBytes(len)))) }
+            2 -> nextCursor = cis.readString(); 3 -> hasMore = cis.readBool()
+            4 -> { val len = cis.readUInt32(); serverTime = com.google.protobuf.Timestamp.parseFrom(java.io.ByteArrayInputStream(cis.readRawBytes(len))) }
+            else -> cis.skipField(tag)
+        } }
+        return GetAdminUserListResponseProto(users, nextCursor, hasMore, serverTime)
+    }
+}
+
+// ======= Admin User Sessions =======
+
+class AdminUserSessionMarshaller : io.grpc.MethodDescriptor.Marshaller<AdminUserSessionProto> {
+    override fun stream(v: AdminUserSessionProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.deviceId.isNotEmpty()) cos.writeString(1, v.deviceId)
+        if (v.deviceName.isNotEmpty()) cos.writeString(2, v.deviceName)
+        if (v.deviceType.isNotEmpty()) cos.writeString(3, v.deviceType)
+        if (v.clientVersion.isNotEmpty()) cos.writeString(4, v.clientVersion)
+        if (v.ipAddress.isNotEmpty()) cos.writeString(5, v.ipAddress)
+        if (v.lastSeenAt != null) { cos.writeTag(6, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED); cos.writeUInt32NoTag(v.lastSeenAt.toByteArray().size); cos.writeRawBytes(v.lastSeenAt.toByteArray()) }
+        if (v.isOnline) cos.writeBool(7, v.isOnline)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): AdminUserSessionProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var deviceId = ""; var deviceName = ""; var deviceType = ""; var clientVersion = ""; var ipAddress = ""; var lastSeenAt: com.google.protobuf.Timestamp? = null; var isOnline = false
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+            1 -> deviceId = cis.readString(); 2 -> deviceName = cis.readString(); 3 -> deviceType = cis.readString()
+            4 -> clientVersion = cis.readString(); 5 -> ipAddress = cis.readString()
+            6 -> { val len = cis.readUInt32(); lastSeenAt = com.google.protobuf.Timestamp.parseFrom(java.io.ByteArrayInputStream(cis.readRawBytes(len))) }
+            7 -> isOnline = cis.readBool()
+            else -> cis.skipField(tag)
+        } }
+        return AdminUserSessionProto(deviceId, deviceName, deviceType, clientVersion, ipAddress, lastSeenAt, isOnline)
+    }
+}
+
+class GetAdminUserSessionsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAdminUserSessionsRequestProto> {
+    override fun stream(v: GetAdminUserSessionsRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): GetAdminUserSessionsRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var userId = ""
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+            1 -> userId = cis.readString()
+            else -> cis.skipField(tag)
+        } }
+        return GetAdminUserSessionsRequestProto(userId)
+    }
+}
+
+class GetAdminUserSessionsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAdminUserSessionsResponseProto> {
+    override fun stream(v: GetAdminUserSessionsResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetAdminUserSessionsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); val sessions = mutableListOf<AdminUserSessionProto>(); val sm = AdminUserSessionMarshaller()
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+            1 -> { val len = cis.readUInt32(); sessions.add(sm.parse(java.io.ByteArrayInputStream(cis.readRawBytes(len)))) }
+            else -> cis.skipField(tag)
+        } }
+        return GetAdminUserSessionsResponseProto(sessions)
+    }
+}

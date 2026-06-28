@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.1.04 | **Updated:** 2026-06-28
+**Version:** v1.3.1.05 | **Updated:** 2026-06-28
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -267,3 +267,25 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **Client needs no proto changes** — Hermes works through existing `ChatWithAIV2` streaming RPC
 - **Emoji mapping "hermes" → "🔬"** in 3 files: AIBottomSheet, AiV2AgentListAdapter, AiV2ChatActivity
 - **11 preset agents** now (was 10): mimo, assistant, developer, devops, architect, writer, analyst, translator, vision, reve, hermes
+
+## Secret Chat E2EE Status (v1.3.1.05)
+
+- **`updateSubtitle()` overwrites E2EE status** — observer flow (combine users/connectionStatus/typingUsers/allUsers) calls `updateSubtitle()` on every state change. Without `isSecret` early return, it overwrites "🔒 Сквозное шифрование" with participant/online count
+- **`ChatE2EEDelegate` must NOT set `toolbarSubtitle` directly** — race condition with observer flow. Use `onKeyExchangeStart`/`onKeyExchangeComplete` callbacks instead
+- **`E2EEManager.isE2EEActive()` checks SharedPreferences** — returns true if shared secret is stored for the chat. Use this to determine if key exchange is complete
+- **Secret chats have `chatType = "secret"`** — NOT `"direct"`. But `isDirect` must be `true` for toolbar logic (secret chats are always 1-on-1)
+- **`IS_SECRET` intent extra is critical** — without it, re-entering secret chat from list → `isSecret = false` → no E2EE init, no E2EE status in toolbar
+
+## Call Button Lost in Refactor (v1.3.1.05)
+
+- **`bae73d5` refactor split NewChatActivity into 6 delegates** — `onCreateOptionsMenu()`/`onPrepareOptionsMenu()`/`onOptionsItemSelected()` were removed but NOT migrated to any delegate
+- **`chat_menu.xml` still exists** with `action_video_call`, `action_conference`, `action_search` — but nothing inflated it
+- **Call infrastructure intact** — `GrpcCallClient`, `CallManager`, `CallNavigator`, `CallActivity`, `WebRtcClient` all work. Only the UI trigger button was missing
+- **Video call only for direct chats** — hidden for secret chats (`!isSecret`), favorites (`!startsWith("favorites_")`), and selection mode
+- **`invalidateOptionsMenu()`** called by `ChatSelectionDelegate.onSelectionModeChanged` — menu refreshes when entering/exiting selection mode
+
+## Online Users Count (v1.3.1.05)
+
+- **`ONLINE_USERS_UPDATE` system signal** populates `_users` StateFlow with list of online usernames from server
+- **Server may not include current user** in the online users list — "0 online" can appear even when user is connected
+- **Secret chats no longer show participant/online count** — they show E2EE status instead (fix for "2 участника, 0 онлайн")

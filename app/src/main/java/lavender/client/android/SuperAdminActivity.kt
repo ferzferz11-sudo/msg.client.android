@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
+import lavender.client.android.data.proto.AdminUserInfoProto
 import lavender.client.android.data.proto.UserInfoProto
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
@@ -49,8 +50,11 @@ class SuperAdminActivity : AppCompatActivity() {
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
     
     private var allUsers = listOf<UserInfoProto>()
+    private var adminUsers = listOf<AdminUserInfoProto>()
     private var allChats = listOf<ChatInfo>()
     private var currentMode = Mode.USERS
+    private var currentCursor = ""
+    private var hasMore = true
     private val selectedUsernames = mutableSetOf<String>()
     private val selectedChatIds = mutableSetOf<String>()
     
@@ -99,7 +103,11 @@ class SuperAdminActivity : AppCompatActivity() {
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 currentMode = if (tab?.position == 0) Mode.USERS else Mode.GROUPS
                 clearSelection()
-                updateUI(allUsers, allChats)
+                if (currentMode == Mode.USERS) {
+                    updateAdminUI(adminUsers, allChats)
+                } else {
+                    updateUI(allUsers, allChats)
+                }
             }
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
             override fun onTabReselected(tab: TabLayout.Tab?) {}
@@ -125,18 +133,23 @@ class SuperAdminActivity : AppCompatActivity() {
     private fun setupRecyclerView() {
         adapter = SuperAdminAdapter(
             onUserClick = { user ->
+                val adminUser = user as? AdminUserInfoProto ?: return@SuperAdminAdapter
                 if (selectedUsernames.isNotEmpty()) {
-                    toggleUserSelection(user.username)
+                    toggleUserSelection(adminUser.username)
                 } else {
-                    val intent = Intent(this, ProfileActivity::class.java).apply {
-                        putExtra("username", user.username)
-                        putExtra("is_group", false)
+                    adapter.toggleSessions(adminUser)
+                    if (adapter.isExpanded(adminUser.username)) {
+                        loadUserSessions(adminUser)
                     }
-                    startActivity(intent)
                 }
             },
             onUserLongClick = { user ->
-                toggleUserSelection(user.username)
+                val username = when (user) {
+                    is UserInfoProto -> user.username
+                    is AdminUserInfoProto -> user.username
+                    else -> return@SuperAdminAdapter
+                }
+                toggleUserSelection(username)
             },
             onChatClick = { chat ->
                 if (selectedChatIds.isNotEmpty()) {
@@ -161,6 +174,19 @@ class SuperAdminActivity : AppCompatActivity() {
         )
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                if (dy > 0 && currentMode == Mode.USERS) {
+                    val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+                    val lastVisible = layoutManager.findLastVisibleItemPosition()
+                    val totalItems = layoutManager.itemCount
+                    if (lastVisible >= totalItems - 5 && hasMore && currentCursor.isNotEmpty()) {
+                        loadMoreUsers()
+                    }
+                }
+            }
+        })
     }
 
     override fun onResume() {
@@ -254,6 +280,8 @@ class SuperAdminActivity : AppCompatActivity() {
 
     private fun loadData() {
         swipeRefreshLayout.isRefreshing = true
+        currentCursor = ""
+        hasMore = true
 
         val loadTimeout = lifecycleScope.launch {
             delay(15000)
@@ -265,17 +293,28 @@ class SuperAdminActivity : AppCompatActivity() {
             }
         }
 
-        grpcClient.loadAllUsers { users ->
-            allUsers = users
-            Log.d("SuperAdminActivity", "Loaded ${users.size} users")
+        grpcClient.getAdminUserList("", "", 50, "last_message") { response ->
+            adminUsers = response.users
+            currentCursor = response.nextCursor
+            hasMore = response.hasMore
+            Log.d("SuperAdminActivity", "Loaded ${response.users.size} admin users, hasMore=$hasMore")
             grpcClient.getAllChats { chats ->
                 allChats = chats
                 Log.d("SuperAdminActivity", "Loaded ${chats.size} chats")
                 loadTimeout.cancel()
                 runOnUiThread {
                     swipeRefreshLayout.isRefreshing = false
-                    updateUI(allUsers, allChats)
+                    updateAdminUI(adminUsers, allChats)
                 }
+            }
+        }
+    }
+
+    private fun loadUserSessions(user: AdminUserInfoProto) {
+        grpcClient.getAdminUserSessions(user.userId) { response ->
+            Log.d("SuperAdminActivity", "Loaded ${response.sessions.size} sessions for ${user.username}")
+            runOnUiThread {
+                adapter.setSessions(user.username, response.sessions)
             }
         }
     }
@@ -318,11 +357,59 @@ class SuperAdminActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("SetTextI18n")
+    private fun updateAdminUI(users: List<AdminUserInfoProto>, chats: List<ChatInfo>) {
+        val emptyStateText = findViewById<TextView>(R.id.emptyStateText)
+        
+        val theme = ThemeStore.currentTheme()
+        val textSecondary = try { theme.textSecondaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.LTGRAY }
+        
+        emptyStateText.setTextColor(textSecondary)
+
+        val hasSelection = selectedUsernames.isNotEmpty() || selectedChatIds.isNotEmpty()
+        if (hasSelection) {
+            supportActionBar?.title = getString(R.string.selected_count, if (currentMode == Mode.USERS) selectedUsernames.size else selectedChatIds.size)
+            supportActionBar?.setDisplayHomeAsUpEnabled(true)
+            supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
+        } else {
+            supportActionBar?.title = getString(R.string.super_admin)
+            supportActionBar?.setHomeAsUpIndicator(null)
+        }
+        invalidateOptionsMenu()
+
+        lifecycleScope.launch(Dispatchers.Default) {
+            val sortedUsers = users.sortedByDescending { it.lastMessageTime?.seconds ?: 0 }
+            val sortedChats = chats
+            withContext(Dispatchers.Main) {
+                if (currentMode == Mode.USERS) {
+                    emptyStateText.isVisible = users.isEmpty()
+                    adapter.setAdminItems(sortedUsers)
+                } else {
+                    emptyStateText.isVisible = chats.isEmpty()
+                    adapter.setItems(sortedChats)
+                }
+            }
+        }
+    }
+
+    private fun loadMoreUsers() {
+        if (!hasMore || currentCursor.isEmpty()) return
+        grpcClient.getAdminUserList("", currentCursor, 50, "last_message") { response ->
+            adminUsers = adminUsers + response.users
+            currentCursor = response.nextCursor
+            hasMore = response.hasMore
+            Log.d("SuperAdminActivity", "Loaded ${response.users.size} more admin users, total=${adminUsers.size}")
+            runOnUiThread {
+                updateAdminUI(adminUsers, allChats)
+            }
+        }
+    }
+
     private fun filterCurrentList(query: String) {
         val q = query.lowercase()
         if (currentMode == Mode.USERS) {
-            val filtered = allUsers.filter { it.username.lowercase().contains(q) }
-            updateUI(filtered, emptyList())
+            val filtered = adminUsers.filter { it.username.lowercase().contains(q) }
+            updateAdminUI(filtered, emptyList())
         } else {
             val filtered = allChats.filter { it.name.lowercase().contains(q) || it.id.lowercase().contains(q) }
             updateUI(emptyList(), filtered)
@@ -336,7 +423,11 @@ class SuperAdminActivity : AppCompatActivity() {
             selectedUsernames.add(username)
         }
         adapter.toggleSelection(username)
-        updateUI(allUsers, allChats)
+        if (currentMode == Mode.USERS) {
+            updateAdminUI(adminUsers, allChats)
+        } else {
+            updateUI(allUsers, allChats)
+        }
     }
 
     private fun toggleChatSelection(chatId: String) {
@@ -346,14 +437,22 @@ class SuperAdminActivity : AppCompatActivity() {
             selectedChatIds.add(chatId)
         }
         adapter.toggleSelection(chatId)
-        updateUI(allUsers, allChats)
+        if (currentMode == Mode.USERS) {
+            updateAdminUI(adminUsers, allChats)
+        } else {
+            updateUI(allUsers, allChats)
+        }
     }
 
     private fun clearSelection() {
         selectedUsernames.clear()
         selectedChatIds.clear()
         adapter.clearSelection()
-        updateUI(allUsers, allChats)
+        if (currentMode == Mode.USERS) {
+            updateAdminUI(adminUsers, allChats)
+        } else {
+            updateUI(allUsers, allChats)
+        }
     }
 
     private fun applyThemeToTabs(tabLayout: TabLayout) {
@@ -453,7 +552,11 @@ class SuperAdminActivity : AppCompatActivity() {
                     if (success) {
                         Toast.makeText(this, R.string.password_updated, Toast.LENGTH_SHORT).show()
                         clearSelection()
-                        updateUI(allUsers, allChats)
+                        if (currentMode == Mode.USERS) {
+                            updateAdminUI(adminUsers, allChats)
+                        } else {
+                            updateUI(allUsers, allChats)
+                        }
                         sheet.dismiss()
                     } else {
                         Toast.makeText(this, "Error: $message", Toast.LENGTH_LONG).show()

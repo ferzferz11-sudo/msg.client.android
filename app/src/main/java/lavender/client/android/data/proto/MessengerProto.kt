@@ -1379,3 +1379,55 @@ data class UnarchiveChatRequestProto(
 data class UnarchiveChatResponseProto(
     val success: Boolean = false
 )
+
+// ======= Admin User List =======
+
+data class AdminUserInfoProto(
+    val userId: String = "",
+    val username: String = "",
+    val avatarUrl: String = "",
+    val fullAvatarUrl: String = "",
+    val email: String = "",
+    val isSuperAdmin: Boolean = false,
+    val lastClientVersion: String = "",
+    val lastSeenAt: Timestamp? = null,
+    val isOnline: Boolean = false,
+    val lastMessageText: String = "",
+    val lastMessageTime: Timestamp? = null,
+    val lastMessageUsername: String = "",
+    val chatCount: Int = 0
+)
+
+data class GetAdminUserListRequestProto(
+    val query: String = "",
+    val cursor: String = "",
+    val limit: Int = 50,
+    val sortBy: String = "last_message"
+)
+
+data class GetAdminUserListResponseProto(
+    val users: List<AdminUserInfoProto> = emptyList(),
+    val nextCursor: String = "",
+    val hasMore: Boolean = false,
+    val serverTime: Timestamp? = null
+)
+
+// ======= Admin User Sessions =======
+
+data class AdminUserSessionProto(
+    val deviceId: String = "",
+    val deviceName: String = "",
+    val deviceType: String = "",
+    val clientVersion: String = "",
+    val ipAddress: String = "",
+    val lastSeenAt: Timestamp? = null,
+    val isOnline: Boolean = false
+)
+
+data class GetAdminUserSessionsRequestProto(
+    val userId: String = ""
+)
+
+data class GetAdminUserSessionsResponseProto(
+    val sessions: List<AdminUserSessionProto> = emptyList()
+)

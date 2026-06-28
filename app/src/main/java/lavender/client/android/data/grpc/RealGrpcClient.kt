@@ -238,6 +238,13 @@ object RealGrpcClient {
         scope = scope
     )
 
+    private val METHOD_MARK_READ = MethodDescriptor.newBuilder<MarkReadRequestProto, MarkReadResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("messenger.ChatService/MarkRead")
+        .setRequestMarshaller(MarkReadRequestMarshaller())
+        .setResponseMarshaller(MarkReadResponseMarshaller())
+        .build()
+
     // ====== State (kept in orchestrator) ======
     internal var appContext: Context? = null
     private var currentUsername: String? = null
@@ -515,15 +522,54 @@ object RealGrpcClient {
                                 }
                             } catch (e: Exception) { Log.e(TAG, "Error parsing online users update", e) }
                         }
+                        "REACTION_V2" -> {
+                            try {
+                                val parts = sysMessage.split("|", limit = 2)
+                                if (parts.size == 2) {
+                                    val messageId = parts[0]
+                                    val reactionsJson = parts[1]
+                                    val reactions = messageV2Client.parseReactions(reactionsJson.toByteArray())
+                                    _messages.update { current ->
+                                        val idx = current.indexOfFirst { it.id == messageId }
+                                        if (idx != -1) {
+                                            val list = current.toMutableList()
+                                            list[idx] = list[idx].copy(reactions = reactions)
+                                            scope.launch(Dispatchers.IO) {
+                                                val msg = list[idx]
+                                                db()?.messageDao()?.insertMessages(listOf(msg.toEntity()))
+                                            }
+                                            list
+                                        } else current
+                                    }
+                                }
+                            } catch (e: Exception) { Log.e(TAG, "Error parsing reaction update", e) }
+                        }
                     }
                     return
                 }
                 // Handle message
                 if (value.message != null) {
                     val msg = messageV2Client.messageV2ToDomain(value.message)
-                    if (msg.text != "[deleted]") {
-                        onMessageReceived(msg)
+                    if (msg.roomId == currentRoomId) {
+                        _messages.update { current ->
+                            if (current.any { it.id == msg.id }) current
+                            else {
+                                val insertIndex = current.indexOfFirst { it.timestamp > msg.timestamp }
+                                val list = current.toMutableList()
+                                if (insertIndex == -1) list.add(msg) else list.add(insertIndex, msg)
+                                list
+                            }
+                        }
+                        scope.launch(Dispatchers.IO) {
+                            db()?.messageDao()?.insertMessages(listOf(msg.toEntity()))
+                        }
+                        val myUsername = currentUsername ?: ""
+                        if (msg.user.isNotEmpty() && msg.user != myUsername) {
+                            markRead(currentRoomId, myUsername, null)
+                        }
                     }
+                    onMessageReceived(msg)
+                    _newMessageEvent.tryEmit(msg)
                 }
             }
 
@@ -611,7 +657,27 @@ object RealGrpcClient {
     fun clearMessages() { _messages.value = emptyList() }
     fun markRead(rid: String, u: String, onComp: (() -> Unit)?) {
         appContext?.let { lavender.client.android.data.fcm.LavenderMessagingService.dismissNotificationsForRoom(it, rid) }
-        onComp?.invoke()
+        val channel = getChannel()
+        if (channel == null) {
+            onComp?.invoke()
+            return
+        }
+        val userId = currentUserId ?: ""
+        val call = channel.newCall(METHOD_MARK_READ, CallOptions.DEFAULT)
+        call.start(object : ClientCall.Listener<MarkReadResponseProto>() {
+            override fun onMessage(response: MarkReadResponseProto) {
+                onComp?.invoke()
+            }
+            override fun onClose(status: Status, trailers: Metadata) {
+                if (!status.isOk) {
+                    ErrorHandler.handle("$TAG.markRead", StatusRuntimeException(status))
+                }
+                onComp?.invoke()
+            }
+        }, Metadata())
+        call.sendMessage(MarkReadRequestProto(roomId = rid, username = u, userId = userId))
+        call.halfClose()
+        call.request(1)
     }
 
     // ====== Chat List (delegated) ======
@@ -621,6 +687,8 @@ object RealGrpcClient {
     fun registerToken(user: String, token: String, pushEnabled: Boolean) { chatAuxClient.registerToken(user, token, pushEnabled) }
     fun fetchUserId(username: String, callback: (String?, Boolean) -> Unit) { chatAuxClient.fetchUserId(username, callback) }
     fun loadAllUsers(cb: (List<UserInfoProto>) -> Unit) { chatAuxClient.loadAllUsers(cb) }
+    fun getAdminUserList(query: String, cursor: String, limit: Int, sortBy: String, callback: (GetAdminUserListResponseProto) -> Unit) { chatAuxClient.getAdminUserList(query, cursor, limit, sortBy, callback) }
+    fun getAdminUserSessions(userId: String, callback: (GetAdminUserSessionsResponseProto) -> Unit) { chatAuxClient.getAdminUserSessions(userId, callback) }
     fun getMutedChats(callback: (List<String>) -> Unit) { chatAuxClient.getMutedChats(callback) }
     fun setMutedChat(roomId: String, muted: Boolean, callback: (Boolean) -> Unit) { chatAuxClient.setMutedChat(roomId, muted, callback) }
     fun deleteChat(cid: String, requesterUsername: String, cb: (Boolean, String) -> Unit) { chatClient.deleteChat(cid, requesterUsername, cb) }

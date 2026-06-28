@@ -49,12 +49,13 @@ internal fun navigateToChat(activity: ChatListActivity, chat: ChatInfo, username
                 putExtra("SERVER_ADDRESS", serverAddress)
                 putExtra("CHAT_NAME", displayName)
                 putExtra("ROOM_ID", chat.id)
-                putExtra("IS_DIRECT", chat.type == "direct")
+                putExtra("IS_DIRECT", chat.type == "direct" || chat.isSecret)
                 putExtra("CHAT_TYPE", chat.type)
                 putExtra("PARTICIPANTS", chat.participants)
                 putExtra("AVATAR_URL", chat.avatarUrl)
                 putExtra("FULL_AVATAR_URL", chat.fullAvatarUrl)
                 putExtra("CREATOR", chat.creator)
+                putExtra("IS_SECRET", chat.isSecret.toString())
             }
             activity.startActivity(intent)
         }

@@ -1,8 +1,11 @@
 package lavender.client.android.data.grpc
 
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import lavender.client.android.data.models.ErrorHandler
 import lavender.client.android.data.models.Message
+import lavender.client.android.data.models.Reaction
 import lavender.client.android.data.proto.*
 
 /**
@@ -58,6 +61,24 @@ class GrpcFavoritesClient(
         call.request(1)
     }
 
+    private fun parseReactions(reactionsBytes: ByteArray): List<Reaction> {
+        if (reactionsBytes.isEmpty()) return emptyList()
+        return try {
+            val obj = org.json.JSONObject(String(reactionsBytes))
+            val result = mutableListOf<Reaction>()
+            for (key in obj.keys()) {
+                val emoji = obj.getString(key)
+                if (emoji.isNotEmpty()) {
+                    result.add(Reaction(user = key, emoji = emoji))
+                }
+            }
+            result
+        } catch (e: Exception) {
+            ErrorHandler.handle("GrpcFavoritesClient.parseReactions", e)
+            emptyList()
+        }
+    }
+
     fun getFavorites(userId: String, callback: (List<Message>) -> Unit) {
         val currentChannel = getChannel() ?: return
         val call = currentChannel.newCall(
@@ -84,11 +105,13 @@ class GrpcFavoritesClient(
                             }
                         }
                     }
+                    val reactions = parseReactions(proto.reactions)
                     Message(
                         id = proto.id,
                         user = username,
                         text = proto.text,
                         timestamp = timestamp,
+                        reactions = reactions,
                         roomId = "favorites_${getUsername() ?: ""}",
                         imageUrl = imageUrl,
                         voiceUrl = voiceUrl,

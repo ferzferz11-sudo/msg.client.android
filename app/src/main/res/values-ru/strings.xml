@@ -622,6 +622,12 @@
         <item quantity="many">%d дней назад</item>
         <item quantity="other">%d дней назад</item>
     </plurals>
+    <plurals name="chats_count">
+        <item quantity="one">%d чат</item>
+        <item quantity="few">%d чата</item>
+        <item quantity="many">%d чатов</item>
+        <item quantity="other">%d чатов</item>
+    </plurals>
     <string name="resending">Повторная отправка…</string>
     <string name="message_already_sent">Сообщение уже на сервере</string>
     <string name="today">Сегодня</string>

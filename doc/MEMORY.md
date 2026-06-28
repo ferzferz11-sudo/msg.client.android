@@ -45,6 +45,15 @@ Lavender Messenger — Android client. Kotlin, gRPC, AI v2 marketplace, secret c
 
 ## Discovered durable knowledge
 
+- **Secret chat E2EE status must NOT be overwritten by observer flow**: `updateSubtitle()` is called by `combine(grpcClient.users, grpcClient.connectionStatus, grpcClient.typingUsers, grpcClient.allUsers)`. For secret chats, this overwrites E2EE status with participant/online count. Fix: `isSecret` check with early return at the start of `updateSubtitle()`.
+- **ChatE2EEDelegate must use callbacks, not direct toolbarSubtitle**: Setting `toolbarSubtitle.text` directly causes race condition with observer flow. Use `onKeyExchangeStart`/`onKeyExchangeComplete` callbacks → `toolbarDelegate.isE2eeInProgress`.
+- **`E2EEManager.isE2EEActive(context, chatId)`** checks SharedPreferences for shared secret. Returns true if key exchange completed.
+- **Secret chats need `IS_SECRET` intent extra**: Without it, `isSecret = false` on re-entry → no E2EE init, wrong toolbar status.
+- **Call button was lost in bae73d5 refactor**: `onCreateOptionsMenu`/`onPrepareOptionsMenu`/`onOptionsItemSelected` removed from NewChatActivity but not migrated to any of the 6 delegates. Restored in v1.3.1.05.
+- **`ONLINE_USERS_UPDATE` may not include current user**: Server sends list of online usernames. Current user might be missing → "0 online" even when connected. Secret chats now show E2EE status instead.
+
+## Discovered durable knowledge
+
 - **Auth handled at channel level, not per-call**: `GrpcConnectionManager.kt:107` adds `BearerTokenInterceptor` to the managed channel builder.
 - **AI v2 architecture**: Client uses hand-rolled protobuf marshallers (no .proto files). All gRPC calls through messenger.ChatService/*. 9 LLM providers (openrouter, local, mimo, webhook, websocket, subprocess, mcp, reve, hermes_acp). AiV2ChatUseCase orchestrates tool calling loop (max 10 iterations).
 - **AI database tables**: agents_v2, ai_chats_v2, ai_messages_v2, ai_rate_limits, ai_usage_stats, agent_reviews.

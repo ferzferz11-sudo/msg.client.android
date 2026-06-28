@@ -1,5 +1,51 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.05] - 2026-06-29
+
+### Read status + Reactions persistence + Real-time messages + Chat list UX + Admin Sessions + Delete Messages v2
+
+**Исправлено:**
+- Unread count не сбрасывался при входе в чат — `RealGrpcClient.markRead()` был заглушкой (dismiss нотификаций), никогда не отправлял gRPC `MarkRead` на сервер. Реализован реальный вызов `messenger.ChatService/MarkRead`
+- Unread восстанавливался после `loadChats` — добавлен `locallyReadChats` optimistic tracking в `ChatListViewModel`, предотвращающий перезапись из stale серверных данных
+- Сообщения из ChatV2 стрима не отображались в открытом чате — добавлено добавление в `_messages` StateFlow + Room DB с дедупликацией по ID
+- Реакции не сохранялись при перезаходе — `REACTION_V2` stream handler обновлял in-memory но не сохранял в Room DB
+- Реакции терялись при загрузке истории — merge logic в `loadHistoryV2` теперь мержит реакции из обоих источников (сервер + локальный кеш), сохраняя реакции текущего пользователя
+- Race condition при загрузке кеша — Room DB кеш теперь всегда мержится с текущими сообщениями, не только когда `messages` пустой
+- Секретные чаты: "Обмен ключами..." больше не зависает навсегда — `updateSubtitle()` теперь корректно обрабатывает `isSecret`
+- Секретные чаты: "2 участника, 0 онлайн" заменено на правильный E2EE статус (🔒 E2EE / 🔒 Сквозное шифрование)
+- Навигация из списка чатов: добавлен `IS_SECRET` intent extra — при повторном входе в секретный чат E2EE корректно инициализируется
+- Кнопка видеозвонка восстановлена в тулбаре чата (потеряна при рефакторинге NewChatActivity в 6 делегатов)
+- Кнопка поиска восстановлена в тулбаре чата
+- `handleIncomingE2EEMessage`: исправлен мёртвый код — теперь корректно добавляет расшифрованное сообщение
+
+**Добавлено:**
+- `METHOD_MARK_READ` + реальный gRPC вызов `MarkRead` в `RealGrpcClient`
+- `locallyReadChats` — optimistic tracking для предотвращения перезаписи unread count
+- Автоматический `markRead` при получении сообщения от другого пользователя в активном чате
+- Chat list: `scrollToPosition(0)` при новом сообщении если пользователь вверху списка
+- `AdminUserSessionProto` + marshallers для отображения сессий устройств
+- `getAdminUserSessions()` RPC — загрузка активных сессий пользователя
+- `SuperAdminAdapter` — раскрывающийся список сессий под каждым пользователем (иконка устройства, версия, IP, last seen, online статус)
+- `item_admin_session.xml` — layout для элемента сессии
+- Иконки `ic_web.xml`, `ic_android.xml`, `ic_device.xml`
+- Удалены фильтры `text == "[deleted]"` — сервер теперь полностью удаляет записи вместо пометки `content_type='deleted'`
+
+**Изменено:**
+- `RealGrpcClient.kt` — +`METHOD_MARK_READ`, +реальный gRPC в `markRead()`, +добавление стрим-сообщений в `_messages`, +auto `markRead` для активного чата, +`REACTION_V2` сохранение в Room DB
+- `GrpcMessageV2Client.kt` — merge logic мержит реакции из server + local, Room DB кеш всегда мержится
+- `ChatListViewModel.kt` — `markAsRead()` optimistic clear + `locallyReadChats` tracking
+- `ChatListActivity.kt` — `onResume()` всегда `loadChats(silent = true)`, `scrollToPosition(0)` при new message
+- `ChatToolbarDelegate.kt` — +`isE2eeInProgress` флаг, +проверка `isSecret` в `updateSubtitle()`
+- `ChatE2EEDelegate.kt` — +`onKeyExchangeStart` callback
+- `NewChatActivity.kt` — +`onCreateOptionsMenu`/`onPrepareOptionsMenu`/`onOptionsItemSelected`, +`onKeyExchangeStart` wiring, исправлен `handleIncomingE2EEMessage`
+- `ChatListNavigation.kt` — +`IS_SECRET` intent extra, `IS_DIRECT` учитывает `isSecret`
+- `SuperAdminAdapter.kt` — +раскрывающиеся сессии
+- `SuperAdminActivity.kt` — +загрузка сессий при клике
+- `MessengerProto.kt` — +`AdminUserSessionProto`, +Request/Response
+- `GrpcMarshallers.kt` — +marshallers для сессий
+
+---
+
 ## [1.3.1.04] - 2026-06-28
 
 ### ChatV2 clientVersion + Hermes Agent ACP + last_seen_at fix
@@ -7,6 +53,7 @@
 **Добавлено:**
 - `ChatV2MessageProto.clientVersion` (field 3) — клиент отправляет версию при подключении к ChatV2 стриму
 - Hermes Agent ACP: emoji mapping "hermes" → "🔬" в AIBottomSheet, AiV2AgentListAdapter, AiV2ChatActivity
+- `ChatListNavigation.kt` — +`IS_SECRET` intent extra, `IS_DIRECT` учитывает `isSecret`
 
 **Исправлено:**
 - Админ панель показывала неверные версии клиентов — `clientVersion` не отправлялся в ChatV2 стриме

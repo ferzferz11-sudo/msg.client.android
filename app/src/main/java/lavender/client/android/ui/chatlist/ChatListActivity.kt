@@ -297,12 +297,9 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
-        // Safety net: if chats list is empty but we're connected, reload.
-        if (::viewModel.isInitialized && viewModel.getChats().isEmpty()
-            && GrpcClient.connectionStatus.value == ConnectionStatus.READY
-        ) {
-            Log.d(TAG, "onResume: chats empty but READY — reloading")
-            viewModel.loadChats()
+        // Always refresh chat list on resume to pick up unread count changes
+        if (::viewModel.isInitialized && GrpcClient.connectionStatus.value == ConnectionStatus.READY) {
+            viewModel.loadChats(silent = true)
         }
         // Pre-load users for add contact/create chat sheets
         if (GrpcClient.connectionStatus.value == ConnectionStatus.READY) {
@@ -412,7 +409,12 @@ class ChatListActivity : AppCompatActivity() {
         // Observe sections
         lifecycleScope.launch {
             viewModel.sections.collectLatest { sections ->
+                val wasNearTop = (rvChatList?.layoutManager as? LinearLayoutManager)
+                    ?.findFirstCompletelyVisibleItemPosition() ?: 0 <= 1
                 chatAdapter.setSections(sections)
+                if (wasNearTop) {
+                    rvChatList?.scrollToPosition(0)
+                }
             }
         }
 

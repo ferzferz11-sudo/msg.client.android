@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.1.04 | **Updated:** 2026-06-28
+**Version:** v1.3.1.05 | **Updated:** 2026-06-28
 
 ---
 
@@ -557,3 +557,59 @@ Presets removed — accessible via AiV2AgentListActivity only
 18. ProfileService v2: profile/avatar/delete/settings via `messenger.ProfileService/*` (JWT context)
 19. **ALWAYS verify against server code**: Before any gRPC/marshaller change, check `/Users/paveld/LavenderMessenger-server/doc/CLIENT_INTEGRATION.md` AND the actual server source code at `/Users/paveld/LavenderMessenger-server/`.
 19. CHANGELOG: do NOT list documentation changes (README, doc/, comments) — only code changes
+
+---
+
+## v1.3.1.05
+
+### Secret Chat E2EE Status Pattern (v1.3.1.05)
+```
+ChatToolbarDelegate.updateSubtitle()
+  ├── isSecret check FIRST (early return)
+  │   ├── !isConnected → "Подключение..."
+  │   ├── isE2eeInProgress → "🔒 Обмен ключами..."
+  │   ├── E2EEManager.isE2EEActive() → "🔒 Сквозное шифрование" (green)
+  │   └── else → "🔒 E2EE"
+  └── Regular chats: typists → isDirect → group
+
+ChatE2EEDelegate
+  ├── onKeyExchangeStart callback → toolbarDelegate.isE2eeInProgress = true
+  ├── onKeyExchangeComplete callback → toolbarDelegate.isE2eeInProgress = false
+  └── NO direct toolbarSubtitle manipulation (caused race condition with observer flow)
+```
+- Secret chats ALWAYS show E2EE status, never participant/online count
+- Observer flow (combine users/connectionStatus/typingUsers/allUsers) calls updateSubtitle() — must not overwrite E2EE status
+- `isE2eeInProgress` flag ensures "Обмен ключами..." shows during retry loop
+
+### Call Button in Chat Toolbar Pattern (v1.3.1.05)
+```
+NewChatActivity
+  ├── onCreateOptionsMenu → inflate chat_menu.xml (action_video_call, action_search)
+  ├── onPrepareOptionsMenu
+  │   ├── action_video_call: visible if !inSelection && isDirect && !startsWith("favorites_") && !isSecret
+  │   ├── action_search: visible if !inSelection
+  │   └── action_conference: always hidden
+  └── onOptionsItemSelected
+      ├── action_video_call → CallManager.initiateCall(otherUser) + CallNavigator.startCall()
+      └── action_search → searchDelegate.show()
+
+ChatToolbarDelegate.getOtherParticipant() → resolves other username from participantsJson
+```
+- Call button lost during bae73d5 refactor (NewChatActivity split into 6 delegates)
+- None of the 6 delegates absorbed menu inflation logic
+- Video calls only for direct chats, not secret/favorites
+- `invalidateOptionsMenu()` called by ChatSelectionDelegate.onSelectionModeChanged
+
+### Secret Chat Navigation Pattern (v1.3.1.05)
+```
+ChatListNavigation
+  └── else branch → putExtra("IS_SECRET", chat.isSecret.toString())
+                    putExtra("IS_DIRECT", chat.type == "direct" || chat.isSecret)
+
+NewChatActivity.loadDataFromIntent()
+  ├── isSecret = intent.getStringExtra("IS_SECRET") == "true"
+  ├── if (isSecret) chatType = "secret"
+  └── IS_DIRECT must be true for secret chats (they are always 1-on-1)
+```
+- Without IS_SECRET, re-entering secret chat from list → isSecret=false → no E2EE init
+- `chat.isSecret` from ChatInfo model (server-populated field)

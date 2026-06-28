@@ -56,6 +56,8 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     private val _tabFilter = MutableStateFlow("all")
     val tabFilter: StateFlow<String> = _tabFilter.asStateFlow()
 
+    private val locallyReadChats = mutableSetOf<String>()
+
     private var allChats: List<ChatInfo> = emptyList()
     private var syncJob: Job? = null
     private var nextCursor: String = ""
@@ -241,11 +243,16 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                         }
                     if (hasChanges || allChats.isEmpty()) {
                         val mergedChats = fetchedChats.map { serverChat ->
-                            val localChat = allChats.find { it.id == serverChat.id }
-                            if (localChat != null && localChat.unreadCount > serverChat.unreadCount) {
-                                serverChat.copy(unreadCount = localChat.unreadCount)
+                            if (serverChat.id in locallyReadChats) {
+                                locallyReadChats.remove(serverChat.id)
+                                serverChat.copy(unreadCount = 0)
                             } else {
-                                serverChat
+                                val localChat = allChats.find { it.id == serverChat.id }
+                                if (localChat != null && localChat.unreadCount > serverChat.unreadCount) {
+                                    serverChat.copy(unreadCount = localChat.unreadCount)
+                                } else {
+                                    serverChat
+                                }
                             }
                         }
                         allChats = mergedChats
@@ -519,15 +526,16 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     fun markAsRead(chatId: String) {
         val chat = allChats.find { it.id == chatId }
         Log.d(TAG, "markAsRead: chatId=$chatId name=${chat?.name} currentUnread=${chat?.unreadCount}")
+        locallyReadChats.add(chatId)
+        allChats = allChats.map {
+            if (it.id == chatId) it.copy(unreadCount = 0) else it
+        }
+        buildSections(allChats)
         viewModelScope.launch {
             try {
                 val username = SessionManager.session.value.username
                 GrpcClient.markRead(chatId, username) {
-                    allChats = allChats.map {
-                        if (it.id == chatId) it.copy(unreadCount = 0) else it
-                    }
-                    buildSections(allChats)
-                    Log.d(TAG, "markAsRead: chatId=$chatId — cleared to 0")
+                    Log.d(TAG, "markAsRead: chatId=$chatId — server confirmed")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to mark as read: $chatId", e)

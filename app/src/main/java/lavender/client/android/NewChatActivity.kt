@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
@@ -222,7 +224,11 @@ class NewChatActivity : AppCompatActivity() {
         searchDelegate.setupListeners()
 
         e2eeDelegate.configure(roomId, isSecret, toolbarDelegate.toolbarSubtitle)
+        e2eeDelegate.onKeyExchangeStart = {
+            toolbarDelegate.isE2eeInProgress = true
+        }
         e2eeDelegate.onKeyExchangeComplete = { success ->
+            toolbarDelegate.isE2eeInProgress = false
             if (success) {
                 inputDelegate.setSecretState(true)
                 runOnUiThread {
@@ -522,14 +528,47 @@ class NewChatActivity : AppCompatActivity() {
         loadDraft()
     }
 
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.chat_menu, menu)
+        return true
+    }
+
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        val inSelection = selectionDelegate.isInSelectionMode()
+        val callItem = menu.findItem(R.id.action_video_call)
+        val searchItem = menu.findItem(R.id.action_search)
+        val conferenceItem = menu.findItem(R.id.action_conference)
+        callItem?.isVisible = !inSelection && isDirect && !roomId.startsWith("favorites_") && !isSecret
+        conferenceItem?.isVisible = false
+        searchItem?.isVisible = !inSelection
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_video_call -> {
+                val other = toolbarDelegate.getOtherParticipant()
+                if (!other.isNullOrEmpty()) {
+                    lavender.client.android.data.calls.CallManager.initiateCall(other)
+                    lavender.client.android.data.calls.CallNavigator.startCall(this, other)
+                }
+                true
+            }
+            R.id.action_search -> {
+                searchDelegate.show()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
     fun handleIncomingE2EEMessage(msg: Message) {
         if (!msg.isE2EE || msg.e2eePayload.isEmpty()) return
         val decrypted = e2eeDelegate.decryptMessage(msg)
         if (decrypted != null) {
             val decryptedMsg = msg.copy(text = decrypted, isE2EE = false)
             runOnUiThread {
-                val current = grpcClient.messages.value.toMutableList()
-                current.add(decryptedMsg)
+                grpcClient.addLocalMessage(decryptedMsg)
             }
         }
     }

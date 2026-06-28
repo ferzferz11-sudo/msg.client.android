@@ -94,6 +94,14 @@ object GrpcClient {
         realGrpcClient.loadAllUsers(callback ?: {})
     }
 
+    fun getAdminUserList(query: String, cursor: String, limit: Int, sortBy: String, callback: (GetAdminUserListResponseProto) -> Unit) {
+        realGrpcClient.getAdminUserList(query, cursor, limit, sortBy, callback)
+    }
+
+    fun getAdminUserSessions(userId: String, callback: (GetAdminUserSessionsResponseProto) -> Unit) {
+        realGrpcClient.getAdminUserSessions(userId, callback)
+    }
+
     // ======= AuthService V2 (JWT) =======
 
     fun signInV2(

@@ -47,6 +47,7 @@ class ChatToolbarDelegate(
     private var chatAvatarUrl: String = ""
     private var chatFullAvatarUrl: String = ""
     private var isSecret: Boolean = false
+    var isE2eeInProgress: Boolean = false
 
     fun initViews() {
         toolbar = activity.findViewById(R.id.toolbar)
@@ -278,6 +279,23 @@ class ChatToolbarDelegate(
         val cg = android.graphics.Color.parseColor("#32E672") // holo_green_light equivalent
         toolbarSubtitle.isVisible = true
         toolbarSubtitle.setTypeface(null, android.graphics.Typeface.NORMAL)
+
+        if (isSecret) {
+            if (!isConnected) {
+                toolbarSubtitle.text = activity.getString(R.string.connecting)
+                toolbarSubtitle.setTextColor(cop)
+            } else if (isE2eeInProgress) {
+                toolbarSubtitle.text = activity.getString(R.string.e2ee_pending)
+                toolbarSubtitle.setTextColor(cop)
+            } else if (lavender.client.android.data.crypto.E2EEManager.isE2EEActive(activity, roomId)) {
+                toolbarSubtitle.text = activity.getString(R.string.e2ee_verified)
+                toolbarSubtitle.setTextColor(cg)
+            } else {
+                toolbarSubtitle.text = activity.getString(R.string.e2ee_enabled)
+                toolbarSubtitle.setTextColor(cop)
+            }
+            return
+        }
 
         when {
             !isConnected -> {
