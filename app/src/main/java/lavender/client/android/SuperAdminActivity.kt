@@ -163,6 +163,7 @@ class SuperAdminActivity : AppCompatActivity() {
                         putExtra("full_avatar_url", chat.fullAvatarUrl)
                         putExtra("creator", chat.creator)
                         putExtra("participants", chat.participants)
+                        putExtra("chat_name", chat.name)
                     }
                     startActivity(intent)
                 }

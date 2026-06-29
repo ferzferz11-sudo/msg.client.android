@@ -202,6 +202,7 @@ class ChatToolbarDelegate(
             putExtra("full_avatar_url", chatFullAvatarUrl)
             putExtra("participants", participantsJson)
             putExtra("creator", creator)
+            putExtra("chat_name", chatName)
         }
         activity.startActivity(intent)
     }

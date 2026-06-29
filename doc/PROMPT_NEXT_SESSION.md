@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.1.09 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-06-29
+**Версия:** v1.3.1.10 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-06-29
 
 ---
 
@@ -187,7 +187,41 @@ Secret Chats: E2EE via E2EEManager (ECDH + AES-256-GCM), key exchange with retry
 
 ---
 
-## Задачи — Следующая сессия (v1.3.1.10)
+## Итог сессии v1.3.1.10 (завершена)
+
+### Выполнено
+
+**1. Group info fix:**
+- `ProfileViewModel.loadGroupData()` — теперь принимает intent extras (participants, creator, avatarUrl, fullAvatarUrl, name) как fallback при пагинации `getChats()`
+- `ProfileActivity` — читает extras из intent и передаёт в `loadGroupData()`
+- `ChatToolbarDelegate.openProfile()` + `SuperAdminActivity` — добавлен `chat_name` extra
+
+**2. Call fix — WebRTC signaling:**
+- `CallManager.handleIncomingSignal()` — `RECEIVER_ID` = `signal.senderId` (UUID), `SENDER_NAME` = display name. Ранее `displayName` передавался как `receiverId` → WebRTC сигналы не доходили
+- `CallActivity` — `isCameraEnabled = true` по умолчанию; Accept включает камеру; `SENDER_NAME` для отображения имени
+
+**3. FCM VOIP_CALL fix:**
+- `LavenderMessagingService.handleIncomingCall()` — опрос `connectionStatus == READY` до 5 сек перед `startCallSession()`
+
+**4. BadTokenException fix:**
+- `ChatInputDelegate.showAttachmentSheet()` — `isFinishing/isDestroyed` guard + убрано кеширование `WidgetManager.getOrCreate`
+
+### Изменённые файлы
+
+| Файл | Изменение |
+|------|-----------|
+| `ProfileViewModel.kt` | `loadGroupData()` с intent extras fallback |
+| `ProfileActivity.kt` | Чтение extras + передача в loadGroupData |
+| `ChatToolbarDelegate.kt` | `chat_name` extra |
+| `SuperAdminActivity.kt` | `chat_name` extra |
+| `CallManager.kt` | `RECEIVER_ID` = UUID, `SENDER_NAME` = display name |
+| `CallActivity.kt` | `isCameraEnabled = true`, `SENDER_NAME`, Accept включает камеру |
+| `LavenderMessagingService.kt` | Ждёт `connectionStatus == READY` перед startCallSession |
+| `ChatInputDelegate.kt` | `isFinishing/isDestroyed` guard, убрано WidgetManager кеширование |
+
+---
+
+## Задачи — Следующая сессия (v1.3.1.11)
 
 ---
 

@@ -101,20 +101,40 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun loadGroupData(roomId: String) {
+    fun loadGroupData(
+        roomId: String,
+        intentParticipants: String = "",
+        intentCreator: String = "",
+        intentAvatarUrl: String = "",
+        intentFullAvatarUrl: String = "",
+        intentName: String = ""
+    ) {
+        val participants = try {
+            val arr = JSONArray(intentParticipants)
+            (0 until arr.length()).map { arr.getString(it) }
+        } catch (_: Exception) { emptyList() }
+
+        if (participants.isNotEmpty() || intentCreator.isNotEmpty()) {
+            _groupData.value = GroupData(
+                name = intentName, avatarUrl = intentAvatarUrl,
+                fullAvatarUrl = intentFullAvatarUrl, creator = intentCreator,
+                participants = participants, allowMembersToAdd = false
+            )
+        }
+
         viewModelScope.launch {
             val username = GrpcClient.getCurrentUsername() ?: return@launch
             GrpcClient.getChats(username) { page ->
                 val chat = page.chats.find { it.id == roomId }
                 if (chat != null) {
-                    val participants = try {
+                    val chatParticipants = try {
                         val arr = JSONArray(chat.participants)
                         (0 until arr.length()).map { arr.getString(it) }
                     } catch (_: Exception) { emptyList() }
                     _groupData.value = GroupData(
                         name = chat.name, avatarUrl = chat.avatarUrl,
                         fullAvatarUrl = chat.fullAvatarUrl, creator = chat.creator,
-                        participants = participants, allowMembersToAdd = chat.allowMembersToAdd
+                        participants = chatParticipants, allowMembersToAdd = chat.allowMembersToAdd
                     )
                 }
             }

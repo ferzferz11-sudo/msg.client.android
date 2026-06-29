@@ -63,8 +63,18 @@ object CallManager {
             CallMessageProto.Type.INITIATE -> {
                 if (_currentCall.value == null) {
                     _currentCall.value = signal
+                    val senderId = signal.senderId
                     val displayName = signal.senderName.takeIf { it.isNotEmpty() } ?: signal.senderId
-                    appContext?.let { CallNavigator.navigateToCall(it, signal.callId, displayName, true) }
+                    appContext?.let { ctx ->
+                        val intent = android.content.Intent(ctx, lavender.client.android.CallActivity::class.java).apply {
+                            putExtra("CALL_ID", signal.callId)
+                            putExtra("RECEIVER_ID", senderId)
+                            putExtra("SENDER_NAME", displayName)
+                            putExtra("IS_INCOMING", true)
+                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                        }
+                        ctx.startActivity(intent)
+                    }
                 } else {
                     Log.w(TAG, "Already in a call, ignoring INITIATE")
                 }

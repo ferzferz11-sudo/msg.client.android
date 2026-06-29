@@ -1,5 +1,31 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.10] - 2026-06-29
+
+### Group info fix + Call fix + Crash fix
+
+**Добавлено:**
+- Информация о групповом чате теперь корректно отображает участников, настройки и аватар — данные берутся из intent extras как fallback при недоступности сервера
+
+**Исправлено:**
+- Групповой чат: "Участники 0" и неработающие настройки — `ProfileViewModel.loadGroupData()` искал чат в пагинированном `getChats()` (limit=100), группа могла не попасть в первую страницу. Теперь используется fallback из intent extras (participants, creator, avatar)
+- Входящий звонок: `receiverId` передавался как `displayName` вместо UUID → WebRTC сигналы (OFFER/ANSWER/ICE) не доходили до абонента. Теперь `RECEIVER_ID` = UUID, `SENDER_NAME` = отображаемое имя
+- Входящий звонок: камера выключена по умолчанию → абоненты не видели друг друга. Теперь камера включена по умолчанию (включается при Accept для входящих)
+- FCM VOIP_CALL: `startCallSession()` вызывался до готовности gRPC канала → стрим не открывался. Теперь опрос `connectionStatus == READY` до 5 сек
+- `BadTokenException` в `ChatInputDelegate.showAttachmentSheet()` — `BottomSheet` показывался после уничтожения Activity. Добавлен `isFinishing/isDestroyed` guard + убрано кеширование через `WidgetManager.getOrCreate` (Activity-scoped sheets не должны кешироваться)
+
+**Изменено:**
+- `ProfileViewModel.kt` — `loadGroupData()` принимает intent extras как fallback (participants, creator, avatarUrl, fullAvatarUrl, name)
+- `ProfileActivity.kt` — читает extras из intent и передаёт в `loadGroupData()`; `onResume` также передаёт текущие данные
+- `ChatToolbarDelegate.kt` — добавлен `chat_name` extra в intent
+- `SuperAdminActivity.kt` — добавлен `chat_name` extra в intent
+- `CallManager.kt` — `handleIncomingSignal()`: `RECEIVER_ID` = `signal.senderId` (UUID), `SENDER_NAME` = display name
+- `CallActivity.kt` — `isCameraEnabled = true` по умолчанию; `SENDER_NAME` для отображения имени; Accept включает камеру
+- `LavenderMessagingService.kt` — `handleIncomingCall()` ждёт `connectionStatus == READY` перед `startCallSession()`
+- `ChatInputDelegate.kt` — `showAttachmentSheet()`: `isFinishing/isDestroyed` guard + убрано кеширование `WidgetManager`
+
+---
+
 ## [1.3.1.09] - 2026-06-29
 
 ### Admin panel fixes + Chat list online status + Favorites reactions fix

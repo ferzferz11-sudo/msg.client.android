@@ -13,6 +13,9 @@ import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import lavender.client.android.R
+import kotlinx.coroutines.*
+import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.calls.CallManager
 
 class LavenderMessagingService : FirebaseMessagingService() {
 
@@ -60,12 +63,19 @@ class LavenderMessagingService : FirebaseMessagingService() {
         val serverAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this)
             ?: "82.146.43.235"
 
-        // Ensure we are connected to receive signaling
-        lavender.client.android.data.grpc.GrpcClient.connect(serverAddress, context = applicationContext)
-        lavender.client.android.data.calls.CallManager.init(applicationContext)
-        lavender.client.android.data.grpc.GrpcClient.startCallSession()
+        CallManager.init(applicationContext)
+        GrpcClient.connect(serverAddress, context = applicationContext)
 
-        // Show a notification or launch a full-screen Intent for the call
+        CoroutineScope(Dispatchers.IO).launch {
+            for (i in 1..10) {
+                if (GrpcClient.connectionStatus.value == lavender.client.android.data.grpc.ConnectionStatus.READY) {
+                    GrpcClient.startCallSession()
+                    break
+                }
+                delay(500)
+            }
+        }
+
         showCallNotification(senderId, callId)
     }
 

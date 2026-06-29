@@ -56,6 +56,11 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var viewModel: ProfileViewModel
     private var isGroup: Boolean = false
     private var roomId: String = ""
+    private var intentParticipants: String = ""
+    private var intentCreator: String = ""
+    private var intentAvatarUrl: String = ""
+    private var intentFullAvatarUrl: String = ""
+    private var intentChatName: String = ""
     private var selectedAvatarUri: Uri? = null
     private var currentProfileAvatar: CircleImageView? = null
     private var participantsAdapter: ParticipantAdapter? = null
@@ -90,6 +95,11 @@ class ProfileActivity : AppCompatActivity() {
         val username = intent.getStringExtra("username") ?: ""
         isGroup = intent.getBooleanExtra("is_group", false)
         roomId = intent.getStringExtra("room_id") ?: ""
+        intentParticipants = intent.getStringExtra("participants") ?: ""
+        intentCreator = intent.getStringExtra("creator") ?: ""
+        intentAvatarUrl = intent.getStringExtra("avatar_url") ?: ""
+        intentFullAvatarUrl = intent.getStringExtra("full_avatar_url") ?: ""
+        intentChatName = intent.getStringExtra("chat_name") ?: ""
 
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -97,7 +107,7 @@ class ProfileActivity : AppCompatActivity() {
         toolbar.setNavigationOnClickListener { finish() }
 
         if (isGroup) {
-            viewModel.loadGroupData(roomId)
+            viewModel.loadGroupData(roomId, intentParticipants, intentCreator, intentAvatarUrl, intentFullAvatarUrl, intentChatName)
             setupGroupObservers()
         } else {
             viewModel.loadUserProfile(username)
@@ -113,7 +123,17 @@ class ProfileActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
-        if (isGroup && roomId.isNotEmpty()) viewModel.loadGroupData(roomId)
+        if (isGroup && roomId.isNotEmpty()) {
+            val data = viewModel.groupData.value
+            viewModel.loadGroupData(
+                roomId,
+                intentParticipants.ifEmpty { try { org.json.JSONArray(data.participants).toString() } catch (_: Exception) { "" } },
+                intentCreator.ifEmpty { data.creator },
+                intentAvatarUrl.ifEmpty { data.avatarUrl },
+                intentFullAvatarUrl.ifEmpty { data.fullAvatarUrl },
+                intentChatName.ifEmpty { data.name }
+            )
+        }
     }
 
     override fun onPause() {

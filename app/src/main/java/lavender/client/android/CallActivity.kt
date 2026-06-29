@@ -37,7 +37,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     private var roomId: String = ""
     
     private var isMicEnabled = true
-    private var isCameraEnabled = false
+    private var isCameraEnabled = true
 
     private val eglBase = EglBase.create()
     private var isRemoteViewInitialized = false
@@ -69,6 +69,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         isIncoming = intent.getBooleanExtra("IS_INCOMING", false)
         isConference = intent.getBooleanExtra("IS_CONFERENCE", false)
         roomId = intent.getStringExtra("ROOM_ID") ?: ""
+        val senderName = intent.getStringExtra("SENDER_NAME") ?: ""
 
         CallManager.init(applicationContext)
         if (isConference) {
@@ -92,13 +93,14 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         }
         GrpcClient.startCallSession()
 
-        binding.tvCallerName.text = if (isConference) getString(R.string.group_conference) else receiverId
+        binding.tvCallerName.text = if (isConference) getString(R.string.group_conference) else senderName.ifEmpty { receiverId }
         if (!isConference) loadOtherParticipantAvatar()
 
         if (isIncoming && !isConference) {
             binding.btnAccept.visibility = View.VISIBLE
             binding.btnMic.visibility = View.GONE
             binding.btnCamera.visibility = View.GONE
+            isCameraEnabled = false
         }
 
         if (hasPermissions()) {
@@ -189,6 +191,8 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             receiverId = intent.getStringExtra("RECEIVER_ID") ?: ""
             isIncoming = intent.getBooleanExtra("IS_INCOMING", false)
             isConference = intent.getBooleanExtra("IS_CONFERENCE", false)
+            val senderName = intent.getStringExtra("SENDER_NAME") ?: ""
+            binding.tvCallerName.text = if (isConference) getString(R.string.group_conference) else senderName.ifEmpty { receiverId }
             
             if (isConference) CallManager.joinConference(roomId)
             else CallManager.syncCallState(callId, receiverId, isIncoming)
@@ -211,6 +215,8 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             binding.btnAccept.visibility = View.GONE
             binding.btnMic.visibility = View.VISIBLE
             binding.btnCamera.visibility = View.VISIBLE
+            isCameraEnabled = true
+            binding.btnCamera.setImageResource(R.drawable.ic_videocam_on)
             initWebRtc()
             CallManager.acceptCall()
         }

@@ -103,3 +103,12 @@ Lavender Messenger — Android client. Kotlin, gRPC, AI v2 marketplace, secret c
 - **Coroutine scope leaks (v1.3.1.08)**: `CoroutineScope` inside method creates orphaned scopes. Store as class property, cancel previous job.
 - **SimpleDateFormat performance (v1.3.1.08)**: Created per bind in MessageAdapter. Cache via `ThreadLocal<SimpleDateFormat>`.
 - **Debounce pattern (v1.3.1.08)**: `buildSections()` and `markRead` now debounced to coalesce rapid updates into single execution.
+
+## v1.3.1.09
+
+- **Admin panel lastSeenAt fix**: `SuperAdminAdapter.bindAdmin()` was using `user.lastMessageTime` (last message sent) instead of `user.lastSeenAt` (last login). Two distinct fields in `AdminUserInfoProto`. Fixed to use `lastSeenAt`.
+- **Admin panel pull-to-refresh**: `SuperAdminActivity.loadData()` now calls `adapter.clearExpanded()` to reset `expandedUsers` + `userSessions` maps on refresh.
+- **Chat list online status + last seen**: Online dot (🟢/⚪) and last seen time for direct chats. Data from `GrpcClient.users` (ONLINE_USERS_UPDATE) and `GrpcClient.allUsers` (GetAllUsers). Only for `type == "direct"`, `!isSecret`, non-favorites.
+- **Favorites reactions fix**: Server `SetReactionV2` returned `success=false` for Favorites messages due to UUID mismatch. Server fix: `SetReactionV2` now correctly finds messages by ID. Client fix: `loadHistoryV2` merge falls back to `getContentHash()` when `getMessageHash()` (by ID) doesn't match.
+- **Content hash fallback merge**: `loadHistoryV2` now uses `getContentHash(user:text:timestamp)` as fallback when message IDs differ between cache and server (e.g., Favorites copies with new UUIDs).
+- **Admin panel "unknown" IP filter**: `ipAddress == "unknown"` now hidden in session display.

@@ -34,7 +34,7 @@ import lavender.client.android.ui.audio.AudioRecordingView
 import lavender.client.android.ui.widget.ActionBottomSheet
 import lavender.client.android.ui.widget.SheetAction
 import lavender.client.android.ui.widget.StandardBottomSheet
-import lavender.client.android.ui.widget.WidgetManager
+
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.data.ThemeMappers
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -356,7 +356,8 @@ class ChatInputDelegate(
     // ======= Attachments =======
 
     fun showAttachmentSheet() {
-        WidgetManager.getOrCreate("attachment_sheet") { ActionBottomSheet(activity) }
+        if (activity.isFinishing || activity.isDestroyed) return
+        ActionBottomSheet(activity)
             .setActions(listOf(
                 SheetAction(R.id.attachCamera, R.drawable.ic_mic, activity.getString(R.string.attach_camera)) {
                     if (androidx.core.content.ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
