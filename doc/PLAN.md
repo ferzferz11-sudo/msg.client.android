@@ -1,6 +1,6 @@
 # Lavender Messenger — Plan
 
-**Version:** v1.1.3.42 | **Branch:** feat/1.1.3.x | **Updated:** 2026-06-21
+**Version:** v1.1.3.44 | **Branch:** feat/1.1.3.x-v1compat | **Updated:** 2026-06-29
 
 ---
 
@@ -71,6 +71,19 @@
 ### Компиляция
 - ✅ deployAgentTaskStream в HermesChatUseCase
 - ✅ Scope leak retryDelay в OwlChatUseCase
+
+---
+
+## Completed — v1.1.3.44 (v1/v2 Negotiation Tests)
+
+### Unit Tests (~220 total, was 199)
+- ✅ ServerConfigTest (20 tests) — PROD/DEV endpoints, port mapping, `findKnown()`, `isDevServer()`
+- ✅ ProfileClientTest (17 tests) — `isChatV2Supported()` / `isProfileV2Supported()` for v1, v2, edge cases
+
+### v1/v2 Architecture
+- ✅ Line B branch `feat/1.1.3.x-v1compat` — separates v1 (prod) and v2 (dev) code paths
+- ✅ Capability negotiation via `fetchServerInfo()` + `isChatV2Supported()` guard
+- ✅ Backward-compatible with prod server (v1 mode) and dev server (v2 mode)
 
 ---
 
