@@ -65,11 +65,11 @@
         android:visibility="gone">
         <ImageView
             style="@style/MenuActionIconStyle"
-            android:contentDescription="@string/action_super_admin"
+            android:contentDescription="@string/admin_panel"
             android:src="@android:drawable/ic_lock_lock" />
         <TextView
             style="@style/MenuActionTextStyle"
-            android:text="@string/action_super_admin" />
+            android:text="@string/admin_panel" />
     </LinearLayout>
 
     <LinearLayout

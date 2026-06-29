@@ -2,6 +2,9 @@ package lavender.client.android.ui.chat.message
 
 import android.app.Activity
 import android.widget.TextView
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.crypto.E2EEManager
 import lavender.client.android.data.grpc.GrpcClient
@@ -48,7 +51,12 @@ class ChatE2EEDelegate(
                     android.util.Log.d("E2EE", "Key exchange pending (attempt $retryCount/$maxRetries): success=$success, peerHasKey=$peerHasKey")
                     if (retryCount < maxRetries) {
                         onKeyExchangeStart?.invoke()
-                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ initE2EE() }, 3000)
+                        (activity as? androidx.appcompat.app.AppCompatActivity)?.lifecycleScope?.launch {
+                            delay(3000)
+                            if (!activity.isFinishing && !activity.isDestroyed) {
+                                initE2EE()
+                            }
+                        }
                     } else {
                         android.util.Log.w("E2EE", "Key exchange failed after $maxRetries attempts for chat: $roomId")
                     }

@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.1.07 | **Updated:** 2026-06-29
+**Version:** v1.3.1.08 | **Updated:** 2026-06-29
 
 ---
 
@@ -716,4 +716,84 @@ UI handling:
   ├── "SERVER_ERROR" → "Server is temporarily unavailable"
   ├── "CONNECTION_FAILED" → "Connection failed"
   └── "USER_NOT_FOUND" → "User not found"
+```
+
+---
+
+## v1.3.1.08
+
+### Thread Safety Pattern (v1.3.1.08)
+```
+Singleton fields accessed from multiple threads:
+  ├── Simple fields: @Volatile annotation (JVM memory visibility guarantee)
+  │   ├── currentUsername, currentUserId — written from gRPC callbacks
+  │   ├── requestObserver, chatV2RequestObserver — written from main, read from gRPC
+  │   └── isRetrying, lastChatRequest — written from coroutines
+  └── Collections: ConcurrentHashMap / ConcurrentHashMap.newKeySet()
+      ├── avatarCache, fullAvatarCache — ConcurrentHashMap<String, String>
+      ├── deletedMessageHashes, pendingReads — ConcurrentHashMap.newKeySet()
+      └── locallyReadChats (ChatListViewModel) — ConcurrentHashMap.newKeySet()
+```
+
+### Coroutine over Thread Pattern (v1.3.1.08)
+```
+BAD:  Thread { while(running) { doWork(); Thread.sleep(3000) } }.start()
+GOOD: scope.launch { while(isActive) { doWork(); delay(3000) } }
+
+Benefits:
+  — Auto-cancels when scope is cancelled (lifecycle-aware)
+  — No Thread.sleep blocking
+  — Structured concurrency: parent scope tracks child jobs
+  — No unmanaged thread leaks
+
+Known sites fixed:
+  — CallSoundManager: dial tone loop
+  — ChatE2EEDelegate: E2EE retry delay
+```
+
+### Lifecycle-Safe Delay Pattern (v1.3.1.08)
+```
+BAD:  Handler(Looper.getMainLooper()).postDelayed({ doWork() }, 3000)
+GOOD: lifecycleScope.launch {
+          delay(3000)
+          if (!activity.isFinishing && !activity.isDestroyed) doWork()
+      }
+
+Benefits:
+  — Auto-cancels on Activity destroy (no leak)
+  — No Handler/Runnable object allocation
+  — isFinishing/isDestroyed guard for extra safety
+```
+
+### Debounced State Update Pattern (v1.3.1.08)
+```
+ChatListViewModel
+  ├── scheduleBuildSections()
+  │   ├── Cancel previous job: buildSectionsJob?.cancel()
+  │   ├── Launch new job with 50ms delay
+  │   └── Only the last update actually runs
+  └── scheduleMarkRead(roomId, username)
+      ├── Cancel previous job: markReadJob?.cancel()
+      ├── Store pending values
+      ├── Launch new job with 1s delay
+      └── Coalesces rapid markRead calls into one gRPC request
+
+Pattern:
+  private var job: Job? = null
+  fun schedule() {
+      job?.cancel()
+      job = scope.launch { delay(DEBOUNCE_MS); doWork() }
+  }
+```
+
+### Targeted RecyclerView Notification Pattern (v1.3.1.08)
+```
+BAD:  notifyItemRangeChanged(0, itemCount)  // rebinds ALL visible items
+GOOD: for (i in 0 until itemCount) {
+          if (itemChanged(i)) notifyItemChanged(i)
+      }
+
+Used in MessageAdapter:
+  — setSearchHighlight: only rebinds items matching old/new query
+  — updatePinnedMessages: only rebinds items whose pin status changed
 ```

@@ -1,5 +1,50 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.08] - 2026-06-29
+
+### Stability fixes + Performance optimizations + UX improvements
+
+**Добавлено:**
+- Избранное перемещено первым пунктом в шторке профиля (было вторым)
+- Звёздочка Избранного в toolbar чат-листа — кнопка `ic_star` справа от заголовка, скрывается в режиме выбора
+- Авто-выход при невалидном токене — если `loadChats()` возвращает ошибку авторизации (`UNAUTHENTICATED`/`PERMISSION_DENIED`/`INTERNAL`) с пустым списком чатов, пользователь автоматически перенаправляется на экран входа (помогает клиентам, обновившимся со старых версий)
+- Строка `session_expired` (EN + RU)
+
+**Исправлено (Stability):**
+- Thread-unsafe singleton fields в `RealGrpcClient` — `currentUsername`, `currentUserId`, `requestObserver`, `chatV2RequestObserver`, `isRetrying`, `lastChatRequest` не имели `@Volatile`, что могло привести к race condition между gRPC callback и main thread
+- Thread-unsafe коллекции в `RealGrpcClient` — `avatarCache`, `fullAvatarCache`, `deletedMessageHashes`, `pendingReads` были обычными `mutableMapOf`/`mutableSetOf`, заменены на `ConcurrentHashMap` и `ConcurrentHashMap.newKeySet()`
+- `runBlocking` на main thread в `ChatListToolbar` — заменён на `lifecycleScope.launch { withContext(IO) }` для очистки кеша
+- Handler lifecycle leak в `ChatE2EEDelegate` — `Handler.postDelayed` заменён на `lifecycleScope.launch { delay() }` с проверкой `isFinishing`/`isDestroyed`
+- Unmanaged Thread в `CallSoundManager` — `Thread { while(...) { Thread.sleep() } }` заменён на coroutine с `delay()`, `toneGenerator` сделан `@Volatile`, добавлен `destroy()` для полной очистки
+- Coroutine scope leak в `AIBottomSheet` — `CoroutineScope` создавался заново при каждом вызове `loadPresetAgents()`, теперь используется class-level `agentScope`
+- Thread-unsafe `locallyReadChats` в `ChatListViewModel` — заменён на `ConcurrentHashMap.newKeySet()`
+
+**Оптимизовано (Performance):**
+- ChatListViewModel: объединены 2 копии списка в 1 при обновлении чата на новое сообщение (~50% меньше аллокаций)
+- `buildSections()` debounce 50ms — пакетная обработка вместо каскадных вызовов при массовых обновлениях
+- MessageAdapter: `SimpleDateFormat` кеширован через `ThreadLocal` вместо создания нового экземпляра на каждый bind
+- MessageAdapter: `setSearchHighlight` и `updatePinnedMessages` теперь обновляют только затронутые элементы вместо `notifyItemRangeChanged(0, itemCount)` (~95% меньше rebinds)
+- `markRead` debounce 1s — одна gRPC-запроса вместо одной на каждое входящее сообщение
+
+**Изменено:**
+- `RealGrpcClient.kt` — `@Volatile` на 6 singleton fields, `ConcurrentHashMap` для 4 коллекций, `scheduleMarkRead()` debounce
+- `ChatListToolbar.kt` — `runBlocking` → `lifecycleScope.launch`
+- `ChatE2EEDelegate.kt` — `Handler.postDelayed` → `lifecycleScope.launch { delay() }`
+- `CallSoundManager.kt` — Thread → coroutine, `@Volatile toneGenerator`, `destroy()` method
+- `CallActivity.kt` — `soundManager.stop()` → `soundManager.destroy()`
+- `AIBottomSheet.kt` — class-level `agentScope` вместо per-call scope
+- `ChatListViewModel.kt` — `locallyReadChats` → `ConcurrentHashMap.newKeySet()`, combined list copy, `scheduleBuildSections()` debounce
+- `MessageAdapter.kt` — `ThreadLocal<SimpleDateFormat>`, targeted `notifyItemChanged`
+- `bottom_sheet_user_menu.xml` — Favorites перемещён выше Contacts
+- `activity_chat_list.xml` — добавлена `ivFavorites` кнопка в toolbar
+- `ChatListActivity.kt` — +`ivFavorites` field, click handler, force logout observer
+- `ChatListActionMode.kt` — hide/show `ivFavorites` в enter/exit selection mode
+- `ChatListViewModel.kt` — +`forceLogoutEvent` SharedFlow, auth error detection в `loadChats()`
+- `GrpcChatClient.kt` — `ChatListPage` +`error` field, `getChats` передаёт gRPC error status
+- `strings.xml` (EN + RU) — +`session_expired`
+
+---
+
 ## [1.3.1.07] - 2026-06-29
 
 ### Reactions fix + Message dedup + AI chat deletion + Error handling

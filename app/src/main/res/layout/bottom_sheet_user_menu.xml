@@ -106,18 +106,6 @@
         android:layout_marginBottom="16dp" />
 
     <LinearLayout
-        android:id="@+id/actionContacts"
-        style="@style/MenuActionItemStyle">
-        <ImageView
-            style="@style/MenuActionIconStyle"
-            android:contentDescription="@string/contacts"
-            android:src="@drawable/ic_contacts" />
-        <TextView
-            style="@style/MenuActionTextStyle"
-            android:text="@string/contacts" />
-    </LinearLayout>
-
-    <LinearLayout
         android:id="@+id/actionFavorites"
         style="@style/MenuActionItemStyle">
         <ImageView
@@ -127,6 +115,31 @@
         <TextView
             style="@style/MenuActionTextStyle"
             android:text="@string/favorites" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/actionAdmin"
+        style="@style/MenuActionItemStyle"
+        android:visibility="gone">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:contentDescription="@string/admin_panel"
+            android:src="@android:drawable/ic_lock_lock" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/admin_panel" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/actionContacts"
+        style="@style/MenuActionItemStyle">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:contentDescription="@string/contacts"
+            android:src="@drawable/ic_contacts" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/contacts" />
     </LinearLayout>
 
     <LinearLayout

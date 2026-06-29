@@ -1,11 +1,13 @@
 package lavender.client.android.ui.chatlist
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
@@ -81,6 +83,7 @@ class ChatListActivity : AppCompatActivity() {
     internal var tvToolbarSubtitle: TextView? = null
     internal var ivToolbarUserAvatar: ImageView? = null
     internal var llToolbarTitleContainer: android.widget.LinearLayout? = null
+    internal var ivFavorites: ImageView? = null
 
     // ActionMode
     internal var isSelectionMode = false
@@ -150,9 +153,23 @@ class ChatListActivity : AppCompatActivity() {
         tvToolbarSubtitle = findViewById(R.id.tvToolbarSubtitle)
         ivToolbarUserAvatar = findViewById(R.id.ivToolbarUserAvatar)
         llToolbarTitleContainer = findViewById(R.id.llToolbarTitleContainer)
+        ivFavorites = findViewById(R.id.ivFavorites)
         tabLayout = findViewById(R.id.tabLayout)
         swipeRefresh = findViewById(R.id.srlChatList)
         rvChatList = findViewById(R.id.rvChatList)
+
+        // Favorites button
+        ivFavorites?.setOnClickListener {
+            val favoritesChat = lavender.client.android.data.models.ChatInfo(
+                id = "favorites_$username",
+                name = getString(lavender.client.android.R.string.favorites),
+                type = "favorites",
+                lastMessageText = "",
+                lastMessageTime = 0L
+            )
+            navigateToChat(favoritesChat, username)
+        }
+        ivFavorites?.visibility = android.view.View.VISIBLE
 
         // Set title
         tvToolbarTitle?.text = getString(R.string.chats)
@@ -356,6 +373,17 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun setupRecyclerView(username: String) {
         viewModel = ChatListViewModel(application)
+
+        // Observe force logout event (auth error with empty chat list)
+        lifecycleScope.launch {
+            viewModel.forceLogoutEvent.collect { error ->
+                Log.w("ChatListActivity", "Force logout triggered: $error")
+                Toast.makeText(this@ChatListActivity, R.string.session_expired, Toast.LENGTH_LONG).show()
+                lavender.client.android.data.session.SessionManager.logout(this@ChatListActivity)
+                finish()
+                startActivity(Intent(this@ChatListActivity, lavender.client.android.SplashActivity::class.java))
+            }
+        }
 
         chatAdapter = ChatAdapter(
             scope = lifecycleScope,

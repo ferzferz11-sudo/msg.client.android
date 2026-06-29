@@ -6,23 +6,31 @@ import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.media.ToneGenerator
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 /**
  * Handles playing ringtones for incoming calls and dial tones for outgoing calls.
  */
-class CallSoundManager(private val context: Context) {
+class CallSoundManager(context: Context) {
+    private val appContext = context.applicationContext
     private var mediaPlayer: MediaPlayer? = null
-    private var toneGenerator: ToneGenerator? = null
+    @Volatile private var toneGenerator: ToneGenerator? = null
+    private var dialToneJob: Job? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val TAG = "CallSoundManager"
 
-    /**
-     * Plays the default system ringtone for incoming calls.
-     */
     fun startRingtone() {
         stop()
         try {
             val notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-            mediaPlayer = MediaPlayer.create(context, notification)
+            mediaPlayer = MediaPlayer.create(appContext, notification)
             mediaPlayer?.isLooping = true
             mediaPlayer?.start()
         } catch (e: Exception) {
@@ -30,27 +38,20 @@ class CallSoundManager(private val context: Context) {
         }
     }
 
-    /**
-     * Plays a dial tone or calling sound for outgoing calls.
-     */
     fun startDialTone() {
         stop()
         try {
-            // Using ToneGenerator for a professional "calling" sound
             toneGenerator = ToneGenerator(AudioManager.STREAM_VOICE_CALL, 80)
-            Thread {
+            dialToneJob = scope.launch {
                 try {
-                    while (toneGenerator != null) {
+                    while (isActive && toneGenerator != null) {
                         toneGenerator?.startTone(ToneGenerator.TONE_SUP_RINGTONE, 1000)
-                        Thread.sleep(3000)
+                        delay(3000)
                     }
-                } catch (e: InterruptedException) {
-                    // Stop requested
-                }
-            }.start()
+                } catch (_: Exception) {}
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start dial tone", e)
-            // Fallback to notification sound if ToneGenerator fails
             startFallbackDialTone()
         }
     }
@@ -58,23 +59,30 @@ class CallSoundManager(private val context: Context) {
     private fun startFallbackDialTone() {
         try {
             val notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            mediaPlayer = MediaPlayer.create(context, notification)
+            mediaPlayer = MediaPlayer.create(appContext, notification)
             mediaPlayer?.isLooping = true
             mediaPlayer?.start()
         } catch (_: Exception) {}
     }
 
     fun stop() {
+        dialToneJob?.cancel()
+        dialToneJob = null
         try {
             mediaPlayer?.stop()
             mediaPlayer?.release()
             mediaPlayer = null
-            
+
             toneGenerator?.stopTone()
             toneGenerator?.release()
             toneGenerator = null
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping sounds", e)
         }
+    }
+
+    fun destroy() {
+        stop()
+        scope.cancel()
     }
 }

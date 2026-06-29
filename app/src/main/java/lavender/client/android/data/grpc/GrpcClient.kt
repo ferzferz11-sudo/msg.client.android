@@ -40,6 +40,8 @@ object GrpcClient {
     val chatDeletedEvent: StateFlow<String?> = realGrpcClient.chatDeletedEvent
     val serverShuttingDown: StateFlow<Boolean> = realGrpcClient.serverShuttingDown
     val callSignals: SharedFlow<CallMessageProto> = realGrpcClient.callSignals
+
+    fun setSuperAdmin(value: Boolean) { realGrpcClient._isSuperAdmin.value = value }
     val newMessageEvent: SharedFlow<Message> = realGrpcClient.newMessageEvent
     val readReceiptEvent: SharedFlow<Pair<String, String>> = realGrpcClient.readReceiptEvent
     val avatarCacheFlow = realGrpcClient.avatarCacheFlow

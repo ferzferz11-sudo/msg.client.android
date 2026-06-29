@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.1.08 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-06-29
+**Версия:** v1.3.1.09 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-06-29
 
 ---
 
@@ -141,7 +141,42 @@ Secret Chats: E2EE via E2EEManager (ECDH + AES-256-GCM), key exchange with retry
 
 ---
 
-## Задачи — Следующая сессия (v1.3.1.08)
+## Итог сессии v1.3.1.08 (завершена)
+
+### Выполнено
+
+**1. Stability fixes (7 issues):**
+- `@Volatile` на 6 singleton fields в `RealGrpcClient` — `currentUsername`, `currentUserId`, `requestObserver`, `chatV2RequestObserver`, `isRetrying`, `lastChatRequest`
+- `ConcurrentHashMap` для thread-unsafe коллекций — `avatarCache`, `fullAvatarCache`, `deletedMessageHashes`, `pendingReads`
+- `runBlocking` → `lifecycleScope.launch` в `ChatListToolbar` (очистка кеша)
+- `Handler.postDelayed` → `lifecycleScope.launch { delay() }` в `ChatE2EEDelegate`
+- Unmanaged `Thread` → coroutine в `CallSoundManager`, `@Volatile toneGenerator`, `destroy()` method
+- Coroutine scope leak в `AIBottomSheet` — class-level `agentScope`
+- `locallyReadChats` → `ConcurrentHashMap.newKeySet()` в `ChatListViewModel`
+
+**2. Performance optimizations (5 items):**
+- Combined list copy в message handler (~50% меньше аллокаций)
+- `buildSections()` debounce 50ms
+- `SimpleDateFormat` cached via `ThreadLocal`
+- Targeted `notifyItemChanged` для search/pinned (~95% меньше rebinds)
+- `markRead` debounce 1s (одна gRPC-запроса вместо спама)
+
+### Изменённые файлы (клиент)
+
+| Файл | Изменение |
+|------|-----------|
+| `RealGrpcClient.kt` | `@Volatile` на 6 fields, `ConcurrentHashMap` для 4 коллекций, `scheduleMarkRead()` |
+| `ChatListToolbar.kt` | `runBlocking` → `lifecycleScope.launch` |
+| `ChatE2EEDelegate.kt` | `Handler.postDelayed` → `lifecycleScope.launch { delay() }` |
+| `CallSoundManager.kt` | Thread → coroutine, `@Volatile`, `destroy()` |
+| `CallActivity.kt` | `soundManager.destroy()` |
+| `AIBottomSheet.kt` | Class-level `agentScope` |
+| `ChatListViewModel.kt` | `locallyReadChats` thread-safe, combined list copy, `scheduleBuildSections()` |
+| `MessageAdapter.kt` | `ThreadLocal<SimpleDateFormat>`, targeted notifyItemChanged |
+
+---
+
+## Задачи — Следующая сессия (v1.3.1.09)
 
 ---
 

@@ -351,7 +351,7 @@
     <string name="users_are_typing">%1$d чел. печатают…</string>
     <string name="action_update">Проверка обновлений</string>
     <string name="action_about">О программе</string>
-    <string name="action_super_admin">Админ панель</string>
+    <string name="admin_panel">Админ панель</string>
     <string name="favorites">Избранное</string>
     <string name="no_favorites_yet">Избранного пока нет</string>
     <string name="added_to_favorites">Добавлено в Избранное</string>
@@ -400,6 +400,7 @@
     <string name="user_not_found">Пользователь не найден</string>
     <string name="wrong_password">Неверное имя пользователя или пароль</string>
     <string name="server_error">Сервер временно недоступен. Попробуйте позже</string>
+    <string name="session_expired">Сессия истекла. Войдите заново</string>
     <string name="register_confirm">Пользователь \"%s\" не зарегистрирован. Хотите создать новую учетную запись?</string>
     <string name="preset_colors">Готовые цвета</string>
     <string name="custom_color">Свой цвет</string>

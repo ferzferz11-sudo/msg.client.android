@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.1.07 | **Updated:** 2026-06-29
+**Version:** v1.3.1.08 | **Updated:** 2026-06-29
 
 ---
 

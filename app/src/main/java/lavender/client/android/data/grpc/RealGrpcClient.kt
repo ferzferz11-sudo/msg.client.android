@@ -108,12 +108,12 @@ object RealGrpcClient {
     private var backgroundStartTime: Long = 0
 
     // ====== Avatar cache (must be declared before module initialization) ======
-    private val avatarCache = mutableMapOf<String, String>()
-    private val fullAvatarCache = mutableMapOf<String, String>()
+    private val avatarCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val fullAvatarCache = java.util.concurrent.ConcurrentHashMap<String, String>()
     val avatarCacheFlow = MutableStateFlow<Map<String, String>>(emptyMap())
 
-    private val deletedMessageHashes = mutableSetOf<String>()
-    private val pendingReads = mutableSetOf<String>()
+    private val deletedMessageHashes: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    private val pendingReads: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     // ====== Module: Connection Manager ======
     private val connectionManager = GrpcConnectionManager(
@@ -247,13 +247,13 @@ object RealGrpcClient {
 
     // ====== State (kept in orchestrator) ======
     internal var appContext: Context? = null
-    private var currentUsername: String? = null
-    private var currentUserId: String? = null
-    private var requestObserver: StreamObserver<MessageProto>? = null
-    private var chatV2RequestObserver: StreamObserver<ChatV2MessageProto>? = null
+    @Volatile private var currentUsername: String? = null
+    @Volatile private var currentUserId: String? = null
+    @Volatile private var requestObserver: StreamObserver<MessageProto>? = null
+    @Volatile private var chatV2RequestObserver: StreamObserver<ChatV2MessageProto>? = null
     private var lastAuthWasJwt: Boolean = false
-    private var isRetrying = false
-    private var lastChatRequest: LastChatRequest? = null
+    @Volatile private var isRetrying = false
+    @Volatile private var lastChatRequest: LastChatRequest? = null
     private data class LastChatRequest(
         val roomId: String, val cb: (Message) -> Unit
     )
@@ -577,7 +577,7 @@ object RealGrpcClient {
                         }
                         val myUsername = currentUsername ?: ""
                         if (msg.user.isNotEmpty() && msg.user != myUsername) {
-                            markRead(currentRoomId, myUsername, null)
+                            scheduleMarkRead(currentRoomId, myUsername)
                         }
                     }
                     onMessageReceived(msg)
@@ -667,6 +667,24 @@ object RealGrpcClient {
         }
     }
     fun clearMessages() { _messages.value = emptyList() }
+
+    private var markReadJob: kotlinx.coroutines.Job? = null
+    private var pendingMarkReadRoom: String? = null
+    private var pendingMarkReadUser: String? = null
+    private fun scheduleMarkRead(roomId: String, username: String) {
+        pendingMarkReadRoom = roomId
+        pendingMarkReadUser = username
+        markReadJob?.cancel()
+        markReadJob = scope.launch {
+            kotlinx.coroutines.delay(1000)
+            val rid = pendingMarkReadRoom ?: return@launch
+            val u = pendingMarkReadUser ?: return@launch
+            pendingMarkReadRoom = null
+            pendingMarkReadUser = null
+            markRead(rid, u, null)
+        }
+    }
+
     fun markRead(rid: String, u: String, onComp: (() -> Unit)?) {
         appContext?.let { lavender.client.android.data.fcm.LavenderMessagingService.dismissNotificationsForRoom(it, rid) }
         val channel = getChannel()

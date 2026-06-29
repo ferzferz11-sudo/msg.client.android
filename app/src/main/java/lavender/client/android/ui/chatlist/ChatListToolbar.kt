@@ -15,7 +15,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import lavender.client.android.EditProfileActivity
 import lavender.client.android.ContactsActivity
 import lavender.client.android.R
@@ -62,6 +62,24 @@ internal fun showSettingsSheet(activity: ChatListActivity, onBack: (() -> Unit)?
 
     sheet.findViewById<TextView>(R.id.menuUsername)?.text = username
 
+    // Fetch admin status if not yet known (fallback for old version upgrades)
+    if (!SessionManager.session.value.isSuperAdmin) {
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            try {
+                val profile = lavender.client.android.data.grpc.ProfileClient.getProfile(activity)
+                if (profile != null && profile.isSuperAdmin) {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        lavender.client.android.data.grpc.GrpcClient.setSuperAdmin(true)
+                        activity.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
+                            .edit { putBoolean("is_super_admin", true) }
+                        // Update admin panel visibility if sheet is still showing
+                        sheet.findViewById<View>(R.id.actionAdmin)?.isVisible = true
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
     sheet.findViewById<View>(R.id.actionShareHeader)?.setOnClickListener {
         sheet.dismiss()
         shareApp(activity)
@@ -94,6 +112,20 @@ internal fun showSettingsSheet(activity: ChatListActivity, onBack: (() -> Unit)?
             lastMessageTime = 0L
         )
         activity.navigateToChat(favoritesChat, username)
+    }
+
+    // Admin panel — show for super admins
+    val adminPanel = sheet.findViewById<View>(R.id.actionAdmin)
+    if (adminPanel != null) {
+        val isSuperAdmin = SessionManager.session.value.isSuperAdmin
+        adminPanel.isVisible = isSuperAdmin
+        adminPanel.setOnClickListener {
+            activity.isNavigatingDeeper = true
+            sheet.dismiss()
+            activity.settingsActivityLauncher.launch(
+                Intent(activity, lavender.client.android.SuperAdminActivity::class.java)
+            )
+        }
     }
 
     sheet.findViewById<View>(R.id.actionThemes)?.setOnClickListener {
@@ -158,13 +190,15 @@ internal fun showAdditionalSettingsSheet(activity: ChatListActivity, onBack: (()
 
     sheet.findViewById<View>(R.id.actionClearCache)?.setOnClickListener {
         sheet.dismiss()
-        try {
-            runBlocking(Dispatchers.IO) {
-                CacheUtils.clearAllWithGlide(activity)
+        activity.lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    CacheUtils.clearAllWithGlide(activity)
+                }
+                Toast.makeText(activity, R.string.cache_cleared, Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                android.util.Log.e("ChatListActivity", "Error clearing cache", e)
             }
-            Toast.makeText(activity, R.string.cache_cleared, Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            android.util.Log.e("ChatListActivity", "Error clearing cache", e)
         }
     }
 

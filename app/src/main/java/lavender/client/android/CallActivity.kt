@@ -412,7 +412,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     override fun onDestroy() {
         super.onDestroy()
         cancelConnectionTimeout()
-        soundManager.stop()
+        soundManager.destroy()
         audioModeManager.restoreMode()
         CallManager.clearCurrentCall()
         binding.localView.release()

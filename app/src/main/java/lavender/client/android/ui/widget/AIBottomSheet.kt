@@ -41,6 +41,7 @@ class AIBottomSheet(
     private var isLoadingAgents = true
     private val agentCheckBoxes = mutableListOf<Pair<AiV2Agent, ImageView>>()
     private var agentLoadJob: Job? = null
+    private val agentScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var summaryText: TextView? = null
     private var createChatButtonView: View? = null
     private var footerContainer: android.widget.LinearLayout? = null
@@ -67,8 +68,7 @@ class AIBottomSheet(
 
     private fun loadPresetAgents() {
         agentLoadJob?.cancel()
-        val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-        agentLoadJob = scope.launch {
+        agentLoadJob = agentScope.launch {
             try {
                 val agents = AiV2ChatUseCase.listAgents(includePublic = false)
                 myAgents = agents

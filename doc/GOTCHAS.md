@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.1.07 | **Updated:** 2026-06-29
+**Version:** v1.3.1.08 | **Updated:** 2026-06-29
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -340,3 +340,35 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 
 - **`messages.value.firstOrNull` after `messages.update` is racy** — another coroutine may update `messages` between the `update` and the `firstOrNull` call, causing the wrong message version to be saved
 - **Fix: capture `updatedMsg` inside `messages.update` lambda** — the lambda is atomic, so the captured value is guaranteed to be the correct version
+
+## Thread Safety in RealGrpcClient Singleton (v1.3.1.08)
+
+- **Singleton fields without `@Volatile`** — `currentUsername`, `currentUserId`, `requestObserver`, `chatV2RequestObserver`, `isRetrying`, `lastChatRequest` are read/written from gRPC callback threads and main thread. Without `@Volatile`, JVM may cache stale values in CPU registers
+- **Thread-unsafe collections** — `mutableMapOf` and `mutableSetOf` are not thread-safe. `avatarCache`, `fullAvatarCache` written from callback threads, read from main thread → `ConcurrentModificationException` risk. `deletedMessageHashes` and `pendingReads` same issue
+- **Fix**: `@Volatile` for simple fields, `ConcurrentHashMap` / `ConcurrentHashMap.newKeySet()` for collections
+
+## runBlocking on Main Thread (v1.3.1.08)
+
+- **`runBlocking(Dispatchers.IO)` in click listeners** — blocks main thread until disk I/O completes. In `ChatListToolbar` cache clear action, this can freeze UI for seconds
+- **Fix**: Use `lifecycleScope.launch { withContext(IO) { ... } }` instead
+
+## Handler Lifecycle Leaks (v1.3.1.08)
+
+- **`Handler(Looper.getMainLooper()).postDelayed()` creates leaks** — the Handler holds a reference to the Runnable, which may capture Activity context. If Activity is destroyed before the delay fires, the Runnable accesses destroyed views
+- **Fix**: Use `lifecycleScope.launch { delay(); ... }` which auto-cancels on Activity destroy
+- **Known sites**: `ChatE2EEDelegate` (3s retry), `AudioRecordingView`, `CallActivity`
+
+## Unmanaged Threads (v1.3.1.08)
+
+- **`Thread { while(...) { Thread.sleep() } }.start()`** — unmanaged thread not bound to lifecycle. If `stop()` races with the thread, `toneGenerator` may be released while the thread calls `startTone()` → NPE
+- **Fix**: Use coroutine with `delay()` in a scope that can be cancelled. `CallSoundManager` now uses `CoroutineScope(SupervisorJob() + Dispatchers.Main)` with `destroy()` method
+
+## Coroutine Scope Leaks (v1.3.1.08)
+
+- **`CoroutineScope` created inside method** — if not stored as class property, old scopes are never cancelled when method is called again. `AIBottomSheet.loadPresetAgents()` created new scope each call
+- **Fix**: Store scope as class property. Cancel previous job before launching new one
+
+## SimpleDateFormat Performance (v1.3.1.08)
+
+- **`SimpleDateFormat` created per bind** — expensive to construct. `MessageAdapter.onBindViewHolder` created 2 instances per message
+- **Fix**: Cache via `ThreadLocal<SimpleDateFormat>` at adapter level

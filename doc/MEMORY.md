@@ -96,3 +96,10 @@ Lavender Messenger — Android client. Kotlin, gRPC, AI v2 marketplace, secret c
 - **Server DB errors look like wrong password (v1.3.1.07)**: PostgreSQL down → gRPC `INTERNAL` → client shows "Wrong password". Fix: `SessionManager` checks error message for `connection refused`/`database`/`internal`/`unavailable` → `SERVER_ERROR`.
 - **Room DB race condition in setReactionV2 (v1.3.1.07)**: `messages.value.firstOrNull` after `messages.update` is racy. Fix: capture `updatedMsg` inside the `messages.update` lambda (atomic).
 - **Reactions in Favorites (v1.3.1.07)**: Room DB save was racy because `messages.value.firstOrNull` could return stale data. Fixed by capturing the updated message directly in the `messages.update` lambda.
+- **Thread safety in RealGrpcClient singleton (v1.3.1.08)**: Fields accessed from gRPC callback threads and main thread need `@Volatile`. Collections need `ConcurrentHashMap` / `ConcurrentHashMap.newKeySet()`.
+- **runBlocking on main thread (v1.3.1.08)**: `runBlocking(Dispatchers.IO)` in click listeners blocks UI. Use `lifecycleScope.launch { withContext(IO) {} }` instead.
+- **Handler lifecycle leaks (v1.3.1.08)**: `Handler.postDelayed()` captures Activity context, leaks if Activity destroyed before delay fires. Use `lifecycleScope.launch { delay() }`.
+- **Unmanaged Thread leaks (v1.3.1.08)**: `Thread { while() {} }.start()` not bound to lifecycle. Use coroutine with `delay()` in cancellable scope.
+- **Coroutine scope leaks (v1.3.1.08)**: `CoroutineScope` inside method creates orphaned scopes. Store as class property, cancel previous job.
+- **SimpleDateFormat performance (v1.3.1.08)**: Created per bind in MessageAdapter. Cache via `ThreadLocal<SimpleDateFormat>`.
+- **Debounce pattern (v1.3.1.08)**: `buildSections()` and `markRead` now debounced to coalesce rapid updates into single execution.

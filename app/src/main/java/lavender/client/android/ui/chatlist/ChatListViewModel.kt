@@ -7,8 +7,11 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -50,13 +53,16 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     private val _connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
     val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus.asStateFlow()
 
+    private val _forceLogoutEvent = MutableSharedFlow<String>()
+    val forceLogoutEvent: SharedFlow<String> = _forceLogoutEvent.asSharedFlow()
+
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     private val _tabFilter = MutableStateFlow("all")
     val tabFilter: StateFlow<String> = _tabFilter.asStateFlow()
 
-    private val locallyReadChats = mutableSetOf<String>()
+    private val locallyReadChats: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     private var allChats: List<ChatInfo> = emptyList()
     private var syncJob: Job? = null
@@ -112,27 +118,22 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                     val chat = allChats[chatIdx]
                     val shouldIncrement = isFromOther && !message.isRead
                     val newUnread = if (shouldIncrement) chat.unreadCount + 1 else chat.unreadCount
-                    allChats = allChats.toMutableList().also {
-                        it[chatIdx] = chat.copy(
-                            lastMessageText = preview,
-                            lastMessageTime = message.timestamp,
-                            lastMessageUsername = message.user,
-                            lastMessageHasImage = message.imageUrl.isNotEmpty(),
-                            unreadCount = newUnread
-                        )
-                    }
-                    // Reorder: move updated chat to top of its section
-                    val updatedChat = allChats[chatIdx]
-                    allChats = allChats.toMutableList().also {
-                        it.removeAt(chatIdx)
-                        it.add(0, updatedChat)
-                    }
+                    val updatedChat = chat.copy(
+                        lastMessageText = preview,
+                        lastMessageTime = message.timestamp,
+                        lastMessageUsername = message.user,
+                        lastMessageHasImage = message.imageUrl.isNotEmpty(),
+                        unreadCount = newUnread
+                    )
+                    val mutable = allChats.toMutableList()
+                    mutable.removeAt(chatIdx)
+                    mutable.add(0, updatedChat)
+                    allChats = mutable
                 } else {
-                    // New chat not in list — reload to pick it up
                     loadChats(silent = true)
                     return@collect
                 }
-                buildSections(allChats)
+                scheduleBuildSections()
             }
         }
         // Listen for deleted chats — remove from list in real-time
@@ -140,7 +141,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
             GrpcClient.chatDeletedEvent.collect { deletedChatId ->
                 if (deletedChatId != null && deletedChatId.isNotEmpty()) {
                     allChats = allChats.filter { it.id != deletedChatId }
-                    buildSections(allChats)
+                    scheduleBuildSections()
                     viewModelScope.launch(Dispatchers.IO) {
                         try {
                             val db = lavender.client.android.data.db.AppDatabase.getDatabase(getApplication())
@@ -245,6 +246,16 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
 
                 // Process regular chats
                 if (fetchedPage != null) {
+                    // Check for auth errors — force logout if token is invalid
+                    if (fetchedPage.error != null && fetchedPage.chats.isEmpty() && allChats.isEmpty()) {
+                        val error = fetchedPage.error
+                        if (error == "UNAUTHENTICATED" || error == "PERMISSION_DENIED" || error == "INTERNAL" || error == "NOT_CONNECTED") {
+                            Log.w(TAG, "loadChats: auth error ($error) with empty chat list — forcing logout")
+                            _forceLogoutEvent.emit(error)
+                            return@launch
+                        }
+                    }
+
                     val fetchedChats = fetchedPage.chats
                     nextCursor = fetchedPage.nextCursor
                     hasMore = fetchedPage.hasMore
@@ -574,6 +585,15 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
             if (it.id == chatId) it.copy(unreadCount = it.unreadCount + 1) else it
         }
         buildSections(allChats)
+    }
+
+    private var buildSectionsJob: kotlinx.coroutines.Job? = null
+    private fun scheduleBuildSections() {
+        buildSectionsJob?.cancel()
+        buildSectionsJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(50)
+            buildSections(allChats)
+        }
     }
 
     private fun buildSections(chats: List<ChatInfo>) {

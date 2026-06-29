@@ -10,7 +10,8 @@ import lavender.client.android.data.proto.*
 data class ChatListPage(
     val chats: List<ChatInfo>,
     val nextCursor: String,
-    val hasMore: Boolean
+    val hasMore: Boolean,
+    val error: String? = null
 )
 
 class GrpcChatClient(
@@ -27,7 +28,7 @@ class GrpcChatClient(
         val currentChannel = getChannel()
         if (currentChannel == null || currentChannel.isShutdown || currentChannel.isTerminated) {
             Log.w(TAG, "getChats: channel not available")
-            callback(ChatListPage(emptyList(), "", false))
+            callback(ChatListPage(emptyList(), "", false, error = "NOT_CONNECTED"))
             return
         }
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetChatsRequestProto, GetChatsResponseProto>()
@@ -59,7 +60,8 @@ class GrpcChatClient(
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (!status.isOk) {
                     Log.w(TAG, "getChats: onClose error: ${status.code} - ${status.description}")
-                    callback(ChatListPage(emptyList(), "", false))
+                    val errorCode = status.code.name
+                    callback(ChatListPage(emptyList(), "", false, error = errorCode))
                 }
             }
         }, io.grpc.Metadata())

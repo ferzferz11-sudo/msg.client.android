@@ -19,6 +19,7 @@ internal fun enterSelectionMode(activity: ChatListActivity) {
     // Hide avatar container (FrameLayout wrapper), not just the ImageView
     activity.ivToolbarUserAvatar?.parent?.let { (it as? android.view.View)?.isVisible = false }
     activity.llToolbarTitleContainer?.isVisible = true
+    activity.ivFavorites?.isVisible = false
     activity.tvToolbarSubtitle?.isVisible = false
     activity.toolbar?.menu?.clear()
     activity.toolbar?.inflateMenu(R.menu.chat_list_action_mode)
@@ -48,6 +49,7 @@ internal fun exitSelectionMode(activity: ChatListActivity) {
     // Restore avatar container (FrameLayout wrapper)
     activity.ivToolbarUserAvatar?.parent?.let { (it as? android.view.View)?.isVisible = true }
     activity.llToolbarTitleContainer?.isVisible = true
+    activity.ivFavorites?.isVisible = true
     activity.tvToolbarTitle?.text = activity.getString(R.string.chats)
     // Restore title color from theme
     val typedValue = android.util.TypedValue()

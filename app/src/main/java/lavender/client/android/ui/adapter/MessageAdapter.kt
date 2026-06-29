@@ -46,9 +46,31 @@ class MessageAdapter(
     private var selectionMode = false
     private var searchHighlight: String? = null
     private var pinnedMessageIds = mutableSetOf<String>()
+    private val dayFormat = object : ThreadLocal<SimpleDateFormat>() {
+        override fun initialValue() = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+    }
 
-    fun setSearchHighlight(query: String?) { searchHighlight = query; notifyItemRangeChanged(0, itemCount) }
-    fun updatePinnedMessages(ids: Set<String>) { pinnedMessageIds = ids.toMutableSet(); notifyItemRangeChanged(0, itemCount) }
+    fun setSearchHighlight(query: String?) {
+        val oldHighlight = searchHighlight
+        searchHighlight = query
+        if (oldHighlight != query) {
+            for (i in 0 until itemCount) {
+                val msg = try { getItem(i) } catch (_: Exception) { continue }
+                if ((oldHighlight == null || msg.text.contains(oldHighlight, true)) ||
+                    (query != null && msg.text.contains(query, true))) {
+                    notifyItemChanged(i)
+                }
+            }
+        }
+    }
+    fun updatePinnedMessages(ids: Set<String>) {
+        val oldPinned = pinnedMessageIds.toSet()
+        pinnedMessageIds = ids.toMutableSet()
+        for (i in 0 until itemCount) {
+            val msg = try { getItem(i) } catch (_: Exception) { continue }
+            if (msg.id in oldPinned || msg.id in pinnedMessageIds) notifyItemChanged(i)
+        }
+    }
     fun getSelectedMessages(): List<Message> = selectedPositions.map { getItem(it) }
 
     @Suppress("UNUSED")
@@ -81,8 +103,9 @@ class MessageAdapter(
         val prevTs = prev?.let { if (it.timestamp > now) now else it.timestamp } ?: 0L
         val isSameMinute = prev != null && (curTs / 60000 == prevTs / 60000)
         val showDateSeparator = if (prev == null) true else {
-            val curDay = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(curTs))
-            val prevDay = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(prevTs))
+            val fmt = dayFormat.get()!!
+            val curDay = fmt.format(Date(curTs))
+            val prevDay = fmt.format(Date(prevTs))
             curDay != prevDay
         }
         holder.bind(msg, isOutgoing, selectedPositions.contains(position), isConsecutive && isSameMinute,
