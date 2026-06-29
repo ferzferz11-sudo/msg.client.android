@@ -282,6 +282,7 @@ class SuperAdminActivity : AppCompatActivity() {
         swipeRefreshLayout.isRefreshing = true
         currentCursor = ""
         hasMore = true
+        adapter.clearExpanded()
 
         val loadTimeout = lifecycleScope.launch {
             delay(15000)

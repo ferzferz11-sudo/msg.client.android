@@ -129,6 +129,11 @@ class SuperAdminAdapter(
 
     fun isExpanded(username: String): Boolean = expandedUsers.contains(username)
 
+    fun clearExpanded() {
+        expandedUsers.clear()
+        userSessions.clear()
+    }
+
     fun toggleSelection(id: String) {
         if (selectedIds.contains(id)) {
             selectedIds.remove(id)
@@ -250,7 +255,7 @@ class SuperAdminAdapter(
             versionText.text = versionStr
             versionText.setTextColor(if (isSelected) onPrimary else textSecondary)
             
-            val timeAgoStr = user.lastMessageTime?.let { getTimeAgo(it.seconds * 1000, itemView.context) } ?: ""
+            val timeAgoStr = user.lastSeenAt?.let { getTimeAgo(it.seconds * 1000, itemView.context) } ?: ""
             timeAgoText.text = timeAgoStr
             timeAgoText.setTextColor(if (isSelected) onPrimary else textSecondary)
             
@@ -313,7 +318,7 @@ class SuperAdminAdapter(
             versionText.text = if (session.clientVersion.isNotEmpty()) "v${session.clientVersion}" else ""
             versionText.setTextColor(textSecondary)
 
-            ipText.text = session.ipAddress.ifEmpty { "" }
+            ipText.text = if (session.ipAddress.isNotEmpty() && session.ipAddress != "unknown") session.ipAddress else ""
             ipText.setTextColor(textSecondary)
 
             val lastSeenStr = session.lastSeenAt?.let { getTimeAgo(it.seconds * 1000, itemView.context) } ?: ""

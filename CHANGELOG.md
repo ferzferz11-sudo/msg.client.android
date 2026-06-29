@@ -1,5 +1,30 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.09] - 2026-06-29
+
+### Admin panel fixes + Chat list online status + Favorites reactions fix
+
+**Добавлено:**
+- Онлайн-статус (🟢/⚪) и время последнего визита в списке чатов — для direct-чатов справа от имени показывается зелёный/серый кружок и "5 мин назад"/"3ч"/"2д"
+- Diagnostics logging для `SetReactionV2` (серверная диагностика)
+
+**Исправлено:**
+- Админ-панель: главная плашка пользователя показывала `lastMessageTime` (время последнего сообщения) вместо `lastSeenAt` (время последнего входа)
+- Админ-панель: pull-to-refresh не очищал раскрытые сессии — теперь `clearExpanded()` сбрасывает `expandedUsers` и `userSessions`
+- Админ-панель: "unknown" IP адрес в сессиях — теперь скрывается
+- Избранное: реакции не сохранялись при повторном входе — сервер генерировал другие UUID для Favorites сообщений. Клиент: fallback merge по content hash (user:text:timestamp). Сервер: `SetReactionV2` исправлен
+
+**Изменено:**
+- `SuperAdminAdapter.kt` — `lastSeenAt` вместо `lastMessageTime`, `clearExpanded()`, "unknown" IP filter
+- `SuperAdminActivity.kt` — `adapter.clearExpanded()` при pull-to-refresh
+- `item_chat.xml` — FrameLayout wrapper + online dot + tvLastSeen
+- `ChatAdapter.kt` — `onlineUsers`/`allUsers` параметры, bind logic для direct-чатов
+- `ChatListActivity.kt` — подписка на `GrpcClient.users` + `GrpcClient.allUsers`
+- `GrpcMessageV2Client.kt` — contentHash fallback merge в `loadHistoryV2`
+- `RealGrpcClient.kt` — REACTION_V2 handler логирование (diagnostics)
+
+---
+
 ## [1.3.1.08] - 2026-06-29
 
 ### Stability fixes + Performance optimizations + UX improvements

@@ -41,7 +41,9 @@ class ChatAdapter(
     private val currentUsername: String,
     private val onChatClick: (ChatInfo) -> Unit,
     private val onChatLongClick: (ChatInfo, View) -> Unit,
-    private val onSelectionChanged: (Int) -> Unit = {}
+    private val onSelectionChanged: (Int) -> Unit = {},
+    private var onlineUsers: List<String> = emptyList(),
+    private var allUsers: List<lavender.client.android.data.proto.UserInfoProto> = emptyList()
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
@@ -202,13 +204,23 @@ class ChatAdapter(
         when (val item = flatItems.getOrNull(position)) {
             is FlatItem.SectionHeader -> (holder as SectionHeaderViewHolder).bind(item)
             is FlatItem.ChatItem -> (holder as ChatViewHolder).bind(
-                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedUnreadColor, cachedPrimaryColor, selectionMode, selectedIds.contains(item.chat.id), currentUsername
+                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedUnreadColor, cachedPrimaryColor, selectionMode, selectedIds.contains(item.chat.id), currentUsername, onlineUsers.toSet(), allUsers
             )
             null -> {}
         }
     }
 
     override fun getItemCount(): Int = flatItems.size
+
+    fun updateOnlineUsers(users: List<String>) {
+        onlineUsers = users
+        notifyDataSetChanged()
+    }
+
+    fun updateAllUsers(users: List<lavender.client.android.data.proto.UserInfoProto>) {
+        allUsers = users
+        notifyDataSetChanged()
+    }
 
     fun filter(query: String) {
         currentFilter = query.lowercase()
@@ -252,10 +264,12 @@ class ChatAdapter(
         private val tvUnreadCount: TextView = itemView.findViewById(R.id.tvUnreadCount)
         private val ivMuteIndicator: ImageView = itemView.findViewById(R.id.ivMuteIndicator)
         private val cbChatSelect: MaterialCheckBox = itemView.findViewById(R.id.cbChatSelect)
+        private val statusIndicator: View = itemView.findViewById(R.id.statusIndicator)
+        private val tvLastSeen: TextView = itemView.findViewById(R.id.tvLastSeen)
         private val cardView: com.google.android.material.card.MaterialCardView =
             itemView as com.google.android.material.card.MaterialCardView
 
-        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, unreadColor: Int, primaryColor: Int, selectionMode: Boolean, isSelected: Boolean, currentUsername: String) {
+        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, unreadColor: Int, primaryColor: Int, selectionMode: Boolean, isSelected: Boolean, currentUsername: String, onlineUsers: Set<String>, allUsers: List<lavender.client.android.data.proto.UserInfoProto>) {
             val hasUnread = chat.unreadCount > 0
             if (hasUnread) android.util.Log.d("ChatAdapter", "BIND UNREAD: ${chat.name} unreadCount=${chat.unreadCount}")
             tvChatName.text = chat.getDisplayName(currentUsername)
@@ -301,6 +315,36 @@ class ChatAdapter(
             }
             cardView.setCardBackgroundColor(bgColor)
 
+            // Online status + last seen — direct chats only
+            if (chat.type == "direct" && !chat.isSecret && !chat.id.startsWith("favorites_")) {
+                val otherUser = getOtherParticipant(chat, currentUsername)
+                if (otherUser.isNotEmpty()) {
+                    val isOnline = onlineUsers.contains(otherUser)
+                    statusIndicator.isVisible = true
+                    statusIndicator.setBackgroundResource(if (isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot)
+
+                    if (!isOnline) {
+                        val userInfo = allUsers.firstOrNull { it.username == otherUser }
+                        val lastSeenStr = userInfo?.lastSeenAt?.let { getTimeAgo(it.seconds * 1000, itemView.context) }
+                        if (lastSeenStr != null) {
+                            tvLastSeen.isVisible = true
+                            tvLastSeen.text = lastSeenStr
+                            tvLastSeen.setTextColor(textSecondary)
+                        } else {
+                            tvLastSeen.isVisible = false
+                        }
+                    } else {
+                        tvLastSeen.isVisible = false
+                    }
+                } else {
+                    statusIndicator.isVisible = false
+                    tvLastSeen.isVisible = false
+                }
+            } else {
+                statusIndicator.isVisible = false
+                tvLastSeen.isVisible = false
+            }
+
             // Click listeners
             if (selectionMode) {
                 itemView.setOnClickListener { onChatClick(chat) }
@@ -308,6 +352,38 @@ class ChatAdapter(
             } else {
                 itemView.setOnClickListener { onChatClick(chat) }
                 itemView.setOnLongClickListener { view -> onChatLongClick(chat, view); true }
+            }
+        }
+
+        private fun getOtherParticipant(chat: ChatInfo, currentUsername: String): String {
+            return try {
+                val arr = org.json.JSONArray(chat.participants)
+                for (i in 0 until arr.length()) {
+                    val p = arr.getString(i)
+                    if (p != currentUsername) return p
+                }
+                ""
+            } catch (e: Exception) {
+                ""
+            }
+        }
+
+        private fun getTimeAgo(timestampMillis: Long, context: android.content.Context): String {
+            val now = System.currentTimeMillis()
+            val diff = now - timestampMillis
+            val seconds = diff / 1000
+            val minutes = seconds / 60
+            val hours = minutes / 60
+            val days = hours / 24
+            return when {
+                seconds < 60 -> context.getString(R.string.just_now)
+                minutes < 60 -> context.resources.getQuantityString(R.plurals.minutes_ago, minutes.toInt(), minutes.toInt())
+                hours < 24 -> context.resources.getQuantityString(R.plurals.hours_ago, hours.toInt(), hours.toInt())
+                days < 7 -> context.resources.getQuantityString(R.plurals.days_ago, days.toInt(), days.toInt())
+                else -> {
+                    val format = java.text.SimpleDateFormat("dd.MM.yy", java.util.Locale.getDefault())
+                    format.format(java.util.Date(timestampMillis))
+                }
             }
         }
     }

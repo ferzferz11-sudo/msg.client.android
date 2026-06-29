@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.1.08 | **Updated:** 2026-06-29
+**Version:** v1.3.1.09 | **Updated:** 2026-06-29
 
 ---
 
@@ -796,4 +796,53 @@ GOOD: for (i in 0 until itemCount) {
 Used in MessageAdapter:
   — setSearchHighlight: only rebinds items matching old/new query
   — updatePinnedMessages: only rebinds items whose pin status changed
+```
+
+---
+
+## v1.3.1.09
+
+### Chat List Online Status + Last Seen Pattern (v1.3.1.09)
+```
+ChatAdapter — direct chats only
+  ├── onlineUsers: List<String> — from GrpcClient.users (ONLINE_USERS_UPDATE stream)
+  ├── allUsers: List<UserInfoProto> — from GrpcClient.allUsers (GetAllUsers RPC)
+  ├── Bind logic:
+  │   ├── Get other participant username from chat.participants JSON
+  │   ├── Status dot: onlineUsers.contains(otherUser) → green/gray dot
+  │   └── Last seen: allUsers.firstOrNull{username}?.lastSeenAt → getTimeAgo()
+  └── Layout: FrameLayout wrapper around participantAvatars with status dot overlay
+
+ChatListActivity observers:
+  ├── GrpcClient.users.collectLatest → chatAdapter.updateOnlineUsers()
+  └── GrpcClient.allUsers.collectLatest → chatAdapter.updateAllUsers()
+```
+- Online dot: `status_online_dot` / `status_offline_dot` drawables (12dp, elevation 4dp)
+- Last seen: shown only when offline, format: "just now", "5 min", "3h", "2d"
+- Direct chats only: hidden for groups, secrets, favorites, AI chats
+
+### Admin Panel Last Seen Fix Pattern (v1.3.1.09)
+```
+SuperAdminAdapter.bindAdmin()
+  ├── versionText: user.lastClientVersion (from users table — stale, PROMPT_ADMIN_VERSION_FIX)
+  ├── timeAgoText: user.lastSeenAt (was lastMessageTime — BUG, fixed)
+  └── statusDot: user.isOnline (from hub)
+
+SuperAdminAdapter.clearExpanded()
+  ├── expandedUsers.clear()
+  └── userSessions.clear()
+  — Called by SuperAdminActivity.loadData() on pull-to-refresh
+```
+
+### Message Dedup Content Hash Fallback (v1.3.1.09)
+```
+loadHistoryV2 merge logic:
+  currentMap = current.associateBy { getMessageHash(it) }  // by ID
+  currentByContent = current.associateBy { getContentHash(it) }  // by content
+
+  localMsg = currentMap[getMessageHash(serverMsg)]
+           ?: currentByContent[getContentHash(serverMsg)]  // fallback
+
+  — Fixes Favorites reaction loss: server generates new UUID for favorites copies,
+    content hash matches even when IDs differ
 ```

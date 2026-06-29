@@ -1,10 +1,14 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.1.08 | **Updated:** 2026-06-29
+**Version:** v1.3.1.09 | **Updated:** 2026-06-29
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
 ---
+
+## Debug Commands
+
+- **adb logcat:** `/Users/paveld/Library/Android/sdk/platform-tools/adb logcat`
 
 ## Build & Compilation
 
@@ -372,3 +376,21 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 
 - **`SimpleDateFormat` created per bind** — expensive to construct. `MessageAdapter.onBindViewHolder` created 2 instances per message
 - **Fix**: Cache via `ThreadLocal<SimpleDateFormat>` at adapter level
+
+## Favorites Reactions (v1.3.1.09)
+
+- **Favorites messages have different UUIDs** — server `SaveFavoriteMessage` generates new UUID for `messages_v2` row. `GetHistoryV2` returns these new UUIDs
+- **`SetReactionV2` returns success=false** — server can't find Favorites message by UUID from `GetHistoryV2`. Server-side fix: `SetReactionV2` must find messages by room_id+content or `SaveFavoriteMessage` must use consistent UUIDs
+- **Content hash fallback merge** — `loadHistoryV2` merge now falls back to `getContentHash()` (user:text:timestamp) when `getMessageHash()` (by ID) doesn't match. Fixes reaction loss when server returns messages with different UUIDs than cache
+
+## Admin Panel Data (v1.3.1.09)
+
+- **`last_seen_at` only updates on send/login** — `UpdateLastSeen` called on SendMessageV2, EditMessageV2, DeleteMessageV2, SetReactionV2, ChatV2 stream connect, and login. NOT on receive. Server heartbeat (60s) fixes this
+- **`last_client_version` in `users` table is stale** — only updated when ChatV2 stream receives `clientVersion`. Use `user_devices` table instead (updated on every connection). Server-side fix via `PROMPT_ADMIN_VERSION_FIX.md`
+- **"unknown" IP in sessions** — server sends `ipAddress="unknown"` when IP can't be determined. Client now filters this out
+
+## Chat List Online Status (v1.3.1.09)
+
+- **Online status from `GrpcClient.users`** — `ONLINE_USERS_UPDATE` system signal populates StateFlow of online usernames. NOT from `users` table
+- **Last seen from `GrpcClient.allUsers`** — `GetAllUsers` RPC loads all users with `lastSeenAt`. Called via `GrpcClient.loadUsers()` in `ChatListActivity.onResume()`
+- **Only for direct chats** — online dot and last seen hidden for groups, secrets, favorites, AI chats

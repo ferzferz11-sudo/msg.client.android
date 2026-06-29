@@ -141,42 +141,53 @@ Secret Chats: E2EE via E2EEManager (ECDH + AES-256-GCM), key exchange with retry
 
 ---
 
-## Итог сессии v1.3.1.08 (завершена)
+## Итог сессии v1.3.1.09 (завершена)
 
 ### Выполнено
 
-**1. Stability fixes (7 issues):**
-- `@Volatile` на 6 singleton fields в `RealGrpcClient` — `currentUsername`, `currentUserId`, `requestObserver`, `chatV2RequestObserver`, `isRetrying`, `lastChatRequest`
-- `ConcurrentHashMap` для thread-unsafe коллекций — `avatarCache`, `fullAvatarCache`, `deletedMessageHashes`, `pendingReads`
-- `runBlocking` → `lifecycleScope.launch` в `ChatListToolbar` (очистка кеша)
-- `Handler.postDelayed` → `lifecycleScope.launch { delay() }` в `ChatE2EEDelegate`
-- Unmanaged `Thread` → coroutine в `CallSoundManager`, `@Volatile toneGenerator`, `destroy()` method
-- Coroutine scope leak в `AIBottomSheet` — class-level `agentScope`
-- `locallyReadChats` → `ConcurrentHashMap.newKeySet()` в `ChatListViewModel`
+**1. Admin panel — lastSeenAt fix:**
+- `SuperAdminAdapter.bindAdmin()`: `user.lastMessageTime` → `user.lastSeenAt` на главной плашке пользователя
+- `SuperAdminActivity.loadData()`: `adapter.clearExpanded()` — pull-to-refresh очищает раскрытые сессии
+- `SuperAdminAdapter.clearExpanded()`: очищает `expandedUsers` + `userSessions`
+- Скрытие "unknown" IP в сессиях: `ipAddress != "unknown"` проверка
 
-**2. Performance optimizations (5 items):**
-- Combined list copy в message handler (~50% меньше аллокаций)
-- `buildSections()` debounce 50ms
-- `SimpleDateFormat` cached via `ThreadLocal`
-- Targeted `notifyItemChanged` для search/pinned (~95% меньше rebinds)
-- `markRead` debounce 1s (одна gRPC-запроса вместо спама)
+**2. Chat list — online status + last seen:**
+- `item_chat.xml`: FrameLayout wrapper с `statusIndicator` (online dot) + `tvLastSeen` рядом с именем
+- `ChatAdapter`: `onlineUsers`/`allUsers` параметры, bind logic для direct-чатов (online dot 🟢/⚪ + last seen time)
+- `ChatListActivity`: подписка на `GrpcClient.users` + `GrpcClient.allUsers` для обновления статусов
+
+**3. Admin panel — version from user_devices:**
+- `PROMPT_ADMIN_VERSION_FIX.md`: SQL запрос `GetAdminUserList` берёт `last_client_version` из `user_devices` вместо `users`
+
+**4. Server heartbeat:**
+- `PROMPT_LAST_SEEN_FIX.md`: heartbeat 60s в ChatV2 stream + фикс `UpdateLastSeen` при `clientVersion != ""`
+
+**5. Favorites reactions — диагностика + фикс:**
+- `GrpcMessageV2Client.loadHistoryV2()`: fallback merge по `getContentHash` (user:text:timestamp) когда ID не совпадают
+- `GrpcMessageV2Client.setReactionV2()`: логирование server response + onClose
+- `PROMPT_FAVORITES_REACTION_FIX.md`: сервер возвращает `success=false` на `SetReactionV2` для Favorites UUID
+- Корень: `SaveFavoriteMessage` генерирует другой UUID чем `req.Id` → `SetReactionV2` не находит сообщение
 
 ### Изменённые файлы (клиент)
 
 | Файл | Изменение |
 |------|-----------|
-| `RealGrpcClient.kt` | `@Volatile` на 6 fields, `ConcurrentHashMap` для 4 коллекций, `scheduleMarkRead()` |
-| `ChatListToolbar.kt` | `runBlocking` → `lifecycleScope.launch` |
-| `ChatE2EEDelegate.kt` | `Handler.postDelayed` → `lifecycleScope.launch { delay() }` |
-| `CallSoundManager.kt` | Thread → coroutine, `@Volatile`, `destroy()` |
-| `CallActivity.kt` | `soundManager.destroy()` |
-| `AIBottomSheet.kt` | Class-level `agentScope` |
-| `ChatListViewModel.kt` | `locallyReadChats` thread-safe, combined list copy, `scheduleBuildSections()` |
-| `MessageAdapter.kt` | `ThreadLocal<SimpleDateFormat>`, targeted notifyItemChanged |
+| `SuperAdminAdapter.kt` | `lastSeenAt` вместо `lastMessageTime`, `clearExpanded()`, "unknown" IP filter |
+| `SuperAdminActivity.kt` | `adapter.clearExpanded()` при pull-to-refresh |
+| `item_chat.xml` | FrameLayout wrapper + status dot + tvLastSeen |
+| `ChatAdapter.kt` | onlineUsers/allUsers params, bind logic for direct chats |
+| `ChatListActivity.kt` | observers for GrpcClient.users + allUsers |
+| `GrpcMessageV2Client.kt` | contentHash fallback merge, setReactionV2 logging |
+
+### Серверные задачи (выполнены)
+
+- `PROMPT_LAST_SEEN_FIX.md` — heartbeat 60s + UpdateLastSeen fix ✅
+- `PROMPT_ADMIN_VERSION_FIX.md` — last_client_version из user_devices ✅
+- `PROMPT_FAVORITES_REACTION_FIX.md` — SetReactionV2 для Favorites ✅
 
 ---
 
-## Задачи — Следующая сессия (v1.3.1.09)
+## Задачи — Следующая сессия (v1.3.1.10)
 
 ---
 
@@ -225,9 +236,5 @@ Secret Chats: E2EE via E2EEManager (ECDH + AES-256-GCM), key exchange with retry
 
 - Документация клиента: `doc/INDEX.md`, `doc/PATTERNS.md`
 - Документация AI v2: `doc/AI_V2_TESTING.md`
-- Серверный промпт (Hermes ACP): `/Users/paveld/LavenderMessenger-server/doc/PROMPT_HERMES_ACP.md`
 - Клиентский план Hermes: `doc/PROMPT_HERMES_ACP_CLIENT.md`
-- Серверный промпт (Admin User List): `/Users/paveld/LavenderMessenger-server/doc/PROMPT_ADMIN_USER_LIST.md`
-- Серверный промпт (Reactions Fix): `/Users/paveld/LavenderMessenger-server/doc/PROMPT_REACTIONS_FIX.md`
-- Серверный промпт (Admin Sessions): `/Users/paveld/LavenderMessenger-server/doc/PROMPT_ADMIN_SESSIONS.md`
 - Changelog: `CHANGELOG.md`

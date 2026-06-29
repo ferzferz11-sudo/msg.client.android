@@ -243,12 +243,14 @@ class GrpcMessageV2Client(
                     .map { messageV2ToDomain(it) }
                     .filterNot { deletedMessageHashes.contains(getMessageHash(it)) }
 
-                Log.d(TAG, "loadHistoryV2: server returned ${message.messages.size} msgs, ${history.count { it.reactions.isNotEmpty() }} with reactions")
+                Log.d(TAG, "loadHistoryV2: server returned ${message.messages.size} msgs, ${history.count { it.reactions.isNotEmpty() }} with reactions, room=$roomId")
 
                 messages.update { current ->
                     val currentMap = current.associateBy { getMessageHash(it) }
+                    val currentByContent = current.associateBy { getContentHash(it) }
                     val mergedHistory = history.map { serverMsg ->
                         val localMsg = currentMap[getMessageHash(serverMsg)]
+                            ?: currentByContent[getContentHash(serverMsg)]
                         if (localMsg != null) {
                             val mergedReactions = if (serverMsg.reactions.isEmpty() && localMsg.reactions.isNotEmpty()) {
                                 localMsg.reactions

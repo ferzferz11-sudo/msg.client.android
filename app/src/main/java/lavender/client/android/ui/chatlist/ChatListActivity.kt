@@ -457,6 +457,20 @@ class ChatListActivity : AppCompatActivity() {
                 swipeRefresh?.isRefreshing = loading
             }
         }
+
+        // Observe online users for chat list status dots
+        lifecycleScope.launch {
+            GrpcClient.users.collectLatest { users ->
+                chatAdapter.updateOnlineUsers(users)
+            }
+        }
+
+        // Observe all users for last seen time
+        lifecycleScope.launch {
+            GrpcClient.allUsers.collectLatest { users ->
+                chatAdapter.updateAllUsers(users)
+            }
+        }
     }
 
     private fun setupSwipeRefresh() {
