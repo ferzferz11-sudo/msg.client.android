@@ -84,3 +84,15 @@ Lavender Messenger — Android client. Kotlin, gRPC, AI v2 marketplace, secret c
 - **ChatV2MessageProto clientVersion (field 3)**: Server proto has `client_version` at field 3. Client was missing it entirely. Fixed in v1.3.1.04: added to proto, marshaller, and first auth message.
 - **SendMessageV2 missing UpdateLastSeen**: Client uses unary RPC, not ChatV2 stream. Server handler never called UpdateLastSeen. Fixed in v1.3.1.04: added to SendMessageV2, EditMessageV2, DeleteMessageV2, SetReactionV2.
 - **Hermes ACP provider**: Server-side `ai_provider_hermes_acp.go` with JSON-RPC 2.0, persistent sessions. Client needs only emoji mapping — no proto changes.
+- **REACTION_V2 stream drops reactions for unloaded messages (v1.3.1.07)**: When a reaction arrives for a message not in `_messages` (different chat, scrolled off), it was silently discarded. Fixed: saves to Room DB via `updateReactions()` DAO method.
+- **Content-based message dedup (v1.3.1.07)**: `getContentHash(msg) = "${user}:${text}:${timestamp/1000}"`. `deduplicateByContent()` prefers server IDs over temp IDs. Applied in `loadHistoryV2` cache load and server merge.
+- **ChatV2 stream race with sendMessageV2**: Stream can deliver server's copy (server ID) before response handler changes temp ID → server ID. Both saved to Room DB. Content dedup prevents duplicates on re-entry.
+- **Server-side message search (v1.3.1.07)**: `ChatSearchDelegate` uses `SearchMessages` RPC with 300ms debounce. Falls back to client-side if server returns 0 results.
+- **Parallel chat loading (v1.3.1.07)**: Regular + AI chats loaded via `supervisorScope` + `CompletableDeferred` on `Dispatchers.IO`. Removed standalone `loadAiChats()`.
+- **Kotlin 2.4.0 async deprecation**: `async` deprecated outside proper coroutine scope. Use `supervisorScope` + `launch` + `CompletableDeferred` instead.
+- **Notification sounds (v1.3.1.07)**: Channel has default notification sound. Per-chat override via `notification_sounds` SharedPreferences. `setNotificationSound`/`getNotificationSound` companion methods.
+- **AI chats not in server `chats` table (v1.3.1.07)**: AI chats are virtual, created by `ListAIV2Chats` RPC. `DeleteChat` fails for `ai-chat-*` IDs. Client skips server call, deletes locally only.
+- **AI chats reappear after deletion (v1.3.1.07)**: `loadChats()` re-fetches from server. Fix: `deleted_ai_chats` SharedPreferences Set filters them during merge.
+- **Server DB errors look like wrong password (v1.3.1.07)**: PostgreSQL down → gRPC `INTERNAL` → client shows "Wrong password". Fix: `SessionManager` checks error message for `connection refused`/`database`/`internal`/`unavailable` → `SERVER_ERROR`.
+- **Room DB race condition in setReactionV2 (v1.3.1.07)**: `messages.value.firstOrNull` after `messages.update` is racy. Fix: capture `updatedMsg` inside the `messages.update` lambda (atomic).
+- **Reactions in Favorites (v1.3.1.07)**: Room DB save was racy because `messages.value.firstOrNull` could return stale data. Fixed by capturing the updated message directly in the `messages.update` lambda.

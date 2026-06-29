@@ -104,6 +104,14 @@ internal fun showLoginBottomSheet(activity: ChatListActivity, serverAddress: Str
                             loginSheet.setLoading(false)
                             Toast.makeText(activity, R.string.wrong_password, Toast.LENGTH_LONG).show()
                         }
+                        "SERVER_ERROR" -> {
+                            loginSheet.setLoading(false)
+                            Toast.makeText(activity, R.string.server_error, Toast.LENGTH_LONG).show()
+                        }
+                        "CONNECTION_FAILED" -> {
+                            loginSheet.setLoading(false)
+                            Toast.makeText(activity, R.string.connection_failed, Toast.LENGTH_LONG).show()
+                        }
                         else -> {
                             loginSheet.setLoading(false)
                             Toast.makeText(activity, R.string.connection_failed, Toast.LENGTH_LONG).show()

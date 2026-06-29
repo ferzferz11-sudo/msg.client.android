@@ -271,6 +271,14 @@ class ServersActivity : AppCompatActivity() {
                                 loginSheet.setLoading(false)
                                 Toast.makeText(this@ServersActivity, R.string.wrong_password, Toast.LENGTH_LONG).show()
                             }
+                            "SERVER_ERROR" -> {
+                                loginSheet.setLoading(false)
+                                Toast.makeText(this@ServersActivity, R.string.server_error, Toast.LENGTH_LONG).show()
+                            }
+                            "CONNECTION_FAILED" -> {
+                                loginSheet.setLoading(false)
+                                Toast.makeText(this@ServersActivity, R.string.connection_failed, Toast.LENGTH_LONG).show()
+                            }
                             else -> {
                                 loginSheet.setLoading(false)
                                 Toast.makeText(this@ServersActivity, result ?: "Unknown error", Toast.LENGTH_LONG).show()

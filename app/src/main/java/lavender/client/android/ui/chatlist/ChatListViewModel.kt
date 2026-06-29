@@ -209,23 +209,41 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                         if (cached.isNotEmpty()) {
                             allChats = cached
                             buildSections(cached)
-                    val unreadChats = cached.filter { it.unreadCount > 0 }
-                    Log.d(TAG, "Loaded ${cached.size} chats from cache (${unreadChats.size} unread)")
+                            val unreadChats = cached.filter { it.unreadCount > 0 }
+                            Log.d(TAG, "Loaded ${cached.size} chats from cache (${unreadChats.size} unread)")
                         }
                     } catch (e: Exception) {
                         Log.w(TAG, "Failed to load chats from cache", e)
                     }
                 }
 
-                // Fetch first page from server
-                val fetchedPage = kotlinx.coroutines.withTimeoutOrNull(10000L) {
-                    kotlinx.coroutines.suspendCancellableCoroutine<lavender.client.android.data.grpc.ChatListPage> { cont ->
-                        GrpcClient.getChats(username, skipCache = true) { page ->
-                            if (cont.isActive) cont.resumeWith(Result.success(page))
-                        }
+                // Launch regular chats and AI chats in parallel using separate scope
+                var fetchedPage: lavender.client.android.data.grpc.ChatListPage? = null
+                var aiSessions: List<lavender.client.android.data.ai.AiV2ChatSession> = emptyList()
+                kotlinx.coroutines.supervisorScope {
+                    val pageDeferred = kotlinx.coroutines.CompletableDeferred<lavender.client.android.data.grpc.ChatListPage?>()
+                    val aiDeferred = kotlinx.coroutines.CompletableDeferred<List<lavender.client.android.data.ai.AiV2ChatSession>>()
+                    launch(Dispatchers.IO) {
+                        pageDeferred.complete(
+                            kotlinx.coroutines.withTimeoutOrNull(10000L) {
+                                kotlinx.coroutines.suspendCancellableCoroutine<lavender.client.android.data.grpc.ChatListPage> { cont ->
+                                    GrpcClient.getChats(username, skipCache = true) { page ->
+                                        if (cont.isActive) cont.resumeWith(Result.success(page))
+                                    }
+                                }
+                            }
+                        )
                     }
+                    launch(Dispatchers.IO) {
+                        aiDeferred.complete(
+                            try { AiV2ChatUseCase.listAIChats() } catch (_: Exception) { emptyList() }
+                        )
+                    }
+                    fetchedPage = pageDeferred.await()
+                    aiSessions = aiDeferred.await()
                 }
 
+                // Process regular chats
                 if (fetchedPage != null) {
                     val fetchedChats = fetchedPage.chats
                     nextCursor = fetchedPage.nextCursor
@@ -256,13 +274,12 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                             }
                         }
                         allChats = mergedChats
-                        buildSections(mergedChats)
-                val mergedUnread = mergedChats.filter { it.unreadCount > 0 }
-                Log.d(TAG, "Synced ${mergedChats.size} chats (${mergedUnread.size} unread)")
+                        val mergedUnread = mergedChats.filter { it.unreadCount > 0 }
+                        Log.d(TAG, "Synced ${mergedChats.size} chats (${mergedUnread.size} unread)")
                     } else {
                         Log.d(TAG, "No changes — keeping ${allChats.size} chats")
                     }
-                    // Sync to local DB — use allChats (merged) to preserve locally-incremented unread counts
+                    // Sync to local DB
                     try {
                         val db = lavender.client.android.data.db.AppDatabase.getDatabase(getApplication())
                         db.chatDao().syncChats(allChats.map { it.toEntity() })
@@ -271,47 +288,36 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                     }
                     Log.d(TAG, "Loaded ${fetchedChats.size} chats from server (${System.currentTimeMillis() - startTime}ms)")
                 } else {
-                    // Timeout — keep existing chats, don't clear the list
                     Log.w(TAG, "loadChats timeout — keeping ${allChats.size} existing chats")
                 }
+
+                // Merge AI chats (already loaded in parallel)
+                if (aiSessions.isNotEmpty()) {
+                    val prefs = getApplication<android.app.Application>().getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
+                    val deletedAiChats = prefs.getStringSet("deleted_ai_chats", emptySet()) ?: emptySet()
+                    val aiChatInfos = aiSessions
+                        .filter { it.id !in deletedAiChats }
+                        .map { aiChat ->
+                            ChatInfo(
+                                id = aiChat.id, name = aiChat.agentName, type = "hermes",
+                                participants = "[]", createdAt = aiChat.createdAt,
+                                lastMessageTime = aiChat.updatedAt, activeAgentId = aiChat.agentId,
+                                isPinned = false, isArchived = false
+                            )
+                        }
+                    val existingIds = allChats.map { it.id }.toSet()
+                    val newAiChats = aiChatInfos.filter { it.id !in existingIds }
+                    if (newAiChats.isNotEmpty()) {
+                        allChats = allChats + newAiChats
+                        Log.d(TAG, "Merged ${newAiChats.size} AI chats (total=${allChats.size})")
+                    }
+                }
+
+                buildSections(allChats)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load chats", e)
             } finally {
                 _isLoading.value = false
-            }
-        }
-    }
-
-    /**
-     * Load AI chats from server and merge into the chat list.
-     * Called separately after main chats are loaded to avoid blocking startup.
-     */
-    fun loadAiChats() {
-        viewModelScope.launch {
-            try {
-                val aiChats = AiV2ChatUseCase.listAIChats()
-                val aiChatInfos = aiChats.map { aiChat ->
-                    ChatInfo(
-                        id = aiChat.id,
-                        name = aiChat.agentName,
-                        type = "hermes",
-                        participants = "[]",
-                        createdAt = aiChat.createdAt,
-                        lastMessageTime = aiChat.updatedAt,
-                        activeAgentId = aiChat.agentId,
-                        isPinned = false,
-                        isArchived = false
-                    )
-                }
-                val existingIds = allChats.map { it.id }.toSet()
-                val newAiChats = aiChatInfos.filter { it.id !in existingIds }
-                if (newAiChats.isNotEmpty()) {
-                    allChats = allChats + newAiChats
-                    buildSections(allChats)
-                    Log.d(TAG, "Merged ${newAiChats.size} AI chats (total=${allChats.size})")
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to load AI chats: ${e.message}")
             }
         }
     }
@@ -488,6 +494,23 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     fun deleteChat(chatId: String, onResult: (() -> Unit)? = null) {
         viewModelScope.launch {
             try {
+                val isAiChat = chatId.startsWith("ai-chat-")
+                if (isAiChat) {
+                    allChats = allChats.filter { it.id != chatId }
+                    buildSections(allChats)
+                    viewModelScope.launch(Dispatchers.IO) {
+                        try {
+                            val db = lavender.client.android.data.db.AppDatabase.getDatabase(getApplication())
+                            db.chatDao().deleteChat(chatId)
+                        } catch (e: Exception) { Log.w(TAG, "Failed to delete AI chat from cache", e) }
+                        val prefs = getApplication<android.app.Application>().getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
+                        val deleted = prefs.getStringSet("deleted_ai_chats", emptySet()) ?: emptySet()
+                        prefs.edit().putStringSet("deleted_ai_chats", deleted + chatId).apply()
+                    }
+                    onResult?.invoke()
+                    return@launch
+                }
+
                 val username = SessionManager.session.value.username
                 GrpcClient.deleteChat(chatId, username) { success, _ ->
                     if (success) {

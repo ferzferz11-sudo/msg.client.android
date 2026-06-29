@@ -482,30 +482,31 @@ object SessionManager {
                 }
 
                 val authResult = withTimeoutOrNull(10000) {
-                    suspendCancellableCoroutine<AuthResponseV2Proto?> { cont ->
+                    suspendCancellableCoroutine<Pair<AuthResponseV2Proto?, String?>> { cont ->
                         v2Callback { response, error ->
                             if (cont.isActive) {
                                 if (response != null && response.success) {
-                                    cont.resumeWith(Result.success(response))
+                                    cont.resumeWith(Result.success(Pair(response, null)))
                                 } else {
-                                    cont.resumeWith(Result.success(null))
+                                    cont.resumeWith(Result.success(Pair(null, error ?: "Auth failed")))
                                 }
                             }
                         }
                     }
                 }
 
-                if (authResult != null && authResult.success) {
-                    Log.d("SessionManager", "V2 auth success for ${authResult.username}")
+                if (authResult != null && authResult.first != null && authResult.first!!.success) {
+                    val authResponse = authResult.first!!
+                    Log.d("SessionManager", "V2 auth success for ${authResponse.username}")
 
                     AuthManager.storeTokens(
                         context = context,
-                        accessToken = authResult.accessToken,
-                        refreshToken = authResult.refreshToken,
-                        accessExpiresAt = authResult.accessExpiresAt,
-                        refreshExpiresAt = authResult.refreshExpiresAt,
-                        userId = authResult.userId,
-                        username = authResult.username,
+                        accessToken = authResponse.accessToken,
+                        refreshToken = authResponse.refreshToken,
+                        accessExpiresAt = authResponse.accessExpiresAt,
+                        refreshExpiresAt = authResponse.refreshExpiresAt,
+                        userId = authResponse.userId,
+                        username = authResponse.username,
                         deviceId = deviceId
                     )
 
@@ -513,20 +514,20 @@ object SessionManager {
                         context = context,
                         username = username,
                         password = pass,
-                        userId = authResult.userId,
-                        email = authResult.email,
+                        userId = authResponse.userId,
+                        email = authResponse.email,
                         serverAddress = serverAddress
                     )
 
                     updateSession(
-                        username = authResult.username,
+                        username = authResponse.username,
                         password = pass,
-                        userId = authResult.userId,
-                        email = authResult.email
+                        userId = authResponse.userId,
+                        email = authResponse.email
                     )
                     _session.value = _session.value.copy(
-                        accessToken = authResult.accessToken,
-                        refreshToken = authResult.refreshToken,
+                        accessToken = authResponse.accessToken,
+                        refreshToken = authResponse.refreshToken,
                         authMethod = "v2_jwt"
                     )
 
@@ -542,8 +543,16 @@ object SessionManager {
 
                     onComplete("SUCCESS")
                 } else {
-                    Log.w("SessionManager", "AUTH_FAILED")
-                    onComplete("AUTH_FAILED")
+                    val errorMsg = authResult?.second ?: "AUTH_FAILED"
+                    Log.w("SessionManager", "AUTH_FAILED: $errorMsg")
+                    if (errorMsg.contains("connection refused", ignoreCase = true) ||
+                        errorMsg.contains("database", ignoreCase = true) ||
+                        errorMsg.contains("internal", ignoreCase = true) ||
+                        errorMsg.contains("unavailable", ignoreCase = true)) {
+                        onComplete("SERVER_ERROR")
+                    } else {
+                        onComplete("AUTH_FAILED")
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("SessionManager", "V2 login error: ${e.message}", e)

@@ -1,5 +1,41 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.07] - 2026-06-29
+
+### Reactions fix + Message dedup + AI chat deletion + Error handling
+
+**Исправлено:**
+- Реакции не сохранялись в Избранном — race condition в Room DB save: `messages.value.firstOrNull` перечитывал StateFlow после обновления. Теперь `updatedMsg` захватывается прямо в `messages.update` lambda
+- Реакции не появлялись на другом клиенте — REACTION_V2 stream handler молча дропал реакции если сообщение не было загружено в `_messages`. Теперь реакции сохраняются в Room DB через `updateReactions()` даже если сообщение не в памяти
+- Реакции залипали в optimistic state — `setReactionV2` response с пустыми реакциями игнорировался. Теперь пустые реакции корректно очищают UI
+- Дубликаты сообщений при перезаходе в чат — `sendMessageV2` temp ID vs server ID race condition оставлял оба варианта в Room DB. Добавлен content-based dedup (`getContentHash` + `deduplicateByContent`)
+- Позиция скролла списка чатов терялась при pull-to-refresh — теперь позиция сохраняется если пользователь прокрутил вниз
+- AI чаты нельзя удалить — `deleteChat()` отправлял `DeleteChat` на сервер для `ai-chat-*` ID, которых нет в таблице `chats`. Теперь удаление только локальное
+- AI чаты возвращались после удаления — `loadChats()` заново загружал AI чаты с сервера. Теперь удалённые ID хранятся в SharedPreferences (`deleted_ai_chats`) и фильтруются
+- Ошибка БД сервера показывалась как "Неверное имя или пароль" — gRPC `INTERNAL`/`UNAVAILABLE` ошибки теперь распознаются и показывают "Сервер временно недоступен"
+
+**Добавлено:**
+- Серверный поиск сообщений — `ChatSearchDelegate` теперь использует `SearchMessages` RPC с 300ms debounce, fallback на клиентский поиск
+- Кастомные звуки уведомлений — per-chat звуки через `notification_sounds` SharedPreferences, `setNotificationSound`/`getNotificationSound` companion methods
+- Параллельная загрузка чатов — regular + AI chats загружаются одновременно через `supervisorScope` + `CompletableDeferred`
+- Строка `server_error` (EN + RU) для ошибок сервера
+
+**Изменено:**
+- `RealGrpcClient.kt` — REACTION_V2 handler: +Room DB save via `updateReactions()` когда сообщение не в `_messages`
+- `GrpcMessageV2Client.kt` — `setReactionV2`: response обрабатывает пустые реакции; Room DB save через захваченный `updatedMsg` (без race condition); +`getContentHash`, +`deduplicateByContent`; merge logic фильтрует по content hash
+- `Daos.kt` — +`updateReactions(messageId, reactionsJson)` DAO method
+- `ChatListActivity.kt` — scroll position preservation при обновлении adapter
+- `ChatSearchDelegate.kt` — server-side search via `SearchMessages` RPC, debounced, fallback to client
+- `NewChatActivity.kt` — `ChatSearchDelegate` constructor + `roomId` wiring
+- `LavenderMessagingService.kt` — notification channel sound, per-chat sound override
+- `ChatListViewModel.kt` — parallel chat + AI chat loading; AI chat deletion locally only + `deleted_ai_chats` filter; removed separate `loadAiChats()`
+- `SessionManager.kt` — login error handling: `SERVER_ERROR` для ошибок БД/сервера
+- `ServersActivity.kt` — обработка `SERVER_ERROR` и `CONNECTION_FAILED`
+- `ChatListAuth.kt` — обработка `SERVER_ERROR` и `CONNECTION_FAILED`
+- `strings.xml` (EN + RU) — +`server_error`
+
+---
+
 ## [1.3.1.06] - 2026-06-29
 
 ### Splash freeze fix + Duplicate message fix + Push notification deep link

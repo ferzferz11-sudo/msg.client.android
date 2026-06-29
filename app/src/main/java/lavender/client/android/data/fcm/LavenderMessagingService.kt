@@ -5,6 +5,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.media.RingtoneManager
+import android.net.Uri
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -119,6 +121,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
 
         // Создаем канал уведомлений (обязательно для Android 8.0+)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
             val channel = NotificationChannel(
                 channelId,
                 getString(R.string.lavender_messages_channel),
@@ -129,6 +132,10 @@ class LavenderMessagingService : FirebaseMessagingService() {
                 vibrationPattern = longArrayOf(0, 300, 200, 300)
                 enableLights(true)
                 setShowBadge(true)
+                setSound(defaultSoundUri, android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build())
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -174,10 +181,19 @@ class LavenderMessagingService : FirebaseMessagingService() {
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setFullScreenIntent(pendingIntent, true)
-            .setDefaults(NotificationCompat.DEFAULT_VIBRATE or NotificationCompat.DEFAULT_SOUND)
+            .setVibrate(longArrayOf(0, 300, 200, 300))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+
+        val soundPrefs = getSharedPreferences("notification_sounds", MODE_PRIVATE)
+        val customSoundUri = soundPrefs.getString(roomId, null)
+        if (customSoundUri != null) {
+            notificationBuilder.setSound(Uri.parse(customSoundUri))
+        } else {
+            val defaultSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            notificationBuilder.setSound(defaultSound)
+        }
 
         // Apply DND bypass if enabled (requires NOTIFICATION_POLICY_ACCESS)
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
@@ -212,6 +228,21 @@ class LavenderMessagingService : FirebaseMessagingService() {
     }
 
     companion object {
+        fun setNotificationSound(context: Context, roomId: String, soundUri: String?) {
+            val prefs = context.getSharedPreferences("notification_sounds", MODE_PRIVATE)
+            if (soundUri != null) {
+                prefs.edit().putString(roomId, soundUri).apply()
+            } else {
+                prefs.edit().remove(roomId).apply()
+            }
+        }
+
+        fun getNotificationSound(context: Context, roomId: String): Uri? {
+            val prefs = context.getSharedPreferences("notification_sounds", MODE_PRIVATE)
+            val uri = prefs.getString(roomId, null)
+            return if (uri != null) Uri.parse(uri) else RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        }
+
         fun dismissNotificationsForRoom(context: Context, roomId: String) {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             

@@ -529,17 +529,29 @@ object RealGrpcClient {
                                     val messageId = parts[0]
                                     val reactionsJson = parts[1]
                                     val reactions = messageV2Client.parseReactions(reactionsJson.toByteArray())
+                                    val reactionsDbJson = org.json.JSONArray().apply {
+                                        reactions.forEach { r ->
+                                            put(org.json.JSONObject().apply {
+                                                put("user", r.user)
+                                                put("emoji", r.emoji)
+                                            })
+                                        }
+                                    }.toString()
                                     _messages.update { current ->
                                         val idx = current.indexOfFirst { it.id == messageId }
                                         if (idx != -1) {
                                             val list = current.toMutableList()
                                             list[idx] = list[idx].copy(reactions = reactions)
                                             scope.launch(Dispatchers.IO) {
-                                                val msg = list[idx]
-                                                db()?.messageDao()?.insertMessages(listOf(msg.toEntity()))
+                                                db()?.messageDao()?.insertMessages(listOf(list[idx].toEntity()))
                                             }
                                             list
-                                        } else current
+                                        } else {
+                                            scope.launch(Dispatchers.IO) {
+                                                db()?.messageDao()?.updateReactions(messageId, reactionsDbJson)
+                                            }
+                                            current
+                                        }
                                     }
                                 }
                             } catch (e: Exception) { Log.e(TAG, "Error parsing reaction update", e) }

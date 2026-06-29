@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.1.05 | **Updated:** 2026-06-28
+**Version:** v1.3.1.07 | **Updated:** 2026-06-29
 
 ---
 
@@ -613,3 +613,107 @@ NewChatActivity.loadDataFromIntent()
 ```
 - Without IS_SECRET, re-entering secret chat from list → isSecret=false → no E2EE init
 - `chat.isSecret` from ChatInfo model (server-populated field)
+
+---
+
+## v1.3.1.07
+
+### Reactions Fix Pattern (v1.3.1.07)
+```
+REACTION_V2 stream handler (RealGrpcClient.kt)
+  ├── If message found in _messages → update reactions + save to Room DB
+  └── If message NOT found → save to Room DB via updateReactions() (previously silently dropped)
+
+setReactionV2 response (GrpcMessageV2Client.kt)
+  ├── response.success && reactions not empty → overwrite with server reactions
+  ├── response.success && reactions empty → clear reactions (previously ignored)
+  └── Always save to Room DB after update
+
+updateReactions DAO (Daos.kt)
+  └── UPDATE messages SET reactionsJson = :reactionsJson WHERE id = :messageId
+```
+
+### Message Dedup Pattern (v1.3.1.07)
+```
+getContentHash(message) = "${user}:${text}:${timestamp / 1000}"
+  — Content-based key independent of message ID
+
+deduplicateByContent(messages)
+  — Groups by content hash, prefers server IDs over temp IDs (id.startsWith("temp_"))
+
+Applied in loadHistoryV2:
+  — Cache load: dedupedCache = deduplicateByContent(cached)
+  — Server merge: filterNot by contentHash, then deduplicateByContent(result)
+```
+
+### Server-Side Search Pattern (v1.3.1.07)
+```
+ChatSearchDelegate
+  ├── searchDebounced(query) — 300ms delay via coroutine Job cancel
+  ├── performServerSearch(query) — GrpcClient.searchMessages(roomId, query, limit=50)
+  │   ├── Find message positions in adapter by ID
+  │   └── If positions found → scroll to results
+  └── Fallback: performClientSearch(query) — filter adapter.currentList by text contains
+
+Constructor: ChatSearchDelegate(activity, scope)
+  + var roomId: String — set after init in NewChatActivity.setupDelegates()
+```
+
+### Parallel Chat Loading Pattern (v1.3.1.07)
+```
+loadChats()
+  ├── Cache load (if allChats empty) — Room DB → instant display
+  ├── supervisorScope {
+  │   ├── launch(IO) { fetchedPage = getChats() }
+  │   └── launch(IO) { aiSessions = listAIChats() }
+  │   — Both run concurrently
+  ├── Process regular chats (merge, unread tracking)
+  ├── Merge AI chats (ChatInfo with type="hermes")
+  ├── buildSections(allChats)
+  └── Sync to Room DB
+```
+- Removed standalone `loadAiChats()` — AI chats loaded inside `loadChats()` for parallelism
+- Kotlin 2.4.0: `async` deprecated outside scope → use `supervisorScope` + `launch` + `CompletableDeferred`
+
+### Notification Sound Pattern (v1.3.1.07)
+```
+LavenderMessagingService
+  ├── Channel: IMPORTANCE_HIGH + RingtoneManager.getDefaultUri(TYPE_NOTIFICATION)
+  │   └── AudioAttributes(USAGE_NOTIFICATION, CONTENT_TYPE_SONIFICATION)
+  ├── Per-chat override: notification_sounds SharedPreferences
+  │   ├── setNotificationSound(context, roomId, soundUri)
+  │   └── getNotificationSound(context, roomId) → Uri?
+  └── Builder: setSound(customUri) or setSound(defaultUri)
+```
+
+### AI Chat Deletion Pattern (v1.3.1.07)
+```
+deleteChat(chatId)
+  ├── if chatId.startsWith("ai-chat-")
+  │   ├── Remove from allChats + buildSections
+  │   ├── Delete from Room DB
+  │   ├── Save to SharedPreferences: deleted_ai_chats Set
+  │   └── Skip server DeleteChat call
+  └── else: normal server DeleteChat
+
+loadChats() — AI chat merge
+  ├── Load deleted_ai_chats from SharedPreferences
+  ├── Filter aiSessions by deletedAiChats
+  └── Only merge non-deleted AI chats
+```
+
+### Server Error Handling Pattern (v1.3.1.07)
+```
+SessionManager.loginV2()
+  ├── Auth callback: Pair<AuthResponseV2Proto?, String?> (response, error)
+  ├── If error contains "connection refused" | "database" | "internal" | "unavailable"
+  │   └── onComplete("SERVER_ERROR")
+  └── Else → onComplete("AUTH_FAILED")
+
+UI handling:
+  ├── "SUCCESS" → navigate to chat list
+  ├── "AUTH_FAILED" → "Wrong username or password"
+  ├── "SERVER_ERROR" → "Server is temporarily unavailable"
+  ├── "CONNECTION_FAILED" → "Connection failed"
+  └── "USER_NOT_FOUND" → "User not found"
+```

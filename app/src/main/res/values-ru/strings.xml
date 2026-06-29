@@ -399,6 +399,7 @@
     <string name="no">Нет</string>
     <string name="user_not_found">Пользователь не найден</string>
     <string name="wrong_password">Неверное имя пользователя или пароль</string>
+    <string name="server_error">Сервер временно недоступен. Попробуйте позже</string>
     <string name="register_confirm">Пользователь \"%s\" не зарегистрирован. Хотите создать новую учетную запись?</string>
     <string name="preset_colors">Готовые цвета</string>
     <string name="custom_color">Свой цвет</string>

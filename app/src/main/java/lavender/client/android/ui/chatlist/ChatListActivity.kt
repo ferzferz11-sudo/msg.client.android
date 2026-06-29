@@ -409,11 +409,16 @@ class ChatListActivity : AppCompatActivity() {
         // Observe sections
         lifecycleScope.launch {
             viewModel.sections.collectLatest { sections ->
-                val wasNearTop = (rvChatList?.layoutManager as? LinearLayoutManager)
-                    ?.findFirstCompletelyVisibleItemPosition() ?: 0 <= 1
+                val layoutManager = rvChatList?.layoutManager as? LinearLayoutManager
+                val firstVisible = layoutManager?.findFirstCompletelyVisibleItemPosition() ?: 0
+                val wasNearTop = firstVisible <= 1
+                val previousItemCount = chatAdapter.itemCount
                 chatAdapter.setSections(sections)
                 if (wasNearTop) {
                     rvChatList?.scrollToPosition(0)
+                } else if (chatAdapter.itemCount > 0) {
+                    val targetPos = minOf(firstVisible, chatAdapter.itemCount - 1)
+                    rvChatList?.scrollToPosition(targetPos)
                 }
             }
         }

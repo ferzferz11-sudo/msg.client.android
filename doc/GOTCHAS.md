@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.1.06 | **Updated:** 2026-06-29
+**Version:** v1.3.1.07 | **Updated:** 2026-06-29
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -292,3 +292,51 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **`ONLINE_USERS_UPDATE` system signal** populates `_users` StateFlow with list of online usernames from server
 - **Server may not include current user** in the online users list — "0 online" can appear even when user is connected
 - **Secret chats no longer show participant/online count** — they show E2EE status instead (fix for "2 участника, 0 онлайн")
+
+## Reactions Bugs (v1.3.1.07)
+
+- **REACTION_V2 stream drops reactions for unloaded messages** — if a reaction arrives for a message not in `_messages` (e.g., scrolled off, different chat), it was silently discarded. Fixed: saves to Room DB via `updateReactions()` even when message not in memory
+- **`setReactionV2` empty reactions ignored** — server response with `success=true` but empty `reactions` bytes kept the optimistic state. Fixed: now clears reactions when server returns empty
+- **`updateReactions` DAO method** — new `UPDATE messages SET reactionsJson = :reactionsJson WHERE id = :messageId` for targeted reaction updates without full message rewrite
+
+## Message Dedup (v1.3.1.07)
+
+- **Content-based dedup** — `getContentHash(message)` = `"${user}:${text}:${timestamp/1000}"`. `deduplicateByContent()` prefers server IDs over temp IDs (`id.startsWith("temp_")`)
+- **Applied in `loadHistoryV2`** — both cache load and server response merge now deduplicate by content hash, preventing temp ID + server ID coexistence in Room DB
+- **Root cause**: ChatV2 stream can deliver server's copy of a sent message (with server ID) before `sendMessageV2` response handler changes temp ID → server ID. Both get saved to Room DB.
+
+## Chat Search Server-Side (v1.3.1.07)
+
+- **`ChatSearchDelegate` now uses `SearchMessages` RPC** — 300ms debounce, searches server first, falls back to client-side if server returns 0 results
+- **Constructor changed** — now requires `CoroutineScope` parameter, plus `roomId` must be set after init
+- **`NewChatActivity`** passes `lifecycleScope` and sets `searchDelegate.roomId`
+
+## Notification Sounds (v1.3.1.07)
+
+- **Channel now has default notification sound** — `RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)` with `AudioAttributes` for notification usage
+- **Per-chat sound override** — `notification_sounds` SharedPreferences, `setNotificationSound(context, roomId, soundUri)` / `getNotificationSound(context, roomId)`
+- **Replaced `DEFAULT_VIBRATE | DEFAULT_SOUND`** — now explicit `setVibrate()` + `setSound()` for reliable sound playback
+
+## Parallel Chat Loading (v1.3.1.07)
+
+- **Regular + AI chats load in parallel** — `supervisorScope` + `CompletableDeferred` on `Dispatchers.IO`
+- **Removed standalone `loadAiChats()`** — AI chats now loaded inside `loadChats()` to avoid duplicate calls
+- **Kotlin 2.4.0**: `async` is deprecated outside proper coroutine scope — use `supervisorScope` + `launch` + `CompletableDeferred` instead
+
+## AI Chat Deletion (v1.3.1.07)
+
+- **Server doesn't store AI chats in `chats` table** — AI chats are virtual, created by `ListAIV2Chats` RPC. `DeleteChat` server call fails with "not found" for `ai-chat-*` IDs
+- **Fix: skip server call for AI chats** — `deleteChat()` checks `chatId.startsWith("ai-chat-")` and only removes locally
+- **AI chats reappear after deletion** — `loadChats()` re-fetches from server via `listAIChats()`. Fix: store deleted IDs in SharedPreferences (`deleted_ai_chats`) and filter during merge
+
+## Server Error Handling (v1.3.1.07)
+
+- **Server DB errors return gRPC `INTERNAL`/`UNAVAILABLE`** — when PostgreSQL is down, auth handlers receive status error instead of `success=false`
+- **Client showed "Wrong password" for all auth failures** — `AUTH_FAILED` result shown for both wrong credentials and server errors
+- **Fix: distinguish error types** — `SessionManager.loginV2()` now checks error message for `connection refused`/`database`/`internal`/`unavailable` → returns `SERVER_ERROR` instead of `AUTH_FAILED`
+- **UI handlers**: `ServersActivity`, `ChatListAuth` now handle `SERVER_ERROR` → "Server is temporarily unavailable" and `CONNECTION_FAILED` → "Connection failed"
+
+## Reactions Room DB Race Condition (v1.3.1.07)
+
+- **`messages.value.firstOrNull` after `messages.update` is racy** — another coroutine may update `messages` between the `update` and the `firstOrNull` call, causing the wrong message version to be saved
+- **Fix: capture `updatedMsg` inside `messages.update` lambda** — the lambda is atomic, so the captured value is guaranteed to be the correct version

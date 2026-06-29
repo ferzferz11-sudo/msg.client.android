@@ -31,6 +31,9 @@ interface MessageDao {
     @Query("SELECT * FROM messages WHERE isSent = 0")
     suspend fun getPendingMessages(): List<MessageEntity>
 
+    @Query("UPDATE messages SET reactionsJson = :reactionsJson WHERE id = :messageId")
+    suspend fun updateReactions(messageId: String, reactionsJson: String)
+
     @Query("DELETE FROM messages")
     suspend fun clearAll()
 }

@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.1.07 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-06-29
+**Версия:** v1.3.1.08 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-06-29
 
 ---
 
@@ -82,37 +82,66 @@ Secret Chats: E2EE via E2EEManager (ECDH + AES-256-GCM), key exchange with retry
 
 ---
 
-## Итог сессии v1.3.1.06 (завершена)
+## Итог сессии v1.3.1.07 (завершена)
 
 ### Выполнено
 
-**1. Splash screen freeze fix:**
-- `SessionManager.waitForConnectionAndReLogin()` — убран `latch.await(8, SECONDS)`, блокировавший Main thread. Callback обрабатывает результат асинхронно
-- `SplashActivity` — добавлен 15s biometric timeout (принудительный переход если biometric завис)
-- `SplashActivity` — добавлен 5s safety timeout (принудительный переход если анимация сломалась)
+**1. Reactions fix:**
+- `REACTION_V2` stream handler — reactions теперь сохраняются в Room DB даже если сообщение не в `_messages` (была primary причина бага)
+- `setReactionV2` response — обрабатывает пустые реакции (optimistic state больше не залипает)
+- Room DB save через захваченный `updatedMsg` вместо `messages.value.firstOrNull` (исправлена race condition в Избранном)
+- +`updateReactions` DAO method для обновления реакций без полной перезаписи сообщения
 
-**2. Duplicate message fix:**
-- `GrpcMessageV2Client.sendMessageV2()` — race condition: temp ID → server ID в response handler, но ChatV2 stream уже добавил сообщение с server ID. Добавлен dedup фильтр после обновления ID
+**2. Message dedup:**
+- Добавлен `getContentHash` (user + text + timestamp/1000) и `deduplicateByContent`
+- Применён в `loadHistoryV2` — cache load и server response merge теперь дедуплицируют по content, предотвращая дубликаты temp ID vs server ID
 
-**3. Push notification deep link fix:**
-- `NewChatActivity.onNewIntent()` — если пользователь уже в чате и нажимает уведомление на другой чат — теперь корректно переключается (startChatV2 + markRead + toolbar update)
+**3. Chat list scroll position:**
+- Scroll position теперь сохраняется при pull-to-refresh если пользователь прокрутил вниз (wasNearTop = false → scrollToPosition(firstVisible))
 
-**4. Backlog check:**
-- Offline mode — ✅ уже реализовано (Room DB кеш для чатов и сообщений)
-- Push notification deep link — ✅ уже реализовано (+ исправлен onNewIntent)
+**4. Server-side message search:**
+- `ChatSearchDelegate` теперь использует `SearchMessages` RPC с 300ms debounce
+- Fallback на клиентский поиск если сервер вернул 0 результатов
+- Добавлен `scope` и `roomId` параметры
+
+**5. Notification sounds:**
+- Notification channel теперь имеет default notification sound
+- Per-chat sound override через `notification_sounds` SharedPreferences
+- `setNotificationSound`/`getNotificationSound` companion methods
+
+**6. Parallel chat loading:**
+- Regular chats и AI chats загружаются одновременно через `supervisorScope` + `CompletableDeferred`
+- Удалён отдельный `loadAiChats()` — AI chats теперь загружаются в `loadChats()`
+
+**7. AI chat deletion:**
+- `deleteChat()` пропускает серверный вызов для `ai-chat-*` ID (сервер не хранит AI chats в таблице `chats`)
+- Удалённые AI chat ID сохраняются в SharedPreferences (`deleted_ai_chats`) и фильтруются при загрузке
+
+**8. Server error handling:**
+- gRPC `INTERNAL`/`UNAVAILABLE` ошибки теперь распознаются как `SERVER_ERROR`
+- UI показывает "Сервер временно недоступен" вместо "Неверное имя или пароль"
+- Обработаны в `ServersActivity`, `ChatListAuth`, `SessionManager`
 
 ### Изменённые файлы (клиент)
 
 | Файл | Изменение |
 |------|-----------|
-| `SessionManager.kt` | убран `CountDownLatch` + `latch.await(8s)` |
-| `SplashActivity.kt` | +Log import, +15s biometric timeout, +5s splash timeout |
-| `GrpcMessageV2Client.kt` | dedup фильтр в `sendMessageV2` response handler |
-| `NewChatActivity.kt` | `onNewIntent()` +startChatV2, +markRead, +toolbar update |
+| `RealGrpcClient.kt` | REACTION_V2 handler: +Room DB save via updateReactions() for missing messages |
+| `GrpcMessageV2Client.kt` | +setReactionV2 empty reactions, captured updatedMsg for Room DB save, +getContentHash, +deduplicateByContent |
+| `Daos.kt` | +updateReactions(messageId, reactionsJson) |
+| `ChatListActivity.kt` | Scroll position preservation |
+| `ChatSearchDelegate.kt` | Server-side search via SearchMessages RPC |
+| `NewChatActivity.kt` | ChatSearchDelegate constructor + roomId wiring |
+| `LavenderMessagingService.kt` | Channel sound, per-chat sound override |
+| `ChatListViewModel.kt` | Parallel chat + AI loading, AI deletion locally only, deleted_ai_chats filter |
+| `SessionManager.kt` | Login error handling: SERVER_ERROR for DB/server errors |
+| `ServersActivity.kt` | SERVER_ERROR + CONNECTION_FAILED handling |
+| `ChatListAuth.kt` | SERVER_ERROR + CONNECTION_FAILED handling |
+| `strings.xml` (EN + RU) | +server_error |
 
 ---
 
-## Задачи — Следующая сессия (v1.3.1.07)
+## Задачи — Следующая сессия (v1.3.1.08)
 
 ---
 
@@ -140,7 +169,7 @@ Secret Chats: E2EE via E2EEManager (ECDH + AES-256-GCM), key exchange with retry
 20. **AI ошибки:** показывать как chat bubble (⚠️ + текст), НЕ Toast
 21. **AuthManager.getBearerToken()** возвращает "Bearer <token>" — НЕ добавлять ещё один "Bearer "
 22. **ВСЕГДА сверять с сервером:** перед любым gRPC/marshaller изменением проверять серверный код
-23. **Reaction flow:** optimistic UI → Room DB save → server response → in-memory + Room DB update → REACTION_V2 stream
+23. **Reaction flow:** optimistic UI → Room DB save → server response (incl. empty) → in-memory + Room DB update → REACTION_V2 stream → Room DB save (even if message not in _messages)
 
 ---
 

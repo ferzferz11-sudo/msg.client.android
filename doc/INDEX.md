@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.1.06 | **Updated:** 2026-06-29
+**Version:** v1.3.1.07 | **Updated:** 2026-06-29
 
 ---
 
@@ -98,14 +98,18 @@ Session: SessionManager (async token refresh — no Main thread blocking)
 SplashScreen: SplashActivity → animateAndNavigate() → navigateToTarget() → biometric (15s timeout) + 5s safety timeout
 Chat Stream: ChatV2 bidirectional stream (messenger.ChatService/ChatV2) — JWT auth + clientVersion, system signals, typing
 Messages: v2 only — GetHistoryV2, SendMessageV2, EditMessageV2, DeleteMessageV2, SetReactionV2
-Reactions: optimistic UI → Room DB save → server response → in-memory + Room DB update → REACTION_V2 stream → Room DB save
+Reactions: optimistic UI → Room DB save → server response (incl. empty) → in-memory + Room DB update → REACTION_V2 stream → Room DB save (even if message not in _messages)
+Message Dedup: content-based (getContentHash) — deduplicates temp ID vs server ID in loadHistoryV2
 Unread: markAsRead optimistic clear + locallyReadChats tracking → gRPC MarkRead to server → server updates last_read_at
 Real-time: ChatV2 stream messages added to _messages StateFlow + Room DB, auto markAsRead for active chat
+Chat Search: server-side SearchMessages RPC with 300ms debounce, fallback to client-side filter
+Chat List: Cursor-based pagination (infinite scroll), Unread highlight, scroll position preserved on refresh
+Parallel Loading: regular + AI chats loaded concurrently via supervisorScope + CompletableDeferred
 AI v2: ChatWithAIV2 streaming + tool calling loop + 9 provider types + image/file support
 AI Chat History: GetAIV2ChatHistory + ListAIV2Chats (server-side)
 AI Marketplace: Rate, Reviews, Stats, Share, Install, Usage + Search + Pagination + Sort + Filter
 Biometric: BiometricPrompt after splash screen when enabled (15s timeout fallback)
-Chat List: Cursor-based pagination (infinite scroll), Unread highlight
+Notifications: per-chat sound override via notification_sounds SharedPreferences
 Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 Logging: clean logs, no hot-path noise, performance timing in loadChats
 ```

@@ -179,7 +179,7 @@ class NewChatActivity : AppCompatActivity() {
         toolbarDelegate = ChatToolbarDelegate(this, grpcClient); toolbarDelegate.initViews()
         inputDelegate = ChatInputDelegate(this, grpcClient); inputDelegate.initViews()
         selectionDelegate = ChatSelectionDelegate(this, grpcClient); selectionDelegate.initViews()
-        searchDelegate = ChatSearchDelegate(this); searchDelegate.initViews()
+        searchDelegate = ChatSearchDelegate(this, lifecycleScope); searchDelegate.initViews()
         e2eeDelegate = ChatE2EEDelegate(this, grpcClient)
         messageMenuDelegate = ChatMessageMenuDelegate(this, grpcClient)
     }
@@ -214,6 +214,8 @@ class NewChatActivity : AppCompatActivity() {
 
         selectionDelegate.configure(roomId, username)
         selectionDelegate.setAdapter(adapter)
+
+        searchDelegate.roomId = roomId
         selectionDelegate.onSelectionModeChanged = { invalidateOptionsMenu() }
         selectionDelegate.getToolbarDelegate = { toolbarDelegate }
         selectionDelegate.onReplySelected = { m -> inputDelegate.showReplyPreview(m) }
