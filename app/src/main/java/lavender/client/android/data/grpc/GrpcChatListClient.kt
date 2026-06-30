@@ -46,15 +46,23 @@ class GrpcChatListClient(
                 Log.d(TAG, "getChats: received ${message.chats.size} chats")
                 val chats = message.chats.map { proto ->
                     ChatInfo(
-                        proto.id, proto.name, proto.type, proto.participants,
-                        proto.createdAt?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
-                        proto.unreadCount,
-                        proto.lastMessageTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
-                        proto.creator, proto.lastMessageText, proto.avatarUrl, proto.fullAvatarUrl,
-                        proto.lastMessageUsername, false, proto.lastMessageHasImage, proto.allowMembersToAdd,
-                        proto.conferenceStartTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
-                        proto.isSecret, proto.peerPublicKey, proto.e2eeReady,
-                        proto.activeAgentId, proto.agentMode
+                        id = proto.id, name = proto.name, type = proto.type,
+                        participants = proto.participants,
+                        createdAt = proto.createdAt?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
+                        unreadCount = proto.unreadCount,
+                        lastMessageTime = proto.lastMessageTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
+                        creator = proto.creator, lastMessageText = proto.lastMessageText,
+                        avatarUrl = proto.avatarUrl, fullAvatarUrl = proto.fullAvatarUrl,
+                        lastMessageUsername = proto.lastMessageUsername,
+                        isMuted = proto.isMuted,
+                        lastMessageHasImage = proto.lastMessageHasImage,
+                        allowMembersToAdd = proto.allowMembersToAdd,
+                        conferenceStartTime = proto.conferenceStartTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
+                        isSecret = proto.isSecret, peerPublicKey = proto.peerPublicKey,
+                        e2eeReady = proto.e2eeReady,
+                        activeAgentId = proto.activeAgentId, agentMode = proto.agentMode,
+                        isPinned = proto.isPinned, isArchived = proto.isArchived,
+                        pinnedAt = proto.pinnedAt
                     )
                 }
                 if (chats.isNotEmpty()) {
@@ -94,12 +102,16 @@ class GrpcChatListClient(
                         lastMessageTime = proto.lastMessageTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
                         creator = proto.creator, lastMessageText = proto.lastMessageText,
                         avatarUrl = proto.avatarUrl, fullAvatarUrl = proto.fullAvatarUrl,
-                        lastMessageUsername = proto.lastMessageUsername, isMuted = false,
+                        lastMessageUsername = proto.lastMessageUsername,
+                        isMuted = proto.isMuted,
                         lastMessageHasImage = proto.lastMessageHasImage,
                         allowMembersToAdd = proto.allowMembersToAdd,
                         conferenceStartTime = proto.conferenceStartTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
                         isSecret = proto.isSecret, peerPublicKey = proto.peerPublicKey,
-                        e2eeReady = proto.e2eeReady
+                        e2eeReady = proto.e2eeReady,
+                        activeAgentId = proto.activeAgentId, agentMode = proto.agentMode,
+                        isPinned = proto.isPinned, isArchived = proto.isArchived,
+                        pinnedAt = proto.pinnedAt
                     )
                 })
             }

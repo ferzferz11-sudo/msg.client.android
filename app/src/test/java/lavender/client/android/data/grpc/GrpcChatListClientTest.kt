@@ -54,6 +54,65 @@ class GrpcChatListClientTest {
     }
 
     @Test
+    fun getChats_v2Fields_mappedToChatInfo() = runTest {
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
+        every { mockCall.start(any(), any()) } answers {
+            @Suppress("UNCHECKED_CAST")
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            val chatProto = ChatInfoProto(
+                id = "chat-pinned", name = "Pinned Chat", type = "group",
+                participants = "[\"user1\",\"user2\"]", unreadCount = 5,
+                isPinned = true, isMuted = true, isArchived = false,
+                pinnedAt = 1719000000000L,
+                createdAt = com.google.protobuf.Timestamp.newBuilder().setSeconds(1000).build()
+            )
+            listener.onMessage(GetChatsResponseProto(chats = listOf(chatProto)))
+            listener.onClose(Status.OK, Metadata())
+        }
+
+        var result: List<ChatInfo>? = null
+        client.getChats(username = "testuser", callback = { result = it })
+
+        assertNotNull("Result should not be null", result)
+        assertEquals("Should have 1 chat", 1, result!!.size)
+        val chat = result!![0]
+        assertTrue("isPinned should be true", chat.isPinned)
+        assertTrue("isMuted should be true", chat.isMuted)
+        assertFalse("isArchived should be false", chat.isArchived)
+        assertEquals("pinnedAt should match", 1719000000000L, chat.pinnedAt)
+    }
+
+    @Test
+    fun getAllChats_v2Fields_mappedToChatInfo() = runTest {
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
+        every { mockCall.start(any(), any()) } answers {
+            @Suppress("UNCHECKED_CAST")
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            // GetAllChatsResponseProto.chats is List<ChatInfoProto> (same type as GetChats)
+            val chatProto = ChatInfoProto(
+                id = "chat-archived", name = "Archived Chat", type = "direct",
+                participants = "[\"user1\"]", unreadCount = 0,
+                isPinned = false, isMuted = false, isArchived = true,
+                pinnedAt = 0L
+            )
+            listener.onMessage(GetAllChatsResponseProto(chats = listOf(chatProto)))
+            listener.onClose(Status.OK, Metadata())
+        }
+
+        var result: List<ChatInfo>? = null
+        client.getAllChats { result = it }
+
+        assertNotNull("Result should not be null", result)
+        assertEquals("Should have 1 chat", 1, result!!.size)
+        val chat = result!![0]
+        assertFalse("isPinned should be false", chat.isPinned)
+        assertFalse("isMuted should be false", chat.isMuted)
+        assertTrue("isArchived should be true", chat.isArchived)
+    }
+
+    @Test
     fun getChats_emptyServerResponse_returnsNull() = runTest {
         val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
         every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
