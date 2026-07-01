@@ -1,5 +1,25 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.12] - 2026-07-02
+
+### Call disconnect fix + Chat history fix
+
+**Исправлено:**
+- INITIATE echo перезаписывал `receiverId` в `_currentCall` — сервер меняет `receiverId` на sender ID при эхе. Теперь INITIATE echo обновляет только `callId`, сохраняя оригинальный `receiverId` из `initiateCall()`
+- Звонок завершался у инициатора, но callee видел уведомление звонка — HANGUP не доставлялся если call stream callee не зарегистрирован. Сервер теперь отправляет FCM `CALL_ENDED` push при `!delivered && HANGUP/REJECT`
+- `loadHistory()` всегда вызывается при READY-соединении — ранее кэш мог заблокировать gRPC запрос и новое сообщение не подгружалось после обновления приложения
+
+**Изменено:**
+- `CallManager.kt` — INITIATE echo: `existing.copy(callId = signal.callId)` вместо полной перезаписи; `handleCallEndedPush()` для обработки FCM CALL_ENDED
+- `LavenderMessagingService.kt` — обработка FCM `type=CALL_ENDED` → dismiss notification + close CallActivity
+- `NewChatActivity.kt` — `loadHistory()` вызывается всегда при READY, `shouldScrollToBottom` только при пустом адаптере
+
+**Сервер:**
+- `server_chat.go` — после `BroadcastCall`: если `!delivered && (HANGUP || REJECT)` → `sendCallEndedPushNotification()`
+- `server_push.go` — новая функция `sendCallEndedPushNotification()` отправляет FCM push с `type=CALL_ENDED`
+
+---
+
 ## [1.3.1.11] - 2026-06-29
 
 ### Call signaling fix + Token resilience
@@ -11,6 +31,9 @@
 - `NewChatActivity` передаёт UUID в `CallNavigator.startCall` вместо username (WebRTC сигналы теперь доставляются)
 - Разлогин при недоступности сервера — `INTERNAL` и `NOT_CONNECTED` ошибки больше не вызывают force logout (это ошибки доступности, не авторизации)
 - Токен обновляется при onResume — обрабатывает пробуждение после долгого простоя (ночь, doze mode)
+- INITIATE echo перезаписывал `receiverId` в `_currentCall` — сервер меняет `receiverId` на sender ID при эхе. Теперь INITIATE echo обновляет только `callId`
+- Звонок завершался у инициатора, но callee видел уведомление звонка — HANGUP не доставлялся если call stream callee не зарегистрирован. Сервер теперь отправляет FCM `CALL_ENDED` push при `!delivered && HANGUP/REJECT`
+- `loadHistory()` всегда вызывается при READY-соединении — сообщения из кэша могли блокировать gRPC запрос
 
 **Изменено:**
 - `CallManager.kt` — `initiateCall()` резолвит username → UUID; `resolveUserId()` helper; все conference методы используют `getUserId()`

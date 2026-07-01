@@ -43,7 +43,19 @@ object CallManager {
         
         if (isMe(signal.senderId)) {
             when (signal.type) {
-                CallMessageProto.Type.INITIATE, 
+                CallMessageProto.Type.INITIATE -> {
+                    val existing = _currentCall.value
+                    if (existing != null) {
+                        // Server echoes INITIATE back with receiverId swapped to sender.
+                        // Only update callId, preserve original receiverId.
+                        Log.d(TAG, "Self INITIATE echo — updating callId only: ${signal.callId}")
+                        _currentCall.value = existing.copy(callId = signal.callId)
+                    } else {
+                        _currentCall.value = signal
+                    }
+                    scope.launch { _incomingSignals.emit(signal) }
+                    return
+                }
                 CallMessageProto.Type.INITIATE_CONFERENCE,
                 CallMessageProto.Type.JOIN_CONFERENCE,
                 CallMessageProto.Type.UPDATE_CONFERENCE,
@@ -131,6 +143,18 @@ object CallManager {
 
     fun clearCurrentCall() {
         Log.d(TAG, "Clearing current call state")
+        _currentCall.value = null
+    }
+
+    fun handleCallEndedPush(callId: String) {
+        Log.d(TAG, "Call ended push received for call: $callId")
+        val signal = CallMessageProto(
+            callId = callId,
+            senderId = "",
+            receiverId = "",
+            type = CallMessageProto.Type.HANGUP
+        )
+        scope.launch { _incomingSignals.emit(signal) }
         _currentCall.value = null
     }
 

@@ -37,6 +37,13 @@ class LavenderMessagingService : FirebaseMessagingService() {
             handleIncomingCall(callId, senderId)
             return
         }
+        if (type == "CALL_ENDED") {
+            val callId = remoteMessage.data["call_id"] ?: ""
+            Log.d("FCM", "Call ended push received for call: $callId")
+            CallManager.handleCallEndedPush(callId)
+            dismissCallNotification(callId)
+            return
+        }
 
         // Извлекаем данные (приоритет payload из data, затем notification)
         val title = remoteMessage.data["title"] ?: remoteMessage.notification?.title ?: getString(R.string.new_message)
@@ -77,6 +84,12 @@ class LavenderMessagingService : FirebaseMessagingService() {
         }
 
         showCallNotification(senderId, callId)
+    }
+
+    private fun dismissCallNotification(callId: String) {
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel(callId.hashCode())
+        Log.d("FCM", "Dismissed call notification for call: $callId")
     }
 
     private fun showCallNotification(senderId: String, callId: String) {

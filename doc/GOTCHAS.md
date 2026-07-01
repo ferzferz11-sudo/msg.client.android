@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.1.11 | **Updated:** 2026-06-29
+**Version:** v1.3.1.12 | **Updated:** 2026-07-02
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -403,6 +403,14 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **Fix: `initiateCall()` resolves username → UUID via `allUsers`** — `resolveUserId(username)` helper
 - **Conference methods also used `getCurrentUsername()`** — 7 methods fixed to use `getUserId()`
 - **FCM push `sender_id` must be UUID** — server `sendCallPushNotification` now sends `msg.SenderId` (UUID) instead of `senderUsername`
+
+## Call Disconnect Asymmetry (v1.3.1.11)
+
+- **INITIATE echo corrupts `receiverId`** — server echoes INITIATE back with `receiverId` swapped to sender's own ID. `CallManager.handleIncomingSignal` overwrites `_currentCall` with this echo, corrupting `receiverId`. After hangup + stream reconnect, `acceptCall()` uses corrupted state → sends ACCEPT to wrong party
+- **Fix: INITIATE echo only updates `callId`** — `existing.copy(callId = signal.callId)` preserves original `receiverId` from `initiateCall()`
+- **HANGUP not delivered when callee stream offline** — `BroadcastCall` at line 669 can't find callee in `callStreams` (FCM-initiated call, not stream-initiated). Server logs warning but no push sent
+- **Fix: server sends `CALL_ENDED` FCM push** — `sendCallEndedPushNotification()` called when `!delivered && (HANGUP || REJECT)`
+- **Client handles `CALL_ENDED` push** — `LavenderMessagingService` dismisses notification, `CallManager.handleCallEndedPush()` emits synthetic HANGUP to close open CallActivity
 
 ## Token Resilience (v1.3.1.11)
 

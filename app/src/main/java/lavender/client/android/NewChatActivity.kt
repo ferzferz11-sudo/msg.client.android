@@ -347,8 +347,8 @@ class NewChatActivity : AppCompatActivity() {
                         viewModel.syncChatListIfNeeded(this@NewChatActivity)
                         if (adapter.currentList.isEmpty()) {
                             shouldScrollToBottom = true
-                            viewModel.loadHistory()
                         }
+                        viewModel.loadHistory()
                         viewModel.loadPinnedMessages(this@NewChatActivity)
                     }
                 }

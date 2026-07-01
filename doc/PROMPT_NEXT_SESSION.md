@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.1.11 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-06-29
+**Версия:** v1.3.1.12 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-07-02
 
 ---
 
@@ -187,6 +187,37 @@ Secret Chats: E2EE via E2EEManager (ECDH + AES-256-GCM), key exchange with retry
 
 ---
 
+## Итог сессии v1.3.1.12 (завершена)
+
+### Выполнено
+
+**1. Chat history fix — missing message after app update:**
+- `NewChatActivity.kt` — `loadHistory()` теперь всегда вызывается при READY-соединении. Ранее `adapter.currentList.isEmpty()` блокировал повторный gRPC запрос, если кэш содержал старые сообщения
+
+**2. Call disconnect asymmetry fix:**
+- `CallManager.handleIncomingSignal()` — INITIATE echo теперь обновляет только `callId`, не перезаписывая `receiverId` (сервер меняет receiverId на senderId при эхе)
+- `CallManager.handleCallEndedPush()` — эмитит синтетический HANGUP в `incomingSignals` для закрытия открытого CallActivity
+- `LavenderMessagingService` — обработка FCM `type=CALL_ENDED` → закрывает CallActivity + дисмиссит уведомление
+
+**3. Сервер (выполнено):**
+- `server_chat.go:673` — после `BroadcastCall`: если `!delivered && (HANGUP || REJECT)` → `sendCallEndedPushNotification()`
+- `server_push.go` — новая функция `sendCallEndedPushNotification()` отправляет FCM push с `type=CALL_ENDED`
+
+### Изменённые файлы
+
+| Файл | Изменение |
+|------|-----------|
+| `CallManager.kt` | INITIATE echo фикс receiverId; `handleCallEndedPush()` |
+| `LavenderMessagingService.kt` | Обработка FCM `CALL_ENDED` |
+| `NewChatActivity.kt` | `loadHistory()` всегда при READY |
+| `CHANGELOG.md` | Запись v1.3.1.12 |
+
+### Серверные задачи (выполнены)
+
+- `PROMPT_CALL_HANGUP_PUSH.md` — FCM push CALL_ENDED при !delivered && HANGUP/REJECT ✅
+
+---
+
 ## Итог сессии v1.3.1.11 (завершена)
 
 ### Выполнено
@@ -201,17 +232,25 @@ Secret Chats: E2EE via E2EEManager (ECDH + AES-256-GCM), key exchange with retry
 - `server_chat.go:551` — `msg.SenderId` (UUID) вместо `msg.SenderName` (username) в FCM push
 - `server_push.go:524-546` — `sender_id` = UUID, убран `resolveDisplayName`
 
+**3. Call disconnect asymmetry fix:**
+- `CallManager.handleIncomingSignal()` — INITIATE echo теперь обновляет только `callId`, не перезаписывая `receiverId` (сервер меняет receiverId на senderId при эхе)
+- `CallManager.handleCallEndedPush()` — эмитит синтетический HANGUP в `incomingSignals` для закрытия открытого CallActivity
+- `LavenderMessagingService` — обработка FCM `type=CALL_ENDED` → закрывает CallActivity + дисмиссит уведомление
+- Сервер: `sendCallEndedPushNotification()` в `server_push.go` — отправляет FCM `CALL_ENDED` при `!delivered && HANGUP/REJECT` в `server_chat.go:673`
+
 ### Изменённые файлы
 
 | Файл | Изменение |
 |------|-----------|
-| `CallManager.kt` | `initiateCall()` резолвит username→UUID; `resolveUserId()` helper; 7 conference методов: `getUserId()` |
+| `CallManager.kt` | `initiateCall()` резолвит username→UUID; `resolveUserId()` helper; 7 conference методов: `getUserId()`; INITIATE echo фикс receiverId; `handleCallEndedPush()` |
 | `NewChatActivity.kt` | Резолвинг UUID через `allUsers` перед `CallNavigator.startCall` |
+| `LavenderMessagingService.kt` | Обработка FCM `CALL_ENDED` → dismiss notification + close CallActivity |
 | `CHANGELOG.md` | Запись v1.3.1.11 |
 
 ### Серверные задачи (выполнены)
 
 - `PROMPT_CALL_UUID_FIX.md` — FCM push sender_id = UUID ✅
+- `PROMPT_CALL_HANGUP_PUSH.md` — FCM push CALL_ENDED при !delivered && HANGUP/REJECT ✅
 
 ---
 
