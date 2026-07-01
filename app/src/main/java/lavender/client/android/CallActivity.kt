@@ -110,7 +110,6 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         }
 
         setupButtons()
-        setupController()
         
         lifecycleScope.launch {
             viewModel.timerText.collect { binding.tvCallDuration.text = it }
@@ -142,12 +141,16 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     }
 
     private fun setupController() {
+        callController?.cancel()
         callController = CallController(callId, receiverId, isIncoming, isConference, roomId, webRtcClient, object : CallController.Listener {
             override fun onCallAccepted() {
                 soundManager.stop()
-                cancelConnectionTimeout() // Cancel timeout on successful connection
+                cancelConnectionTimeout()
                 viewModel.startTimer()
-                runOnUiThread { binding.tvCallStatus.text = getString(R.string.call_status_connected) }
+                runOnUiThread {
+                    binding.tvCallStatus.text = getString(R.string.call_status_connecting)
+                    binding.tvCallDuration.visibility = View.VISIBLE
+                }
             }
 
             override fun onCallTerminated(reason: String) {
@@ -388,6 +391,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         CallManager.sendWebRtcSignal(receiverId, CallMessageProto.Type.ANSWER, description.description)
         runOnUiThread { 
             binding.tvCallStatus.text = getString(R.string.call_status_connected) 
+            binding.tvCallDuration.visibility = View.VISIBLE
             viewModel.startTimer()
         }
     }

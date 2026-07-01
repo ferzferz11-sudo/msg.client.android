@@ -291,6 +291,16 @@ class ChatListActivity : AppCompatActivity() {
                 tvToolbarSubtitle?.isVisible = statusText.isNotEmpty()
             }
         }
+
+        // Periodic user refresh every 60s to keep lastSeenAt current
+        lifecycleScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(60_000)
+                if (GrpcClient.connectionStatus.value == ConnectionStatus.READY) {
+                    GrpcClient.loadUsers()
+                }
+            }
+        }
     }
 
     override fun onResume() {
@@ -488,6 +498,9 @@ class ChatListActivity : AppCompatActivity() {
     private fun setupSwipeRefresh() {
         swipeRefresh?.setOnRefreshListener {
             viewModel.refreshChats()
+            if (GrpcClient.connectionStatus.value == ConnectionStatus.READY) {
+                GrpcClient.loadUsers()
+            }
         }
     }
 

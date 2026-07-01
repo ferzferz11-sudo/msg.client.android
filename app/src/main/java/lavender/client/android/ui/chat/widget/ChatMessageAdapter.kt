@@ -242,7 +242,12 @@ class ChatMessageAdapter(
             if (item.senderAvatarUrl.isNotEmpty()) {
                 avatar.isVisible = showAvatars
                 emoji.isVisible = false
-                // TODO: Load avatar with Glide
+                com.bumptech.glide.Glide.with(itemView.context)
+                    .load(item.senderAvatarUrl)
+                    .placeholder(R.drawable.ic_default_avatar)
+                    .error(R.drawable.ic_default_avatar)
+                    .circleCrop()
+                    .into(avatar)
             } else if (item.senderEmoji.isNotEmpty()) {
                 avatar.isVisible = false
                 emoji.isVisible = true

@@ -5,6 +5,7 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import lavender.client.android.R
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -41,6 +42,10 @@ class CallController(
         observeSignals()
     }
 
+    fun cancel() {
+        scope.cancel()
+    }
+
     private fun observeSignals() {
         scope.launch {
             CallManager.incomingSignals.collectLatest { signal ->
@@ -58,7 +63,12 @@ class CallController(
                 when (signal.type) {
                     CallMessageProto.Type.ACCEPT -> {
                         if (!isIncoming) {
-                            webRtcClient?.createOffer()
+                            if (webRtcClient != null) {
+                                webRtcClient?.createOffer()
+                            } else {
+                                Log.w(TAG, "ACCEPT received but WebRTC not ready yet")
+                                listener.onStatusUpdate(context.getString(R.string.call_status_connecting))
+                            }
                             listener.onCallAccepted()
                         }
                     }

@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.1.12 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-07-02
+**Версия:** v1.3.1.13 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-07-02
 
 ---
 
@@ -184,6 +184,45 @@ Secret Chats: E2EE via E2EEManager (ECDH + AES-256-GCM), key exchange with retry
 - `PROMPT_LAST_SEEN_FIX.md` — heartbeat 60s + UpdateLastSeen fix ✅
 - `PROMPT_ADMIN_VERSION_FIX.md` — last_client_version из user_devices ✅
 - `PROMPT_FAVORITES_REACTION_FIX.md` — SetReactionV2 для Favorites ✅
+
+---
+
+## Итог сессии v1.3.1.13 (завершена)
+
+### Выполнено
+
+**1. Avatar loading with Glide:**
+- `ChatMessageAdapter.kt` — загрузка аватаров через `Glide.with().load().circleCrop().into(avatar)` с placeholders
+
+**2. Online status fix:**
+- `ChatListActivity.kt` — `loadUsers()` вызывается при pull-to-refresh (ранее только при `onResume()`)
+- Добавлен periodic refresh `loadUsers()` каждые 60 секунд в фоне
+- Проблема: `allUsers` (с `lastSeenAt`) обновлялся только при `onResume()` → pull-to-refresh не обновлял "последний раз был"
+
+**3. Toolbar icon order fix:**
+- `activity_chat_list.xml` — `llUpdateContainer` перемещён перед `ivFavorites` (порядок: Update → Favorites → Search)
+
+**4. Call state fix (PROMPT_CALL_FIX.md):**
+- `CallController.kt` — добавлен `cancel()` метод; ACCEPT handler проверяет `webRtcClient != null` перед `createOffer()`
+- `CallActivity.kt` — `setupController()` вызывается один раз (убран из `onCreate()`, оставлен в `setupWebRtcListeners()` и `btnAccept`)
+- `callController?.cancel()` перед пересозданием контроллера
+- `onCallAccepted()` ставит "Подключение..." вместо "Подключено" (статус при ICE CONNECTED)
+- `tvCallDuration.visibility = View.VISIBLE` при принятии звонка
+
+### Изменённые файлы
+
+| Файл | Изменение |
+|------|-----------|
+| `ChatMessageAdapter.kt` | Glide загрузка аватаров |
+| `ChatListActivity.kt` | `loadUsers()` при refresh + periodic 60s |
+| `activity_chat_list.xml` | Порядок Update → Favorites |
+| `CallController.kt` | `cancel()`, ACCEPT handler webRtcClient check |
+| `CallActivity.kt` | `setupController()` once, cancel previous, status fix |
+| `CHANGELOG.md` | Запись v1.3.1.13 |
+
+### Серверные задачи
+
+- `PROMPT_CALL_FIX.md` — клиентские изменения, серверные не требуются
 
 ---
 

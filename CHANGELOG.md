@@ -1,5 +1,28 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.13] - 2026-07-02
+
+### Avatar loading, online status fix, toolbar layout fix, call state fix
+
+**Добавлено:**
+- Загрузка аватаров через Glide в `ChatMessageAdapter` (chat сообщения)
+
+**Исправлено:**
+- Online status — `allUsers` (с `lastSeenAt`) не обновлялся при pull-to-refresh, из-за чего "последний раз был" показывал устаревшие данные. Теперь `loadUsers()` вызывается при pull-to-refresh и каждые 60 секунд в фоне
+- Порядок иконок на тулбаре списка чатов — избранное теперь справа от индикатора обновления (слева от поиска), а не наоборот
+- Call state — вызывающий застревал на "Дозвон" после принятия звонка. Причина: два CallController подписывались на один `incomingSignals` SharedFlow. Теперь `setupController()` вызывается один раз, старый контроллер отменяется, ACCEPT обрабатывается корректно即使 WebRTC ещё не инициализирован
+- Call status flickering — `onCallAccepted()` теперь ставит "Подключение..." вместо "Подключено" (статус будет установлен при ICE CONNECTED)
+- Call timer — `tvCallDuration` теперь становится `VISIBLE` при принятии звонка
+
+**Изменено:**
+- `ChatMessageAdapter.kt` — Glide загрузка аватаров вместо TODO
+- `ChatListActivity.kt` — `loadUsers()` при pull-to-refresh + периодический refresh каждые 60s
+- `activity_chat_list.xml` — `llUpdateContainer` перемещён перед `ivFavorites`
+- `CallController.kt` — добавлен `cancel()`, ACCEPT handler проверяет `webRtcClient != null`
+- `CallActivity.kt` — `setupController()` вызывается один раз, `callController?.cancel()` перед пересозданием
+
+---
+
 ## [1.3.1.12] - 2026-07-02
 
 ### Call disconnect fix + Chat history fix

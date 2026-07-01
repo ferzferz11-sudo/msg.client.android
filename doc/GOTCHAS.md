@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.1.12 | **Updated:** 2026-07-02
+**Version:** v1.3.1.13 | **Updated:** 2026-07-02
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -72,6 +72,7 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **Auto-scroll threshold:** `lastCompletelyVisible >= itemCount - 3` to determine "near bottom"
 - **`"Поделиться в чате"` forward flow:** `ChatSelectionDelegate.forwardSelectedMessages()` → `grpcClient.getChats()` → `ListBottomSheet` + `ForwardChatAdapter`. NOT in `ChatMessageMenuDelegate`. Selection mode entered via long-press on message
 - **Duplicate message race condition:** `sendMessageV2` response handler changes temp ID → server ID, but ChatV2 stream may have already added the message with server ID. Always dedup by ID after ID update in `sendMessageV2` response handler
+- **Online status / lastSeenAt:** `ONLINE_USERS_UPDATE` stream provides online usernames (real-time), but `allUsers` (with `lastSeenAt`) is only updated via `loadAllUsers()` unary call. Always call `loadUsers()` during pull-to-refresh and periodically (60s) to keep `lastSeenAt` current. Without this, chat list shows stale "last seen X ago" even when user is online.
 
 ## Unread Count
 
