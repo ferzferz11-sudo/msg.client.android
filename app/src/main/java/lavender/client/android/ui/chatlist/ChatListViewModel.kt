@@ -246,10 +246,11 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
 
                 // Process regular chats
                 if (fetchedPage != null) {
-                    // Check for auth errors — force logout if token is invalid
+                    // Check for auth errors — force logout only on REAL auth failures
+                    // INTERNAL/NOT_CONNECTED are server availability errors, NOT auth errors — don't logout
                     if (fetchedPage.error != null && fetchedPage.chats.isEmpty() && allChats.isEmpty()) {
                         val error = fetchedPage.error
-                        if (error == "UNAUTHENTICATED" || error == "PERMISSION_DENIED" || error == "INTERNAL" || error == "NOT_CONNECTED") {
+                        if (error == "UNAUTHENTICATED" || error == "PERMISSION_DENIED") {
                             Log.w(TAG, "loadChats: auth error ($error) with empty chat list — forcing logout")
                             _forceLogoutEvent.emit(error)
                             return@launch

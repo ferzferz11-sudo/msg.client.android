@@ -96,8 +96,9 @@ object CallManager {
         }
     }
 
-    fun initiateCall(receiverId: String) {
+    fun initiateCall(receiverUsername: String) {
         val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
+        val receiverId = resolveUserId(receiverUsername) ?: receiverUsername
         
         // Clear state before starting new call
         _currentCall.value = null
@@ -187,6 +188,10 @@ object CallManager {
         return false
     }
 
+    private fun resolveUserId(username: String): String? {
+        return GrpcClient.allUsers.value.firstOrNull { it.username == username }?.userId
+    }
+
     fun sendWebRtcSignal(receiverId: String, type: CallMessageProto.Type, payload: String) {
     	val call = _currentCall.value ?: return
     	// Always use UUID for senderId (never username)
@@ -203,7 +208,7 @@ object CallManager {
     }
 
     fun initiateConference(roomId: String) {
-        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
         GrpcClient.startCallSession()
         val signal = CallMessageProto(
             senderId = senderId,
@@ -215,7 +220,7 @@ object CallManager {
     }
 
     fun joinConference(roomId: String) {
-        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
         GrpcClient.startCallSession()
         val signal = CallMessageProto(
             senderId = senderId,
@@ -228,7 +233,7 @@ object CallManager {
 
     fun leaveConference() {
         val call = _currentCall.value ?: return
-        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
         val signal = CallMessageProto(
             senderId = senderId,
             roomId = call.roomId,
@@ -239,7 +244,7 @@ object CallManager {
     }
 
     fun inviteToConference(roomId: String, targetUserId: String, targetUserName: String) {
-        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
         val signal = CallMessageProto(
             senderId = senderId,
             receiverId = targetUserId,
@@ -251,7 +256,7 @@ object CallManager {
     }
 
     fun removeFromConference(roomId: String, targetUserId: String) {
-        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
         val signal = CallMessageProto(
             senderId = senderId,
             receiverId = targetUserId,
@@ -262,7 +267,7 @@ object CallManager {
     }
 
     fun updateConferenceMetadata(roomId: String, topic: String, startTime: Long) {
-        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
         val payload = JSONObject().apply {
             put("topic", topic)
             put("start_time", startTime)
@@ -278,7 +283,7 @@ object CallManager {
 
     fun endConference(roomId: String? = null) {
         val targetRoomId = roomId ?: _currentCall.value?.roomId ?: return
-        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
         val signal = CallMessageProto(
             senderId = senderId,
             roomId = targetRoomId,

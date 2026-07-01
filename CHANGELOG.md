@@ -1,5 +1,25 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.11] - 2026-06-29
+
+### Call signaling fix + Token resilience
+
+**Исправлено:**
+- Звонки не доставлялись — `initiateCall()` отправлял `username` как `receiverId`, но сервер в `callStreams` хранит `UUID`. `BroadcastCall` не мог найти получателя → `delivered: false`
+- `CallManager.initiateCall()` теперь резолвит username → UUID через `allUsers` перед отправкой
+- Все 7 conference методов использовали `getCurrentUsername()` вместо `getUserId()` — исправлено
+- `NewChatActivity` передаёт UUID в `CallNavigator.startCall` вместо username (WebRTC сигналы теперь доставляются)
+- Разлогин при недоступности сервера — `INTERNAL` и `NOT_CONNECTED` ошибки больше не вызывают force logout (это ошибки доступности, не авторизации)
+- Токен обновляется при onResume — обрабатывает пробуждение после долгого простоя (ночь, doze mode)
+
+**Изменено:**
+- `CallManager.kt` — `initiateCall()` резолвит username → UUID; `resolveUserId()` helper; все conference методы используют `getUserId()`
+- `NewChatActivity.kt` — резолвинг UUID через `allUsers` перед `CallNavigator.startCall`
+- `ChatListViewModel.kt` — force logout только для `UNAUTHENTICATED`/`PERMISSION_DENIED` (убраны `INTERNAL`/`NOT_CONNECTED`)
+- `ChatListActivity.kt` — `ensureFreshToken` при onResume перед загрузкой чатов
+
+---
+
 ## [1.3.1.10] - 2026-06-29
 
 ### Group info fix + Call fix + Crash fix

@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.1.10 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-06-29
+**Версия:** v1.3.1.11 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-06-29
 
 ---
 
@@ -187,6 +187,34 @@ Secret Chats: E2EE via E2EEManager (ECDH + AES-256-GCM), key exchange with retry
 
 ---
 
+## Итог сессии v1.3.1.11 (завершена)
+
+### Выполнено
+
+**1. Call signaling — UUID vs username fix:**
+- `CallManager.initiateCall()` — резолвит username → UUID через `allUsers` перед отправкой
+- Добавлен `resolveUserId(username)` helper
+- 7 conference методов: `getCurrentUsername()` → `getUserId() ?: getCurrentUsername()` (initiateConference, joinConference, leaveConference, inviteToConference, removeFromConference, updateConferenceMetadata, endConference)
+- `NewChatActivity` — `CallNavigator.startCall` получает UUID вместо username
+
+**2. Server-side call push fix:**
+- `server_chat.go:551` — `msg.SenderId` (UUID) вместо `msg.SenderName` (username) в FCM push
+- `server_push.go:524-546` — `sender_id` = UUID, убран `resolveDisplayName`
+
+### Изменённые файлы
+
+| Файл | Изменение |
+|------|-----------|
+| `CallManager.kt` | `initiateCall()` резолвит username→UUID; `resolveUserId()` helper; 7 conference методов: `getUserId()` |
+| `NewChatActivity.kt` | Резолвинг UUID через `allUsers` перед `CallNavigator.startCall` |
+| `CHANGELOG.md` | Запись v1.3.1.11 |
+
+### Серверные задачи (выполнены)
+
+- `PROMPT_CALL_UUID_FIX.md` — FCM push sender_id = UUID ✅
+
+---
+
 ## Итог сессии v1.3.1.10 (завершена)
 
 ### Выполнено
@@ -223,6 +251,65 @@ Secret Chats: E2EE via E2EEManager (ECDH + AES-256-GCM), key exchange with retry
 
 ## Задачи — Следующая сессия (v1.3.1.11)
 
+### P0: Звонки — сигналы не доставляются (UUID vs username) ✅ ВЫПОЛНЕНО
+
+**Проблема:** Звонки не доходят — `BroadcastCall` на сервере не находит получателя. Сервер хранит `callStreams[stream] = UUID`, а клиент отправляет `username` как `receiverId`.
+
+**Корень:**
+1. `getOtherParticipant()` возвращает **username** из `participantsJson` (сервер хранит usernames)
+2. `initiateCall(username)` → `CallMessageProto(receiverId="ferz")`
+3. Сервер: `BroadcastCall` сравнивает UUID == username → **не совпадает** → `delivered: false`
+4. FCM push отправляется с `sender_id = senderUsername` (username) → `handleIncomingCall(senderId)` → `CallActivity` получает username → WebRTC сигналы тоже не доставлялись
+
+**Исправление (клиент):**
+- `CallManager.initiateCall()` — резолвит username → UUID через `allUsers` перед отправкой
+- Добавлен `resolveUserId(username)` helper
+- 7 conference методов: `getCurrentUsername()` → `getUserId() ?: getCurrentUsername()`
+- `NewChatActivity` — `CallNavigator.startCall` получает UUID вместо username
+
+**Исправление (сервер):**
+- `server_chat.go:551` — `msg.SenderId` (UUID) вместо `msg.SenderName` (username) в FCM push
+- `server_push.go:524-546` — `sender_id` = UUID, убран `resolveDisplayName`
+
+**Серверный промпт:** `PROMPT_CALL_UUID_FIX.md` ✅
+
+### P1: Token resilience — разлогин при недоступности сервера ✅ ВЫПОЛНЕНО
+
+**Проблема:** Сервер временно недоступен → `INTERNAL`/`NOT_CONNECTED` ошибки → force logout. Также токен протухает за ночь и не обновляется при пробуждении.
+
+**Исправление:**
+- `ChatListViewModel.kt` — force logout только для `UNAUTHENTICATED`/`PERMISSION_DENIED` (убраны `INTERNAL`/`NOT_CONNECTED`)
+- `ChatListActivity.onResume()` — `ensureFreshToken` перед загрузкой чатов (обрабатывает пробуждение после doze)
+
+---
+
+### Полный аудит: UUID vs Username в клиенте
+
+| # | Файл:строка | Поле | Тип | Нужен UUID? | Проблема |
+|---|-------------|------|-----|-------------|----------|
+| 1 | `CallManager.kt:109` | `initiateCall(receiverId)` | username | ✅ Да | `getOtherParticipant()` возвращает username из `participantsJson` |
+| 2 | `CallManager.kt:206` | `initiateConference(senderId)` | username | ✅ Да | `getCurrentUsername()` вместо `getUserId()` |
+| 3 | `CallManager.kt:218` | `joinConference(senderId)` | username | ✅ Да | `getCurrentUsername()` вместо `getUserId()` |
+| 4 | `CallManager.kt:232` | `leaveConference(senderId)` | username | ✅ Да | `getCurrentUsername()` вместо `getUserId()` |
+| 5 | `CallManager.kt:242` | `inviteToConference(senderId)` | username | ✅ Да | `getCurrentUsername()` вместо `getUserId()` |
+| 6 | `CallManager.kt:254` | `removeFromConference(senderId)` | username | ✅ Да | `getCurrentUsername()` вместо `getUserId()` |
+| 7 | `CallManager.kt:265` | `updateConferenceMetadata(senderId)` | username | ✅ Да | `getCurrentUsername()` вместо `getUserId()` |
+| 8 | `CallManager.kt:281` | `endConference(senderId)` | username | ✅ Да | `getCurrentUsername()` вместо `getUserId()` |
+| 9 | `server_push.go:548` | `sendCallPushNotification` → `sender_id` | username | ✅ Да | Сервер отправляет `senderUsername` вместо `senderId` (UUID) |
+| 10 | `NewChatActivity.kt:560` | `getOtherParticipant()` | username | ✅ Да | Корень проблемы — `participantsJson` хранит usernames |
+
+### Исправление
+
+**Клиент (CallManager.kt):**
+- Все 7 методов conference: заменить `getCurrentUsername()` → `getUserId() ?: getCurrentUsername()` (line 206, 218, 232, 242, 254, 265, 281)
+- `initiateCall`: резолвить username → UUID через `allUsers` перед отправкой
+- `NewChatActivity`: `getOtherParticipant()` должен возвращать UUID, не username
+
+**Сервер (server_push.go:548):**
+- `sender_id` в FCM push должен быть `msg.SenderId` (UUID), а не `senderUsername`
+
+**Правило:** Все gRPC/routing вызовы должны использовать UUID, НЕ username. Username — только для отображения в UI.
+
 ---
 
 ## Правила (обязательно к прочтению)
@@ -250,6 +337,7 @@ Secret Chats: E2EE via E2EEManager (ECDH + AES-256-GCM), key exchange with retry
 21. **AuthManager.getBearerToken()** возвращает "Bearer <token>" — НЕ добавлять ещё один "Bearer "
 22. **ВСЕГДА сверять с сервером:** перед любым gRPC/marshaller изменением проверять серверный код
 23. **Reaction flow:** optimistic UI → Room DB save → server response (incl. empty) → in-memory + Room DB update → REACTION_V2 stream → Room DB save (even if message not in _messages)
+24. **UUID ALWAYS for routing, username ONLY for display:** callStreams, participants, gRPC routing, FCM payloads, intent extras — all use UUID. Username CAN change. `participantsJson` stores usernames → resolve via `allUsers` before sending to server.
 
 ---
 

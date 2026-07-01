@@ -559,8 +559,10 @@ class NewChatActivity : AppCompatActivity() {
             R.id.action_video_call -> {
                 val other = toolbarDelegate.getOtherParticipant()
                 if (!other.isNullOrEmpty()) {
+                    val otherUserId = lavender.client.android.data.grpc.GrpcClient.allUsers.value
+                        .firstOrNull { it.username == other }?.userId ?: other
                     lavender.client.android.data.calls.CallManager.initiateCall(other)
-                    lavender.client.android.data.calls.CallNavigator.startCall(this, other)
+                    lavender.client.android.data.calls.CallNavigator.startCall(this, otherUserId)
                 }
                 true
             }

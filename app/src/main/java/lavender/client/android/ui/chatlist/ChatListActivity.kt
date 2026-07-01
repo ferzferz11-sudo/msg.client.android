@@ -22,9 +22,11 @@ import com.google.android.material.tabs.TabLayout
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.grpc.ConnectionStatus
@@ -299,6 +301,16 @@ class ChatListActivity : AppCompatActivity() {
             getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
                 .registerOnSharedPreferenceChangeListener(coord.prefsListener)
             coord.updateIndicatorVisibility()
+        }
+
+        // Token refresh on resume — handles long idle (doze, overnight)
+        // Coroutine-based refresh to avoid blocking Main thread
+        if (lavender.client.android.data.auth.AuthManager.isTokenExpiredOrExpiring(this)) {
+            lifecycleScope.launch {
+                withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    lavender.client.android.data.session.SessionManager.ensureFreshToken(this@ChatListActivity)
+                }
+            }
         }
 
         // Channel health check on resume from background

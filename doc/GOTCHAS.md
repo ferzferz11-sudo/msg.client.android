@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.1.10 | **Updated:** 2026-06-29
+**Version:** v1.3.1.11 | **Updated:** 2026-06-29
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -394,3 +394,19 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **Online status from `GrpcClient.users`** — `ONLINE_USERS_UPDATE` system signal populates StateFlow of online usernames. NOT from `users` table
 - **Last seen from `GrpcClient.allUsers`** — `GetAllUsers` RPC loads all users with `lastSeenAt`. Called via `GrpcClient.loadUsers()` in `ChatListActivity.onResume()`
 - **Only for direct chats** — online dot and last seen hidden for groups, secrets, favorites, AI chats
+
+## Call Signaling UUID Fix (v1.3.1.11)
+
+- **`callStreams` stores UUID** — server `hub.go` maps `callStreams[stream] = currentUserId` (UUID from stream identification)
+- **`getOtherParticipant()` returns USERNAME** — `participantsJson` stores usernames, not UUIDs
+- **`initiateCall(username)` → `delivered: false`** — UUID != username in `BroadcastCall` comparison
+- **Fix: `initiateCall()` resolves username → UUID via `allUsers`** — `resolveUserId(username)` helper
+- **Conference methods also used `getCurrentUsername()`** — 7 methods fixed to use `getUserId()`
+- **FCM push `sender_id` must be UUID** — server `sendCallPushNotification` now sends `msg.SenderId` (UUID) instead of `senderUsername`
+
+## Token Resilience (v1.3.1.11)
+
+- **`INTERNAL`/`NOT_CONNECTED` are NOT auth errors** — server availability errors should NOT trigger force logout. Only `UNAUTHENTICATED`/`PERMISSION_DENIED` are real auth failures
+- **Force logout condition narrowed** — `ChatListViewModel.loadChats()` only force logouts on `UNAUTHENTICATED`/`PERMISSION_DENIED` with empty chat list
+- **Token refresh on resume** — `ChatListActivity.onResume()` calls `ensureFreshToken()` before loading chats. Handles long idle (overnight, doze mode) when periodic 60s refresh coroutine was suspended
+- **`startTokenRefresh` runs every 60s** — checks `needsRefresh()` (5-min buffer before expiry). In doze mode, coroutine is suspended. On wake, `onResume` refresh compensates
