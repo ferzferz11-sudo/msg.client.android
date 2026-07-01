@@ -826,6 +826,7 @@
     <string name="incoming_call">Входящий звонок</string>
     <string name="call_from">Звонит %s</string>
     <string name="lavender_calls_channel">Звонки Лава</string>
+    <string name="decline_call">Отклонить</string>
     <string name="lavender_messages_channel">Сообщения Лава</string>
     <string name="lavender_messages_channel_desc">Входящие сообщения чатов</string>
 

@@ -10,8 +10,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
@@ -31,7 +29,6 @@ class ChatSelectionDelegate(
     lateinit var toolbarContent: View
     lateinit var copyMessages: ImageButton
     lateinit var replyMessage: ImageButton
-    lateinit var pinMessageBtn: ImageButton
     lateinit var deleteMessages: ImageButton
     lateinit var forwardMessages: ImageButton
 
@@ -51,7 +48,6 @@ class ChatSelectionDelegate(
         toolbarContent = activity.findViewById(R.id.toolbarContent)
         copyMessages = activity.findViewById(R.id.copyMessages)
         replyMessage = activity.findViewById(R.id.replyMessage)
-        pinMessageBtn = activity.findViewById(R.id.pinMessage)
         deleteMessages = activity.findViewById(R.id.deleteMessages)
         forwardMessages = activity.findViewById(R.id.forwardMessages)
     }
@@ -70,12 +66,10 @@ class ChatSelectionDelegate(
     }
 
     fun setupListeners() {
-        activity.findViewById<ImageButton>(R.id.starMessages).setOnClickListener { starSelectedMessages() }
         copyMessages.setOnClickListener { copySelectedMessages() }
         replyMessage.setOnClickListener { replyToSelectedMessage() }
         deleteMessages.setOnClickListener { deleteSelectedMessages() }
         forwardMessages.setOnClickListener { forwardSelectedMessages() }
-        pinMessageBtn.setOnClickListener { pinSelectedMessages() }
     }
 
     fun enterSelectionMode(m: Message) {
@@ -96,7 +90,6 @@ class ChatSelectionDelegate(
         getToolbarDelegate?.invoke()?.setNavigationIcon(R.drawable.ic_close)
         replyMessage.isVisible = count == 1
         forwardMessages.isVisible = count > 0
-        pinMessageBtn.isVisible = count == 1
         try {
             selectionToolbar.setBackgroundColor(ThemeStore.currentTheme().primaryColor.toColorInt())
         } catch (_: Exception) {}
@@ -182,54 +175,6 @@ class ChatSelectionDelegate(
                 )
                 sheet.setAdapter(forwardAdapter)
                 sheet.show()
-            }
-        }
-    }
-
-    private fun starSelectedMessages() {
-        val sm = adapter?.getSelectedMessages() ?: return
-        val uid = grpcClient.getUserId() ?: ""
-        if (uid.isEmpty()) {
-            Toast.makeText(activity, "User ID not loaded. Please wait.", Toast.LENGTH_SHORT).show()
-            return
-        }
-        var c = 0
-        sm.forEach { m ->
-            grpcClient.addFavorite(uid, m.id) { _, _ ->
-                c++
-                if (c == sm.size) activity.runOnUiThread {
-                    Toast.makeText(activity, activity.getString(R.string.added_to_favorites), Toast.LENGTH_SHORT).show()
-                    hideSelectionToolbar()
-                }
-            }
-        }
-    }
-
-    private fun pinSelectedMessages() {
-        val sm = adapter?.getSelectedMessages() ?: return
-        if (sm.isEmpty()) { hideSelectionToolbar(); return }
-        activity.lifecycleScope.launch {
-            var successCount = 0
-            var failCount = 0
-            sm.forEach { m ->
-                try {
-                    val isPinned = pinnedMessageIds.contains(m.id)
-                    val success = if (isPinned) {
-                        GrpcClient.unpinMessage(activity, roomId, m.id)
-                    } else {
-                        GrpcClient.pinMessage(activity, roomId, m.id)
-                    }
-                    if (success) successCount++ else failCount++
-                } catch (e: Exception) { failCount++ }
-            }
-            activity.runOnUiThread {
-                if (successCount > 0) {
-                    val msg = if (sm.size == 1 && pinnedMessageIds.contains(sm[0].id))
-                        activity.getString(R.string.unpin_message) else activity.getString(R.string.pinned_message)
-                    Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show()
-                }
-                if (failCount > 0) Toast.makeText(activity, "Failed: $failCount", Toast.LENGTH_SHORT).show()
-                hideSelectionToolbar()
             }
         }
     }

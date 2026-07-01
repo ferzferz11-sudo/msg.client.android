@@ -502,6 +502,24 @@ class ChatListActivity : AppCompatActivity() {
                 GrpcClient.loadUsers()
             }
         }
+
+        rvChatList?.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            private var canTriggerUpdate = false
+
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                if (newState == RecyclerView.SCROLL_STATE_DRAGGING) {
+                    val layoutManager = recyclerView.layoutManager as? LinearLayoutManager
+                    canTriggerUpdate = layoutManager?.findFirstCompletelyVisibleItemPosition() == 0
+                }
+                if (newState == RecyclerView.SCROLL_STATE_IDLE && canTriggerUpdate) {
+                    canTriggerUpdate = false
+                    val dy = recyclerView.computeVerticalScrollOffset()
+                    if (dy <= 0) {
+                        updateCoordinator?.checkManualUpdate()
+                    }
+                }
+            }
+        })
     }
 
     private fun setupBackPressHandler() {

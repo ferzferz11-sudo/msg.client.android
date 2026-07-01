@@ -155,24 +155,6 @@
                     tools:text="1" />
 
                 <ImageButton
-                    android:id="@+id/starMessages"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_star"
-                    app:tint="?attr/colorOnPrimary"
-                    android:contentDescription="@string/save_theme" />
-
-                <ImageButton
-                    android:id="@+id/copyMessages"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_copy"
-                    app:tint="?attr/colorOnPrimary"
-                    android:contentDescription="@string/copy" />
-
-                <ImageButton
                     android:id="@+id/replyMessage"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
@@ -182,15 +164,6 @@
                     android:contentDescription="@string/reply" />
 
                 <ImageButton
-                    android:id="@+id/pinMessage"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_lock"
-                    app:tint="?attr/colorOnPrimary"
-                    android:contentDescription="@string/pin_message" />
-
-                <ImageButton
                     android:id="@+id/forwardMessages"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
@@ -198,6 +171,15 @@
                     android:src="@drawable/ic_forward"
                     app:tint="?attr/colorOnPrimary"
                     android:contentDescription="@string/forward" />
+
+                <ImageButton
+                    android:id="@+id/copyMessages"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_copy"
+                    app:tint="?attr/colorOnPrimary"
+                    android:contentDescription="@string/copy" />
 
                 <ImageButton
                     android:id="@+id/deleteMessages"

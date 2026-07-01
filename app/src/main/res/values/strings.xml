@@ -826,6 +826,7 @@
     <string name="incoming_call">Incoming call</string>
     <string name="call_from">Calling %s</string>
     <string name="lavender_calls_channel">Lava Calls</string>
+    <string name="decline_call">Decline</string>
     <string name="lavender_messages_channel">Lava Messages</string>
     <string name="lavender_messages_channel_desc">Incoming chat messages</string>
 

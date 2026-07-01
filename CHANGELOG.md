@@ -1,5 +1,37 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.14] - 2026-07-02
+
+### Update improvements + Call notification fix + Selection toolbar cleanup
+
+**Добавлено:**
+- Проверка обновлений при долгом свайпе вниз в списке чатов — если пользователь вверху списка и делает свап вниз до упора, открывается диалог проверки обновлений
+- Кнопка "Отклонить" в уведомлении входящего звонка — позволяет отклонить звонок прямо из уведомления
+- Звук звонка и вибрация в уведомлении входящего звонка (ранее было тихо)
+
+**Исправлено:**
+- Уведомление входящего звонка показывало UUID вместо имени — теперь отображается "Звонит [Имя]"
+- Если скачанное обновление устарело (вышла новая версия) — старый APK удаляется, пользователю предлагается скачать актуальную версию
+
+**Удалено:**
+- Кнопка "Что нового" из уведомлений об обновлении — осталась только "Установить"
+- Иконка "Избранное" (star) из режима выбора сообщений — для отправки в избранное используется "Переслать"
+- Иконка "Замочек" (pin/lock) из режима выбора сообщений — функция пока не реализована на Android
+
+**Изменено:**
+- `ChatListActivity.kt` — `RecyclerView.OnScrollListener` для детекции долгого свайпа вверху списка
+- `UpdateManager.kt` — сохранение `downloaded_version` при скачивании; проверка версии при обновлении; очистка устаревшего APK
+- `UpdateUtils.kt` — удалён `whatsNewIntent` из `showUpdateReadyNotification()`
+- `UpdateCoordinator.kt` — удалён `whatsNewIntent` из `showUpdateAvailableNotification()`
+- `LavenderMessagingService.kt` — извлечение `sender_name` из FCM; использование имени в уведомлении; добавлен звук/вибрация/кнопка "Отклонить"
+- `CallActionService.kt` — новый файл для обработки действий в уведомлении звонка
+- `AndroidManifest.xml` — регистрация `CallActionService`
+- `activity_new_chat.xml` — reordered selection toolbar: reply → forward → copy → delete
+- `ChatSelectionDelegate.kt` — удалены `starMessages`, `pinMessageBtn`, `starSelectedMessages()`, `pinSelectedMessages()`
+- `strings.xml` (EN + RU) — +`decline_call`
+
+---
+
 ## [1.3.1.13] - 2026-07-02
 
 ### Avatar loading, online status fix, toolbar layout fix, call state fix

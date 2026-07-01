@@ -231,15 +231,6 @@ class UpdateCoordinator(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val whatsNewIntent = Intent(context, ChatListActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("extra_show_whats_new", true)
-        }
-        val whatsNewPendingIntent = PendingIntent.getActivity(
-            context, 1006, whatsNewIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channel = NotificationChannel(UpdateUtils.CHANNEL_ID, "Updates", NotificationManager.IMPORTANCE_DEFAULT)
         notificationManager.createNotificationChannel(channel)
@@ -250,7 +241,6 @@ class UpdateCoordinator(
             .setContentText(context.getString(R.string.version_available, latestVersion))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
-            .addAction(R.drawable.ic_star, context.getString(R.string.whats_new), whatsNewPendingIntent)
             .setAutoCancel(true)
             .setOnlyAlertOnce(true)
             .build()

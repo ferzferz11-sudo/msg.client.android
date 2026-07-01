@@ -34,7 +34,8 @@ class LavenderMessagingService : FirebaseMessagingService() {
         if (type == "VOIP_CALL") {
             val callId = remoteMessage.data["call_id"] ?: ""
             val senderId = remoteMessage.data["sender_id"] ?: ""
-            handleIncomingCall(callId, senderId)
+            val senderName = remoteMessage.data["sender_name"] ?: senderId
+            handleIncomingCall(callId, senderId, senderName)
             return
         }
         if (type == "CALL_ENDED") {
@@ -65,8 +66,8 @@ class LavenderMessagingService : FirebaseMessagingService() {
         }
     }
 
-    private fun handleIncomingCall(callId: String, senderId: String) {
-        Log.d("FCM", "Handling incoming VOIP call: $callId from $senderId")
+    private fun handleIncomingCall(callId: String, senderId: String, senderName: String) {
+        Log.d("FCM", "Handling incoming VOIP call: $callId from $senderId ($senderName)")
         val serverAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this)
             ?: "82.146.43.235"
 
@@ -83,7 +84,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
             }
         }
 
-        showCallNotification(senderId, callId)
+        showCallNotification(senderId, callId, senderName)
     }
 
     private fun dismissCallNotification(callId: String) {
@@ -92,7 +93,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
         Log.d("FCM", "Dismissed call notification for call: $callId")
     }
 
-    private fun showCallNotification(senderId: String, callId: String) {
+    private fun showCallNotification(senderId: String, callId: String, senderName: String = senderId) {
         val channelId = "lavender_calls"
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
@@ -110,16 +111,28 @@ class LavenderMessagingService : FirebaseMessagingService() {
                 getString(R.string.lavender_calls_channel),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                setSound(null, null) // Use custom ringtone or handle in activity
                 enableVibration(true)
+                vibrationPattern = longArrayOf(0, 500, 200, 500)
             }
             notificationManager.createNotificationChannel(channel)
         }
 
+        val declineIntent = PendingIntent.getService(
+            this, callId.hashCode() + 1,
+            Intent(this, CallActionService::class.java).apply {
+                action = "DECLINE"
+                putExtra("CALL_ID", callId)
+                putExtra("SENDER_ID", senderId)
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_notification_small)
             .setContentTitle(getString(R.string.incoming_call))
-            .setContentText(getString(R.string.call_from, senderId))
+            .setContentText(getString(R.string.call_from, senderName))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setOngoing(true)
@@ -127,6 +140,9 @@ class LavenderMessagingService : FirebaseMessagingService() {
             .setFullScreenIntent(pendingIntent, true)
             .setAutoCancel(false)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setVibrate(longArrayOf(0, 500, 200, 500))
+            .setSound(ringtoneUri)
+            .addAction(R.drawable.ic_notification_small, getString(R.string.decline_call), declineIntent)
 
         notificationManager.notify(callId.hashCode(), notificationBuilder.build())
     }

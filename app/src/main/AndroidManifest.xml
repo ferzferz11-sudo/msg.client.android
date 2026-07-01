@@ -154,6 +154,10 @@
         </service>
 
         <service
+            android:name=".data.fcm.CallActionService"
+            android:exported="false" />
+
+        <service
             android:name=".ui.remote.RemoteAgentService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />

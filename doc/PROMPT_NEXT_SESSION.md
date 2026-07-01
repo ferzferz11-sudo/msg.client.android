@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.1.13 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-07-02
+**Версия:** v1.3.1.14 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-07-02
 
 ---
 
@@ -73,11 +73,12 @@ AI Chats in Chat List: AI chats merged into main chat list via ListAIV2Chats
 AI Errors: shown as agent chat bubbles (⚠️ + текст), НЕ Toast
 AI Marketplace: cache in Room DB (marketplace_agents table), Favorites (SharedPreferences)
 Biometric: BiometricPrompt after splash screen when enabled (error → continue, not crash)
-Chat List: Cursor-based pagination (infinite scroll), Unread highlight
+Chat List: Cursor-based pagination (infinite scroll), Unread highlight, long swipe → update check
 Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 Notifications in Remote Agent: server notifications shown as system messages in chat
-Calls: WebRTC video calls via CallManager + CallNavigator + CallActivity
+Calls: WebRTC video calls via CallManager + CallNavigator + CallActivity + CallActionService (decline from notification)
 Secret Chats: E2EE via E2EEManager (ECDH + AES-256-GCM), key exchange with retry
+Update: UpdateManager + UpdateCoordinator + UpdateUtils; downloaded_version tracking; stale APK cleanup; ringtone in call notifications
 ```
 
 ---
@@ -184,6 +185,52 @@ Secret Chats: E2EE via E2EEManager (ECDH + AES-256-GCM), key exchange with retry
 - `PROMPT_LAST_SEEN_FIX.md` — heartbeat 60s + UpdateLastSeen fix ✅
 - `PROMPT_ADMIN_VERSION_FIX.md` — last_client_version из user_devices ✅
 - `PROMPT_FAVORITES_REACTION_FIX.md` — SetReactionV2 для Favorites ✅
+
+---
+
+## Итог сессии v1.3.1.14 (завершена)
+
+### Выполнено
+
+**1. Long swipe update check:**
+- `ChatListActivity.kt` — `RecyclerView.OnScrollListener` детектирует долгий свап вверху списка → `checkManualUpdate()`
+
+**2. Force re-download stale APK:**
+- `UpdateManager.kt` — `downloaded_version` сохраняется при скачивании; при проверке обновлений если `downloadedVersion != latestVersion` → APK удаляется, состояние сбрасывается
+
+**3. Removed "What's New" from update notifications:**
+- `UpdateUtils.kt` — удалён `whatsNewIntent` из `showUpdateReadyNotification()`
+- `UpdateCoordinator.kt` — удалён `whatsNewIntent` из `showUpdateAvailableNotification()`
+
+**4. Call notification fix (PROMPT_CALL_NOTIFICATION_FIX.md):**
+- `LavenderMessagingService.kt` — извлечение `sender_name` из FCM payload; имя вместо UUID в уведомлении; добавлен ringtone + vibration
+- `CallActionService.kt` — новый файл: кнопка "Отклонить" в уведомлении → `CallManager.rejectCall()`
+- `AndroidManifest.xml` — регистрация `CallActionService`
+- `strings.xml` (EN + RU) — +`decline_call`
+
+**5. Selection toolbar cleanup:**
+- `activity_new_chat.xml` — reordered: reply → forward → copy → delete (убраны star и lock)
+- `ChatSelectionDelegate.kt` — удалены `starMessages`, `pinMessageBtn`, `starSelectedMessages()`, `pinSelectedMessages()`
+
+### Изменённые файлы
+
+| Файл | Изменение |
+|------|-----------|
+| `ChatListActivity.kt` | +OnScrollListener для долгого свайпа |
+| `UpdateManager.kt` | +downloaded_version tracking, stale APK cleanup |
+| `UpdateUtils.kt` | -whatsNewIntent в notification |
+| `UpdateCoordinator.kt` | -whatsNewIntent в notification |
+| `LavenderMessagingService.kt` | +sender_name, ringtone, vibration, decline button |
+| `CallActionService.kt` | NEW — обработкаDECLINE в уведомлении |
+| `AndroidManifest.xml` | +CallActionService registration |
+| `activity_new_chat.xml` | reordered selection toolbar |
+| `ChatSelectionDelegate.kt` | -star, -lock, -unused methods |
+| `strings.xml` (EN + RU) | +decline_call |
+| `CHANGELOG.md` | Запись v1.3.1.14 |
+
+### Серверные задачи
+
+- `PROMPT_CHAT_LAST_MESSAGE_FIX.md` — lastMessageText не обновляется при удалении сообщений ✅ (выполняется отдельно)
 
 ---
 

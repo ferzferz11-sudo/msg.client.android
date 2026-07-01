@@ -63,12 +63,29 @@ class UpdateManager(private val context: Context) {
                     val currentVersion = BuildConfig.VERSION_NAME
                     val isAvailable = UpdateUtils.isUpdateAvailable(currentVersion, latestVersion)
 
+                    // If new version available, check if downloaded APK matches
+                    if (isAvailable) {
+                        val downloadedVersion = prefs.getString("downloaded_version", null)
+                        if (downloadedVersion != null && downloadedVersion != latestVersion) {
+                            Log.d(TAG, "Downloaded APK version ($downloadedVersion) != latest ($latestVersion), clearing stale download")
+                            val apkPath = prefs.getString("apk_path", null)
+                            if (apkPath != null) File(apkPath).delete()
+                            prefs.edit {
+                                putBoolean("update_downloaded", false)
+                                remove("apk_path")
+                                remove("downloaded_version")
+                            }
+                            _isDownloaded.value = false
+                        }
+                    }
+
                     prefs.edit {
                         putBoolean("update_available", isAvailable)
                         putString("latest_version", latestVersion)
                         if (!isAvailable) {
                             putBoolean("update_downloaded", false)
                             remove("apk_path")
+                            remove("downloaded_version")
                         }
                     }
                     onResult(isAvailable, latestVersion)
@@ -176,6 +193,7 @@ class UpdateManager(private val context: Context) {
                 prefs.edit {
                     putBoolean("update_downloaded", true)
                     putString("apk_path", file.absolutePath)
+                    putString("downloaded_version", prefs.getString("latest_version", null))
                 }
                 _isDownloaded.value = true
                 _downloadProgress.value = 100
