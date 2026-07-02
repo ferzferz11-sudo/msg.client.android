@@ -22,6 +22,8 @@
 | `doc/REMOTE_AGENT.md` | Remote Agent reference | When working with Remote Agent |
 | `doc/AI_V2_TESTING.md` | AI v2 test scenarios | When testing AI features |
 | `doc/PROMPT_HERMES_ACP_CLIENT.md` | Hermes ACP client plan | When working with Hermes Agent |
+| `doc/SESSION_SUMMARY_v1.3.1.16.md` | v1.3.1.16 architecture audit summary | Reference for session work |
+| `doc/PLAN_v1.3.1.16.md` | v1.3.1.16 execution plan | Reference |
 | `CHANGELOG.md` | Version history | Reference |
 
 ---
