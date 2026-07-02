@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import lavender.client.android.data.models.ErrorHandler
 import androidx.core.content.edit
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CancellationException
@@ -123,7 +124,7 @@ object SessionManager {
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    Log.e("SessionManager", "Token refresh check error: ${e.message}")
+                    ErrorHandler.handle("SessionManager", "Token refresh check error: ${e.message}", e)
                 }
                 delay(60_000)
             }
@@ -590,7 +591,7 @@ object SessionManager {
                     }
                 }
             } catch (e: Exception) {
-                Log.e("SessionManager", "V2 login error: ${e.message}", e)
+                ErrorHandler.handle("SessionManager", "V2 login error: ${e.message}", e)
                 onComplete("ERROR")
             }
         }

@@ -99,13 +99,13 @@ object RealGrpcClient {
     private val _readReceiptEvent = MutableSharedFlow<Pair<String, String>>(extraBufferCapacity = 64)
     val readReceiptEvent: SharedFlow<Pair<String, String>> = _readReceiptEvent
 
-    var hasCheckedForUpdates = false
-    var isAppInBackground = false
+    @Volatile var hasCheckedForUpdates = false
+    @Volatile var isAppInBackground = false
         set(value) {
             field = value
             if (value) backgroundStartTime = System.currentTimeMillis()
         }
-    private var backgroundStartTime: Long = 0
+    @Volatile private var backgroundStartTime: Long = 0
 
     // ====== Avatar cache (must be declared before module initialization) ======
     private val avatarCache = java.util.concurrent.ConcurrentHashMap<String, String>()
@@ -246,12 +246,12 @@ object RealGrpcClient {
         .build()
 
     // ====== State (kept in orchestrator) ======
-    internal var appContext: Context? = null
+    @Volatile internal var appContext: Context? = null
     @Volatile private var currentUsername: String? = null
     @Volatile private var currentUserId: String? = null
     @Volatile private var requestObserver: StreamObserver<MessageProto>? = null
     @Volatile private var chatV2RequestObserver: StreamObserver<ChatV2MessageProto>? = null
-    private var lastAuthWasJwt: Boolean = false
+    @Volatile private var lastAuthWasJwt: Boolean = false
     @Volatile private var isRetrying = false
     @Volatile private var lastChatRequest: LastChatRequest? = null
     private data class LastChatRequest(
@@ -285,7 +285,7 @@ object RealGrpcClient {
         lastChatRequest = null
     }
 
-    var currentRoomId = ""
+    @Volatile var currentRoomId = ""
         internal set
 
     // ====== Connection (delegated) ======
@@ -668,9 +668,9 @@ object RealGrpcClient {
     }
     fun clearMessages() { _messages.value = emptyList() }
 
-    private var markReadJob: kotlinx.coroutines.Job? = null
-    private var pendingMarkReadRoom: String? = null
-    private var pendingMarkReadUser: String? = null
+    @Volatile private var markReadJob: kotlinx.coroutines.Job? = null
+    @Volatile private var pendingMarkReadRoom: String? = null
+    @Volatile private var pendingMarkReadUser: String? = null
     private fun scheduleMarkRead(roomId: String, username: String) {
         pendingMarkReadRoom = roomId
         pendingMarkReadUser = username
@@ -828,7 +828,7 @@ object RealGrpcClient {
         }
     }
 
-    private var database: AppDatabase? = null
+    @Volatile private var database: AppDatabase? = null
     private fun db() = database ?: appContext?.let {
         val d = AppDatabase.getDatabase(it)
         database = d

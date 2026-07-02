@@ -29,17 +29,17 @@ class GrpcConnectionManager(
         private const val TAG = "GrpcConnectionManager"
     }
 
-    var channel: ManagedChannel? = null
+    @Volatile var channel: ManagedChannel? = null
         private set
 
-    var currentServerAddress: String? = null
+    @Volatile var currentServerAddress: String? = null
         private set
-    var currentServerPort: Int = 50051
+    @Volatile var currentServerPort: Int = 50051
         private set
 
     private var reconnectJob: Job? = null
-    private var reconnectDelayMs = 5000L
-    private var appContext: Context? = null
+    @Volatile private var reconnectDelayMs = 5000L
+    @Volatile private var appContext: Context? = null
 
     /** Guard: skip reconnect on auth failures. Set by GrpcAuthClient. */
     @Volatile
@@ -153,6 +153,11 @@ class GrpcConnectionManager(
     }
 
     private fun scheduleReconnect(serverAddress: String, useTls: Boolean, port: Int, context: Context?) {
+        if (isAuthFailure) {
+            Log.w(TAG, "Skipping reconnect: auth failure")
+            return
+        }
+        val appCtx = context?.applicationContext
         reconnectJob?.cancel()
         reconnectJob = scope.launch {
             val delayMs = reconnectDelayMs.coerceAtMost(30000L)
@@ -160,7 +165,7 @@ class GrpcConnectionManager(
             delay(delayMs)
             reconnectDelayMs = (reconnectDelayMs * 2).coerceAtMost(60000L)
             Log.d(TAG, "Retrying connection to $serverAddress...")
-            connect(serverAddress, useTls, port, context)
+            connect(serverAddress, useTls, port, appCtx)
         }
     }
 

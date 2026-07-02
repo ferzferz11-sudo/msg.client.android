@@ -51,11 +51,13 @@ class GrpcAuthClient(
                     setAuthFailure(false)
                     callback(message, null)
                 } else {
+                    setAuthFailure(true)
                     callback(null, message.message)
                 }
             }
             override fun onClose(status: Status, trailers: Metadata) {
                 if (!status.isOk) {
+                    setAuthFailure(true)
                     callback(null, status.description ?: "Auth failed")
                 }
             }

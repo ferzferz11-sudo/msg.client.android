@@ -2,6 +2,7 @@ package lavender.client.android.data.updates
 
 import android.content.Context
 import android.util.Log
+import lavender.client.android.data.models.ErrorHandler
 import androidx.core.content.edit
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -92,7 +93,7 @@ class UpdateManager(private val context: Context) {
                 }
                 connection.disconnect()
             } catch (e: Exception) {
-                Log.e(TAG, "Update check failed", e)
+                ErrorHandler.handle(TAG, "Update check failed", e)
                 onResult(false, "")
             }
         }.start()
@@ -210,7 +211,7 @@ class UpdateManager(private val context: Context) {
                 finishDownload(false)
                 return@launch
             } catch (e: Exception) {
-                Log.e(TAG, "Download failed", e)
+                ErrorHandler.handle(TAG, "Download failed", e)
                 file.delete()
                 finishDownload(false)
             }

@@ -1,5 +1,48 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.16] - 2026-07-02
+
+### Architecture stability audit — Thread safety, Memory leaks, Error handling, gRPC resilience, Room DB
+
+**Исправлено:**
+- Message disappearing bug — `getContentHash` uses `userId` (UUID) instead of `user` (username), fixing content hash mismatch when `allUsers` not loaded
+- Thread safety — added `@Volatile` to 15 cross-thread fields across RealGrpcClient, GrpcConnectionManager, GrpcCallClient, GrpcTypingClient, GrpcMessageV2Client
+- Thread safety — `allChats` in ChatListViewModel moved from IO to Main thread
+- Memory leak — CallController not cancelled in CallActivity.onDestroy
+- Memory leak — GrpcConnectionManager extracted applicationContext from reconnect lambda
+- Memory leak — AIBottomSheet.agentScope cancelled on dialog dismiss
+- Memory leak — CallActivity.fetchTurnCredentials replaced unmanaged Thread with lifecycleScope
+- Error handling — 20 Log.e/Log.w calls replaced with ErrorHandler.handle() in ChatListViewModel, SessionManager, UpdateManager
+- Error handling — gRPC silent error swallows in editMessageV2, deleteMessageV2, setReactionV2 now use ErrorHandler
+- gRPC resilience — Typing stream retry loop: exponential backoff (1s→30s), max 10 retries, connection check
+- gRPC resilience — Call stream retry loop: same backoff + max retries + connection check
+- gRPC resilience — `isAuthFailure` flag now set on auth failure, checked in scheduleReconnect to skip infinite reconnect
+- Room DB — added index on `messages.roomId` (migration 11→12)
+- UI — added `setDecorFitsSystemWindows` to ChatListActivity and ConferenceLobbyActivity
+- UI — CallActionService replaces deprecated IntentService for FCM call actions
+
+**Изменено:**
+- `GrpcMessageV2Client.kt` — `getContentHash`/`getMessageHash` use `userId` instead of `user`
+- `RealGrpcClient.kt` — 9 fields annotated with `@Volatile`
+- `GrpcConnectionManager.kt` — 5 fields annotated with `@Volatile`, `scheduleReconnect` extracts applicationContext, checks `isAuthFailure`
+- `GrpcCallClient.kt` — `callRequestObserver` annotated `@Volatile`, retry backoff added
+- `GrpcTypingClient.kt` — `typingRequestObserver` annotated `@Volatile`, retry backoff added
+- `GrpcMessageV2Client.kt` — `database` annotated `@Volatile`
+- `GrpcAuthClient.kt` — `setAuthFailure(true)` on auth failure
+- `ChatListViewModel.kt` — 16 error handlers migrated to ErrorHandler
+- `SessionManager.kt` — 2 error handlers migrated to ErrorHandler
+- `UpdateManager.kt` — 2 error handlers migrated to ErrorHandler
+- `CallActivity.kt` — `callController?.cancel()` in onDestroy, fetchTurnCredentials uses lifecycleScope
+- `AIBottomSheet.kt` — `agentScope.cancel()` on dialog dismiss
+- `ChatListActivity.kt` — `setDecorFitsSystemWindows(window, false)` in onCreate
+- `ConferenceLobbyActivity.kt` — `setDecorFitsSystemWindows(window, false)` in onCreate
+- `Entities.kt` — `@ColumnInfo(index = true)` on `MessageEntity.roomId`
+- `AppDatabase.kt` — version 12, migration 11→12 creates roomId index
+- `doc/PROMPT_NEXT_SESSION.md` — audit completed
+- `doc/INDEX.md`, `doc/PATTERNS.md`, `doc/GOTCHAS.md` — version updated to v1.3.1.16
+
+---
+
 ## [1.3.1.15] - 2026-07-02
 
 ### Login update + Auth resilience + Call notification fix + Selection toolbar cleanup

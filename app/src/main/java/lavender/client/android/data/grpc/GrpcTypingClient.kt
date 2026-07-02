@@ -24,10 +24,12 @@ class GrpcTypingClient(
 ) {
     companion object {
         private const val TAG = "GrpcTypingClient"
+        private const val MAX_TYPING_RETRIES = 10
     }
 
-    var typingRequestObserver: StreamObserver<TypingRequestProto>? = null
+    @Volatile var typingRequestObserver: StreamObserver<TypingRequestProto>? = null
         private set
+    @Volatile private var typingRetryCount = 0
 
     fun startTypingStream() {
         val currentChannel = getChannel() ?: return
@@ -40,6 +42,7 @@ class GrpcTypingClient(
 
         val call = currentChannel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
         typingRequestObserver = call.startTypingStream(typingUsers, scope)
+        typingRetryCount = 0
     }
 
     fun sendTypingSignal(username: String, isTyping: Boolean, roomId: String, userId: String) {
@@ -70,8 +73,13 @@ class GrpcTypingClient(
             }
             override fun onError(t: Throwable) {
                 Log.e(TAG, "Typing stream error", t)
+                typingRequestObserver = null
+                if (typingRetryCount >= MAX_TYPING_RETRIES) return
+                val channel = getChannel()
+                if (channel == null || channel.isShutdown || channel.isTerminated) return
+                typingRetryCount++
                 scope.launch {
-                    delay(5000)
+                    delay((1000L * (1 shl minOf(typingRetryCount, 5))).coerceAtMost(30_000L))
                     startTypingStream()
                 }
             }

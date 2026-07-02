@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.1.12 | **Updated:** 2026-07-02
+**Version:** v1.3.1.16 | **Updated:** 2026-07-02
 
 ---
 
@@ -42,7 +42,7 @@
 | Kotlin files | ~173 |
 | Activities | 29 |
 | Fragments | 1 (RemoteAgentSettingsFragment) |
-| Services | 3 (ChatKeepAliveService, RemoteAgentService, LavenderMessagingService) |
+| Services | 4 (ChatKeepAliveService, RemoteAgentService, LavenderMessagingService, CallActionService) |
 | gRPC files | 22 |
 | Unit tests | 320 (all passing) |
 | Layout XML | 115 |
@@ -53,7 +53,7 @@
 
 ---
 
-## Architecture Overview (v1.3.1.06)
+## Architecture Overview (v1.3.1.15)
 
 ```
 GrpcClient (facade)
@@ -94,7 +94,7 @@ AIBottomSheet → agent selection with user agents only + loading/empty states +
 SuperAdminActivity → admin panel with GetAdminUserList (cursor pagination, search, sort) + GetAdminUserSessions (expandable device sessions)
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor + AuthInterceptor (HTTP)
-Session: SessionManager (async token refresh — no Main thread blocking)
+Session: SessionManager (async token refresh — no Main thread blocking, isRefreshing guard, READY wait before refresh)
 SplashScreen: SplashActivity → animateAndNavigate() → navigateToTarget() → biometric (15s timeout) + 5s safety timeout
 Chat Stream: ChatV2 bidirectional stream (messenger.ChatService/ChatV2) — JWT auth + clientVersion, system signals, typing
 Messages: v2 only — GetHistoryV2, SendMessageV2, EditMessageV2, DeleteMessageV2, SetReactionV2
@@ -112,6 +112,8 @@ Biometric: BiometricPrompt after splash screen when enabled (15s timeout fallbac
 Notifications: per-chat sound override via notification_sounds SharedPreferences
 Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 Logging: clean logs, no hot-path noise, performance timing in loadChats
+Calls: WebRTC via CallManager + CallNavigator + CallActivity + CallActionService (Service, not IntentService)
+Update: UpdateManager + UpdateCoordinator + downloaded_version tracking + stale APK cleanup
 ```
 
 ---

@@ -50,6 +50,10 @@ class AIBottomSheet(
         isLoadingAgents = true
         selectedAgents.clear()
         buildContent()
+        dialog?.setOnDismissListener {
+            agentLoadJob?.cancel()
+            agentScope.cancel()
+        }
         show()
         loadPresetAgents()
     }

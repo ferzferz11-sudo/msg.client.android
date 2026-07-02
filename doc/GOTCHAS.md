@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.1.13 | **Updated:** 2026-07-02
+**Version:** v1.3.1.16 | **Updated:** 2026-07-02
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -306,7 +306,7 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 
 ## Message Dedup (v1.3.1.07)
 
-- **Content-based dedup** — `getContentHash(message)` = `"${user}:${text}:${timestamp/1000}"`. `deduplicateByContent()` prefers server IDs over temp IDs (`id.startsWith("temp_")`)
+- **Content-based dedup** — `getContentHash(message)` = `"${userId}:${text}:${timestamp/1000}"`. `deduplicateByContent()` prefers server IDs over temp IDs (`id.startsWith("temp_")`)
 - **Applied in `loadHistoryV2`** — both cache load and server response merge now deduplicate by content hash, preventing temp ID + server ID coexistence in Room DB
 - **Root cause**: ChatV2 stream can deliver server's copy of a sent message (with server ID) before `sendMessageV2` response handler changes temp ID → server ID. Both get saved to Room DB.
 
@@ -419,3 +419,57 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **Force logout condition narrowed** — `ChatListViewModel.loadChats()` only force logouts on `UNAUTHENTICATED`/`PERMISSION_DENIED` with empty chat list
 - **Token refresh on resume** — `ChatListActivity.onResume()` calls `ensureFreshToken()` before loading chats. Handles long idle (overnight, doze mode) when periodic 60s refresh coroutine was suspended
 - **`startTokenRefresh` runs every 60s** — checks `needsRefresh()` (5-min buffer before expiry). In doze mode, coroutine is suspended. On wake, `onResume` refresh compensates
+
+## CallActionService (v1.3.1.15)
+
+- **IntentService deprecated since API 26** — Android kills its process after `onHandleIntent` returns. Notification dismissal races with process kill. Use `Service` + `stopSelf(startId)` instead
+- **CallActionService handles DECLINE action** — FCM notification adds decline button. `CallManager.rejectCall()` + `NotificationManager.cancel()`
+- **Registered in AndroidManifest** with intent filters for `DECLINE` action
+
+## SessionManager Resilience (v1.3.1.15)
+
+- **`ensureFreshToken()` MUST wait for READY gRPC channel** — refreshing before channel is ready causes UNAUTHENTICATED errors. Now waits for `connectionStatus == READY` before attempting refresh
+- **`isRefreshing` guard prevents parallel refresh** — multiple coroutines calling `ensureFreshToken()` would race. CountDownLatch ensures only one refresh runs, others wait
+- **ChatListActivity connection observer** — on READY status, triggers `loadChats()`. Handles wake from doze mode where periodic refresh was suspended
+- **`loadChats()` not blocked by `isLoading`** — `refreshChats()` resets `_isLoading` first to allow pull-to-refresh during periodic sync
+
+## Stale APK Cleanup (v1.3.1.15)
+
+- **Downloaded APK version tracked** — `UpdateManager` stores `downloadedVersion` in SharedPreferences. When a new version is downloaded, old APK is deleted automatically
+- **APK validation before marking as downloaded** — Content-Type (reject text/html), ZIP header (PK magic bytes), minimum size (>100KB). Prevents "невозможно установить пакет"
+
+## Call Notification Fixes (v1.3.1.15)
+
+- **Call notification shows UUID instead of name** — FCM `sender_id` was UUID. Fix: use `sender_name` field from FCM data for notification title
+- **Call notification has ringtone + vibration** — now uses `RingtoneManager.getDefaultUri(TYPE_NOTIFICATION)` + `Vibrator` for incoming calls
+- **Decline button in notification** — `CallActionService` handles `DECLINE` action, rejects call and dismisses notification
+
+## Content Hash Race Condition (v1.3.1.16)
+
+- **`getContentHash` used `message.user` (username)** — when `allUsers()` was empty (before `loadAllUsers` completed), `resolveUsername(senderId)` returned `""`. Content hash became `":Hello:1719900000"` instead of `"alice:Hello:1719900000"`
+- **Same message had different hashes at different times** — once with `user=""` (when allUsers empty), once with `user="alice"` (after allUsers loaded). Merge/dedup logic failed to match them
+- **Fix: use `message.userId` (UUID) instead of `message.user`** — UUID is always available from proto, never depends on `allUsers` loading order
+- **Impact**: messages disappearing from chat view while visible in chat list last message. Server correctly stores message, but client's dedup logic creates two entries with different content hashes
+
+## Thread Safety Audit (v1.3.1.16)
+
+- **Fields without `@Volatile`** — `appContext`, `currentRoomId`, `markReadJob`, `pendingMarkReadRoom/User`, `database` in RealGrpcClient; `channel`, `currentServerAddress`, `currentServerPort`, `reconnectDelayMs`, `appContext` in GrpcConnectionManager; `callRequestObserver` in GrpcCallClient; `typingRequestObserver` in GrpcTypingClient; `database` in GrpcMessageV2Client — all accessed from multiple threads
+- **Fix: added `@Volatile`** to all cross-thread fields
+- **`allChats` in ChatListViewModel** — was written on `Dispatchers.IO` (init block) but read/written on Main thread. Fix: moved assignment to Main thread via `withContext(Dispatchers.IO)` for DB call only
+
+## Memory Leak Fixes (v1.3.1.16)
+
+- **CallController not cancelled in onDestroy** — `CallActivity.onDestroy()` did not call `callController?.cancel()`. Coroutine scope kept running, holding Activity via `context` field. Fix: added `callController?.cancel()` to `onDestroy()`
+- **GrpcConnectionManager capturing Activity in reconnect lambda** — `scheduleReconnect` received raw `context` (could be Activity) and captured it in coroutine lambda with up to 60s delay. Fix: extract `context?.applicationContext` before launching coroutine
+- **AIBottomSheet.agentScope never cancelled** — `CoroutineScope` created but never cancelled on dismiss. Fix: `dialog?.setOnDismissListener { agentScope.cancel() }`
+- **CallActivity.fetchTurnCredentials unmanaged Thread** — `Thread { ... }.start()` with `runOnUiThread` callback kept Activity alive. Fix: replaced with `lifecycleScope.launch(Dispatchers.IO)` + `isFinishing/isDestroyed` guard
+
+## gRPC Resilience Fixes (v1.3.1.16)
+
+- **Typing stream retry loop** — was unconditional `delay(5000)` with no backoff, no max retries, no connection check. On UNAUTHENTICATED/channel shutdown, retried forever. Fix: exponential backoff (1s→30s), max 10 retries, check channel state before retry, reset count on success
+- **Call stream retry loop** — same anti-pattern as typing. Fix: same backoff + max retries + connection check
+- **gRPC silent error swallows** — `editMessageV2`, `deleteMessageV2`, `setReactionV2` `onClose` callbacks silently discarded errors. Fix: added `ErrorHandler.handle()` to all three
+
+## Room DB Index (v1.3.1.16)
+
+- **No index on `messages.roomId`** — every message query did full table scan. Most queried column in the database. Fix: added `@ColumnInfo(index = true)` on `MessageEntity.roomId` + migration 11→12 with `CREATE INDEX`

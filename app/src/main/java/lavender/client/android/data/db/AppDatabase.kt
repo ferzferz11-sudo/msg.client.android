@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [MessageEntity::class, ChatEntity::class, MarketplaceAgentEntity::class], version = 11, exportSchema = false)
+@Database(entities = [MessageEntity::class, ChatEntity::class, MarketplaceAgentEntity::class], version = 12, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun messageDao(): MessageDao
     abstract fun chatDao(): ChatDao
@@ -168,13 +168,19 @@ abstract class AppDatabase : RoomDatabase() {
                         model TEXT NOT NULL,
                         toolsEnabled INTEGER NOT NULL,
                         ragEnabled INTEGER NOT NULL,
-                        isPreset INTEGER NOT NULL,
+                        isPinned INTEGER NOT NULL,
                         isPublic INTEGER NOT NULL,
                         avgRating REAL NOT NULL,
                         installCount INTEGER NOT NULL,
                         cachedAt INTEGER NOT NULL
                     )
                 """.trimIndent())
+            }
+        }
+
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try { db.execSQL("CREATE INDEX IF NOT EXISTS index_messages_roomId ON messages (roomId)") } catch (_: Exception) {}
             }
         }
 
@@ -185,7 +191,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "lavender_cache"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                 .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
                 .build()
                 INSTANCE = instance

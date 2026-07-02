@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.1.13 | **Updated:** 2026-07-02
+**Version:** v1.3.1.16 | **Updated:** 2026-07-02
 
 ---
 
@@ -845,4 +845,84 @@ loadHistoryV2 merge logic:
 
   — Fixes Favorites reaction loss: server generates new UUID for favorites copies,
     content hash matches even when IDs differ
+```
+
+---
+
+## v1.3.1.15
+
+### CallActionService Pattern (v1.3.1.15)
+```
+CallActionService (Service, NOT IntentService)
+  ├── Replaces deprecated IntentService (API 26+)
+  ├── Handles FCM call notification actions (DECLINE)
+  ├── onStartCommand → action + callId from Intent extras
+  ├── CallManager.rejectCall() for DECLINE action
+  ├── NotificationManager.cancel(callId.hashCode()) to dismiss
+  └── stopSelf(startId) + START_NOT_STICKY
+```
+- IntentService deprecated since API 26 — Android kills its process after `onHandleIntent` returns, causing notification dismissal race
+- Service stays alive until `stopSelf()` — reliable for quick actions
+
+### SessionManager Resilience Pattern (v1.3.1.15)
+```
+SessionManager
+  ├── ensureFreshToken()
+  │   ├── Wait for GrpcClient.connectionStatus == READY before refresh
+  │   ├── isRefreshing guard: concurrent calls block on CountDownLatch
+  │   └── Falls back to password re-login if both tokens expired
+  ├── isRefreshing: Boolean — prevents parallel refresh races
+  └── Connection observer in ChatListActivity
+      └── On READY → loadChats() (handles wake from doze)
+```
+- `ensureFreshToken()` MUST wait for READY gRPC channel — refreshing before channel is ready causes UNAUTHENTICATED
+- `isRefreshing` flag with CountDownLatch ensures only one refresh at a time
+- ChatListActivity connection observer triggers `loadChats()` on READY — handles app wake from background/doze
+
+### Stale APK Cleanup Pattern (v1.3.1.15)
+```
+UpdateManager
+  ├── downloadedVersion: String? — tracks which version was downloaded
+  ├── On new version download: if downloadedVersion != current download → delete old APK
+  └── isValidApk(file): Content-Type + ZIP header + minimum size validation
+```
+
+---
+
+## v1.3.1.16
+
+### gRPC Retry Backoff Pattern (v1.3.1.16)
+```
+GrpcTypingClient / GrpcCallClient
+  ├── @Volatile retryCount = 0
+  ├── MAX_RETRIES = 10
+  ├── onError:
+  │   ├── if retryCount >= MAX_RETRIES → return (stop retrying)
+  │   ├── if channel null/shutdown/terminated → return
+  │   ├── retryCount++
+  │   └── delay((1000L * (1 shl minOf(retryCount, 5))).coerceAtMost(30_000L))
+  └── On successful stream start: retryCount = 0
+
+Backoff sequence: 2s → 4s → 8s → 16s → 30s → 30s → ... (max 10 retries)
+```
+- Exponential backoff prevents thundering herd on server restart
+- Connection check prevents retries when channel is dead
+- Reset on success ensures fresh backoff for new failures
+
+### Content Hash UUID Pattern (v1.3.1.16)
+```
+getContentHash(message) = "${message.userId}:${message.text}:${message.timestamp / 1000}"
+  — Uses userId (UUID) instead of user (username)
+  — UUID always available from proto, never depends on allUsers loading order
+  — Prevents content hash mismatch when allUsers() is empty
+```
+
+### isAuthFailure Guard Pattern (v1.3.1.16)
+```
+GrpcAuthClient
+  ├── onMessage: if !success → setAuthFailure(true)
+  └── onClose: if !isOk → setAuthFailure(true)
+
+GrpcConnectionManager.scheduleReconnect()
+  └── if isAuthFailure → skip reconnect (return early)
 ```

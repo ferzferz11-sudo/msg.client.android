@@ -85,7 +85,7 @@ class GrpcMessageV2Client(
             .build()
     }
 
-    private var database: AppDatabase? = null
+    @Volatile private var database: AppDatabase? = null
     private fun db() = database ?: appContext()?.let {
         val d = AppDatabase.getDatabase(it)
         database = d
@@ -358,7 +358,10 @@ class GrpcMessageV2Client(
         call.start(object : ClientCall.Listener<EditMessageV2ResponseProto>() {
             override fun onMessage(msg: EditMessageV2ResponseProto) { cb(msg.success, msg.message) }
             override fun onClose(status: Status, trailers: Metadata) {
-                if (!status.isOk) cb(false, status.description ?: "Error")
+                if (!status.isOk) {
+                    ErrorHandler.handle("$TAG.editMessageV2", StatusRuntimeException(status))
+                    cb(false, status.description ?: "Error")
+                }
             }
         }, Metadata())
         call.sendMessage(EditMessageV2RequestProto(messageId, text))
@@ -383,7 +386,10 @@ class GrpcMessageV2Client(
         call.start(object : ClientCall.Listener<DeleteMessageV2ResponseProto>() {
             override fun onMessage(msg: DeleteMessageV2ResponseProto) { cb(msg.success) }
             override fun onClose(status: Status, trailers: Metadata) {
-                if (!status.isOk) cb(false)
+                if (!status.isOk) {
+                    ErrorHandler.handle("$TAG.deleteMessageV2", StatusRuntimeException(status))
+                    cb(false)
+                }
             }
         }, Metadata())
         call.sendMessage(DeleteMessageV2RequestProto(messageIds, getUserId() ?: ""))
@@ -443,7 +449,9 @@ class GrpcMessageV2Client(
                     }
                 }
             }
-            override fun onClose(status: Status, trailers: Metadata) {}
+            override fun onClose(status: Status, trailers: Metadata) {
+                if (!status.isOk) ErrorHandler.handle("$TAG.setReactionV2", StatusRuntimeException(status))
+            }
         }, Metadata())
         call.sendMessage(SetReactionV2RequestProto(messageId, emoji))
         call.halfClose()
@@ -477,10 +485,10 @@ class GrpcMessageV2Client(
 
     private fun getMessageHash(message: Message): String =
         if (message.id.isNotEmpty()) "id:${message.id}"
-        else "${message.user}:${message.text}:${message.timestamp / 1000}"
+        else "${message.userId}:${message.text}:${message.timestamp / 1000}"
 
     private fun getContentHash(message: Message): String =
-        "${message.user}:${message.text}:${message.timestamp / 1000}"
+        "${message.userId}:${message.text}:${message.timestamp / 1000}"
 
     private fun deduplicateByContent(messages: List<Message>): List<Message> {
         val seen = mutableMapOf<String, Message>()

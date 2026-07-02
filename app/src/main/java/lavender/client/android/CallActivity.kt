@@ -14,6 +14,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.databinding.ActivityCallBinding
 import lavender.client.android.data.calls.*
 import lavender.client.android.data.grpc.GrpcClient
@@ -244,7 +245,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     }
 
     private fun fetchTurnCredentials(callback: (List<PeerConnection.IceServer>) -> Unit) {
-        Thread {
+        lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 val url = java.net.URL(lavender.client.android.data.ServerConfig.turnCredentialsUrl())
                 val connection = url.openConnection() as java.net.HttpURLConnection
@@ -273,12 +274,16 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
                         )
                     }
                 }
-                callback(servers)
+                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    if (!isFinishing && !isDestroyed) callback(servers)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to fetch TURN credentials, using STUN only", e)
-                callback(listOf(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()))
+                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    if (!isFinishing && !isDestroyed) callback(listOf(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()))
+                }
             }
-        }.start()
+        }
     }
 
     private fun initWebRtc() {
@@ -421,6 +426,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
     override fun onDestroy() {
         super.onDestroy()
+        callController?.cancel()
         cancelConnectionTimeout()
         soundManager.destroy()
         audioModeManager.restoreMode()

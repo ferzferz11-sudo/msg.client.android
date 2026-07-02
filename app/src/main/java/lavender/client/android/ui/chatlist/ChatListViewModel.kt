@@ -2,6 +2,7 @@ package lavender.client.android.ui.chatlist
 
 import android.app.Application
 import android.util.Log
+import lavender.client.android.data.models.ErrorHandler
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -72,18 +73,20 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
 
     init {
         // Load cached chats on startup (offline-first)
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             if (allChats.isEmpty()) {
                 try {
                     val db = lavender.client.android.data.db.AppDatabase.getDatabase(getApplication())
-                    val cached = db.chatDao().getAllChats().map { it.toDomain() }
+                    val cached = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                        db.chatDao().getAllChats().map { it.toDomain() }
+                    }
                     if (cached.isNotEmpty()) {
                         allChats = cached
                         buildSections(cached)
                         Log.d(TAG, "Loaded ${cached.size} chats from cache on startup")
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to load chats from cache on startup", e)
+                    ErrorHandler.handle(TAG, "Failed to load chats from cache on startup", e)
                 }
             }
         }
@@ -146,7 +149,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                         try {
                             val db = lavender.client.android.data.db.AppDatabase.getDatabase(getApplication())
                             db.chatDao().deleteChat(deletedChatId)
-                        } catch (e: Exception) { Log.w(TAG, "Failed to delete chat from cache", e) }
+                        } catch (e: Exception) { ErrorHandler.handle(TAG, "Failed to delete chat from cache", e) }
                     }
                     Log.d(TAG, "Chat deleted: $deletedChatId")
                 }
@@ -214,7 +217,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                             Log.d(TAG, "Loaded ${cached.size} chats from cache (${unreadChats.size} unread)")
                         }
                     } catch (e: Exception) {
-                        Log.w(TAG, "Failed to load chats from cache", e)
+                        ErrorHandler.handle(TAG, "Failed to load chats from cache", e)
                     }
                 }
 
@@ -296,7 +299,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                         val db = lavender.client.android.data.db.AppDatabase.getDatabase(getApplication())
                         db.chatDao().syncChats(allChats.map { it.toEntity() })
                     } catch (e: Exception) {
-                        Log.w(TAG, "Failed to sync chats to cache", e)
+                        ErrorHandler.handle(TAG, "Failed to sync chats to cache", e)
                     }
                     Log.d(TAG, "Loaded ${fetchedChats.size} chats from server (${System.currentTimeMillis() - startTime}ms)")
                 } else {
@@ -327,7 +330,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
 
                 buildSections(allChats)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to load chats", e)
+                ErrorHandler.handle(TAG, "Failed to load chats", e)
             } finally {
                 _isLoading.value = false
             }
@@ -401,7 +404,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Refresh preparation failed: ${e.message}")
+                ErrorHandler.handle(TAG, "Refresh preparation failed: ${e.message}", e)
             }
             loadChats()
         }
@@ -433,7 +436,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                     buildSections(allChats)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to pin chat $chatId", e)
+                ErrorHandler.handle(TAG, "Failed to pin chat $chatId", e)
             }
         }
     }
@@ -449,7 +452,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                     buildSections(allChats)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to unpin chat $chatId", e)
+                ErrorHandler.handle(TAG, "Failed to unpin chat $chatId", e)
             }
         }
     }
@@ -465,7 +468,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                     buildSections(allChats)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to archive chat $chatId", e)
+                ErrorHandler.handle(TAG, "Failed to archive chat $chatId", e)
             }
         }
     }
@@ -481,7 +484,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                     buildSections(allChats)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to unarchive chat $chatId", e)
+                ErrorHandler.handle(TAG, "Failed to unarchive chat $chatId", e)
             }
         }
     }
@@ -498,7 +501,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to toggle mute for $chatId", e)
+                ErrorHandler.handle(TAG, "Failed to toggle mute for $chatId", e)
             }
         }
     }
@@ -514,7 +517,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                         try {
                             val db = lavender.client.android.data.db.AppDatabase.getDatabase(getApplication())
                             db.chatDao().deleteChat(chatId)
-                        } catch (e: Exception) { Log.w(TAG, "Failed to delete AI chat from cache", e) }
+                        } catch (e: Exception) { ErrorHandler.handle(TAG, "Failed to delete AI chat from cache", e) }
                         val prefs = getApplication<android.app.Application>().getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
                         val deleted = prefs.getStringSet("deleted_ai_chats", emptySet()) ?: emptySet()
                         prefs.edit().putStringSet("deleted_ai_chats", deleted + chatId).apply()
@@ -532,13 +535,13 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                             try {
                                 val db = lavender.client.android.data.db.AppDatabase.getDatabase(getApplication())
                                 db.chatDao().deleteChat(chatId)
-                            } catch (e: Exception) { Log.w(TAG, "Failed to delete chat from cache", e) }
+} catch (e: Exception) { ErrorHandler.handle(TAG, "Failed to delete chat from cache", e) }
                         }
                     }
                     onResult?.invoke()
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to delete chat $chatId", e)
+                ErrorHandler.handle(TAG, "Failed to delete chat $chatId", e)
                 onResult?.invoke()
             }
         }
@@ -573,7 +576,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                     Log.d(TAG, "markAsRead: chatId=$chatId — server confirmed")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to mark as read: $chatId", e)
+                ErrorHandler.handle(TAG, "Failed to mark as read: $chatId", e)
             }
         }
     }

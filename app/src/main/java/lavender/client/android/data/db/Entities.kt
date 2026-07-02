@@ -1,5 +1,6 @@
 package lavender.client.android.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import lavender.client.android.data.ai.AiProviderType
@@ -14,7 +15,7 @@ data class MessageEntity(
     val user: String,
     val text: String,
     val timestamp: Long,
-    val roomId: String,
+    @ColumnInfo(index = true) val roomId: String,
     val repliedToMessageId: String,
     val repliedToUser: String,
     val repliedToText: String,

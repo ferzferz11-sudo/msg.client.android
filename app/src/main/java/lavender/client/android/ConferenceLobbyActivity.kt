@@ -69,6 +69,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         binding = ActivityConferenceLobbyBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
