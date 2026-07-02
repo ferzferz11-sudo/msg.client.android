@@ -276,6 +276,7 @@ class ChatListActivity : AppCompatActivity() {
 
         // Observe connection status
         lifecycleScope.launch {
+            var wasReady = GrpcClient.connectionStatus.value == ConnectionStatus.READY
             GrpcClient.connectionStatus.collect { status ->
                 val statusText = when (status) {
                     ConnectionStatus.CONNECTING -> getString(R.string.connecting)
@@ -289,6 +290,16 @@ class ChatListActivity : AppCompatActivity() {
                 }
                 tvToolbarSubtitle?.text = statusText
                 tvToolbarSubtitle?.isVisible = statusText.isNotEmpty()
+
+                // Load chats when connection becomes READY (handles wake from doze)
+                if (status == ConnectionStatus.READY && !wasReady) {
+                    wasReady = true
+                    if (::viewModel.isInitialized) {
+                        viewModel.loadChats(silent = true)
+                        GrpcClient.loadUsers()
+                    }
+                }
+                if (status != ConnectionStatus.READY) wasReady = false
             }
         }
 

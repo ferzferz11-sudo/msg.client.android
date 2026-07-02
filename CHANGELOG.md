@@ -1,34 +1,38 @@
 # Lava Messenger — Android Changelog
 
-## [1.3.1.14] - 2026-07-02
+## [1.3.1.15] - 2026-07-02
 
-### Update improvements + Call notification fix + Selection toolbar cleanup
+### Login update + Auth resilience + Call notification fix + Selection toolbar cleanup
 
 **Добавлено:**
-- Проверка обновлений при долгом свайпе вниз в списке чатов — если пользователь вверху списка и делает свап вниз до упора, открывается диалог проверки обновлений
-- Кнопка "Отклонить" в уведомлении входящего звонка — позволяет отклонить звонок прямо из уведомления
-- Звук звонка и вибрация в уведомлении входящего звонка (ранее было тихо)
+- Кнопка обновления на экране логина — "Доступна новая версия. Скачать?" с возможностью скачать/установить прямо из шторки входа
+- Проверка обновлений при долгом свайпе вниз в списке чатов
+- Кнопка "Отклонить" в уведомлении входящего звонка
+- Звук звонка и вибрация в уведомлении входящего звонка
 
 **Исправлено:**
-- Уведомление входящего звонка показывало UUID вместо имени — теперь отображается "Звонит [Имя]"
-- Если скачанное обновление устарело (вышла новая версия) — старый APK удаляется, пользователю предлагается скачать актуальную версию
+- Токен не обновлялся после пробуждения — `ensureFreshToken` теперь ждёт READY gRPC канал перед refresh
+- Чаты не загружались после пробуждения — connection observer теперь вызывает `loadChats` при переключении в READY
+- Параллельные refresh токена — `isRefreshing` guard предотвращает гонку
+- Уведомление входящего звонка показывало UUID вместо имени — теперь "Звонит [Имя]"
+- Устаревшее скачанное обновление — если вышла новая версия, старый APK удаляется
 
 **Удалено:**
-- Кнопка "Что нового" из уведомлений об обновлении — осталась только "Установить"
-- Иконка "Избранное" (star) из режима выбора сообщений — для отправки в избранное используется "Переслать"
-- Иконка "Замочек" (pin/lock) из режима выбора сообщений — функция пока не реализована на Android
+- Кнопка "Что нового" из уведомлений об обновлении
+- Иконка "Избранное" (star) из режима выбора сообщений
+- Иконка "Замочек" (pin/lock) из режима выбора сообщений
 
 **Изменено:**
-- `ChatListActivity.kt` — `RecyclerView.OnScrollListener` для детекции долгого свайпа вверху списка
-- `UpdateManager.kt` — сохранение `downloaded_version` при скачивании; проверка версии при обновлении; очистка устаревшего APK
-- `UpdateUtils.kt` — удалён `whatsNewIntent` из `showUpdateReadyNotification()`
-- `UpdateCoordinator.kt` — удалён `whatsNewIntent` из `showUpdateAvailableNotification()`
-- `LavenderMessagingService.kt` — извлечение `sender_name` из FCM; использование имени в уведомлении; добавлен звук/вибрация/кнопка "Отклонить"
-- `CallActionService.kt` — новый файл для обработки действий в уведомлении звонка
-- `AndroidManifest.xml` — регистрация `CallActionService`
+- `ServerAuthBottomSheet.kt` — кнопка обновления на экране логина
+- `SessionManager.kt` — ensureFreshToken ждёт READY + isRefreshing guard
+- `ChatListActivity.kt` — OnScrollListener для долгого свайпа; connection observer загружает чаты при READY
+- `UpdateManager.kt` — downloaded_version tracking + stale APK cleanup
+- `UpdateUtils.kt` / `UpdateCoordinator.kt` — удалён whatsNewIntent
+- `LavenderMessagingService.kt` — sender_name из FCM, ringtone, vibration, decline button
+- `CallActionService.kt` — NEW, Service вместо deprecated IntentService
 - `activity_new_chat.xml` — reordered selection toolbar: reply → forward → copy → delete
-- `ChatSelectionDelegate.kt` — удалены `starMessages`, `pinMessageBtn`, `starSelectedMessages()`, `pinSelectedMessages()`
-- `strings.xml` (EN + RU) — +`decline_call`
+- `ChatSelectionDelegate.kt` — удалены star, lock, unused methods
+- `strings.xml` (EN + RU) — +decline_call, +update_download_prompt, +downloading
 
 ---
 

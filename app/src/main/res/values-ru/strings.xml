@@ -173,6 +173,8 @@
     <string name="online_users">Пользователи онлайн</string>
     <string name="update_available">Доступно обновление</string>
     <string name="install_update">Установить обновление</string>
+    <string name="update_download_prompt">Доступна новая версия. Скачать?</string>
+    <string name="downloading">Загрузка…</string>
     <string name="delete_chats">Удалить чаты</string>
     <string name="delete_chats_confirmation">Вы уверены, что хотите удалить %d выбранных чатов? Все сообщения и изображения будут удалены навсегда.</string>
     <string name="deleted_count">Удалено чатов: %d</string>

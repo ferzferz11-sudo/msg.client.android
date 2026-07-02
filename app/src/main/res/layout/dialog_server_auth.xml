@@ -95,6 +95,18 @@
         android:text="@string/register"
         app:cornerRadius="28dp" />
 
+    <!-- Update button (hidden by default, shown when update available) -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnUpdateApp"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginTop="8dp"
+        android:textAllCaps="false"
+        android:text="@string/update_download_prompt"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
     <!-- App version -->
     <TextView
         android:id="@+id/serverAuthAppVersion"

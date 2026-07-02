@@ -9,12 +9,15 @@ import android.widget.ImageView
 import android.widget.TextView
 import com.google.android.material.button.MaterialButton
 import lavender.client.android.R
+import lavender.client.android.data.updates.UpdateManager
+import lavender.client.android.data.updates.UpdateUtils
 import lavender.client.android.theme.Theme
 import lavender.client.android.theme.ThemeStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -22,7 +25,7 @@ import java.net.URL
  * Server Auth Bottom Sheet — first screen when user selects a server.
  *
  * Shows: logo, server name, server address, online status (via /health), login/register buttons.
- * Used in: ChatListActivity (first login), ServersActivity (server selection).
+ * Also checks for app updates and offers download/install.
  */
 class ServerAuthBottomSheet(
     context: Context,
@@ -36,10 +39,12 @@ class ServerAuthBottomSheet(
 ) : StandardBottomSheet(context, R.layout.dialog_server_auth, theme) {
 
     private var statusIndicator: View? = null
+    private val updateManager = UpdateManager(context)
 
     init {
         initViews()
         checkServerHealth()
+        checkForUpdate()
     }
 
     private fun initViews() {
@@ -70,6 +75,61 @@ class ServerAuthBottomSheet(
         findViewById<MaterialButton>(R.id.btnServerRegister)?.setOnClickListener {
             dismiss()
             onRegister()
+        }
+
+        // Update button
+        val btnUpdate = findViewById<MaterialButton>(R.id.btnUpdateApp)
+        btnUpdate?.setOnClickListener {
+            val prefs = context.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE)
+            val isDownloaded = prefs.getBoolean("update_downloaded", false)
+
+            if (isDownloaded) {
+                val apkPath = prefs.getString("apk_path", null)
+                if (apkPath != null) {
+                    UpdateUtils.installApk(context, File(apkPath))
+                }
+            } else {
+                btnUpdate.text = context.getString(R.string.downloading)
+                btnUpdate.isEnabled = false
+                updateManager.startDownload()
+            }
+        }
+
+        // Observe download state
+        CoroutineScope(Dispatchers.Main).launch {
+            updateManager.isDownloadingInstance.collect { downloading ->
+                if (!downloading) {
+                    val prefs = context.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE)
+                    val isDownloaded = prefs.getBoolean("update_downloaded", false)
+                    if (isDownloaded) {
+                        btnUpdate?.text = context.getString(R.string.install_update)
+                        btnUpdate?.isEnabled = true
+                    }
+                }
+            }
+        }
+    }
+
+    private fun checkForUpdate() {
+        val btnUpdate = findViewById<MaterialButton>(R.id.btnUpdateApp) ?: return
+
+        // Always check for updates first — this clears stale APK if version mismatch
+        updateManager.checkForUpdates { isAvailable, _ ->
+            val prefs = context.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE)
+            val isDownloaded = prefs.getBoolean("update_downloaded", false)
+
+            btnUpdate.post {
+                if (isDownloaded) {
+                    val apkPath = prefs.getString("apk_path", null)
+                    if (apkPath != null && File(apkPath).exists()) {
+                        btnUpdate.text = context.getString(R.string.install_update)
+                        btnUpdate.visibility = View.VISIBLE
+                    }
+                } else if (isAvailable) {
+                    btnUpdate.text = context.getString(R.string.update_download_prompt)
+                    btnUpdate.visibility = View.VISIBLE
+                }
+            }
         }
     }
 

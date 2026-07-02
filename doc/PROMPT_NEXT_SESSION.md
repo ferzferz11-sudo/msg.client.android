@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.1.14 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-07-02
+**Версия:** v1.3.1.15 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-07-02
 
 ---
 
@@ -188,7 +188,7 @@ Update: UpdateManager + UpdateCoordinator + UpdateUtils; downloaded_version trac
 
 ---
 
-## Итог сессии v1.3.1.14 (завершена)
+## Итог сессии v1.3.1.15 (завершена)
 
 ### Выполнено
 
