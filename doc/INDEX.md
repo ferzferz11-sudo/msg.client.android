@@ -24,6 +24,7 @@
 | `doc/PROMPT_HERMES_ACP_CLIENT.md` | Hermes ACP client plan | When working with Hermes Agent |
 | `doc/SESSION_SUMMARY_v1.3.1.16.md` | v1.3.1.16 architecture audit summary | Reference for session work |
 | `doc/PLAN_v1.3.1.16.md` | v1.3.1.16 execution plan | Reference |
+| `doc/DOC_SYNC_PLAN.md` | Doc sync plan (completed v1.3.1.16) | Historical reference |
 | `CHANGELOG.md` | Version history | Reference |
 
 ---

@@ -364,6 +364,7 @@
     <string name="action_about">About</string>
     <string name="admin_panel">Admin Panel</string>
     <string name="lava_ai_name">Lava AI</string>
+    <string name="ai">AI</string>
     <string name="ai_v2_chat_title">AI Chat</string>
     <string name="ai_v2_agents">AI Agents</string>
     <string name="presets">Presets</string>
@@ -426,7 +427,7 @@
     <string name="marketplace_avg_request">Avg/Request</string>
     <string name="marketplace_no_data">No data yet</string>
     <string name="marketplace_no_data_desc">Usage stats will appear after using AI chats</string>
-    <string name="marketplace_search_hint">Search agents...</string>
+    <string name="marketplace_search_hint">Search agents…</string>
     <string name="rate_limit_exceeded">Rate limit exceeded. Wait %ds</string>
 
     <string name="favorites">Favorites</string>
@@ -512,7 +513,7 @@
     <string name="server_default_name">Lava Germany</string>
     <string name="app_version_format">Lava: app Android %s</string>
     <string name="error_required">Required</string>
-    <string name="error_invalid_port">Port must be 1-65535</string>
+    <string name="error_invalid_port">Port must be 1–65535</string>
     <string name="delete_server_title">Delete server</string>
     <string name="delete_server_confirm">Remove \"%s\" from the list?</string>
     <string name="delete">Delete</string>

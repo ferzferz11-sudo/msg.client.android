@@ -18,7 +18,6 @@ class LavenderFab @JvmOverloads constructor(
         ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                // Raise it higher as requested (32dp margin + system bottom bar)
                 bottomMargin = (32 * resources.displayMetrics.density).toInt() + systemBars.bottom
                 marginEnd = (16 * resources.displayMetrics.density).toInt()
             }

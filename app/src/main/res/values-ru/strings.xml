@@ -681,6 +681,7 @@
     <string name="changelog_open_github">Открыть на GitHub</string>
     <string name="open">Открыть</string>
 
+    <string name="ai">ИИ</string>
     <string name="ai_v2_chat_title">ИИ Чат</string>
     <string name="ai_v2_agents">ИИ Агенты</string>
     <string name="presets">Пресеты</string>
