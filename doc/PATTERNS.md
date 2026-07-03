@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.1.21 | **Updated:** 2026-07-03
+**Version:** v1.3.1.22 | **Updated:** 2026-07-03
 
 ---
 
@@ -976,4 +976,40 @@ Why both notification + direct launch:
   — Direct launch: ensures CallActivity opens when app is in foreground
   — setFullScreenIntent only works when screen off/locked
   — Without direct launch: user sees heads-up notification, may miss it
+```
+
+### Auth Retry Pattern (v1.3.1.22)
+```
+loadChats()
+  ├── ensureFreshToken() — may fail if gRPC not READY (5s timeout)
+  ├── getChats() → UNAUTHENTICATED with empty chats
+  │   ├── forceTokenRefresh() — force refresh token
+  │   ├── Retry getChats() once with refreshed token
+  │   └── Only force logout if retry also fails with UNAUTHENTICATED/PERMISSION_DENIED
+  └── Normal flow proceeds with retried result
+```
+
+### Call senderName Pattern (v1.3.1.22)
+```
+initiateCall(receiverUsername)
+  ├── senderId = getUserId() (UUID)
+  ├── receiverId = resolveUserId(username) (UUID)
+  ├── senderName = getCurrentUsername() (display name)
+  └── CallMessageProto(senderId, receiverId, senderName, INITIATE)
+      └── Server broadcasts → receiver shows senderName, not senderId
+```
+
+### Duration API Pattern (v1.3.1.22)
+```
+DO:
+  withTimeoutOrNull(10.seconds) { ... }
+  delay(60.seconds)
+  delay(200.milliseconds)
+
+DON'T:
+  withTimeoutOrNull(10000L) { ... }
+  delay(60_000)
+  delay(200)
+
+Exception: CountDownLatch.await(Long, TimeUnit) — Java API, no Duration overload
 ```

@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
@@ -172,7 +174,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
         stopPeriodicSync()
         syncJob = viewModelScope.launch {
             while (true) {
-                delay(30_000)
+                delay(30.seconds)
                 if (GrpcClient.connectionStatus.value == ConnectionStatus.READY && !_isLoading.value) {
                     loadChats(silent = true)
                 }
@@ -231,7 +233,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                     val aiDeferred = kotlinx.coroutines.CompletableDeferred<List<lavender.client.android.data.ai.AiV2ChatSession>>()
                     launch(Dispatchers.IO) {
                         pageDeferred.complete(
-                            kotlinx.coroutines.withTimeoutOrNull(10000L) {
+                            kotlinx.coroutines.withTimeoutOrNull(10.seconds) {
                                 kotlinx.coroutines.suspendCancellableCoroutine<lavender.client.android.data.grpc.ChatListPage> { cont ->
                                     GrpcClient.getChats(username, skipCache = true) { page ->
                                         if (cont.isActive) cont.resumeWith(Result.success(page))
@@ -242,7 +244,9 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                     }
                     launch(Dispatchers.IO) {
                         aiDeferred.complete(
-                            try { AiV2ChatUseCase.listAIChats() } catch (_: Exception) { emptyList() }
+                            kotlinx.coroutines.withTimeoutOrNull(10.seconds) {
+                                try { AiV2ChatUseCase.listAIChats() } catch (_: Exception) { null }
+                            } ?: emptyList()
                         )
                     }
                     fetchedPage = pageDeferred.await()
@@ -251,14 +255,34 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
 
                 // Process regular chats
                 if (fetchedPage != null) {
-                    // Check for auth errors — force logout only on REAL auth failures
+                    // Check for auth errors — retry token refresh once before force logout
                     // INTERNAL/NOT_CONNECTED are server availability errors, NOT auth errors — don't logout
-                    if (fetchedPage.error != null && fetchedPage.chats.isEmpty() && allChats.isEmpty()) {
-                        val error = fetchedPage.error
+                    if (fetchedPage!!.error != null && fetchedPage!!.chats.isEmpty() && allChats.isEmpty()) {
+                        val error = fetchedPage!!.error
                         if (error == "UNAUTHENTICATED" || error == "PERMISSION_DENIED") {
-                            Log.w(TAG, "loadChats: auth error ($error) with empty chat list — forcing logout")
-                            _forceLogoutEvent.emit(error)
-                            return@launch
+                            Log.w(TAG, "loadChats: auth error ($error) — retrying token refresh before logout")
+                            withContext(Dispatchers.IO) {
+                                lavender.client.android.data.session.SessionManager.forceTokenRefresh(getApplication())
+                            }
+                            // Retry getChats once with refreshed token
+                            val retriedPage = kotlinx.coroutines.withTimeoutOrNull(10.seconds) {
+                                kotlinx.coroutines.suspendCancellableCoroutine<lavender.client.android.data.grpc.ChatListPage> { cont ->
+                                    GrpcClient.getChats(username, skipCache = true) { page ->
+                                        if (cont.isActive) cont.resumeWith(Result.success(page))
+                                    }
+                                }
+                            }
+                            // Only force logout if retry also failed with auth error
+                            if (retriedPage != null && retriedPage.error != null && retriedPage.chats.isEmpty()) {
+                                val retryError = retriedPage.error
+                                if (retryError == "UNAUTHENTICATED" || retryError == "PERMISSION_DENIED") {
+                                    Log.w(TAG, "loadChats: auth error ($retryError) after token refresh — forcing logout")
+                                    _forceLogoutEvent.emit(retryError!!)
+                                    return@launch
+                                }
+                            }
+                            // Retry succeeded or got non-auth error — use retried result
+                            fetchedPage = retriedPage ?: fetchedPage
                         }
                     }
 
@@ -347,7 +371,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             try {
                 val username = SessionManager.session.value.username
-                val fetchedPage = kotlinx.coroutines.withTimeoutOrNull(10000L) {
+                val fetchedPage = kotlinx.coroutines.withTimeoutOrNull(10.seconds) {
                     kotlinx.coroutines.suspendCancellableCoroutine<lavender.client.android.data.grpc.ChatListPage> { cont ->
                         GrpcClient.getChats(username, skipCache = true, limit = 100, cursor = nextCursor) { page ->
                             if (cont.isActive) cont.resumeWith(Result.success(page))
@@ -377,7 +401,6 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun refreshChats() {
-        _isLoading.value = false
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) {
@@ -401,7 +424,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                         val startWait = System.currentTimeMillis()
                         while (GrpcClient.connectionStatus.value != ConnectionStatus.READY
                             && System.currentTimeMillis() - startWait < 5000) {
-                            delay(200)
+                            delay(200.milliseconds)
                         }
                         Log.d(TAG, "gRPC status after wait: ${GrpcClient.connectionStatus.value}")
                     }
@@ -600,7 +623,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     private fun scheduleBuildSections() {
         buildSectionsJob?.cancel()
         buildSectionsJob = viewModelScope.launch {
-            kotlinx.coroutines.delay(50)
+            kotlinx.coroutines.delay(50.milliseconds)
             buildSections(allChats)
         }
     }

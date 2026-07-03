@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.1.21 | **Updated:** 2026-07-03
+**Version:** v1.3.1.22 | **Updated:** 2026-07-03
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -507,3 +507,23 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **Fix:** `handleIncomingCall()` now always calls `startActivity(CallActivity)` directly in addition to showing notification
 - **Notification still needed:** ringtone, decline button, visible when screen off
 - **`SENDER_NAME` missing from notification intent** — CallActivity showed UUID instead of caller name when opened from notification tap. Fix: added `SENDER_NAME` to notification intent
+
+## Swipe-to-Refresh Stuck Spinner (v1.3.1.22)
+
+- **`listAIChats()` had no timeout** — gRPC call could hang indefinitely when offline. `supervisorScope` in `loadChats()` waited forever, `finally` block never ran, `_isLoading` stayed `true` permanently → spinner kept spinning
+- **Fix:** added `withTimeoutOrNull(10.seconds)` for `aiDeferred` completion, matching `pageDeferred`
+
+## Force Logout on Token Expiry (v1.3.1.22)
+
+- **`ensureFreshToken()` gives up after 5s** — if gRPC channel isn't READY (client was offline, token expired), refresh is skipped. `getChats()` then gets UNAUTHENTICATED → force logout even though user just had no internet
+- **Fix:** on UNAUTHENTICATED, `forceTokenRefresh()` is attempted + `getChats()` retried. Force logout only if retry also fails with auth error
+
+## Call Signal Missing senderName (v1.3.1.22)
+
+- **`initiateCall()` didn't set `senderName`** in `CallMessageProto` — server forwarded INITIATE signal with empty `senderName`, receiver fell back to `senderId` (UUID)
+- **Fix:** added `senderName = getCurrentUsername()` in `initiateCall()`
+
+## Duration API (v1.3.1.22)
+
+- **Kotlin 2.x prefers `Duration` over `Long`** for `withTimeoutOrNull`, `delay`, etc. Converted all legacy Long overloads in ChatListViewModel, SessionManager, ChatListActivity, NewChatActivity
+- **`CountDownLatch.await(Long, TimeUnit)`** is Java API — no Duration overload, left as-is

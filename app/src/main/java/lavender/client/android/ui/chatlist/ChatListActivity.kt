@@ -23,6 +23,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import kotlinx.coroutines.Dispatchers
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -307,7 +308,7 @@ class ChatListActivity : AppCompatActivity() {
         // Periodic user refresh every 60s to keep lastSeenAt current
         lifecycleScope.launch {
             while (true) {
-                kotlinx.coroutines.delay(60_000)
+                kotlinx.coroutines.delay(60.seconds)
                 if (GrpcClient.connectionStatus.value == ConnectionStatus.READY) {
                     GrpcClient.loadUsers()
                 }

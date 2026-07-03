@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.1.21 | **Updated:** 2026-07-03
+**Version:** v1.3.1.22 | **Updated:** 2026-07-03
 
 ---
 
@@ -52,7 +52,7 @@
 
 ---
 
-## Architecture Overview (v1.3.1.15)
+## Architecture Overview (v1.3.1.22)
 
 ```
 GrpcClient (facade)

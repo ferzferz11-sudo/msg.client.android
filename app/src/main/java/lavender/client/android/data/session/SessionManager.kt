@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -126,7 +127,7 @@ object SessionManager {
                 } catch (e: Exception) {
                     ErrorHandler.handle("SessionManager", "Token refresh check error: ${e.message}", e)
                 }
-                delay(60_000)
+                delay(60.seconds)
             }
         }
     }

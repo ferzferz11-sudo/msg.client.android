@@ -27,6 +27,7 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Dispatchers
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -364,7 +365,7 @@ class NewChatActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 while (true) {
-                    kotlinx.coroutines.delay(60_000)
+                    kotlinx.coroutines.delay(60.seconds)
                     if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
                         grpcClient.loadUsers()
                     }

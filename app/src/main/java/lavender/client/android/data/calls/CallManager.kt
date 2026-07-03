@@ -120,6 +120,7 @@ object CallManager {
         val signal = CallMessageProto(
             senderId = senderId,
             receiverId = receiverId,
+            senderName = GrpcClient.getCurrentUsername() ?: "",
             type = CallMessageProto.Type.INITIATE
         )
         GrpcClient.sendCallSignal(signal)

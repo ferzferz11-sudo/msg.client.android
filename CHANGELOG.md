@@ -1,5 +1,31 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.22] - 2026-07-03
+
+### Исправлено
+
+**Зависающий индикатор обновления после свайпа в оффлайне:**
+- `listAIChats()` не имел таймаута — если gRPC вызов зависал, `supervisorScope` блокировался навсегда, `finally` блок в `loadChats()` никогда не выполнялся, `_isLoading` навсегда оставался `true` → индикатор крутился
+- Исправлено: добавлен `withTimeoutOrNull(10.seconds)` для `aiDeferred`, аналогично `pageDeferred`
+
+**Преждевременный logout при потере соединения:**
+- `ensureFreshToken()` сдавался через 5s если gRPC канал не READY (клиент был оффлайн, токен истёк). `getChats()` получал UNAUTHENTICATED → мгновенный force logout даже если пользователь просто был без интернета
+- Исправлено: при UNAUTHENTICATED теперь выполняется `forceTokenRefresh()` + повторный `getChats()` перед force logout. Logout только если повторный запрос тоже вернул UNAUTHENTICATED/PERMISSION_DENIED
+
+**Имя звонящего не отображалось на экране звонка (входящий видел UUID вместо имени):**
+- `initiateCall()` не передавал `senderName` в `CallMessageProto` → сервер пересылал вызов с пустым `senderName` → получатель видел `senderId` (UUID) вместо username
+- Исправлено: добавлен `senderName = getCurrentUsername()` в `initiateCall()`
+
+### Изменено
+
+- `ChatListViewModel.kt` — таймаут `listAIChats()` 10s, retry token refresh при UNAUTHENTICATED, `Long` → `Duration` для `withTimeoutOrNull`/`delay`
+- `CallManager.kt` — `senderName` в `initiateCall()`
+- `SessionManager.kt` — `Long` → `Duration` для `delay`
+- `ChatListActivity.kt` — `Long` → `Duration` для `delay`
+- `NewChatActivity.kt` — `Long` → `Duration` для `delay`
+
+---
+
 ## [1.3.1.21] - 2026-07-03
 
 ### Исправлено
