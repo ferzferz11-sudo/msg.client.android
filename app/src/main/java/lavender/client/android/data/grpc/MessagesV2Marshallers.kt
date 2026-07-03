@@ -47,6 +47,7 @@ class MessageReplyProtoMarshaller {
             val inner = com.google.protobuf.CodedOutputStream.newInstance(baos)
             if (value.messageId.isNotEmpty()) inner.writeString(1, value.messageId)
             if (value.preview.isNotEmpty()) inner.writeString(2, value.preview)
+            if (value.senderId.isNotEmpty()) inner.writeString(3, value.senderId)
             inner.flush()
             val bytes = baos.toByteArray()
             cos.writeTag(fieldNumber, WireFormat.WIRETYPE_LENGTH_DELIMITED)
@@ -55,16 +56,18 @@ class MessageReplyProtoMarshaller {
         }
 
         fun parse(cis: com.google.protobuf.CodedInputStream): MessageReplyProto {
-            var messageId = ""; var preview = ""
+            var messageId = ""; var preview = ""; var senderId = ""
             val inner = com.google.protobuf.CodedInputStream.newInstance(cis.readRawBytes(cis.readUInt32()))
             while (!inner.isAtEnd) {
                 val tag = inner.readTag(); if (tag == 0) break
                 when (WireFormat.getTagFieldNumber(tag)) {
-                    1 -> messageId = inner.readString(); 2 -> preview = inner.readString()
+                    1 -> messageId = inner.readString()
+                    2 -> preview = inner.readString()
+                    3 -> senderId = inner.readString()
                     else -> inner.skipField(tag)
                 }
             }
-            return MessageReplyProto(messageId, preview)
+            return MessageReplyProto(messageId, preview, senderId)
         }
     }
 }

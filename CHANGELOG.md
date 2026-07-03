@@ -1,6 +1,6 @@
 # Lava Messenger — Android Changelog
 
-## [1.3.1.20] - 2026-07-03
+## [1.3.1.21] - 2026-07-03
 
 ### Исправлено
 
@@ -16,10 +16,9 @@
 - Notification intent не содержал `SENDER_NAME` → CallActivity показывал UUID вместо имени
 - Исправлено: добавлен `SENDER_NAME` в notification intent
 
-**Цитаты (reply) — сообщение отправлялось без текста:**
-- Сервер `rowToProtoV2()` перезаписывал `Content=Text` → `Content=Reply` из-за `oneof content` в proto. Текст сообщения терялся, клиент получал пустой bubble
+**Цитаты (reply) — сообщение отправлялось без текста и имени автора:**
 - Клиентский workaround: `messageV2ToDomain()` теперь использует `reply.preview` как текст если `text` пустой
-- Серверный фикс applied: proto changed, reply moved out of oneof content
+- Добавлен `senderId` в `MessageReplyProto` для резолва имени автора цитаты
 
 ### Добавлено
 
@@ -29,7 +28,6 @@
 - `MessageV2Proto` содержит `mentions` (field 40) — упомянутые пользователи в ответе сервера
 - `MessageAdapter` подсвечивает @username в тексте сообщения (цветной + жирный шрифт)
 - Извлечение @username из текста через `extractMentions()` в `GrpcMessageV2Client`
-- Сервер applied: proto, DB mentions column, handler stores/returns mentions
 
 ### Изменено
 

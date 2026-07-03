@@ -11,7 +11,8 @@ data class MessageMediaProto(
 
 data class MessageReplyProto(
     val messageId: String = "",
-    val preview: String = ""
+    val preview: String = "",
+    val senderId: String = ""
 )
 
 data class MessageV2Proto(

@@ -132,7 +132,7 @@ class GrpcMessageV2Client(
 
         var imageUrl = ""; var imageUrls = emptyList<String>()
         var voiceUrl = ""; var duration = 0
-        var repliedToMessageId = ""; var repliedToText = ""
+        var repliedToMessageId = ""; var repliedToText = ""; var repliedToUser = ""
 
         when {
             proto.media != null -> {
@@ -150,6 +150,7 @@ class GrpcMessageV2Client(
             proto.reply != null -> {
                 repliedToMessageId = proto.reply.messageId
                 repliedToText = proto.reply.preview
+                repliedToUser = resolveUsername(proto.reply.senderId)
             }
         }
 
@@ -168,6 +169,7 @@ class GrpcMessageV2Client(
             timestamp = timestamp,
             reactions = parseReactions(proto.reactions),
             repliedToMessageId = repliedToMessageId,
+            repliedToUser = repliedToUser,
             repliedToText = repliedToText,
             roomId = proto.roomId,
             isRead = proto.isRead,
