@@ -21,10 +21,6 @@
 | `doc/PROMPT_NEXT_SESSION.md` | Current plan + backlog | At session start |
 | `doc/REMOTE_AGENT.md` | Remote Agent reference | When working with Remote Agent |
 | `doc/AI_V2_TESTING.md` | AI v2 test scenarios | When testing AI features |
-| `doc/PROMPT_HERMES_ACP_CLIENT.md` | Hermes ACP client plan | When working with Hermes Agent |
-| `doc/SESSION_SUMMARY_v1.3.1.16.md` | v1.3.1.16 architecture audit summary | Reference for session work |
-| `doc/PLAN_v1.3.1.16.md` | v1.3.1.16 execution plan | Reference |
-| `doc/DOC_SYNC_PLAN.md` | Doc sync plan (completed v1.3.1.16) | Historical reference |
 | `CHANGELOG.md` | Version history | Reference |
 
 ---
@@ -123,26 +119,7 @@ Update: UpdateManager + UpdateCoordinator + downloaded_version tracking + stale 
 
 ## Rules
 
-1. Do NOT compile Android on server (OOM)
-2. Do NOT deploy to prod without explicit instruction
-3. userId (UUID) — always as key, NOT username
-4. i18n: all new strings simultaneously in values/strings.xml + values-ru/strings.xml
-5. Do NOT initialize getString() in Activity class fields
-6. Kotlin 2.4.0: cont.resume(value, onCancellation = {})
-7. All errors via `ErrorHandler.handle()` — NOT direct `Log.e`
-8. v2 server only — no v1 legacy fallbacks in client code
-9. Chat toolbars: fixed `@dimen/custom_toolbar_height`, elevation 0dp
-10. All chat activities: `setDecorFitsSystemWindows(window, false)` in onCreate
-11. Marshallers: always include v2 proto fields
-12. JWT freshness: `ensureFreshToken()` before Chat stream
-13. Run `./gradlew assembleDebug` before committing
-14. Do NOT bump version — only user bumps version
-15. Marshallers field order: server proto defines field numbers
-16. AI v2 RPC: all methods under `messenger.ChatService/*` (NOT `AIService`)
-17. Unread count: based on `user_chat_metadata.last_read_at`, NOT `messages.is_read`
-18. ProfileService v2: profile/avatar/delete/settings via `messenger.ProfileService/*` (JWT context)
-19. **ALWAYS verify against server code**: Before any gRPC/marshaller change, check server source code
-20. CHANGELOG: do NOT list documentation changes (README, doc/, comments) — only code changes
+См. полный список в `doc/PATTERNS.md` §Rules (20 правил).
 
 ---
 

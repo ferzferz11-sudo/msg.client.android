@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.1.16 | **Updated:** 2026-07-02
+**Version:** v1.3.1.18 | **Updated:** 2026-07-03
 
 ---
 
@@ -556,7 +556,7 @@ Presets removed — accessible via AiV2AgentListActivity only
 17. Unread count: based on `user_chat_metadata.last_read_at`, NOT `messages.is_read`
 18. ProfileService v2: profile/avatar/delete/settings via `messenger.ProfileService/*` (JWT context)
 19. **ALWAYS verify against server code**: Before any gRPC/marshaller change, check `/Users/paveld/LavenderMessenger-server/doc/CLIENT_INTEGRATION.md` AND the actual server source code at `/Users/paveld/LavenderMessenger-server/`.
-19. CHANGELOG: do NOT list documentation changes (README, doc/, comments) — only code changes
+20. CHANGELOG: do NOT list documentation changes (README, doc/, comments) — only code changes
 
 ---
 
