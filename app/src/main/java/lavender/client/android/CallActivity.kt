@@ -221,8 +221,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             binding.btnCamera.visibility = View.VISIBLE
             isCameraEnabled = true
             binding.btnCamera.setImageResource(R.drawable.ic_videocam_on)
-            initWebRtc()
-            CallManager.acceptCall()
+            initWebRtc(onReady = { CallManager.acceptCall() })
         }
 
         binding.btnMic.setOnClickListener {
@@ -286,7 +285,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         }
     }
 
-    private fun initWebRtc() {
+    private fun initWebRtc(onReady: (() -> Unit)? = null) {
         webRtcClient = WebRtcClient(this, eglBase.eglBaseContext, this)
 
         // Get TURN credentials from server
@@ -294,6 +293,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             runOnUiThread {
                 webRtcClient?.initPeerConnection(iceServers)
                 setupWebRtcListeners()
+                onReady?.invoke()
             }
         }
     }

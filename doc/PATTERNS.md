@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.1.18 | **Updated:** 2026-07-03
+**Version:** v1.3.1.19 | **Updated:** 2026-07-03
 
 ---
 
@@ -925,4 +925,55 @@ GrpcAuthClient
 
 GrpcConnectionManager.scheduleReconnect()
   └── if isAuthFailure → skip reconnect (return early)
+```
+
+### Incoming Call Accept Pattern (v1.3.1.19)
+```
+CallActivity
+  ├── btnAccept.click
+  │   └── initWebRtc(onReady = { CallManager.acceptCall() })
+  │
+  ├── initWebRtc(onReady)
+  │   ├── Create WebRtcClient
+  │   ├── fetchTurnCredentials (async)
+  │   │   └── callback:
+  │   │       ├── initPeerConnection(iceServers)
+  │   │       ├── setupWebRtcListeners()
+  │   │       │   └── setupController() → CallController subscribes to incomingSignals
+  │   │       └── onReady?.invoke() → acceptCall()
+  │   └── CRITICAL: acceptCall() AFTER CallController subscribes
+  │
+  └── Why: SharedFlow(extraBufferCapacity=64, replay=0)
+      — OFFER signal buffered but NOT replayed to late subscribers
+      — acceptCall() before subscribe → OFFER lost → stuck on "Подключение..."
+
+CallController
+  └── observeSignals() collects CallManager.incomingSignals
+      ├── ACCEPT → createOffer() (outgoing) or onCallAccepted (incoming)
+      ├── OFFER → setRemoteDescription + createAnswer
+      ├── ANSWER → setRemoteDescription
+      └── ICE_CANDIDATE → addIceCandidate
+```
+- `initWebRtc(onReady)` — callback runs after `setupController()` completes
+- For outgoing calls: `initWebRtc()` without callback (no acceptCall needed)
+- For incoming calls: `initWebRtc(onReady = { CallManager.acceptCall() })`
+- For conference: `initWebRtc()` without callback (joinConference called separately)
+
+### FCM Incoming Call Auto-Launch Pattern (v1.3.1.19)
+```
+LavenderMessagingService.handleIncomingCall()
+  ├── CallManager.init() — start collecting callSignals
+  ├── GrpcClient.connect() — ensure gRPC connection
+  ├── Poll for READY (10 × 500ms) → startCallSession()
+  ├── showCallNotification() — ringtone + decline button + full-screen intent
+  └── startActivity(CallActivity) — ALWAYS launch directly
+      ├── FLAG_ACTIVITY_NEW_TASK | FLAG_ACTIVITY_SINGLE_TOP
+      ├── CALL_ID, RECEIVER_ID, SENDER_NAME, IS_INCOMING=true
+      └── If CallActivity already open → onNewIntent()
+
+Why both notification + direct launch:
+  — Notification: ringtone, decline button, visible when screen off
+  — Direct launch: ensures CallActivity opens when app is in foreground
+  — setFullScreenIntent only works when screen off/locked
+  — Without direct launch: user sees heads-up notification, may miss it
 ```

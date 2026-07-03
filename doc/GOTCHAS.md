@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.1.18 | **Updated:** 2026-07-03
+**Version:** v1.3.1.19 | **Updated:** 2026-07-03
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -494,3 +494,16 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 ## ShareReceiverActivity (v1.3.1.18)
 
 - **Crash on browser share** — Activity didn't call `GrpcClient.connect()`, message had no `userId`, no error handling. Fix: added gRPC connection init, `userId` in message, try-catch around `onCreate`
+
+## Call Accept Race Condition (v1.3.1.19)
+
+- **`acceptCall()` before `CallController` subscribes** — `btnAccept.setOnClickListener` called `initWebRtc()` (async) then `CallManager.acceptCall()` (immediate). `acceptCall()` sent ACCEPT before `CallController` was created (created in `setupController()` → `setupWebRtcListeners()` → `fetchTurnCredentials` callback). Caller receives ACCEPT → creates OFFER → sends back. OFFER arrives at `incomingSignals` SharedFlow but nobody is collecting yet. `incomingSignals` has `extraBufferCapacity=64` but `replay=0` — new subscribers don't get buffered values. OFFER lost → call stuck on "Подключение..."
+- **Fix:** `initWebRtc(onReady)` callback — `acceptCall()` called after `setupController()` completes
+- **Why SharedFlow extraBufferCapacity doesn't help:** With `replay=0`, extra buffer is only for slow EXISTING subscribers. New subscribers start from scratch — they only see values emitted AFTER they subscribe.
+
+## FCM Incoming Call Not Opening CallActivity (v1.3.1.19)
+
+- **`handleIncomingCall()` only showed notification** — `setFullScreenIntent()` only works when screen is off/locked. When app is in foreground, Android shows heads-up notification instead. User may miss it → CallActivity never opens
+- **Fix:** `handleIncomingCall()` now always calls `startActivity(CallActivity)` directly in addition to showing notification
+- **Notification still needed:** ringtone, decline button, visible when screen off
+- **`SENDER_NAME` missing from notification intent** — CallActivity showed UUID instead of caller name when opened from notification tap. Fix: added `SENDER_NAME` to notification intent

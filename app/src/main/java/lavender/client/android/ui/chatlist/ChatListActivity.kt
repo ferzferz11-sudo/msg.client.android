@@ -527,7 +527,7 @@ class ChatListActivity : AppCompatActivity() {
                     canTriggerUpdate = false
                     val dy = recyclerView.computeVerticalScrollOffset()
                     if (dy <= 0) {
-                        updateCoordinator?.checkManualUpdate()
+                        updateCoordinator?.checkForUpdatesSilently()
                     }
                 }
             }

@@ -1,5 +1,28 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.19] - 2026-07-03
+
+### Исправлено
+
+**Звонок: принятие входящего звонка зависает на "Подключение..." (race condition):**
+- `CallManager.acceptCall()` отправлял ACCEPT信号 до создания `CallController`, который слушает OFFER/ANSWER/ICE сигналы. Клиент-звонящий получал ACCEPT → создавал OFFER → отправлял обратно, но `CallController` ещё не был подписан на `incomingSignals` (SharedFlow с replay=0). OFFER терялся → WebRTC negotiation никогда не завершался → звонок застревал на "Подключение..."
+- Исправлено: `acceptCall()` теперь вызывается после `setupController()` через `onReady` callback в `initWebRtc()`
+
+**Звонок: входящий звонок не открывал CallActivity из FCM:**
+- `LavenderMessagingService.handleIncomingCall()` только показывал heads-up уведомление. `setFullScreenIntent()` работает только когда экран выключен/заблокирован. Если приложение на переднем плане — пользователь мог не заметить уведомление → CallActivity не открывался
+- Исправлено: `handleIncomingCall()` теперь всегда запускает `CallActivity` напрямую через `startActivity()` + `FLAG_ACTIVITY_SINGLE_TOP`
+
+**Звонок: имя звонящего не отображалось в notification:**
+- Notification intent не содержал `SENDER_NAME` → CallActivity показывал UUID вместо имени
+- Исправлено: добавлен `SENDER_NAME` в notification intent
+
+### Изменено
+
+- `CallActivity.kt` — `initWebRtc(onReady)` callback, `acceptCall()` перенесён в `onReady`
+- `LavenderMessagingService.kt` — прямой запуск `CallActivity` из `handleIncomingCall()`, `SENDER_NAME` в notification intent
+
+---
+
 ## [1.3.1.18] - 2026-07-03
 
 ### Исправлено

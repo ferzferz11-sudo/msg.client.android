@@ -85,6 +85,15 @@ class LavenderMessagingService : FirebaseMessagingService() {
         }
 
         showCallNotification(senderId, callId, senderName)
+
+        val callIntent = android.content.Intent(this, lavender.client.android.CallActivity::class.java).apply {
+            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("CALL_ID", callId)
+            putExtra("RECEIVER_ID", senderId)
+            putExtra("SENDER_NAME", senderName)
+            putExtra("IS_INCOMING", true)
+        }
+        startActivity(callIntent)
     }
 
     private fun dismissCallNotification(callId: String) {
@@ -101,6 +110,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("CALL_ID", callId)
             putExtra("RECEIVER_ID", senderId)
+            putExtra("SENDER_NAME", senderName)
             putExtra("IS_INCOMING", true)
         }
         val pendingIntent = PendingIntent.getActivity(this, callId.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)

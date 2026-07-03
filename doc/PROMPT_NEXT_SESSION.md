@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.1.18 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-07-03
+**Версия:** v1.3.1.19 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-07-03
 
 ---
 
@@ -28,7 +28,7 @@
 ## Полезные ссылки
 
 - `doc/PATTERNS.md` — паттерны кода и правила
-- `doc/GOTCHAS.md` — known gotchas (500+ entries, v1.3.1.18)
+- `doc/GOTCHAS.md` — known gotchas (500+ entries, v1.3.1.19)
 - `doc/INDEX.md` — project overview, архитектура
 - `doc/AI_V2_TESTING.md` — AI v2 testing
 - `CHANGELOG.md` — version history
