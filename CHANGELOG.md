@@ -1,6 +1,6 @@
 # Lava Messenger — Android Changelog
 
-## [1.3.1.19] - 2026-07-03
+## [1.3.1.20] - 2026-07-03
 
 ### Исправлено
 
@@ -16,10 +16,30 @@
 - Notification intent не содержал `SENDER_NAME` → CallActivity показывал UUID вместо имени
 - Исправлено: добавлен `SENDER_NAME` в notification intent
 
+**Цитаты (reply) — сообщение отправлялось без текста:**
+- Сервер `rowToProtoV2()` перезаписывал `Content=Text` → `Content=Reply` из-за `oneof content` в proto. Текст сообщения терялся, клиент получал пустой bubble
+- Клиентский workaround: `messageV2ToDomain()` теперь использует `reply.preview` как текст если `text` пустой
+- Серверный фикс applied: proto changed, reply moved out of oneof content
+
+### Добавлено
+
+**@Упоминания (Mentions) в групповых чатах:**
+- Ввод `@` в group chat открывает popup со списком участников (уже работало)
+- `SendMessageV2RequestProto` теперь содержит `mentions` (field 7) — список упомянутых @username
+- `MessageV2Proto` содержит `mentions` (field 40) — упомянутые пользователи в ответе сервера
+- `MessageAdapter` подсвечивает @username в тексте сообщения (цветной + жирный шрифт)
+- Извлечение @username из текста через `extractMentions()` в `GrpcMessageV2Client`
+- Сервер applied: proto, DB mentions column, handler stores/returns mentions
+
 ### Изменено
 
 - `CallActivity.kt` — `initWebRtc(onReady)` callback, `acceptCall()` перенесён в `onReady`
 - `LavenderMessagingService.kt` — прямой запуск `CallActivity` из `handleIncomingCall()`, `SENDER_NAME` в notification intent
+- `Message.kt` — добавлено поле `mentions: List<String>`
+- `MessagesV2Proto.kt` — `MessageV2Proto.mentions` (field 40), `SendMessageV2RequestProto.mentions` (field 7)
+- `MessagesV2Marshallers.kt` — сериализация/десериализация mentions в marshallers
+- `GrpcMessageV2Client.kt` — `extractMentions()`, `domainToSendRequest()` с mentions, `messageV2ToDomain()` с reply workaround
+- `MessageAdapter.kt` — `applyMentionSpans()` для подсветки @username в тексте сообщений
 
 ---
 

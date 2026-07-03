@@ -275,14 +275,39 @@ class MessageAdapter(
             if (!highlight.isNullOrEmpty() && text.contains(highlight, ignoreCase = true)) {
                 val spannable = android.text.SpannableString(text); val start = text.lowercase().indexOf(highlight.lowercase())
                 if (start != -1) { val hlColor = try { ThemeUtils.adjustAlpha(theme.primaryColor.toColorInt(), 0.5f) } catch (_: Exception) { ContextCompat.getColor(ctx, R.color.lavender_mist_alpha) }; spannable.setSpan(android.text.style.BackgroundColorSpan(hlColor), start, start + highlight.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) }
+                applyMentionSpans(spannable, message, ctx)
                 messageText.text = spannable
-            } else { messageText.text = text }
+            } else {
+                val spannable = android.text.SpannableString(text)
+                applyMentionSpans(spannable, message, ctx)
+                messageText.text = spannable
+            }
             messageText.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
             messageText.movementMethod = if (isSelectionMode) null else android.text.method.LinkMovementMethod.getInstance()
             messageText.setOnClickListener { if (isSelectionMode) onClick(pos) else onMessageClick(message) }
             messageText.setOnTouchListener { v, event -> if (event.action == android.view.MotionEvent.ACTION_DOWN) v.tag = System.currentTimeMillis() else if (event.action == android.view.MotionEvent.ACTION_UP) { if (System.currentTimeMillis() - (v.tag as? Long ?: 0L) > android.view.ViewConfiguration.getLongPressTimeout()) return@setOnTouchListener true }; false }
             messageText.isClickable = true; messageText.isLongClickable = true; messageText.isFocusable = true
             messageText.setOnLongClickListener { if (isSelectionMode) onLongClick(pos) else { if (pos != RecyclerView.NO_POSITION) onLongClick(pos) }; true }
+        }
+
+        private fun applyMentionSpans(spannable: android.text.SpannableString, message: Message, ctx: android.content.Context) {
+            val mentionedUsers = message.mentions.toSet()
+            if (mentionedUsers.isEmpty()) return
+            val mentionColor = try { ThemeUtils.adjustAlpha(lavender.client.android.theme.ThemeStore.currentTheme().primaryColor.toColorInt(), 0.85f) } catch (_: Exception) { ContextCompat.getColor(ctx, R.color.lavender_mist_alpha) }
+            val regex = Regex("@(\\w+)")
+            for (match in regex.findAll(spannable)) {
+                val username = match.groupValues[1]
+                if (username in mentionedUsers || mentionedUsers.isEmpty()) {
+                    val start = match.range.first; val end = match.range.last + 1
+                    spannable.setSpan(android.text.style.ForegroundColorSpan(mentionColor), start, end, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    spannable.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, end, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    spannable.setSpan(object : android.text.style.ClickableSpan() {
+                        override fun onClick(widget: android.view.View) {
+                            // Mention click — no action for now, just visual feedback
+                        }
+                    }, start, end, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+            }
         }
 
         private fun bindImageContent(message: Message, isOutgoing: Boolean, isSelectionMode: Boolean, onClick: (Int) -> Unit, onLongClick: (Int) -> Unit, pos: Int, ctx: android.content.Context) {

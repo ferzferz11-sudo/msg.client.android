@@ -153,10 +153,18 @@ class GrpcMessageV2Client(
             }
         }
 
+        // Workaround: server overwrites Content=Text with Content=Reply in oneof,
+        // losing the text. Use reply.preview as text when text is empty.
+        val displayText = if (proto.text.isEmpty() && proto.reply != null && proto.reply.preview.isNotEmpty()) {
+            proto.reply.preview
+        } else {
+            proto.text
+        }
+
         return Message(
             id = proto.id,
             user = username,
-            text = proto.text,
+            text = displayText,
             timestamp = timestamp,
             reactions = parseReactions(proto.reactions),
             repliedToMessageId = repliedToMessageId,
@@ -170,7 +178,8 @@ class GrpcMessageV2Client(
             duration = duration,
             userId = proto.senderId,
             isE2EE = proto.isE2EE,
-            e2eePayload = proto.e2eePayload
+            e2eePayload = proto.e2eePayload,
+            mentions = proto.mentions
         )
     }
 
@@ -187,14 +196,33 @@ class GrpcMessageV2Client(
             else -> null
         }
 
+        val mentions = if (message.mentions.isNotEmpty()) {
+            message.mentions
+        } else {
+            extractMentions(message.text)
+        }
+
         return SendMessageV2RequestProto(
             roomId = message.roomId,
             text = message.text,
             media = media,
             replyToId = message.repliedToMessageId,
             isE2EE = message.isE2EE,
-            e2eePayload = message.e2eePayload
+            e2eePayload = message.e2eePayload,
+            mentions = mentions
         )
+    }
+
+    fun extractMentions(text: String): List<String> {
+        val mentions = mutableListOf<String>()
+        val regex = Regex("@(\\w+)")
+        for (match in regex.findAll(text)) {
+            val username = match.groupValues[1]
+            if (username.isNotEmpty() && username !in mentions) {
+                mentions.add(username)
+            }
+        }
+        return mentions
     }
 
     // ====== Get History V2 (cursor-based pagination) ======

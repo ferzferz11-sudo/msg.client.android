@@ -26,7 +26,8 @@ data class MessageV2Proto(
     val createdAt: Timestamp? = null,
     val reactions: ByteArray = byteArrayOf(),
     val isE2EE: Boolean = false,
-    val e2eePayload: String = ""
+    val e2eePayload: String = "",
+    val mentions: List<String> = emptyList()
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -35,7 +36,7 @@ data class MessageV2Proto(
             text == other.text && media == other.media && reply == other.reply &&
             edited == other.edited && isRead == other.isRead &&
             createdAt?.seconds == other.createdAt?.seconds && createdAt?.nanos == other.createdAt?.nanos &&
-            isE2EE == other.isE2EE
+            isE2EE == other.isE2EE && mentions == other.mentions
     }
     override fun hashCode(): Int {
         var result = id.hashCode()
@@ -43,6 +44,7 @@ data class MessageV2Proto(
         result = 31 * result + senderId.hashCode()
         result = 31 * result + text.hashCode()
         result = 31 * result + (createdAt?.seconds?.hashCode() ?: 0)
+        result = 31 * result + mentions.hashCode()
         return result
     }
 }
@@ -83,7 +85,8 @@ data class SendMessageV2RequestProto(
     val media: MessageMediaProto? = null,
     val replyToId: String = "",
     val isE2EE: Boolean = false,
-    val e2eePayload: String = ""
+    val e2eePayload: String = "",
+    val mentions: List<String> = emptyList()
 )
 
 data class SendMessageV2ResponseProto(
