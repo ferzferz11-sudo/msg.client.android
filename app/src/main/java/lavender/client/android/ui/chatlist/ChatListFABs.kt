@@ -27,8 +27,26 @@ import java.util.Locale
  */
 
 internal fun setupFABs(activity: ChatListActivity) {
-    activity.findViewById<View>(R.id.fabAi)?.setOnClickListener {
+    val fabAi = activity.findViewById<View>(R.id.fabAi)
+    fabAi?.setOnClickListener {
         showAIBottomSheet(activity)
+    }
+    // Position fabAi above fabAddChat using window insets
+    // fabAddChat (LavenderFab) gets bottomMargin = 32dp + systemBars.bottom
+    // fabAi needs to be above it: baseOffset(32dp) + fabHeight(56dp) + spacing(8dp) + systemBars.bottom
+    fabAi?.let { fab ->
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(fab) { view, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            val density = view.resources.displayMetrics.density
+            val fabAddChatHeight = (56 * density).toInt()
+            val spacing = (8 * density).toInt()
+            val baseOffset = (32 * density).toInt()
+            val lp = view.layoutParams as android.view.ViewGroup.MarginLayoutParams
+            lp.bottomMargin = baseOffset + fabAddChatHeight + spacing + systemBars.bottom
+            lp.marginEnd = (16 * density).toInt()
+            view.layoutParams = lp
+            insets
+        }
     }
     activity.findViewById<View>(R.id.fabAddChat)?.setOnClickListener {
         showChatActionSheet(activity)

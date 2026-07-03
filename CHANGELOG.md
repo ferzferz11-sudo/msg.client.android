@@ -1,5 +1,40 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.18] - 2026-07-03
+
+### Исправлено
+
+**Сообщение не появляется в истории чата (отложенная отправка):**
+- Race condition в `loadHistoryV2` — кэш-фаза (IO thread) и серверная фаза (gRPC callback) работали параллельно, обе вызывали `messages.update`. Если сервер отвечал первым, кэш-фаза перезаписывала данные. Добавлен флаг `loadHistoryServerCompleted` — кэш-фаза пропускает merge если серверная фаза уже завершилась
+- Гонка DB-записей — `addLocalMessage` и `sendMessageV2` оба сохраняли в Room DB независимо на IO. Если `addLocalMessage` завершался после `sendMessageV2` handler'а, в DB оставалась запись с клиентским UUID. Убрана DB-запись из `addLocalMessage` — только `sendMessageV2` handler сохраняет
+
+**Swipe refresh не перезагружает сообщения:**
+- `clearRoomMessages()` стирал весь кэш, затем `switchRoom()` очищал in-memory состояние. Если сервер был медленным, сообщения исчезали. Заменён на `forceLoadHistory()` без очистки DB
+- Guard `_isLoading` блокировал `switchRoom()` history load. Добавлен `forceLoadHistory()` который обходит guard
+
+**Удаление группового чата — нет уведомления + логика прав:**
+- Сервер: админы теперь могут удалять любые групповые чаты (не только создатель)
+- Клиент: диалог подтверждения с именем создателя для создателей/админов
+- Клиент: Toast с ошибкой если нет прав (показывает имя создателя)
+- Добавлены строки `group_creator` и `cannot_delete_group` (EN/RU)
+
+**Fatal crash при шаринге из браузера:**
+- Activity не вызывала `GrpcClient.connect()`, сообщение не имело `userId`, не было error handling. Добавлен gRPC connection init, `userId` в сообщении, try-catch в `onCreate`
+
+### Изменено
+
+- `GrpcMessageV2Client.kt` — `loadHistoryServerCompleted` flag, cache merge skipped when server completed
+- `RealGrpcClient.kt` — removed DB save from `addLocalMessage()`
+- `ChatViewModel.kt` — added `forceLoadHistory()`
+- `NewChatActivity.kt` — swipe refresh uses `forceLoadHistory()` instead of `clearRoomMessages()+switchRoom()`
+- `ChatListActionMode.kt` — group chat deletion confirmation dialog, error Toast, admin permissions
+- `ChatListViewModel.kt` — `deleteChat()` returns error message
+- `server_chats.go` — admin can delete group chats, error message includes creator name
+- `ShareReceiverActivity.kt` — gRPC connection, userId, error handling
+- `strings.xml` (EN + RU) — +error, +group_creator, +cannot_delete_group
+
+---
+
 ## [1.3.1.16] - 2026-07-02
 
 ### Architecture stability audit — Thread safety, Memory leaks, Error handling, gRPC resilience, Room DB

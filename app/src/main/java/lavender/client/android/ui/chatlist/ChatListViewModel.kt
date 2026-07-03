@@ -66,6 +66,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     private val locallyReadChats: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     private var allChats: List<ChatInfo> = emptyList()
+    private val loadChatsMutex = kotlinx.coroutines.sync.Mutex()
     private var syncJob: Job? = null
     private var nextCursor: String = ""
     private var hasMore: Boolean = true
@@ -190,14 +191,15 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun loadChats(silent: Boolean = false) {
-        if (_isLoading.value) return
+        if (loadChatsMutex.isLocked) return
         if (!silent) _isLoading.value = true
-        val startTime = System.currentTimeMillis()
-        nextCursor = ""
-        hasMore = true
 
         viewModelScope.launch {
+            if (!loadChatsMutex.tryLock()) return@launch
             try {
+                val startTime = System.currentTimeMillis()
+                nextCursor = ""
+                hasMore = true
                 // Ensure JWT is fresh before any gRPC call
                 withContext(Dispatchers.IO) {
                     lavender.client.android.data.session.SessionManager.ensureFreshToken(getApplication())
@@ -287,7 +289,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                                     serverChat
                                 }
                             }
-                        }
+                        }.distinctBy { it.id }
                         allChats = mergedChats
                         val mergedUnread = mergedChats.filter { it.unreadCount > 0 }
                         Log.d(TAG, "Synced ${mergedChats.size} chats (${mergedUnread.size} unread)")
@@ -333,6 +335,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                 ErrorHandler.handle(TAG, "Failed to load chats", e)
             } finally {
                 _isLoading.value = false
+                loadChatsMutex.unlock()
             }
         }
     }
@@ -506,7 +509,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun deleteChat(chatId: String, onResult: (() -> Unit)? = null) {
+    fun deleteChat(chatId: String, onResult: (String?) -> Unit = { _ -> }) {
         viewModelScope.launch {
             try {
                 val isAiChat = chatId.startsWith("ai-chat-")
@@ -522,12 +525,12 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                         val deleted = prefs.getStringSet("deleted_ai_chats", emptySet()) ?: emptySet()
                         prefs.edit().putStringSet("deleted_ai_chats", deleted + chatId).apply()
                     }
-                    onResult?.invoke()
+                    onResult(null)
                     return@launch
                 }
 
                 val username = SessionManager.session.value.username
-                GrpcClient.deleteChat(chatId, username) { success, _ ->
+                GrpcClient.deleteChat(chatId, username) { success, message ->
                     if (success) {
                         allChats = allChats.filter { it.id != chatId }
                         buildSections(allChats)
@@ -537,12 +540,14 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                                 db.chatDao().deleteChat(chatId)
 } catch (e: Exception) { ErrorHandler.handle(TAG, "Failed to delete chat from cache", e) }
                         }
+                        onResult(null)
+                    } else {
+                        onResult(message.ifEmpty { "Failed to delete chat" })
                     }
-                    onResult?.invoke()
                 }
             } catch (e: Exception) {
                 ErrorHandler.handle(TAG, "Failed to delete chat $chatId", e)
-                onResult?.invoke()
+                onResult(e.message ?: "Failed to delete chat")
             }
         }
     }

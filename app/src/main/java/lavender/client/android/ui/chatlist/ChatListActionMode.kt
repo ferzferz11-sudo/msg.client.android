@@ -150,15 +150,70 @@ internal fun archiveSelectedChats(activity: ChatListActivity, chats: List<ChatIn
 }
 
 internal fun deleteSelectedChats(activity: ChatListActivity, chats: List<ChatInfo>) {
+    val groupChats = chats.filter { it.type == "group" || it.type == "conference" }
+    val nonGroupChats = chats.filter { it.type != "group" && it.type != "conference" }
+
+    if (groupChats.isNotEmpty()) {
+        val username = lavender.client.android.data.session.SessionManager.session.value.username
+        val creator = groupChats.first().creator
+        val isCreator = creator == username
+
+        if (isCreator || nonGroupChats.isEmpty()) {
+            // Creator or all group chats — show confirmation with creator info
+            val message = if (groupChats.size == 1) {
+                val chatName = groupChats.first().name
+                activity.getString(R.string.delete_group) + ": \"$chatName\"?\n" +
+                    activity.getString(R.string.group_creator) + ": $creator"
+            } else {
+                activity.getString(R.string.delete_group) + ": ${groupChats.size} " +
+                    activity.getString(R.string.chats) + "?"
+            }
+
+            androidx.appcompat.app.AlertDialog.Builder(activity)
+                .setTitle(R.string.delete_group)
+                .setMessage(message)
+                .setPositiveButton(R.string.delete) { _, _ ->
+                    doDeleteChats(activity, chats)
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
+        } else {
+            // Non-creator — show info about who can delete
+            val chatName = groupChats.first().name
+            val infoMessage = activity.getString(R.string.cannot_delete_group) + "\n" +
+                activity.getString(R.string.group_creator) + ": $creator"
+
+            androidx.appcompat.app.AlertDialog.Builder(activity)
+                .setTitle(chatName)
+                .setMessage(infoMessage)
+                .setPositiveButton(R.string.ok, null)
+                .show()
+            // Still delete non-group chats if any
+            if (nonGroupChats.isNotEmpty()) {
+                doDeleteChats(activity, nonGroupChats)
+            }
+        }
+    } else {
+        doDeleteChats(activity, chats)
+    }
+}
+
+private fun doDeleteChats(activity: ChatListActivity, chats: List<ChatInfo>) {
     activity.lifecycleScope.launch {
         var deleted = 0
         for (chat in chats) {
-            kotlinx.coroutines.suspendCancellableCoroutine<Unit> { cont ->
-                activity.viewModel.deleteChat(chat.id) {
-                    if (cont.isActive) cont.resumeWith(Result.success(Unit))
+            val errorMessage = kotlinx.coroutines.suspendCancellableCoroutine<String?> { cont ->
+                activity.viewModel.deleteChat(chat.id) { errorMsg ->
+                    if (cont.isActive) cont.resumeWith(Result.success(errorMsg))
                 }
             }
-            deleted++
+            if (errorMessage != null) {
+                activity.runOnUiThread {
+                    android.widget.Toast.makeText(activity, errorMessage, android.widget.Toast.LENGTH_LONG).show()
+                }
+            } else {
+                deleted++
+            }
         }
         if (deleted > 0) {
             activity.viewModel.loadChats()

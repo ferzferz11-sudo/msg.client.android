@@ -203,6 +203,15 @@ class ChatViewModel : ViewModel() {
         }
     }
 
+    fun forceLoadHistory() {
+        _isLoading.value = true
+        viewModelScope.launch {
+            grpcClient.loadHistoryV2(currentRoomId) { _, _ ->
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun markRead(username: String, onCompletion: (() -> Unit)? = null) {
         if (currentRoomId.startsWith("favorites_")) {
             onCompletion?.invoke()

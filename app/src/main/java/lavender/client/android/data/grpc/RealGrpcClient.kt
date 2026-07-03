@@ -646,7 +646,9 @@ object RealGrpcClient {
 
     // ====== Messages V2 (delegated) ======
     fun addLocalMessage(message: Message) {
-        scope.launch(Dispatchers.IO) { db()?.messageDao()?.insertMessages(listOf(message.toEntity())) }
+        // Don't save to Room DB here — sendMessageV2 response handler saves with the correct server ID.
+        // Saving here creates a race condition where addLocalMessage's DB write
+        // overwrites sendMessageV2's DB write, leaving a stale UUID record.
         _messages.update { current ->
             val list = current.toMutableList()
             val existingIndex = list.indexOfFirst { it.id == message.id }

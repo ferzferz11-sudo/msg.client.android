@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.1.16 | **Updated:** 2026-07-02
+**Version:** v1.3.1.18 | **Updated:** 2026-07-03
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -473,3 +473,24 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 ## Room DB Index (v1.3.1.16)
 
 - **No index on `messages.roomId`** — every message query did full table scan. Most queried column in the database. Fix: added `@ColumnInfo(index = true)` on `MessageEntity.roomId` + migration 11→12 with `CREATE INDEX`
+
+## Message History Race Condition (v1.3.1.18)
+
+- **`loadHistoryV2` cache+server race** — Cache phase (IO thread) and server phase (gRPC callback) run concurrently, both call `messages.update`. If server completes first, cache phase overwrites with stale DB data. Fix: `loadHistoryServerCompleted` flag — cache phase skips merge if server already completed
+- **`addLocalMessage` DB write races with `sendMessageV2`** — Both save to Room DB independently on IO. If `addLocalMessage` completes after `sendMessageV2`'s delete+insert, stale UUID record persists. Fix: removed DB save from `addLocalMessage` — only `sendMessageV2` response handler saves
+- **Server timestamp differs from client** — `getContentHash` uses `timestamp/1000`. Server assigns its own timestamp, client uses `System.currentTimeMillis()`. Clock skew >1s defeats content-hash dedup. Fix: `getContentHash` already uses `userId` (UUID) which is clock-independent
+
+## Swipe Refresh (v1.3.1.18)
+
+- **Pull-to-refresh wiped Room DB** — `clearRoomMessages()` deleted all cached messages, then `switchRoom()` cleared in-memory state. If server was slow, messages disappeared. Fix: removed `clearRoomMessages`, use `forceLoadHistory()` instead
+- **`_isLoading` guard blocked `switchRoom()` history load** — If combine collector fired `loadHistory()` first, `switchRoom()`'s call was silently dropped. Fix: added `forceLoadHistory()` that bypasses the guard
+
+## Group Chat Deletion (v1.3.1.18)
+
+- **Server rejected non-creator delete but client ignored error** — `deleteChat` callback discarded the error message (`{ success, _ -> }`). Fix: callback now passes error message to UI, shows Toast
+- **Admins couldn't delete group chats** — Server only allowed creator to delete groups. Fix: server now checks `IsSuperAdmin()` — admins can delete any group
+- **No confirmation dialog for group deletion** — Long-press delete showed no warning. Fix: added AlertDialog with creator name for group chats
+
+## ShareReceiverActivity (v1.3.1.18)
+
+- **Crash on browser share** — Activity didn't call `GrpcClient.connect()`, message had no `userId`, no error handling. Fix: added gRPC connection init, `userId` in message, try-catch around `onCreate`

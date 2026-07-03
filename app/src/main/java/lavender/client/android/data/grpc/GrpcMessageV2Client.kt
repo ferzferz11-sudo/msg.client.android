@@ -199,7 +199,10 @@ class GrpcMessageV2Client(
 
     // ====== Get History V2 (cursor-based pagination) ======
 
+    @Volatile private var loadHistoryServerCompleted = false
+
     fun loadHistoryV2(roomId: String, cursor: String = "", limit: Int = MAX_HISTORY_LIMIT, onCompletion: (String, Boolean) -> Unit = { _, _ -> }) {
+        loadHistoryServerCompleted = false
         // Always load from cache first (offline-first)
         scope.launch(Dispatchers.IO) {
             val cached = db()?.messageDao()?.getMessagesForRoom(roomId)?.map { it.toDomain() }
@@ -207,24 +210,27 @@ class GrpcMessageV2Client(
             val dedupedCache = deduplicateByContent(cached)
             Log.d(TAG, "loadHistoryV2 cache: loaded ${cached.size} msgs (${dedupedCache.size} after dedup) from Room DB, ${dedupedCache.count { it.reactions.isNotEmpty() }} with reactions")
             if (dedupedCache.isNotEmpty()) {
-                messages.update { current ->
-                    if (current.isEmpty()) dedupedCache
-                    else {
-                        val currentMap = current.associateBy { getMessageHash(it) }
-                        dedupedCache.map { cachedMsg ->
-                            val localMsg = currentMap[getMessageHash(cachedMsg)]
-                            if (localMsg != null) {
-                                val mergedReactions = if (cachedMsg.reactions.isEmpty() && localMsg.reactions.isNotEmpty()) {
-                                    localMsg.reactions
-                                } else if (cachedMsg.reactions.isNotEmpty() && localMsg.reactions.isNotEmpty()) {
-                                    val cachedUserIds = cachedMsg.reactions.map { it.user }.toSet()
-                                    cachedMsg.reactions + localMsg.reactions.filter { it.user !in cachedUserIds }
-                                } else {
-                                    cachedMsg.reactions
-                                }
-                                cachedMsg.copy(isRead = localMsg.isRead || cachedMsg.isRead, reactions = mergedReactions)
-                            } else cachedMsg
-                        } + current.filterNot { msg -> dedupedCache.any { getMessageHash(it) == getMessageHash(msg) } }
+                // Skip cache merge if server phase already completed with correct data
+                if (!loadHistoryServerCompleted) {
+                    messages.update { current ->
+                        if (current.isEmpty()) dedupedCache
+                        else {
+                            val currentMap = current.associateBy { getMessageHash(it) }
+                            dedupedCache.map { cachedMsg ->
+                                val localMsg = currentMap[getMessageHash(cachedMsg)]
+                                if (localMsg != null) {
+                                    val mergedReactions = if (cachedMsg.reactions.isEmpty() && localMsg.reactions.isNotEmpty()) {
+                                        localMsg.reactions
+                                    } else if (cachedMsg.reactions.isNotEmpty() && localMsg.reactions.isNotEmpty()) {
+                                        val cachedUserIds = cachedMsg.reactions.map { it.user }.toSet()
+                                        cachedMsg.reactions + localMsg.reactions.filter { it.user !in cachedUserIds }
+                                    } else {
+                                        cachedMsg.reactions
+                                    }
+                                    cachedMsg.copy(isRead = localMsg.isRead || cachedMsg.isRead, reactions = mergedReactions)
+                                } else cachedMsg
+                            } + current.filterNot { msg -> dedupedCache.any { getMessageHash(it) == getMessageHash(msg) } }
+                        }
                     }
                 }
             }
@@ -239,6 +245,7 @@ class GrpcMessageV2Client(
         val call = currentChannel.newCall(METHOD_GET_HISTORY_V2, CallOptions.DEFAULT)
         call.start(object : ClientCall.Listener<GetHistoryV2ResponseProto>() {
             override fun onMessage(message: GetHistoryV2ResponseProto) {
+                loadHistoryServerCompleted = true
                 val history = message.messages
                     .map { messageV2ToDomain(it) }
                     .filterNot { deletedMessageHashes.contains(getMessageHash(it)) }

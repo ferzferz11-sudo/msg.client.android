@@ -261,13 +261,10 @@ class NewChatActivity : AppCompatActivity() {
         } catch (_: Exception) {}
 
         swipeRefreshLayout.setOnRefreshListener {
-            lifecycleScope.launch(Dispatchers.IO) {
-                viewModel.clearRoomMessages(this@NewChatActivity)
-                withContext(Dispatchers.Main) {
-                    viewModel.switchRoom(roomId)
-                    swipeRefreshLayout.isRefreshing = false
-                }
-            }
+            // Don't clearRoomMessages — it wipes the cache and loses pending messages.
+            // Just force-reload from server via loadHistory.
+            viewModel.forceLoadHistory()
+            swipeRefreshLayout.isRefreshing = false
         }
     }
 

@@ -70,55 +70,77 @@ class ShareReceiverActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        SessionManager.initFromPrefs(this)
-        username = SessionManager.session.value.username
+        try {
+            SessionManager.initFromPrefs(this)
+            username = SessionManager.session.value.username
 
-        // Apply theme before setting content view
-        val currentTheme = ThemeStore.currentTheme()
-        ThemeUtils.applyThemeToActivity(this, currentTheme)
-        
-        binding = ActivityShareReceiverBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+            // Apply theme before setting content view
+            val currentTheme = ThemeStore.currentTheme()
+            ThemeUtils.applyThemeToActivity(this, currentTheme)
+            
+            binding = ActivityShareReceiverBinding.inflate(layoutInflater)
+            setContentView(binding.root)
 
-        // Handle shared intent
-        handleSharedIntent()
-        
-        // Setup UI
-        setupUI()
-        
-        // Load chats
-        loadChats()
+            // Ensure gRPC connection
+            if (GrpcClient.connectionStatus.value != ConnectionStatus.READY) {
+                val serverAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this) ?: ""
+                if (serverAddress.isNotEmpty()) {
+                    val parts = serverAddress.split(":")
+                    val host = parts.firstOrNull() ?: serverAddress
+                    val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+                    GrpcClient.connect(host, false, port, this)
+                }
+            }
+
+            // Handle shared intent
+            handleSharedIntent()
+            
+            // Setup UI
+            setupUI()
+            
+            // Load chats
+            loadChats()
+        } catch (e: Exception) {
+            android.util.Log.e("ShareReceiver", "Fatal error in onCreate", e)
+            Toast.makeText(this, getString(R.string.error) + ": ${e.message}", Toast.LENGTH_LONG).show()
+            finish()
+        }
     }
 
     private fun handleSharedIntent() {
-        if (intent.action == Intent.ACTION_SEND) {
-            val type = intent.type
-            if (type == "text/plain") {
-                sharedText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
-                binding.sharedTextView.text = sharedText
-                binding.sharedContentCard.isVisible = sharedText.isNotEmpty()
+        try {
+            if (intent.action == Intent.ACTION_SEND) {
+                val type = intent.type
+                if (type == "text/plain") {
+                    sharedText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
+                    binding.sharedTextView.text = sharedText
+                    binding.sharedContentCard.isVisible = sharedText.isNotEmpty()
 
-                // Check for video links
-                videoInfo = extractVideoInfo(sharedText)
-                if (videoInfo != null) {
-                    showVideoPreview(videoInfo!!)
-                } else {
-                    // Check for regular URL to fetch link preview
-                    val url = extractUrl(sharedText)
-                    if (url != null) {
-                        fetchLinkPreview(url)
+                    // Check for video links
+                    videoInfo = extractVideoInfo(sharedText)
+                    if (videoInfo != null) {
+                        showVideoPreview(videoInfo!!)
+                    } else {
+                        // Check for regular URL to fetch link preview
+                        val url = extractUrl(sharedText)
+                        if (url != null) {
+                            fetchLinkPreview(url)
+                        }
+                    }
+                } else if (type != null && (type.startsWith("image/") || type.startsWith("video/"))) {
+                    sharedText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
+                    binding.sharedTextView.text = sharedText
+                    binding.sharedContentCard.isVisible = sharedText.isNotEmpty()
+                    
+                    sharedUri = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
+                    if (sharedUri != null) {
+                        showFilePreview(sharedUri!!, type)
                     }
                 }
-            } else if (type != null && (type.startsWith("image/") || type.startsWith("video/"))) {
-                sharedText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
-                binding.sharedTextView.text = sharedText
-                binding.sharedContentCard.isVisible = sharedText.isNotEmpty()
-                
-                sharedUri = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
-                if (sharedUri != null) {
-                    showFilePreview(sharedUri!!, type)
-                }
             }
+        } catch (e: Exception) {
+            android.util.Log.e("ShareReceiver", "Error handling shared intent", e)
+            Toast.makeText(this, getString(R.string.error) + ": ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -465,7 +487,8 @@ class ShareReceiverActivity : AppCompatActivity() {
                 text = messageText,
                 timestamp = System.currentTimeMillis(),
                 roomId = chat.id,
-                imageUrl = imageUrl
+                imageUrl = imageUrl,
+                userId = GrpcClient.getUserId() ?: ""
             )
             
             GrpcClient.sendMessageV2(message)
