@@ -342,6 +342,13 @@ object RealGrpcClient {
                             putString("admin_user_id", profile.userId)
                         }
                     }
+                    // Store company info in session
+                    lavender.client.android.data.session.SessionManager.updateSession(
+                        companyId = profile.companyId,
+                        companyName = profile.companyName,
+                        positionTitle = profile.positionTitle,
+                        positionLevel = profile.positionLevel
+                    )
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "fetchAdminStatus failed: ${e.message}")

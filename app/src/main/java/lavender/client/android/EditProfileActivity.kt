@@ -104,6 +104,10 @@ class EditProfileActivity : AppCompatActivity() {
         val btnChangeAvatar = findViewById<Button>(R.id.btnChangeAvatar)
         val avatarProgressBar = findViewById<ProgressBar>(R.id.avatarProgressBar)
         val btnDeleteProfile = findViewById<Button>(R.id.btnDeleteProfile)
+        val companyCard = findViewById<android.view.View>(R.id.companyCard)
+        val tvCompanyName = findViewById<android.widget.TextView>(R.id.tvCompanyName)
+        val tvCompanyPosition = findViewById<android.widget.TextView>(R.id.tvCompanyPosition)
+        val btnCompanyAction = findViewById<Button>(R.id.btnCompanyAction)
 
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -125,6 +129,43 @@ class EditProfileActivity : AppCompatActivity() {
                     initialBio = profile.bio
                     editTextBio.setText(profile.bio)
                     btnChangeBio.isVisible = false
+
+                    // Company section
+                    if (profile.companyId.isNotEmpty()) {
+                        companyCard.isVisible = true
+                        tvCompanyName.text = profile.companyName
+                        tvCompanyPosition.text = getString(R.string.company_position, profile.positionTitle, profile.positionLevel)
+                        btnCompanyAction.text = getString(R.string.my_company)
+                        btnCompanyAction.setOnClickListener {
+                            val intent = android.content.Intent(this@EditProfileActivity, CompanyProfileActivity::class.java).apply {
+                                putExtra("COMPANY_ID", profile.companyId)
+                            }
+                            startActivity(intent)
+                        }
+                        // Check for multi-company
+                        lifecycleScope.launch {
+                            val companiesResponse = lavender.client.android.data.grpc.GrpcCompanyClient.getUserCompanies()
+                            if (companiesResponse != null && companiesResponse.companies.size > 1) {
+                                runOnUiThread {
+                                    tvCompanyPosition.text = getString(R.string.company_position, profile.positionTitle, profile.positionLevel) +
+                                        " (${companiesResponse.companies.size} ${getString(R.string.company_badge).lowercase()}s)"
+                                    // Add long-press to switch company
+                                    btnCompanyAction.setOnLongClickListener {
+                                        showCompanySwitcher(companiesResponse.companies)
+                                        true
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        companyCard.isVisible = true
+                        tvCompanyName.text = getString(R.string.no_company)
+                        tvCompanyPosition.isVisible = false
+                        btnCompanyAction.text = getString(R.string.create_company)
+                        btnCompanyAction.setOnClickListener {
+                            showCreateCompanyDialog()
+                        }
+                    }
                 }
             }
         }
@@ -525,5 +566,83 @@ class EditProfileActivity : AppCompatActivity() {
         }
 
         sheet.show()
+    }
+
+    private fun showCreateCompanyDialog() {
+        val sheet = StandardBottomSheet(this, R.layout.dialog_edit_username)
+        val editNewUsername = sheet.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.editNewUsername)
+        val btnCancel = sheet.findViewById<MaterialButton>(R.id.btnCancel)
+        val btnSave = sheet.findViewById<MaterialButton>(R.id.btnSave)
+
+        sheet.setTitle(getString(R.string.create_company))
+        editNewUsername?.hint = getString(R.string.create_company_name_hint)
+        editNewUsername?.text?.clear()
+        editNewUsername?.requestFocus()
+
+        btnCancel?.setOnClickListener { sheet.dismiss() }
+
+        btnSave?.setOnClickListener {
+            val companyName = editNewUsername?.text.toString().trim()
+            if (companyName.isEmpty()) {
+                Toast.makeText(this, getString(R.string.create_company_name_hint), Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            btnSave.isEnabled = false
+
+            lifecycleScope.launch {
+                val response = lavender.client.android.data.grpc.GrpcCompanyClient.createCompany(companyName)
+                runOnUiThread {
+                    btnSave.isEnabled = true
+                    if (response?.success == true) {
+                        Toast.makeText(this@EditProfileActivity, getString(R.string.company_created), Toast.LENGTH_SHORT).show()
+                        // Auto-set as primary company
+                        lifecycleScope.launch {
+                            lavender.client.android.data.grpc.GrpcCompanyClient.setPrimaryCompany(response.company?.id ?: "")
+                        }
+                        sheet.dismiss()
+                        setResult(RESULT_OK)
+                        finish()
+                    } else {
+                        Toast.makeText(this@EditProfileActivity, getString(R.string.error_colon, "Failed to create company"), Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+
+        sheet.show()
+    }
+
+    private fun showCompanySwitcher(companies: List<lavender.client.android.data.proto.CompanyCompanyMemberProto>) {
+        val titles = companies.map { company ->
+            val member = company.member
+            val position = member?.position?.title ?: ""
+            val primary = if (company.isPrimary) " ★" else ""
+            "${company.company?.name ?: "?"} — $position$primary"
+        }.toTypedArray()
+
+        val currentCompanyId = lavender.client.android.data.session.SessionManager.session.value.companyId
+        val currentIndex = companies.indexOfFirst { it.company?.id == currentCompanyId }.coerceAtLeast(0)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.company_badge)
+            .setSingleChoiceItems(titles, currentIndex) { dialog, which ->
+                val selected = companies[which]
+                lifecycleScope.launch {
+                    val response = lavender.client.android.data.grpc.GrpcCompanyClient.setPrimaryCompany(selected.company?.id ?: "")
+                    runOnUiThread {
+                        if (response?.success == true) {
+                            Toast.makeText(this@EditProfileActivity, getString(R.string.company_updated), Toast.LENGTH_SHORT).show()
+                            setResult(RESULT_OK)
+                            finish()
+                        } else {
+                            Toast.makeText(this@EditProfileActivity, getString(R.string.error_colon, "Failed"), Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.cancel_dialog, null)
+            .show()
     }
 }

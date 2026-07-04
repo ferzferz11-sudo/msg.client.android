@@ -171,6 +171,9 @@ class ProfileActivity : AppCompatActivity() {
         val profileStatus = findViewById<TextView>(R.id.profileStatus) ?: return
         val bioCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.bioCard)
         val groupSettingsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.groupSettingsCard)
+        val companyCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.companyCard)
+        val tvProfileCompanyName = findViewById<TextView>(R.id.tvProfileCompanyName)
+        val tvProfileCompanyPosition = findViewById<TextView>(R.id.tvProfileCompanyPosition)
 
         currentProfileAvatar = profileAvatar
         profileName.text = data.username
@@ -197,6 +200,21 @@ class ProfileActivity : AppCompatActivity() {
             profileStatus.setTextColor(typedValue.data)
         }
         profileStatus.isVisible = true
+
+        // Company section
+        if (data.companyId.isNotEmpty() && companyCard != null) {
+            companyCard.isVisible = true
+            tvProfileCompanyName?.text = data.companyName
+            tvProfileCompanyPosition?.text = getString(R.string.company_position, data.positionTitle, data.positionLevel)
+            companyCard.setOnClickListener {
+                val intent = Intent(this, CompanyProfileActivity::class.java).apply {
+                    putExtra("COMPANY_ID", data.companyId)
+                }
+                startActivity(intent)
+            }
+        } else if (companyCard != null) {
+            companyCard.isVisible = false
+        }
 
         if (data.avatarUrl.isNotEmpty()) {
             Glide.with(this).load(data.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)

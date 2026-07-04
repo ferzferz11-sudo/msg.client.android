@@ -2,6 +2,7 @@ package lavender.client.android.ui.chatlist
 
 import android.app.Application
 import android.util.Log
+import lavender.client.android.R
 import lavender.client.android.data.models.ErrorHandler
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -67,6 +68,9 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
 
     private val locallyReadChats: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
+    // Multi-company: companyId → positionLevel cache
+    private val companyPositionCache: MutableMap<String, Int> = java.util.concurrent.ConcurrentHashMap()
+
     private var allChats: List<ChatInfo> = emptyList()
     private val loadChatsMutex = kotlinx.coroutines.sync.Mutex()
     private var syncJob: Job? = null
@@ -126,8 +130,9 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
             GrpcClient.newMessageEvent.collect { message ->
                 val currentUsername = SessionManager.session.value.username
                 val isFromOther = message.user != currentUsername
-                val preview = if (message.imageUrl.isNotEmpty()) "[image]"
-                else if (message.voiceUrl.isNotEmpty()) "[voice]"
+                val ctx = getApplication<Application>()
+                val preview = if (message.imageUrl.isNotEmpty()) ctx.getString(R.string.chat_preview_image)
+                else if (message.voiceUrl.isNotEmpty()) ctx.getString(R.string.chat_preview_voice)
                 else message.text.take(100)
                 val chatIdx = allChats.indexOfFirst { it.id == message.roomId }
 
@@ -365,6 +370,9 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
 
+                // Load company positions for multi-company access control
+                loadCompanyPositions()
+
                 buildSections(allChats)
             } catch (e: Exception) {
                 ErrorHandler.handle(TAG, "Failed to load chats", e)
@@ -372,6 +380,25 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                 _isLoading.value = false
                 loadChatsMutex.unlock()
             }
+        }
+    }
+
+    private suspend fun loadCompanyPositions() {
+        try {
+            val response = withContext(Dispatchers.IO) {
+                lavender.client.android.data.grpc.GrpcCompanyClient.getUserCompanies()
+            }
+            if (response?.companies != null) {
+                companyPositionCache.clear()
+                for (entry in response.companies) {
+                    val companyId = entry.company?.id ?: continue
+                    val positionLevel = entry.member?.position?.level ?: 0
+                    companyPositionCache[companyId] = positionLevel
+                }
+                Log.d(TAG, "Loaded ${companyPositionCache.size} company positions")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "loadCompanyPositions failed: ${e.message}")
         }
     }
 
@@ -641,12 +668,27 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
 
     private fun buildSections(chats: List<ChatInfo>) {
         val tab = _tabFilter.value
+        val userPositionLevel = lavender.client.android.data.session.SessionManager.session.value.positionLevel
+        val userCompanyId = lavender.client.android.data.session.SessionManager.session.value.companyId
 
         // Apply tab filter
         val filteredChats = when (tab) {
             "ai" -> chats.filter { it.type == "owl" || it.type == "hermes" }
             "groups" -> chats.filter { it.type == "group" || it.type == "general" || it.type == "conference" }
+            "company" -> chats.filter { it.companyId.isNotEmpty() }
             else -> chats // "all"
+        }.filter { chat ->
+            // Company chat access control (per-company)
+            if (chat.companyId.isNotEmpty()) {
+                // Look up position level from cache (populated by loadCompanyPositions)
+                val positionLevel = companyPositionCache[chat.companyId] ?: userPositionLevel
+                when {
+                    chat.companyMinPositionLevel > 0 -> positionLevel >= chat.companyMinPositionLevel
+                    chat.companyChatAccess == "management" -> positionLevel >= 1
+                    chat.companyChatAccess == "owner_only" -> positionLevel >= 3
+                    else -> true // "member" access — all company employees
+                }
+            } else true
         }
 
         val maskedChats = filteredChats.map {

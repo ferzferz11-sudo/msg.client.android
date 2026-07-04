@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.1.22 | **Updated:** 2026-07-03
+**Version:** v1.3.2.0 | **Updated:** 2026-07-04
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -527,3 +527,21 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 
 - **Kotlin 2.x prefers `Duration` over `Long`** for `withTimeoutOrNull`, `delay`, etc. Converted all legacy Long overloads in ChatListViewModel, SessionManager, ChatListActivity, NewChatActivity
 - **`CountDownLatch.await(Long, TimeUnit)`** is Java API — no Duration overload, left as-is
+
+## Company System (v1.3.2.0)
+
+- **CompanyService is separate gRPC service** — not part of ChatService. All RPCs under `messenger.CompanyService/*`
+- **Default positions created by server** — Owner (3), Top Manager (2), Manager (1), Employee (0). Client should not create these
+- **Access control is client-side** — `buildSections()` filters company chats by positionLevel. Server does NOT enforce visibility for company chats
+- **UserSession stores positionLevel** — updated by `fetchAdminStatus()` after profile load. If profile not loaded, positionLevel defaults to 0 (Employee)
+- **Company badge shown for all company chats** — even if user has no access (filtered by buildSections, not by adapter)
+- **GetUserInfo returns company info** — used in ProfileActivity to show company section for other users
+- **Marshallers for nested messages** — use `writeByteArray` (not `writeBytes`) for nested proto messages. `writeBytes` expects ByteString, not ByteArray
+- **Room DB migration 12→13** — adds companyId, companyChatAccess, companyMinPositionLevel columns to chats table
+- **ChatInfo.companyId populated from server** — server sets this field in GetChatsV2 response for company chats
+
+## Media Preview Localization (v1.3.2.0)
+
+- **Server sends hardcoded "Image" / "Voice message"** — stored in `chats.last_message_text` column. Client must translate for non-English locales
+- **Translation in 3 places** — ChatListViewModel (real-time), ChatAdapter (display), SuperAdminAdapter (admin panel)
+- **Content hash uses userId (UUID)** — not username, to avoid hash mismatch when allUsers is empty

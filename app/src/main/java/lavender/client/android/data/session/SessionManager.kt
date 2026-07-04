@@ -454,7 +454,11 @@ object SessionManager {
         userId: String? = null,
         avatarUrl: String? = null,
         fullAvatarUrl: String? = null,
-        email: String? = null
+        email: String? = null,
+        companyId: String? = null,
+        companyName: String? = null,
+        positionTitle: String? = null,
+        positionLevel: Int? = null
     ) {
         _session.value = _session.value.copy(
             username = username ?: _session.value.username,
@@ -462,7 +466,11 @@ object SessionManager {
             userId = userId ?: _session.value.userId,
             avatarUrl = avatarUrl ?: _session.value.avatarUrl,
             fullAvatarUrl = fullAvatarUrl ?: _session.value.fullAvatarUrl,
-            email = email ?: _session.value.email
+            email = email ?: _session.value.email,
+            companyId = companyId ?: _session.value.companyId,
+            companyName = companyName ?: _session.value.companyName,
+            positionTitle = positionTitle ?: _session.value.positionTitle,
+            positionLevel = positionLevel ?: _session.value.positionLevel
         )
 
         userId?.let { GrpcClient.setUserId(it) }

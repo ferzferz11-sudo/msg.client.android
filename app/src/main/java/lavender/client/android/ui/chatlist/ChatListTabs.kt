@@ -12,12 +12,19 @@ internal fun setupTabs(activity: ChatListActivity) {
         tabs.addTab(tabs.newTab().setText(R.string.tab_groups))
         tabs.addTab(tabs.newTab().setText(R.string.tab_ai))
 
+        // Add Company tab only if user has a company
+        val hasCompany = lavender.client.android.data.session.SessionManager.session.value.hasCompany
+        if (hasCompany) {
+            tabs.addTab(tabs.newTab().setText(R.string.tab_company))
+        }
+
         tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 val filter = when (tab?.position) {
                     0 -> "all"
                     1 -> "groups"
                     2 -> "ai"
+                    3 -> if (hasCompany) "company" else "all"
                     else -> "all"
                 }
                 activity.viewModel.setTabFilter(filter)

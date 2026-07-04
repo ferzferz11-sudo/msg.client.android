@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.1.22 | **Updated:** 2026-07-03
+**Version:** v1.3.2.0 | **Updated:** 2026-07-04
 
 ---
 
@@ -38,21 +38,21 @@
 
 | Metric | Value |
 |--------|-------|
-| Kotlin files | ~173 |
-| Activities | 29 |
+| Kotlin files | ~185 |
+| Activities | 32 |
 | Fragments | 1 (RemoteAgentSettingsFragment) |
 | Services | 4 (ChatKeepAliveService, RemoteAgentService, LavenderMessagingService, CallActionService) |
-| gRPC files | 22 |
+| gRPC files | 23 |
 | Unit tests | 320 (all passing) |
-| Layout XML | 115 |
-| String entries | 796 (EN) + 796 (RU) |
+| Layout XML | 120 |
+| String entries | 840 (EN) + 840 (RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.4.0 |
-| Branch | feat/1.3.1.x |
+| Branch | feat/1.3.2.x |
 
 ---
 
-## Architecture Overview (v1.3.1.22)
+## Architecture Overview (v1.3.2.0)
 
 ```
 GrpcClient (facade)
@@ -70,6 +70,7 @@ GrpcClient (facade)
         ├── GrpcMessageV2Client — messages v2 only (no v1 fallback), parseReactions (internal)
         ├── GrpcServerDiscoveryClient — server discovery
         ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools, Marketplace, Chat History)
+        ├── GrpcCompanyClient — Company system (CRUD, Positions, Members, Company Chats, Join/Leave, UserInfo)
         ├── SecretChatGrpc, ProfileClient
         ├── NotificationsGrpc — notifications (subscribe, history, read, unread)
         ├── RemoteAgentGrpc — Remote Agent (list, deploy, tokens, process)
@@ -137,4 +138,4 @@ Update: UpdateManager + UpdateCoordinator + downloaded_version tracking + stale 
 | Branch | Purpose |
 |--------|---------|
 | `master` | Production |
-| `feat/1.3.1.x` | v1.3.1.x development (current) |
+| `feat/1.3.2.x` | v1.3.2.x development (current) |

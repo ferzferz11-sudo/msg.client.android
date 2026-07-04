@@ -908,6 +908,7 @@
     <string name="tab_all">All</string>
     <string name="tab_ai">AI Chats</string>
     <string name="tab_groups">Groups</string>
+    <string name="tab_company">Company</string>
     <string name="section_pinned">Pinned</string>
     <string name="section_favorites">Favorites</string>
     <string name="section_all_chats">All Chats</string>
@@ -947,6 +948,53 @@
     <string name="connection_online">Online</string>
     <string name="connection_offline">Offline</string>
     <string name="server_restarting">Server restarting…</string>
+
+    <!-- Chat list media previews -->
+    <string name="chat_preview_image">Image</string>
+    <string name="chat_preview_voice">Voice message</string>
+
+    <!-- Company System -->
+    <string name="company">Company</string>
+    <string name="my_company">My Company</string>
+    <string name="create_company">Create Company</string>
+    <string name="create_company_name_hint">Company name</string>
+    <string name="company_created">Company created</string>
+    <string name="company_updated">Company updated</string>
+    <string name="company_deleted">Company deleted</string>
+    <string name="leave_company">Leave Company</string>
+    <string name="leave_company_confirm">Are you sure you want to leave this company?</string>
+    <string name="delete_company">Delete Company</string>
+    <string name="delete_company_confirm">Are you sure you want to delete this company? This action cannot be undone.</string>
+    <string name="members">Members</string>
+    <string name="positions">Positions</string>
+    <string name="company_chats">Company Chats</string>
+    <string name="add_member">Add Member</string>
+    <string name="remove_member">Remove Member</string>
+    <string name="member_added">Member added</string>
+    <string name="member_removed">Member removed</string>
+    <string name="position_created">Position created</string>
+    <string name="position_updated">Position updated</string>
+    <string name="position_deleted">Position deleted</string>
+    <string name="create_position">Create Position</string>
+    <string name="position_title_hint">Position title</string>
+    <string name="position_level">Level</string>
+    <string name="chat_access">Chat Access</string>
+    <string name="create_company_chat">Create Company Chat</string>
+    <string name="company_chat_created">Company chat created</string>
+    <string name="employee">Employee</string>
+    <string name="manager">Manager</string>
+    <string name="top_manager">Top Manager</string>
+    <string name="owner">Owner</string>
+    <string name="access_member">Member</string>
+    <string name="access_management">Management</string>
+    <string name="access_owner_only">Owner Only</string>
+    <string name="no_company">No company</string>
+    <string name="company_position">Position: %1$s (Level %2$d)</string>
+    <string name="company_badge">Company</string>
+    <string name="more_options">More options</string>
+    <string name="edit_position">Edit</string>
+    <string name="delete_position">Delete Position</string>
+    <string name="change_position">Change Position</string>
 
     <!-- File/Feedback -->
     <string name="filename_prefix">Lava</string>

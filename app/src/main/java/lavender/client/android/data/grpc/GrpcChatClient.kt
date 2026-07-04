@@ -50,7 +50,8 @@ class GrpcChatClient(
                         proto.lastMessageUsername, proto.isMuted, proto.lastMessageHasImage, proto.allowMembersToAdd,
                         proto.conferenceStartTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
                         proto.isSecret, proto.peerPublicKey, proto.e2eeReady,
-                        proto.activeAgentId, proto.agentMode, proto.isPinned, proto.isArchived, proto.pinnedAt
+                        proto.activeAgentId, proto.agentMode, proto.isPinned, proto.isArchived, proto.pinnedAt,
+                        proto.companyId, proto.companyChatAccess, proto.companyMinPositionLevel
                     )
                 }
                 val unreadChats = chats.filter { it.unreadCount > 0 }
@@ -96,7 +97,9 @@ class GrpcChatClient(
                         allowMembersToAdd = proto.allowMembersToAdd,
                         conferenceStartTime = proto.conferenceStartTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
                         isSecret = proto.isSecret, peerPublicKey = proto.peerPublicKey,
-                        e2eeReady = proto.e2eeReady
+                        e2eeReady = proto.e2eeReady,
+                        companyId = proto.companyId, companyChatAccess = proto.companyChatAccess,
+                        companyMinPositionLevel = proto.companyMinPositionLevel
                     )
                 })
             }

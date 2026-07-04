@@ -88,6 +88,21 @@
                     android:ellipsize="end" />
 
                 <TextView
+                    android:id="@+id/tvCompanyBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="2dp"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorPrimary"
+                    android:background="@drawable/unread_count_background"
+                    android:visibility="gone"
+                    android:text="@string/company_badge"
+                    android:contentDescription="@string/company_badge" />
+
+                <TextView
                     android:id="@+id/tvLastSeen"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

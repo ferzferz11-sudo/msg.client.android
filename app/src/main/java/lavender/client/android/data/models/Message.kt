@@ -55,7 +55,10 @@ data class ChatInfo(
     val agentMode: String = "",         // For hermes sessions: single/parallel/pipeline
     val isPinned: Boolean = false,      // ChatList v2: pinned status
     val isArchived: Boolean = false,    // ChatList v2: archived status
-    val pinnedAt: Long = 0L             // ChatList v2: timestamp when pinned (for sort order)
+    val pinnedAt: Long = 0L,            // ChatList v2: timestamp when pinned (for sort order)
+    val companyId: String = "",         // Company chat: company ID
+    val companyChatAccess: String = "", // Company chat: access level
+    val companyMinPositionLevel: Int = 0 // Company chat: min position level
 ) {
     fun getDisplayName(currentUsername: String): String {
         if (isSecret) {

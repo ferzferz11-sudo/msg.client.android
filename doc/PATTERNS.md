@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.1.22 | **Updated:** 2026-07-03
+**Version:** v1.3.2.0 | **Updated:** 2026-07-04
 
 ---
 
@@ -1012,4 +1012,61 @@ DON'T:
   delay(200)
 
 Exception: CountDownLatch.await(Long, TimeUnit) — Java API, no Duration overload
+```
+
+---
+
+## v1.3.2.0
+
+### Company System Pattern (v1.3.2.0)
+```
+GrpcCompanyClient (object) — CompanyService RPCs
+  ├── Company CRUD: createCompany, getCompany, updateCompany, deleteCompany, listCompanies
+  ├── Positions: createPosition, updatePosition, deletePosition, listPositions
+  ├── Members: addMember, removeMember, updateMemberPosition, listMembers
+  ├── Company Chats: createCompanyChat, setCompanyChatAccess, getCompanyChats
+  ├── Join/Leave: joinCompany, leaveCompany
+  └── User Info: getUserInfo, getCompanyByUser
+
+CompanyProfileActivity
+  ├── TabLayout + ViewPager2 (3 tabs)
+  │   ├── Tab 0: Members (CompanyListFragment TYPE_MEMBERS)
+  │   ├── Tab 1: Positions (CompanyListFragment TYPE_POSITIONS)
+  │   └── Tab 2: Company Chats (CompanyListFragment TYPE_CHATS)
+  ├── btnAddMember → AddMemberActivity
+  ├── btnCreateChat → CreateCompanyChatDialog
+  └── btnLeaveCompany / btnDeleteCompany
+
+AddMemberActivity
+  ├── ContactAdapter — list of all users
+  ├── Click → showSelectPositionDialog (listPositions)
+  └── addMember(companyId, userId, positionId)
+
+CompanyListFragment
+  ├── TYPE_MEMBERS: CompanyMemberAdapter + onMoreClick → changePosition / removeMember
+  ├── TYPE_POSITIONS: CompanyPositionAdapter + onMoreClick → editPosition / deletePosition
+  └── TYPE_CHATS: CompanyChatAdapter
+
+Access Control (buildSections):
+  ├── companyId.isEmpty() → show (no restriction)
+  ├── companyMinPositionLevel > 0 → userPositionLevel >= min
+  ├── companyChatAccess == "management" → userPositionLevel >= 1
+  ├── companyChatAccess == "owner_only" → userPositionLevel >= 3
+  └── companyChatAccess == "member" → all employees
+
+UserSession: companyId, companyName, positionTitle, positionLevel
+  └── Updated by fetchAdminStatus() after profile load
+```
+
+### Media Preview Localization Pattern (v1.3.2.0)
+```
+Server sends hardcoded: "Image" / "Voice message" in last_message_text
+Client translates in 3 places:
+  ├── ChatListViewModel.newMessageEvent — real-time preview uses R.string.chat_preview_image/voice
+  ├── ChatAdapter.bind() — translateMediaPreview() for server strings
+  └── SuperAdminAdapter.bindAdmin() — translateMediaPreview() for admin panel
+
+String resources:
+  ├── chat_preview_image: "Image" / "Изображение"
+  └── chat_preview_voice: "Voice message" / "Голосовое сообщение"
 ```

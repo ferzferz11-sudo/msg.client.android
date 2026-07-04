@@ -263,7 +263,7 @@ class SuperAdminAdapter(
             statusDot.setBackgroundResource(if (user.isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot)
 
             if (user.lastMessageText.isNotEmpty()) {
-                lastMessageText?.text = user.lastMessageText
+                lastMessageText?.text = translateMediaPreview(user.lastMessageText)
                 lastMessageText?.isVisible = true
                 lastMessageText?.setTextColor(if (isSelected) onPrimary else textSecondary)
             } else {
@@ -291,6 +291,14 @@ class SuperAdminAdapter(
             itemView.setOnLongClickListener {
                 onUserLongClick(user)
                 true
+            }
+        }
+
+        private fun translateMediaPreview(text: String): String {
+            return when (text) {
+                "Image" -> itemView.context.getString(R.string.chat_preview_image)
+                "Voice message" -> itemView.context.getString(R.string.chat_preview_voice)
+                else -> text
             }
         }
     }

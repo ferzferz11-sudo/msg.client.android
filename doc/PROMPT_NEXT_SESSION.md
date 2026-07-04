@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.1.22 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-07-03
+**Версия:** v1.3.2.0 | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-04
 
 ---
 
@@ -28,7 +28,7 @@
 ## Полезные ссылки
 
 - `doc/PATTERNS.md` — паттерны кода и правила
-- `doc/GOTCHAS.md` — known gotchas (500+ entries, v1.3.1.21)
+- `doc/GOTCHAS.md` — known gotchas (500+ entries)
 - `doc/INDEX.md` — project overview, архитектура
 - `doc/AI_V2_TESTING.md` — AI v2 testing
 - `CHANGELOG.md` — version history
@@ -47,3 +47,84 @@
 5. v2 server only — никаких v1 fallbacks
 6. Перед коммитом: `./gradlew assembleDebug`
 7. НЕ bump'ать версию — bump делает только пользователь
+
+---
+
+## v1.3.2.0 — Company System
+
+### Новые компоненты
+
+| Компонент | Файл | Назначение |
+|-----------|------|------------|
+| Proto модели | `data/proto/CompanyProto.kt` | 30+ data classes (Company, Position, Member, CompanyChat, UserPublicInfo) |
+| Marshallers | `data/grpc/CompanyMarshallers.kt` | 30+ marshallers для Company RPC |
+| gRPC клиент | `data/grpc/GrpcCompanyClient.kt` | 17 RPC методов |
+| CompanyProfileActivity | `CompanyProfileActivity.kt` | Управление компанией (табы: участники/позиции/чаты) |
+| AddMemberActivity | `AddMemberActivity.kt` | Добавление участников из контактов |
+| CompanyListFragment | `ui/company/CompanyListFragment.kt` | Списки с actions |
+| Адаптеры | `ui/company/Company*.kt` | Member, Position, Chat адаптеры |
+
+### Изменения в существующих файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `UserSession.kt` | +4 поля: companyId, companyName, positionTitle, positionLevel |
+| `MessengerProto.kt` | GetProfileResponseProto +4, ChatInfoProto +3 |
+| `GrpcMarshallers.kt` | Парсинг company полей (3 места) |
+| `Entities.kt` | ChatEntity +3, toEntity/toDomain |
+| `AppDatabase.kt` | Миграция 12→13 |
+| `GrpcChatClient.kt` | Конвертация company полей |
+| `GrpcChatListV2Client.kt` | Конвертация company полей |
+| `RealGrpcClient.kt` | fetchAdminStatus сохраняет company info |
+| `SessionManager.kt` | updateSession +4 company параметра |
+| `ChatListViewModel.kt` | buildSections: company filter + access control |
+| `ChatListTabs.kt` | Таб "Компания" |
+| `ChatAdapter.kt` | Company badge |
+| `EditProfileActivity.kt` | Секция "Компания" (создать/открыть) |
+| `ProfileActivity.kt` | Company card в профиле |
+| `ProfileViewModel.kt` | ProfileData +4 company полей |
+
+### Access Control
+
+| Уровень | member chats | management chats | owner_only chats |
+|---------|-------------|-----------------|-----------------|
+| Employee (0) | ✅ | ❌ | ❌ |
+| Manager (1) | ✅ | ✅ | ❌ |
+| Top Manager (2) | ✅ | ✅ | ❌ |
+| Owner (3) | ✅ | ✅ | ✅ |
+
+### Company RPCs (messenger.CompanyService)
+
+```
+CreateCompany, GetCompany, UpdateCompany, DeleteCompany, ListCompanies
+CreatePosition, UpdatePosition, DeletePosition, ListPositions
+AddMember, RemoveMember, UpdateMemberPosition, ListMembers
+CreateCompanyChat, SetCompanyChatAccess, GetCompanyChats
+JoinCompany, LeaveCompany
+GetUserInfo, GetCompanyByUser
+GetUserCompanies, SetPrimaryCompany
+```
+
+### Multi-Company Support
+
+- Пользователь может состоять в нескольких компаниях
+- `GetUserCompanies` — список всех компаний с позициями и is_primary флагом
+- `SetPrimaryCompany` — выбор основной компании (отображается в профиле)
+- Автоматический выбор основной компании при создании
+- Long-press на кнопке "Моя компания" → switcher для выбора компании
+- Per-company access control: для каждого чата проверяется позиция в конкретной компании
+
+### String Resources (EN + RU)
+
++35 company strings (company, members, positions, chats, access levels)
+
+---
+
+## Backlog
+
+- [ ] Company avatar upload
+- [ ] Invite code for JoinCompany
+- [ ] Company chat notifications
+- [ ] Company settings (edit name, delete)
+- [ ] Push notifications for company events
+- [ ] Per-company position cache (for non-primary companies in multi-company)

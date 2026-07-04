@@ -1,5 +1,53 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.2.0] - 2026-07-04
+
+### Добавлено
+
+**Company System — корпоративные компании:**
+- Создание компаний из профиля пользователя
+- Управление позициями (Employee, Manager, Top Manager, Owner + кастомные)
+- Управление участниками (добавление из контактов, смена позиции, удаление)
+- Корпоративные чаты с role-based access control
+- Таб "Компания" в списке чатов
+- Badge "Компания" на корпоративных чатах
+- Company info в профиле контакта
+- Access control: Employee (0) → member chats, Manager (1+) → management, Owner (3) → all
+
+**Multi-Company Support:**
+- Пользователь может состоять в нескольких компаниях одновременно
+- Выбор основной компании (SetPrimaryCompany)
+- Автоматический выбор основной компании при создании
+- Переключение компаний long-press на кнопке "Моя компания"
+- Per-company access control для multi-company chats
+
+**Company Service (gRPC):**
+- `GrpcCompanyClient` — 19 RPC методов (Company CRUD, Positions, Members, Company Chats, Join/Leave, UserInfo, GetUserCompanies, SetPrimaryCompany)
+- `CompanyProto.kt` — 35+ data classes
+- `CompanyMarshallers.kt` — 35+ marshallers
+
+**UI:**
+- `CompanyProfileActivity` — управление компанией (участники, должности, чаты)
+- `AddMemberActivity` — добавление участников из контактов
+- `CompanyListFragment` — списки участников/позиций/чатов с actions
+- `CompanyMemberAdapter`, `CompanyPositionAdapter`, `CompanyChatAdapter`
+- `EditProfileActivity` — multi-company switcher (long-press)
+
+**Расширения существующих моделей:**
+- `GetProfileResponseProto` +4 поля (companyId, companyName, positionTitle, positionLevel)
+- `ChatInfoProto` +3 поля (companyId, companyChatAccess, companyMinPositionLevel)
+- `UserSession` +4 поля (companyId, companyName, positionTitle, positionLevel)
+- Room DB миграция 12→13
+
+### Исправлено
+
+**Локализация media preview в чат-листе:**
+- Сервер отправлял "Image" / "Voice message" как хардкод строки — теперь переводятся в "Изображение" / "Голосовое сообщение" на русском
+- `ChatListViewModel` real-time preview использует локализованные строки
+- `ChatAdapter` и `SuperAdminAdapter` переводят серверные строки
+
+---
+
 ## [1.3.1.24] - 2026-07-04
 
 ### Исправлено

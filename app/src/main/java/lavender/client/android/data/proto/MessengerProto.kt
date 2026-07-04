@@ -232,7 +232,10 @@ data class ChatInfoProto(
     val isPinned: Boolean = false,    // ChatList v2: pinned status
     val isMuted: Boolean = false,     // ChatList v2: muted status
     val isArchived: Boolean = false,  // ChatList v2: archived status
-    val pinnedAt: Long = 0L           // ChatList v2: timestamp when pinned (for sort order)
+    val pinnedAt: Long = 0L,          // ChatList v2: timestamp when pinned (for sort order)
+    val companyId: String = "",       // Company chat: company ID
+    val companyChatAccess: String = "", // Company chat: access level
+    val companyMinPositionLevel: Int = 0 // Company chat: min position level
 )
 
 // Mark Read Request/Response
@@ -1236,7 +1239,11 @@ data class GetProfileResponseProto(
     val locale: String = "en",
     val isSuperAdmin: Boolean = false,
     val createdAt: String = "",
-    val lastSeenAt: String = ""
+    val lastSeenAt: String = "",
+    val companyId: String = "",
+    val companyName: String = "",
+    val positionTitle: String = "",
+    val positionLevel: Int = 0
 )
 
 data class UpdateProfileV2RequestProto(

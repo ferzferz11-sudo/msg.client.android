@@ -56,7 +56,10 @@ data class ChatEntity(
     val agentMode: String = "",
     val isPinned: Boolean = false,
     val isArchived: Boolean = false,
-    val pinnedAt: Long = 0L
+    val pinnedAt: Long = 0L,
+    val companyId: String = "",
+    val companyChatAccess: String = "",
+    val companyMinPositionLevel: Int = 0
 )
 
 fun Message.toEntity(): MessageEntity {
@@ -139,7 +142,7 @@ fun ChatInfo.toEntity(): ChatEntity = ChatEntity(
     id, name, type, participants, createdAt, unreadCount, lastMessageTime,
     creator, lastMessageText, avatarUrl, fullAvatarUrl, lastMessageUsername, isMuted, lastMessageHasImage,
     allowMembersToAdd, isSecret, peerPublicKey, e2eeReady, activeAgentId, agentMode,
-    isPinned, isArchived, pinnedAt
+    isPinned, isArchived, pinnedAt, companyId, companyChatAccess, companyMinPositionLevel
 )
 
 fun ChatEntity.toDomain(): ChatInfo = ChatInfo(
@@ -147,7 +150,7 @@ fun ChatEntity.toDomain(): ChatInfo = ChatInfo(
     creator, lastMessageText, avatarUrl, fullAvatarUrl, lastMessageUsername, muted, lastMessageHasImage,
     allowMembersToAdd, conferenceStartTime = 0L,
     isSecret, peerPublicKey, e2eeReady, activeAgentId, agentMode,
-    isPinned, isArchived, pinnedAt
+    isPinned, isArchived, pinnedAt, companyId, companyChatAccess, companyMinPositionLevel
 )
 
 @Entity(tableName = "marketplace_agents")

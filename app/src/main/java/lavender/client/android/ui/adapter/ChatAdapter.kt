@@ -266,6 +266,7 @@ class ChatAdapter(
         private val cbChatSelect: MaterialCheckBox = itemView.findViewById(R.id.cbChatSelect)
         private val statusIndicator: View = itemView.findViewById(R.id.statusIndicator)
         private val tvLastSeen: TextView = itemView.findViewById(R.id.tvLastSeen)
+        private val tvCompanyBadge: TextView = itemView.findViewById(R.id.tvCompanyBadge)
         private val cardView: com.google.android.material.card.MaterialCardView =
             itemView as com.google.android.material.card.MaterialCardView
 
@@ -276,12 +277,15 @@ class ChatAdapter(
             tvChatName.setTextColor(if (hasUnread) primaryColor else textPrimary)
             tvChatName.setTypeface(null, if (hasUnread) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
 
+            // Company badge
+            tvCompanyBadge.isVisible = chat.companyId.isNotEmpty()
+
             if (chat.isSecret) {
                 tvChatType.text = itemView.context.getString(R.string.e2ee_verified)
                 tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
                 tvChatType.setTypeface(null, if (hasUnread) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
             } else if (chat.lastMessageText.isNotEmpty()) {
-                tvChatType.text = chat.lastMessageText
+                tvChatType.text = translateMediaPreview(chat.lastMessageText)
                 tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
                 tvChatType.setTypeface(null, if (hasUnread) android.graphics.Typeface.NORMAL else android.graphics.Typeface.NORMAL)
             } else {
@@ -352,6 +356,15 @@ class ChatAdapter(
             } else {
                 itemView.setOnClickListener { onChatClick(chat) }
                 itemView.setOnLongClickListener { view -> onChatLongClick(chat, view); true }
+            }
+        }
+
+        private fun translateMediaPreview(text: String): String {
+            val ctx = itemView.context
+            return when (text) {
+                "Image" -> ctx.getString(R.string.chat_preview_image)
+                "Voice message" -> ctx.getString(R.string.chat_preview_voice)
+                else -> text
             }
         }
 

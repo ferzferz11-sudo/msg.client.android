@@ -91,6 +91,8 @@
 
         <activity android:name=".ProfileActivity" android:exported="false" />
         <activity android:name=".EditProfileActivity" android:exported="false" />
+        <activity android:name=".CompanyProfileActivity" android:exported="false" />
+        <activity android:name=".AddMemberActivity" android:exported="false" />
         <activity android:name=".ContactsActivity" android:exported="false" />
         <activity android:name=".ThemePaletteActivity" android:exported="false" />
         <activity android:name=".SuperAdminActivity" android:exported="false" />
