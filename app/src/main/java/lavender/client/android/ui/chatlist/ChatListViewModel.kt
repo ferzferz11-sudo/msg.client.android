@@ -107,9 +107,20 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                 _error.value = errorMsg
             }
         }
-        // Listen for read receipts from OTHER users — DO NOT clear current user's unread count.
-        // Unread count = messages I haven't read. Other users' READ_ALL signals don't affect my unread.
-        // My own markAsRead() already clears unread locally + server sync handles persistence.
+        // Listen for read receipts — when current user reads messages in a chat,
+        // add it to locallyReadChats so the chat list shows 0 unread on return.
+        viewModelScope.launch {
+            GrpcClient.readReceiptEvent.collect { (roomId, readerId) ->
+                val myUserId = SessionManager.session.value.userId
+                if (roomId.isNotEmpty() && readerId == myUserId) {
+                    locallyReadChats.add(roomId)
+                    allChats = allChats.map {
+                        if (it.id == roomId && it.unreadCount > 0) it.copy(unreadCount = 0) else it
+                    }
+                    scheduleBuildSections()
+                }
+            }
+        }
         // Listen for new messages in other rooms — update chat list in real-time
         viewModelScope.launch {
             GrpcClient.newMessageEvent.collect { message ->
