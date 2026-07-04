@@ -348,6 +348,10 @@ class ThemePaletteActivity : AppCompatActivity(),
             stream?.close()
             
             if (bytes == null) return@withContext ""
+            if (bytes.size > lavender.client.android.data.grpc.ProfileClient.maxUploadSize) {
+                withContext(Dispatchers.Main) { Toast.makeText(this@ThemePaletteActivity, getString(R.string.file_too_large), Toast.LENGTH_LONG).show() }
+                return@withContext ""
+            }
             
             val fileName = getFileName(uri) ?: "background.jpg"
             val body = MultipartBody.Part.createFormData("image", fileName, bytes.toRequestBody("image/jpeg".toMediaTypeOrNull()))

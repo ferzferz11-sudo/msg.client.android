@@ -1,5 +1,32 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.23] - 2026-07-04
+
+### Исправлено
+
+**Read receipts — отправитель не видел ✓✓ даже после прочтения получателем:**
+- Сервер: `MarkReadAndCheck` обновлял `is_read` только в таблице `messages` (legacy v1), но все новые сообщения хранятся в `messages_v2`. Поле `is_read` в `messages_v2` никогда не обновлялось
+- Сервер: `READ_ALL` broadcast отправлялся только через v1 Chat stream — клиенты на ChatV2 не получали уведомление о прочтении
+- Исправлено на сервере: `MarkReadAndCheck` теперь обновляет `is_read` в `messages_v2`, `READ_ALL` рассылается и в ChatV2 потоки
+
+**Загрузка файлов — непонятная ошибка при файле больше 30MB:**
+- Клиент загружал файл целиком, сервер отвечал 400 "File too large", клиент показывал "Server error: 404"
+- Исправлено: проверка размера файла перед загрузкой на клиенте, показ "Файл слишком большой (макс. 30 МБ)"
+- Лимит размера теперь берётся из `GET /info` → `max_upload_size` (серверная capability negotiation)
+
+### Изменено
+
+- `ChatInputDelegate.kt` — проверка `ProfileClient.maxUploadSize` перед загрузкой image/file, обработка 400 "too large"
+- `ShareReceiverActivity.kt` — проверка размера при шаринге файлов
+- `AudioUploader.kt` — проверка размера аудио перед загрузкой, `FILE_TOO_LARGE` error code
+- `AiV2ChatActivity.kt` — проверка размера файлов для AI чата
+- `ThemePaletteActivity.kt` — проверка размера фонов
+- `ChatViewModel.kt` — обработка ошибки `FILE_TOO_LARGE` для аудио
+- `ProfileClient.kt` — кеширование `maxUploadSize` из `GET /info`, fallback 30MB
+- `strings.xml` (EN + RU) — +`file_too_large`
+
+---
+
 ## [1.3.1.22] - 2026-07-03
 
 ### Исправлено

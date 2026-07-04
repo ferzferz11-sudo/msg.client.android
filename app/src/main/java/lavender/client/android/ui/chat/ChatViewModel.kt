@@ -88,7 +88,12 @@ class ChatViewModel : ViewModel() {
                     userId = grpcClient.getUserId() ?: ""
                 ))
             } else {
-                onError("Failed to upload audio: ${if (result.url.contains("404")) "Server error 404" else result.error}")
+                val errorMsg = when {
+                    result.error == "FILE_TOO_LARGE" -> context.getString(lavender.client.android.R.string.file_too_large)
+                    result.url.contains("404") -> context.getString(lavender.client.android.R.string.failed_to_upload_file)
+                    else -> "Failed to upload audio: ${result.error}"
+                }
+                onError(errorMsg)
             }
         }
     }

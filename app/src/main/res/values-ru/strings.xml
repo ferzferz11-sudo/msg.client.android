@@ -936,6 +936,7 @@
     <string name="error_user_id_not_found">Ошибка: ID пользователя не найден. Подождите или войдите снова.</string>
     <string name="failed_to_terminate_session">Не удалось завершить сессию</string>
     <string name="failed_to_upload_file">Не удалось загрузить файл</string>
+    <string name="file_too_large">Файл слишком большой (макс. 30 МБ)</string>
     <string name="download_started">Загрузка начата</string>
     <string name="theme_saved_failed_to_set">Тема сохранена, но не установлена как текущая</string>
     <string name="failed_to_start_recording">Не удалось начать запись</string>

@@ -37,6 +37,7 @@ import lavender.client.android.ui.widget.StandardBottomSheet
 
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.data.ThemeMappers
+import lavender.client.android.data.grpc.ProfileClient
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.Request
@@ -53,6 +54,10 @@ class ChatInputDelegate(
     private val activity: AppCompatActivity,
     private val grpcClient: GrpcClient
 ) {
+    companion object {
+        private const val TAG = "ChatInputDelegate"
+    }
+
     lateinit var messageInput: EditText
     lateinit var sendButton: ImageButton
     lateinit var attachButton: ImageButton
@@ -439,6 +444,19 @@ class ChatInputDelegate(
         selectedImageUris.forEach { uri ->
             val bytes = activity.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             if (bytes != null) {
+                if (bytes.size > ProfileClient.maxUploadSize) {
+                    count++
+                    activity.runOnUiThread {
+                        uploadProgressBar.progress = ((count.toFloat() / total) * 100).toInt()
+                        uploadProgressText.text = activity.getString(R.string.uploading_images, count, total)
+                        if (count == total) {
+                            uploadProgressContainer.isVisible = false
+                            if (urls.isNotEmpty()) sendGalleryMessage(text, urls)
+                            else showToast(activity.getString(R.string.file_too_large))
+                        }
+                    }
+                    return@forEach
+                }
                 val body = MultipartBody.Part.createFormData("image", getFileName(uri) ?: "image.jpg",
                     bytes.toRequestBody("application/octet-stream".toMediaTypeOrNull()))
                 val uploadUrl = "${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(activity)}/upload-image"
@@ -454,8 +472,12 @@ class ChatInputDelegate(
                     override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
                         val rb = response.body.string()
                         android.util.Log.d("ChatInput", "Upload response: code=${response.code} body=${rb.take(200)}")
+                        if (response.code == 400 && rb.contains("too large")) {
+                            activity.runOnUiThread { uploadProgressContainer.isVisible = false; showToast(activity.getString(R.string.file_too_large)) }
+                            return
+                        }
                         if (!response.isSuccessful || rb.contains("404")) {
-                            activity.runOnUiThread { uploadProgressContainer.isVisible = false; showToast("Server error: 404") }
+                            activity.runOnUiThread { uploadProgressContainer.isVisible = false; showToast(activity.getString(R.string.failed_to_upload_file)) }
                             return
                         }
                         val url = if (rb.contains("\"url\"")) try { JSONObject(rb).getString("url") } catch (_: Exception) { "" }
@@ -501,6 +523,11 @@ class ChatInputDelegate(
             uploadProgressBar.isVisible = true
             val bytes = activity.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             if (bytes != null) {
+                if (bytes.size > ProfileClient.maxUploadSize) {
+                    uploadProgressBar.isVisible = false
+                    showToast(activity.getString(R.string.file_too_large))
+                    return@forEach
+                }
                 val fn = getFileName(uri) ?: (if (isImage) "image.jpg" else "file")
                 val body = MultipartBody.Part.createFormData(if (isImage) "image" else "file", fn,
                     bytes.toRequestBody("application/octet-stream".toMediaTypeOrNull()))
@@ -509,12 +536,16 @@ class ChatInputDelegate(
                     .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build()).build()
                 HttpClient.client.newCall(req).enqueue(object : okhttp3.Callback {
                     override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
-                        activity.runOnUiThread { uploadProgressBar.isVisible = false; showToast("Upload failed") }
+                        activity.runOnUiThread { uploadProgressBar.isVisible = false; showToast(activity.getString(R.string.failed_to_upload_file)) }
                     }
                     override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
                         val rb = response.body.string()
+                        if (response.code == 400 && rb.contains("too large")) {
+                            activity.runOnUiThread { uploadProgressBar.isVisible = false; showToast(activity.getString(R.string.file_too_large)) }
+                            return
+                        }
                         if (!response.isSuccessful || rb.contains("404")) {
-                            activity.runOnUiThread { uploadProgressBar.isVisible = false; showToast("Server error: 404") }
+                            activity.runOnUiThread { uploadProgressBar.isVisible = false; showToast(activity.getString(R.string.failed_to_upload_file)) }
                             return
                         }
                         val url = if (rb.contains("\"url\"")) try { JSONObject(rb).getString("url") } catch (_: Exception) { "" }

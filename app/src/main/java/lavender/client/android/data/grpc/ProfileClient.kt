@@ -26,6 +26,7 @@ object ProfileClient {
     @Volatile var serviceChatVersion: String = ""; internal set
     @Volatile var serviceAuthVersion: String = ""; internal set
     @Volatile var serviceAIVersion: String = ""; internal set
+    @Volatile var maxUploadSize: Long = 30L * 1024 * 1024; internal set
 
     fun isProfileV2Supported(): Boolean = true
     fun isChatV2Supported(): Boolean = true
@@ -55,12 +56,17 @@ object ProfileClient {
                     serviceAIVersion = services.optString("ai", "")
                     Log.d(TAG, "Server versions: profile=$serviceProfileVersion chat=$serviceChatVersion auth=$serviceAuthVersion ai=$serviceAIVersion")
                 }
+                if (json.has("max_upload_size")) {
+                    maxUploadSize = json.optLong("max_upload_size", 30L * 1024 * 1024)
+                    Log.d(TAG, "Max upload size: $maxUploadSize")
+                }
             } catch (e: Exception) {
                 Log.d(TAG, "HTTP /info unavailable (${e.message})")
                 serviceProfileVersion = ""
                 serviceChatVersion = ""
                 serviceAuthVersion = ""
                 serviceAIVersion = ""
+                maxUploadSize = 30L * 1024 * 1024
             }
         }
     }

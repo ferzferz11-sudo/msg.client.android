@@ -430,6 +430,10 @@ class AiV2ChatActivity : AppCompatActivity() {
         val contentResolver = contentResolver
         val inputStream = contentResolver.openInputStream(uri) ?: return ""
         val bytes = inputStream.use { it.readBytes() }
+        if (bytes.size > lavender.client.android.data.grpc.ProfileClient.maxUploadSize) {
+            runOnUiThread { Toast.makeText(this, getString(R.string.file_too_large), Toast.LENGTH_LONG).show() }
+            return ""
+        }
         val fileName = getFileName(uri) ?: "file"
 
         val body = MultipartBody.Part.createFormData("file", fileName,

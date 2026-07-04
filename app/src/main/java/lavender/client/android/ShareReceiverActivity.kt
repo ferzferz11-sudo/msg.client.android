@@ -505,6 +505,13 @@ class ShareReceiverActivity : AppCompatActivity() {
             stream?.close()
             if (bytes == null) return@withContext null
 
+            if (bytes.size > lavender.client.android.data.grpc.ProfileClient.maxUploadSize) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ShareReceiverActivity, getString(R.string.file_too_large), Toast.LENGTH_LONG).show()
+                }
+                return@withContext null
+            }
+
             val type = contentResolver.getType(uri) ?: "application/octet-stream"
             val isImage = type.startsWith("image/")
             val endpoint = if (isImage) "upload-image" else "upload-file"

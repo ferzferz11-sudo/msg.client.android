@@ -936,6 +936,7 @@
     <string name="error_user_id_not_found">Error: User ID not found. Please wait or log in again.</string>
     <string name="failed_to_terminate_session">Failed to terminate session</string>
     <string name="failed_to_upload_file">Failed to upload file</string>
+    <string name="file_too_large">File is too large (max 30 MB)</string>
     <string name="download_started">Download started</string>
     <string name="theme_saved_failed_to_set">Theme saved but failed to set as current</string>
     <string name="failed_to_start_recording">Failed to start recording</string>
