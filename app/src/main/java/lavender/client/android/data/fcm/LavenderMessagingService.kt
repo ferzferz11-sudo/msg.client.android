@@ -349,5 +349,76 @@ class LavenderMessagingService : FirebaseMessagingService() {
                 }
             }
         }
+
+        fun showNotificationFromStream(context: Context, title: String, body: String, roomId: String) {
+            val channelId = "lavender_messages_v2"
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                val channel = NotificationChannel(
+                    channelId,
+                    context.getString(R.string.lavender_messages_channel),
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = context.getString(R.string.lavender_messages_channel_desc)
+                    enableVibration(true)
+                    vibrationPattern = longArrayOf(0, 300, 200, 300)
+                    enableLights(true)
+                    setShowBadge(true)
+                    setSound(defaultSoundUri, android.media.AudioAttributes.Builder()
+                        .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build())
+                }
+                notificationManager.createNotificationChannel(channel)
+            }
+
+            val intent = Intent(context, lavender.client.android.NewChatActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra("USERNAME", "")
+                putExtra("SERVER_ADDRESS", lavender.client.android.data.session.CredentialStore.getServerAddress(context) ?: "")
+                putExtra("ROOM_ID", roomId)
+                putExtra("CHAT_NAME", title)
+                putExtra("IS_DIRECT", !roomId.startsWith("group_") && roomId != "general")
+                putExtra("from_notification", true)
+            }
+
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                roomId.hashCode(),
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val notificationBuilder = NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(R.drawable.ic_notification_small)
+                .setColor(ContextCompat.getColor(context, R.color.lavender_mist))
+                .setContentTitle(title)
+                .setContentText(body)
+                .setAutoCancel(true)
+                .setContentIntent(pendingIntent)
+                .setFullScreenIntent(pendingIntent, true)
+                .setVibrate(longArrayOf(0, 300, 200, 300))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+
+            val soundPrefs = context.getSharedPreferences("notification_sounds", Context.MODE_PRIVATE)
+            val customSoundUri = soundPrefs.getString(roomId, null)
+            if (customSoundUri != null) {
+                notificationBuilder.setSound(Uri.parse(customSoundUri))
+            } else {
+                val defaultSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                notificationBuilder.setSound(defaultSound)
+            }
+
+            val extras = android.os.Bundle()
+            extras.putString("room_id", roomId)
+            notificationBuilder.addExtras(extras)
+
+            notificationManager.notify(roomId.hashCode(), notificationBuilder.build())
+            Log.d("FCM", "Stream notification shown for room: $roomId")
+        }
     }
 }

@@ -584,7 +584,19 @@ object RealGrpcClient {
                         }
                         val myUsername = currentUsername ?: ""
                         if (msg.user.isNotEmpty() && msg.user != myUsername) {
-                            scheduleMarkRead(currentRoomId, myUsername)
+                            val isScreenOn = appContext?.let {
+                                val pm = it.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+                                pm.isInteractive
+                            } ?: true
+                            if (isScreenOn) {
+                                scheduleMarkRead(currentRoomId, myUsername)
+                            } else {
+                                appContext?.let { ctx ->
+                                    val title = msg.user
+                                    val body = msg.text.take(200)
+                                    lavender.client.android.data.fcm.LavenderMessagingService.showNotificationFromStream(ctx, title, body, currentRoomId)
+                                }
+                            }
                         }
                     }
                     onMessageReceived(msg)
