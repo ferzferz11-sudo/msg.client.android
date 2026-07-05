@@ -606,3 +606,19 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **`formatPosition()` / `formatCompanyPosition()`** maps level → localized name
 - **Used in:** `CompanyMemberAdapter`, `CompanyListFragment`, `ProfileActivity`, `EditProfileActivity`
 - **Logic:** if title matches English name → show only localized; if custom → show "Custom (Localized)"
+
+## Toolbar Color Standardization (v1.3.2.4)
+
+- **`setSupportActionBar()` overrides `navigationIconTint`** — ActionBar takes control of navigation icon tint via its own theme (`textColorPrimary`), ignoring `app:navigationIconTint` from XML and ThemeApplier. When `setHomeAsUpIndicator()` creates a new drawable, it has no tint
+- **Fix for activities without menu:** remove `setSupportActionBar()`, manage toolbar directly with `toolbar.setNavigationIcon()` + manual tint
+- **Fix for activities with menu:** keep `setSupportActionBar()`, but after each `setHomeAsUpIndicator()` call re-apply `toolbar.navigationIcon?.setTint(getColorOnPrimary())`
+- **`getColorOnPrimary()` helper:** `ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE)` — reads from ThemeStore, not Android theme attrs
+- **Affected activities:** ContactsActivity (removed setSupportActionBar), ThemesActivity (removed), SuperAdminActivity (kept, manual tint)
+- **Unified toolbar standard:** all toolbars use `toolbar_background` drawable + `@dimen/custom_toolbar_height` + `app:navigationIconTint="?attr/colorOnPrimary"` + `app:titleTextColor="?attr/colorOnPrimary"`
+
+## Contacts Add with Group Chat (v1.3.2.4)
+
+- **`showAddContactDialog()` creates group when 2+ selected** — previously only created direct chat for `selected.size == 1`, ignored multi-select with "create chat" checkbox
+- **Fix:** `if (createChat) { if (selected.size == 1) createDirectChat else createGroupChat }`
+- **String key renamed:** `create_direct_chat_after` → `create_chat_after` (EN/RU)
+- **Empty participant list in group:** `showAddParticipantSheet()` filters out existing participants + contacts not in user's contact list. When result is empty, show `setEmptyState(true, getString(R.string.all_contacts_already_in_group))`

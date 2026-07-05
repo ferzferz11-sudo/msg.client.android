@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.2.3 | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-05
+**Версия:** v1.3.2.5 | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-05
 
 ---
 
@@ -50,7 +50,7 @@
 
 ---
 
-## v1.3.2.3 — Conference Fixes + Theme Adaptation + Navigation
+## v1.3.2.4 — Toolbar Standardization + Group Chat Fix + Theme Consistency
 
 ### Добавлено
 
@@ -58,34 +58,45 @@
 - **Конференции — сервер:** поле `type` в `CreateGroupChatRequest`, сервер создаёт `conference` тип
 - **Информация о группе/конференции:** FAB [+] для добавления участников, шторка с опциями
 - **О программе:** отображение версии приложения
+- **Групповой чат из контактов:** при добавлении 2+ контактов с галкой "Создать чат сразу" создаётся групповой чат
+- **Подсказка "Все контакты добавлены":** в шторке добавления участников, когда список пуст
 
 ### Улучшено
 
 - **Темы:** чекбокс выбора, уведомления, FAB [+] адаптированы к кастомным темам
+- **Тулбары — единый стандарт:** все тулбары используют `toolbar_background` + `custom_toolbar_height` + `navigationIconTint` + `titleTextColor` = `colorOnPrimary`
+- **Аватар в тулбаре чатов:** увеличен 48dp → 56dp
+- **Аватар в шторке профиля:** увеличен 100dp → 120dp, сдвинут влево
+- **Toast при добавлении контактов:** показывает количество ("Добавлено контактов: 6")
 
 ### Исправлено
 
 - **Навигация:** кнопка "назад" из Безопасности/Уведомлений возвращает на "Доп. настройки"
 - **isNavigatingDeeper:** флаг сбрасывается только в `settingsActivityLauncher` callback
+- **Групповой чат:** добавление 2+ контактов с галкой "Создать чат" теперь создаёт группу, а не прямые чаты
+- **Цвет стрелки "назад" в ContactsActivity:** `setSupportActionBar()` конфликтовал с темой — убран, тулбар управляется напрямую
+- **Цвет стрелки в ThemesActivity:** аналогичный фикс
+- **Цвет иконок в SuperAdminActivity:** `setHomeAsUpIndicator()` + ручной tint после смены
 
 ### Изменения в файлах
 
 | Файл | Изменение |
 |------|-----------|
-| `item_chat.xml` | +tvConferenceBadge, btnEnterLobby виден для конференций |
-| `ChatAdapter.kt` | Conference badge, тип чата "Конференция", btnEnterLobby с кликом |
-| `ChatToolbarDelegate.kt` | btnLobby для всех участников, requestLayout(), openProfile для конференций |
-| `ProfileActivity.kt` | chatType, setupGroupFab(), showConferenceActionSheet(), showAddParticipantSheet() |
-| `activity_profile.xml` | +fabAddMember FAB |
-| `ThemeApplier.kt` | +fabAddMember, +tvConferenceBadge |
-| `ChatListToolbar.kt` | showAboutDialog: +appVersion, fix isNavigatingDeeper reset |
-| `dialog_about.xml` | +appVersionText |
-| `NotificationAdapter.kt` | ThemeStore colors вместо хардкода |
-| `NewChatActivity.kt` | Убран FAB из чата (перенесён в ProfileActivity) |
-| `activity_new_chat.xml` | Убран fabAddParticipant |
-| `ChatListFABs.kt` | showCreateConferenceDialog — type "conference" |
-| `messenger.proto` (server) | +type field 6 в CreateGroupChatRequest |
-| `server_chats.go` (server) | req.Type вместо хардкода "group" |
+| `activity_chat_list.xml` | Аватар 48dp → 56dp (FrameLayout + CircleImageView) |
+| `dialog_profile.xml` | Аватар 100dp → 120dp, marginEnd=40dp |
+| `activity_log_viewer.xml` | Фон `toolbar_background`, высота `custom_toolbar_height`, +navigationIconTint/titleTextColor, +xmlns:app |
+| `activity_theme_palette.xml` | Высота `custom_toolbar_height`, фон `toolbar_background`, +navigationIconTint |
+| `activity_new_chat.xml` | +titleTextColor |
+| `widget_chat.xml` | +titleTextColor |
+| `activity_themes.xml` | +titleTextColor |
+| `activity_contacts.xml` | +titleTextColor, убран toolbarUserAvatar |
+| `ContactsActivity.kt` | Убран `setSupportActionBar()`, убран toolbarUserAvatar, +getColorOnPrimary/setBackIcon, toast contacts_added с количеством |
+| `ThemesActivity.kt` | Убран `setSupportActionBar()`, +getColorOnPrimary/setBackIcon |
+| `SuperAdminActivity.kt` | +getColorOnPrimary, tint после setHomeAsUpIndicator |
+| `LogViewerActivity.kt` | Убран `setDisplayHomeAsUpEnabled(true)` |
+| `ProfileActivity.kt` | +setEmptyState для шторки добавления участников |
+| `strings.xml` (EN/RU) | +all_contacts_already_in_group, contacts_added с %d, -contact_added |
+| `ChatListFABs.kt` | R.string.create_chat_after (было create_direct_chat_after) |
 
 ---
 

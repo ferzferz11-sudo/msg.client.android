@@ -474,6 +474,7 @@ object SessionManager {
         )
 
         userId?.let { GrpcClient.setUserId(it) }
+        username?.let { GrpcClient.setUsername(it) }
     }
 
     fun login(context: Context, username: String, pass: String, serverAddress: String, register: Boolean = false, email: String = "", onComplete: (String?) -> Unit) {

@@ -559,6 +559,7 @@ data class CustomThemeProto(
     val backgroundColor: String = "",
     val textPrimaryColor: String = "",
     val textSecondaryColor: String = "",
+    val isDark: Boolean = false,
     val chatListBackgroundImageUrl: String = "",
     val chatBackgroundImageUrl: String = "",
     val bottomPanelColor: String = "",
@@ -1347,7 +1348,9 @@ data class UnPinMessageResponseProto(
 
 data class GetPinnedMessagesRequestProto(
     val userId: String = "",
-    val chatId: String = ""
+    val chatId: String = "",
+    val limit: Int = 0,
+    val offset: Int = 0
 )
 
 data class GetPinnedMessagesResponseProto(

@@ -343,8 +343,24 @@ class GetFavoritesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetFa
     override fun stream(v: GetFavoritesResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
     override fun parse(s: java.io.InputStream): GetFavoritesResponseProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); val msgs = mutableListOf<MessageV2Proto>()
-        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) { val len = cis.readUInt32(); msgs.add(lavender.client.android.data.grpc.MessageV2ProtoMarshaller().parse(java.io.ByteArrayInputStream(cis.readRawBytes(len)))) } else cis.skipField(tag) }
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) { val len = cis.readUInt32(); val v1 = MessageProtoMarshaller().parse(java.io.ByteArrayInputStream(cis.readRawBytes(len))); msgs.add(v1ToV2(v1)) } else cis.skipField(tag) }
         return GetFavoritesResponseProto(msgs)
+    }
+    private fun v1ToV2(v1: MessageProto): MessageV2Proto {
+        if (v1.createdAt != null && v1.createdAt.seconds != 0L) { }
+        val senderId = v1.userId.ifEmpty { v1.user }
+        val media = when {
+            v1.imageUrl.isNotEmpty() -> MessageMediaProto(type = "image", url = v1.imageUrl, urls = v1.imageUrls)
+            v1.voiceUrl.isNotEmpty() -> MessageMediaProto(type = "voice", url = v1.voiceUrl, duration = v1.duration)
+            else -> null
+        }
+        val reply = if (v1.repliedToMessageId.isNotEmpty()) MessageReplyProto(messageId = v1.repliedToMessageId, preview = v1.repliedToText, senderId = v1.repliedToUser) else null
+        val reactionsJson = if (v1.reactions.isNotEmpty()) {
+            val obj = org.json.JSONObject()
+            for (r in v1.reactions) { if (r.user.isNotEmpty() && r.emoji.isNotEmpty()) obj.put(r.user, r.emoji) }
+            obj.toString().toByteArray()
+        } else byteArrayOf()
+        return MessageV2Proto(id = v1.id, senderId = senderId, roomId = v1.roomId, text = v1.text, media = media, reply = reply, edited = v1.edited, isRead = v1.isRead, createdAt = v1.createdAt, reactions = reactionsJson, isE2EE = v1.isE2Ee, e2eePayload = v1.e2EePayload)
     }
 }
 
@@ -749,9 +765,9 @@ class GetThemesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetTheme
                 1 -> tid = cis.readString()
                 2 -> {
                     val len = cis.readUInt32(); val b = cis.readRawBytes(len); val cisis = com.google.protobuf.CodedInputStream.newInstance(b)
-                    var id = ""; var name = ""; var pc = ""; var opc = ""; var sc = ""; var osc = ""; var bc = ""; var tpc = ""; var tsc = ""; var clbu = ""; var cbu = ""; var bpc = ""; var obpc = ""; var sctr = ""; var obc = ""; var ibc = ""; var idark = false
-                    while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> name = cisis.readString(); 3 -> pc = cisis.readString(); 4 -> opc = cisis.readString(); 5 -> sc = cisis.readString(); 6 -> osc = cisis.readString(); 7 -> bc = cisis.readString(); 8 -> tpc = cisis.readString(); 9 -> tsc = cisis.readString(); 10 -> idark = cisis.readBool(); 11 -> cbu = cisis.readString(); 12 -> clbu = cisis.readString(); 13 -> bpc = cisis.readString(); 14 -> obpc = cisis.readString(); 15 -> sctr = cisis.readString(); 16 -> obc = cisis.readString(); 17 -> ibc = cisis.readString(); else -> cisis.skipField(t2) } }
-                    themes.add(CustomThemeProto(id, name, pc, opc, sc, osc, bc, tpc, tsc, clbu, cbu, bpc, obpc, sctr, obc, ibc))
+                    var id = ""; var name = ""; var pc = ""; var opc = ""; var sc = ""; var osc = ""; var bc = ""; var tpc = ""; var tsc = ""; var clbu = ""; var cbu = ""; var bpc = ""; var obpc = ""; var sctr = ""; var obc = ""; var ibc = ""; var idark = false; var otc = ""; var itc = ""
+                    while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> name = cisis.readString(); 3 -> pc = cisis.readString(); 4 -> opc = cisis.readString(); 5 -> sc = cisis.readString(); 6 -> osc = cisis.readString(); 7 -> bc = cisis.readString(); 8 -> tpc = cisis.readString(); 9 -> tsc = cisis.readString(); 10 -> idark = cisis.readBool(); 11 -> cbu = cisis.readString(); 12 -> clbu = cisis.readString(); 13 -> bpc = cisis.readString(); 14 -> obpc = cisis.readString(); 15 -> sctr = cisis.readString(); 16 -> obc = cisis.readString(); 17 -> ibc = cisis.readString(); 18 -> otc = cisis.readString(); 19 -> itc = cisis.readString(); else -> cisis.skipField(t2) } }
+                    themes.add(CustomThemeProto(id, name, pc, opc, sc, osc, bc, tpc, tsc, idark, clbu, cbu, bpc, obpc, sctr, obc, ibc, otc, itc))
                 }
                 else -> cis.skipField(tag)
             } }
@@ -764,7 +780,7 @@ class SaveThemeRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<SaveTheme
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.username.isNotEmpty()) cos.writeString(1, v.username)
         cos.writeTag(2, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED); val tbaos = java.io.ByteArrayOutputStream(); val tcos = com.google.protobuf.CodedOutputStream.newInstance(tbaos); val th = v.theme
-        if (th.id.isNotEmpty()) tcos.writeString(1, th.id); if (th.name.isNotEmpty()) tcos.writeString(2, th.name); if (th.primaryColor.isNotEmpty()) tcos.writeString(3, th.primaryColor); if (th.onPrimaryColor.isNotEmpty()) tcos.writeString(4, th.onPrimaryColor); if (th.surfaceColor.isNotEmpty()) tcos.writeString(5, th.surfaceColor); if (th.onSurfaceColor.isNotEmpty()) tcos.writeString(6, th.onSurfaceColor); if (th.backgroundColor.isNotEmpty()) tcos.writeString(7, th.backgroundColor); if (th.textPrimaryColor.isNotEmpty()) tcos.writeString(8, th.textPrimaryColor); if (th.textSecondaryColor.isNotEmpty()) tcos.writeString(9, th.textSecondaryColor); if (th.chatBackgroundImageUrl.isNotEmpty()) tcos.writeString(11, th.chatBackgroundImageUrl); if (th.chatListBackgroundImageUrl.isNotEmpty()) tcos.writeString(12, th.chatListBackgroundImageUrl); if (th.bottomPanelColor.isNotEmpty()) tcos.writeString(13, th.bottomPanelColor); if (th.onBottomPanelColor.isNotEmpty()) tcos.writeString(14, th.onBottomPanelColor); if (th.surfaceContainer.isNotEmpty()) tcos.writeString(15, th.surfaceContainer); if (th.outgoingBubbleColor.isNotEmpty()) tcos.writeString(16, th.outgoingBubbleColor); if (th.incomingBubbleColor.isNotEmpty()) tcos.writeString(17, th.incomingBubbleColor)
+        if (th.id.isNotEmpty()) tcos.writeString(1, th.id); if (th.name.isNotEmpty()) tcos.writeString(2, th.name); if (th.primaryColor.isNotEmpty()) tcos.writeString(3, th.primaryColor); if (th.onPrimaryColor.isNotEmpty()) tcos.writeString(4, th.onPrimaryColor); if (th.surfaceColor.isNotEmpty()) tcos.writeString(5, th.surfaceColor); if (th.onSurfaceColor.isNotEmpty()) tcos.writeString(6, th.onSurfaceColor); if (th.backgroundColor.isNotEmpty()) tcos.writeString(7, th.backgroundColor); if (th.textPrimaryColor.isNotEmpty()) tcos.writeString(8, th.textPrimaryColor); if (th.textSecondaryColor.isNotEmpty()) tcos.writeString(9, th.textSecondaryColor); if (th.isDark) tcos.writeBool(10, th.isDark); if (th.chatBackgroundImageUrl.isNotEmpty()) tcos.writeString(11, th.chatBackgroundImageUrl); if (th.chatListBackgroundImageUrl.isNotEmpty()) tcos.writeString(12, th.chatListBackgroundImageUrl); if (th.bottomPanelColor.isNotEmpty()) tcos.writeString(13, th.bottomPanelColor); if (th.onBottomPanelColor.isNotEmpty()) tcos.writeString(14, th.onBottomPanelColor); if (th.surfaceContainer.isNotEmpty()) tcos.writeString(15, th.surfaceContainer); if (th.outgoingBubbleColor.isNotEmpty()) tcos.writeString(16, th.outgoingBubbleColor); if (th.incomingBubbleColor.isNotEmpty()) tcos.writeString(17, th.incomingBubbleColor); if (th.outgoingTextColor.isNotEmpty()) tcos.writeString(18, th.outgoingTextColor); if (th.incomingTextColor.isNotEmpty()) tcos.writeString(19, th.incomingTextColor)
         tcos.flush(); val tb = tbaos.toByteArray(); cos.writeUInt32NoTag(tb.size); cos.writeRawBytes(tb)
         if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
@@ -1104,9 +1120,9 @@ class AuthResponseV2Marshaller : io.grpc.MethodDescriptor.Marshaller<AuthRespons
                             1 -> userId = userCis.readString()
                             2 -> username = userCis.readString()
                             3 -> email = userCis.readString()
-                            5 -> avatarUrl = userCis.readString()
-                            6 -> bio = userCis.readString()
-                            7 -> status = userCis.readString()
+                            4 -> avatarUrl = userCis.readString()
+                            5 -> bio = userCis.readString()
+                            6 -> status = userCis.readString()
                             else -> userCis.skipField(utag)
                         }
                     }
@@ -1308,7 +1324,8 @@ class UnPinMessageRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UnPinM
 class GetPinnedMessagesRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetPinnedMessagesRequestProto> {
     override fun stream(v: GetPinnedMessagesRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId); if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
+        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId)
+        if (v.limit != 0) cos.writeInt32(3, v.limit); if (v.offset != 0) cos.writeInt32(4, v.offset)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): GetPinnedMessagesRequestProto = GetPinnedMessagesRequestProto()

@@ -348,11 +348,28 @@ GrpcProfileClient (class) — ChatService methods (no v2 replacement)
     android:background="@drawable/toolbar_background"
     android:elevation="0dp"
     app:navigationIcon="@drawable/ic_back_arrow"
-    app:navigationIconTint="?attr/colorOnPrimary" />
+    app:navigationIconTint="?attr/colorOnPrimary"
+    app:titleTextColor="?attr/colorOnPrimary" />
 ```
-- Fixed height, not wrap_content
+- Fixed height (`@dimen/custom_toolbar_height`), not `?attr/actionBarSize`
+- Background: `@drawable/toolbar_background` (primary color with rounded bottom corners), NOT `?attr/colorPrimary`
 - Elevation 0dp (handled by toolbar_background drawable)
 - `setDecorFitsSystemWindows(window, false)` required in Activity.onCreate
+- **NEVER use `setSupportActionBar()` if you need to change navigation icon at runtime** — ActionBar overrides tint. Manage toolbar directly
+
+### Toolbar Navigation Icon Pattern (v1.3.2.4)
+```
+Activities WITHOUT options menu:
+  — Remove setSupportActionBar(), manage toolbar directly
+  — toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
+  — toolbar.navigationIcon?.setTint(getColorOnPrimary())
+  — Change icon: toolbar.navigationIcon = drawable.apply { setTint(getColorOnPrimary()) }
+
+Activities WITH options menu:
+  — Keep setSupportActionBar() for menu inflation
+  — After supportActionBar?.setHomeAsUpIndicator(): toolbar.navigationIcon?.setTint(getColorOnPrimary())
+  — getColorOnPrimary() = ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE)
+```
 
 ### Marshallers Pattern
 - Custom marshallers for each proto type (not using protobuf-java reflection)

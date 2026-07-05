@@ -407,7 +407,7 @@ class ChatListActivity : AppCompatActivity() {
     // ActionMode
 
     private fun setupRecyclerView(username: String) {
-        viewModel = ChatListViewModel(application)
+        viewModel = androidx.lifecycle.ViewModelProvider(this)[ChatListViewModel::class.java]
 
         // Observe force logout event (auth error with empty chat list)
         lifecycleScope.launch {

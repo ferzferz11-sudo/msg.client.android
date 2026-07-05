@@ -704,9 +704,7 @@ object RealGrpcClient {
         val userId = currentUserId ?: ""
         val call = channel.newCall(METHOD_MARK_READ, CallOptions.DEFAULT)
         call.start(object : ClientCall.Listener<MarkReadResponseProto>() {
-            override fun onMessage(response: MarkReadResponseProto) {
-                onComp?.invoke()
-            }
+            override fun onMessage(response: MarkReadResponseProto) {}
             override fun onClose(status: Status, trailers: Metadata) {
                 if (!status.isOk) {
                     ErrorHandler.handle("$TAG.markRead", StatusRuntimeException(status))
@@ -793,6 +791,7 @@ object RealGrpcClient {
     }
     fun clearSystemNotification() { _systemNotification.value = null }
     fun setUserId(userId: String) { currentUserId = userId }
+    fun setUsername(username: String) { currentUsername = username }
     fun getUserId(): String? = currentUserId
     fun getCurrentUsername(): String? = currentUsername
 
@@ -838,10 +837,12 @@ object RealGrpcClient {
     }
 
     @Volatile private var database: AppDatabase? = null
-    private fun db() = database ?: appContext?.let {
-        val d = AppDatabase.getDatabase(it)
+    private fun db(): AppDatabase? {
+        database?.let { return it }
+        val ctx = appContext ?: return null
+        val d = AppDatabase.getDatabase(ctx)
         database = d
-        d
+        return d
     }
 
     fun loadUsers() {

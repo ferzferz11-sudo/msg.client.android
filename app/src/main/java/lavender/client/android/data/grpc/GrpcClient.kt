@@ -449,6 +449,8 @@ object GrpcClient {
 
     fun setUserId(userId: String) = realGrpcClient.setUserId(userId)
 
+    fun setUsername(username: String) = realGrpcClient.setUsername(username)
+
     fun getUserId(): String? = realGrpcClient.getUserId()
 
     fun fetchUserId(username: String, callback: (String?, Boolean) -> Unit) =

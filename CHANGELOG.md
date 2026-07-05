@@ -1,6 +1,32 @@
 # Lava Messenger — Android Changelog
 
-## [1.3.2.3] - 2026-07-05
+## [1.3.2.5] - 2026-07-05
+
+### Исправлено
+
+**Marshaller'ы — критические баги:**
+- `AuthResponseV2` — исправлен парсинг User поля: добавлено поле 4 (avatar_url), исправлены поля 5-7 (bio, status)
+- `GetPinnedMessagesRequest` — исправлены поменянные местами userId/chatId (field 1/2)
+- `GetFavoritesResponse` — исправлен парсинг v1 Message (сервер отправляет v1, клиент парсил как v2). Добавлен конвертер v1→v2
+- `GetPinnedMessagesRequest` — добавлены поля limit/offset для пагинации
+
+**Thread safety:**
+- `RealGrpcClient.currentUsername` — добавлен `setUsername()` метод, вызов из `SessionManager.updateSession()`. Ранее всегда был null
+- `markRead` callback — убран двойной вызов (onMessage + onClose)
+- `toggleMute`/`deleteChat` — callback'и обёрнуты в `viewModelScope.launch(Dispatchers.Main)` для корректного потока
+- `db()` — улучшена проверка null-before-assign
+
+**Темы:**
+- `CustomThemeProto` — добавлено поле `isDark`
+- Парсинг `outgoingTextColor`/`incomingTextColor` (поля 18-19)
+- Сериализация полей 10/18/19 в `SaveThemeRequestMarshaller`
+
+**ViewModel:**
+- `ChatListActivity` — теперь использует `ViewModelProvider` вместо ручного создания. Сохраняет состояние при повороте экрана
+
+---
+
+## [1.3.2.4] - 2026-07-05
 
 ### Добавлено
 
@@ -23,7 +49,29 @@
 **О программе:**
 - Отображение версии приложения Android в шторке "О программе"
 
+**Групповой чат из контактов:**
+- При добавлении 2+ контактов с галкой "Создать чат сразу" создаётся групповой чат (раньше создавались прямые чаты)
+- Переименована строка: `create_direct_chat_after` → `create_chat_after`
+
+**Подсказка при пустом списке:**
+- В шторке добавления участников группы: "Все ваши контакты уже добавлены в эту группу"
+
 ### Улучшено
+
+**Тулбары — единый стандарт:**
+- Все тулбары используют `toolbar_background` + `@dimen/custom_toolbar_height` + `navigationIconTint` + `titleTextColor` = `colorOnPrimary`
+- Убраны отклонения: `LogViewerActivity` (ThemeOverlay.Dark.ActionBar), `ThemePaletteActivity` (?attr/actionBarSize)
+- Добавлен `titleTextColor` в `new_chat`, `widget_chat`, `themes`, `contacts`
+
+**Аватары:**
+- Аватар в тулбаре списка чатов: 48dp → 56dp (растёт от центра)
+- Аватар в шторке профиля: 100dp → 120dp, сдвинут влево
+
+**Цвет стрелки "назад":**
+- `ContactsActivity` — убран `setSupportActionBar()`, тулбар управляется напрямую (фикс для кастомных тем)
+- `ThemesActivity` — аналогично
+- `SuperAdminActivity` — ручной tint после `setHomeAsUpIndicator()`
+- Toast при добавлении контактов: показывает количество ("Добавлено контактов: 6")
 
 **Темы:**
 - Чекбокс выбора в списке чатов адаптирован к кастомным темам (`buttonTintList` + `backgroundTintList`)
@@ -35,6 +83,9 @@
 **Навигация:**
 - Кнопка "назад" из Безопасности / Уведомлений теперь корректно возвращает на шторку "Дополнительные настройки"
 - Исправлен сброс `isNavigatingDeeper` в `setOnDismissListener` — флаг сбрасывается только в `settingsActivityLauncher` callback
+
+**Групповой чат:**
+- Добавление 2+ контактов с галкой "Создать чат" теперь создаёт группу, а не прямые чаты
 
 ---
 

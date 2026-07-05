@@ -558,10 +558,12 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
             try {
                 GrpcClient.setMutedChat(chatId, mute) { success ->
                     if (success) {
-                        allChats = allChats.map {
-                            if (it.id == chatId) it.copy(isMuted = mute) else it
+                        viewModelScope.launch(Dispatchers.Main) {
+                            allChats = allChats.map {
+                                if (it.id == chatId) it.copy(isMuted = mute) else it
+                            }
+                            buildSections(allChats)
                         }
-                        buildSections(allChats)
                     }
                 }
             } catch (e: Exception) {
@@ -592,18 +594,20 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
 
                 val username = SessionManager.session.value.username
                 GrpcClient.deleteChat(chatId, username) { success, message ->
-                    if (success) {
-                        allChats = allChats.filter { it.id != chatId }
-                        buildSections(allChats)
-                        viewModelScope.launch(Dispatchers.IO) {
-                            try {
-                                val db = lavender.client.android.data.db.AppDatabase.getDatabase(getApplication())
-                                db.chatDao().deleteChat(chatId)
-} catch (e: Exception) { ErrorHandler.handle(TAG, "Failed to delete chat from cache", e) }
+                    viewModelScope.launch(Dispatchers.Main) {
+                        if (success) {
+                            allChats = allChats.filter { it.id != chatId }
+                            buildSections(allChats)
+                            kotlinx.coroutines.withContext(Dispatchers.IO) {
+                                try {
+                                    val db = lavender.client.android.data.db.AppDatabase.getDatabase(getApplication())
+                                    db.chatDao().deleteChat(chatId)
+                                } catch (e: Exception) { ErrorHandler.handle(TAG, "Failed to delete chat from cache", e) }
+                            }
+                            onResult(null)
+                        } else {
+                            onResult(message.ifEmpty { "Failed to delete chat" })
                         }
-                        onResult(null)
-                    } else {
-                        onResult(message.ifEmpty { "Failed to delete chat" })
                     }
                 }
             } catch (e: Exception) {
