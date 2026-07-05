@@ -565,3 +565,44 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **`ThemeUi.bind()` must be called in `onCreate()`** after `setContentView()` — collects `ThemeStore.theme` StateFlow
 - **`applyThemeToViews()` in `onResume()`** — applies theme colors to views not handled by `ThemeApplier`
 - **`companyCard` added to `ThemeApplier`** — automatically themed with `surfaceColor` background
+
+## Company Position Localization (v1.3.2.2)
+
+- **Server returns English position titles** — "Owner", "Manager", etc. regardless of client locale
+- **`formatCompanyPosition()`** maps level numbers to localized names: 0→Employee, 1→Manager, 2→Top Manager, 3→Owner
+- **If positionTitle matches English name** — show only localized version (e.g., "Владелец" not "Owner (Владелец)")
+- **If positionTitle is custom** — show both: "Директор (Владелец)"
+- **Used in both ProfileActivity and EditProfileActivity** — same logic duplicated
+
+## Company Logo in Profile (v1.3.2.2)
+
+- **`ivProfileCompanyLogo` in `activity_profile.xml`** — CircleImageView next to company name
+- **Loaded via `GrpcCompanyClient.getCompany(companyId)`** — async, shows logo if `avatarUrl` is not empty
+- **Same pattern in EditProfileActivity** — logo loaded from company response
+
+## Owner Protection in Members List (v1.3.2.2)
+
+- **Owner cannot remove themselves as sole member** — `CompanyListFragment.showMemberOptions()` checks `memberCount <= 1` and `position.level == 3`
+- **Shows Toast** with `R.string.owner_cannot_remove_self` instead of options dialog
+- **If multiple members** — owner sees only "Change Position" (no "Remove")
+- **`memberCount` tracked** from `loadMembers()` response
+
+## Company Card Theme Fix (v1.3.2.2)
+
+- **`?attr/colorSurface` in XML doesn't resolve for custom themes** — must set card background programmatically
+- **Fix:** `companyInfoCard.setCardBackgroundColor(surfaceColor)` in `applyThemeToViews()`
+- **Same pattern as chat list** — `ChatAdapter` sets `cardView.setCardBackgroundColor(bgColor)` programmatically
+
+## Rename Company Dialog (v1.3.2.2)
+
+- **`btnEditCompanyName`** — ImageButton with `ic_edit`, visible only for owner
+- **Uses `StandardBottomSheet` with `dialog_edit_username` layout** — same as username change
+- **`GrpcCompanyClient.updateCompany(companyId, name=newName)`** — server call
+- **`inputLayout?.startIconDrawable = null`** — hides the person icon from username dialog
+
+## Position Localization Pattern (v1.3.2.2)
+
+- **Server returns English position titles** — "Owner", "Manager" regardless of locale
+- **`formatPosition()` / `formatCompanyPosition()`** maps level → localized name
+- **Used in:** `CompanyMemberAdapter`, `CompanyListFragment`, `ProfileActivity`, `EditProfileActivity`
+- **Logic:** if title matches English name → show only localized; if custom → show "Custom (Localized)"

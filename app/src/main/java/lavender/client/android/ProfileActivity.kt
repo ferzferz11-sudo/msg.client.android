@@ -24,7 +24,9 @@ import com.bumptech.glide.Glide
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import de.hdodenhof.circleimageview.CircleImageView
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.ProtoUtils
 import lavender.client.android.theme.ThemeStore
@@ -174,6 +176,7 @@ class ProfileActivity : AppCompatActivity() {
         val companyCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.companyCard)
         val tvProfileCompanyName = findViewById<TextView>(R.id.tvProfileCompanyName)
         val tvProfileCompanyPosition = findViewById<TextView>(R.id.tvProfileCompanyPosition)
+        val ivProfileCompanyLogo = findViewById<de.hdodenhof.circleimageview.CircleImageView>(R.id.ivProfileCompanyLogo)
 
         currentProfileAvatar = profileAvatar
         profileName.text = data.username
@@ -205,7 +208,23 @@ class ProfileActivity : AppCompatActivity() {
         if (data.companyId.isNotEmpty() && companyCard != null) {
             companyCard.isVisible = true
             tvProfileCompanyName?.text = data.companyName
-            tvProfileCompanyPosition?.text = getString(R.string.company_position, data.positionTitle, data.positionLevel)
+            tvProfileCompanyPosition?.text = formatCompanyPosition(data.positionTitle, data.positionLevel)
+            ivProfileCompanyLogo?.isVisible = false
+            lifecycleScope.launch {
+                val companyResp = withContext(Dispatchers.IO) {
+                    lavender.client.android.data.grpc.GrpcCompanyClient.getCompany(data.companyId)
+                }
+                val logoUrl = companyResp?.company?.avatarUrl
+                if (!logoUrl.isNullOrEmpty()) {
+                    runOnUiThread {
+                        ivProfileCompanyLogo?.isVisible = true
+                        Glide.with(this@ProfileActivity)
+                            .load(logoUrl)
+                            .placeholder(R.drawable.ic_default_avatar)
+                            .into(ivProfileCompanyLogo!!)
+                    }
+                }
+            }
             companyCard.setOnClickListener {
                 val intent = Intent(this, CompanyProfileActivity::class.java).apply {
                     putExtra("COMPANY_ID", data.companyId)
@@ -447,6 +466,26 @@ class ProfileActivity : AppCompatActivity() {
             if (data.participants.isNotEmpty()) {
                 participantsAdapter?.updateData(data.participants, grpcClient.users.value.toSet(), grpcClient.getAvatarCache())
             }
+        }
+    }
+
+    private fun formatCompanyPosition(positionTitle: String, positionLevel: Int): String {
+        val englishNames = mapOf(0 to "Employee", 1 to "Manager", 2 to "Top Manager", 3 to "Owner")
+        val levelName = when (positionLevel) {
+            0 -> getString(R.string.employee)
+            1 -> getString(R.string.manager)
+            2 -> getString(R.string.top_manager)
+            3 -> getString(R.string.owner)
+            else -> positionTitle
+        }
+        if (positionTitle.isEmpty()) return levelName
+        val englishName = englishNames[positionLevel]
+        return if (englishName != null && positionTitle.equals(englishName, ignoreCase = true)) {
+            levelName
+        } else if (positionTitle != levelName) {
+            "$positionTitle ($levelName)"
+        } else {
+            levelName
         }
     }
 

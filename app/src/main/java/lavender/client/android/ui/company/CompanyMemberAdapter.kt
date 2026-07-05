@@ -36,7 +36,7 @@ class CompanyMemberAdapter(
 
         fun bind(member: CompanyMemberProto) {
             tvName.text = member.username
-            tvPosition.text = member.position?.title ?: ""
+            tvPosition.text = formatPosition(member.position?.title, member.position?.level ?: 0)
 
             if (member.avatarUrl.isNotEmpty()) {
                 Glide.with(itemView.context).load(member.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(ivAvatar)
@@ -44,6 +44,27 @@ class CompanyMemberAdapter(
 
             itemView.setOnClickListener { onMemberClick(member) }
             btnMore.setOnClickListener { onMoreClick(member, it) }
+        }
+
+        private fun formatPosition(title: String?, level: Int): String {
+            val context = itemView.context
+            val englishNames = mapOf(0 to "Employee", 1 to "Manager", 2 to "Top Manager", 3 to "Owner")
+            val levelName = when (level) {
+                0 -> context.getString(R.string.employee)
+                1 -> context.getString(R.string.manager)
+                2 -> context.getString(R.string.top_manager)
+                3 -> context.getString(R.string.owner)
+                else -> title ?: ""
+            }
+            if (title.isNullOrEmpty()) return levelName
+            val englishName = englishNames[level]
+            return if (englishName != null && title.equals(englishName, ignoreCase = true)) {
+                levelName
+            } else if (title != levelName) {
+                "$title ($levelName)"
+            } else {
+                levelName
+            }
         }
     }
 

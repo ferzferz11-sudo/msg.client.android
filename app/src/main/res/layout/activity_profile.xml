@@ -113,33 +113,50 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/company"
-                        android:textSize="14sp"
-                        android:textColor="?attr/colorPrimary"
-                        android:textStyle="bold" />
+                    <de.hdodenhof.circleimageview.CircleImageView
+                        android:id="@+id/ivProfileCompanyLogo"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginEnd="12dp"
+                        android:src="@drawable/ic_default_avatar"
+                        android:visibility="gone" />
 
-                    <TextView
-                        android:id="@+id/tvProfileCompanyName"
-                        android:layout_width="match_parent"
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textSize="16sp"
-                        android:textColor="?android:attr/textColorPrimary" />
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
-                    <TextView
-                        android:id="@+id/tvProfileCompanyPosition"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:textSize="14sp"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/company"
+                            android:textSize="14sp"
+                            android:textColor="?attr/colorPrimary"
+                            android:textStyle="bold" />
 
+                        <TextView
+                            android:id="@+id/tvProfileCompanyName"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="?android:attr/textColorPrimary" />
+
+                        <TextView
+                            android:id="@+id/tvProfileCompanyPosition"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textSize="14sp"
+                            android:textColor="?android:attr/textColorSecondary" />
+
+                    </LinearLayout>
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>

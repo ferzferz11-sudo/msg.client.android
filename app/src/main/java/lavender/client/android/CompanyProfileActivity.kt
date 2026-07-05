@@ -80,6 +80,7 @@ class CompanyProfileActivity : AppCompatActivity() {
         val tvCompanyName = findViewById<TextView>(R.id.tvCompanyName)
         val tvMemberCount = findViewById<TextView>(R.id.tvMemberCount)
         val ivCompanyLogo = findViewById<CircleImageView>(R.id.ivCompanyLogo)
+        val btnEditCompanyName = findViewById<android.widget.ImageButton>(R.id.btnEditCompanyName)
         val tabLayout = findViewById<TabLayout>(R.id.tabLayout)
         val viewPager = findViewById<ViewPager2>(R.id.viewPager)
         val fabActions = findViewById<FloatingActionButton>(R.id.fabCompanyActions)
@@ -141,6 +142,12 @@ class CompanyProfileActivity : AppCompatActivity() {
                 isOwner = response.company.ownerId == currentUserId
 
                 invalidateOptionsMenu()
+
+                // Show edit button for owner
+                btnEditCompanyName.isVisible = isOwner
+                btnEditCompanyName.setOnClickListener {
+                    showRenameCompanyDialog(tvCompanyName)
+                }
 
                 // Load company logo
                 ivCompanyLogo.isVisible = true
@@ -215,13 +222,62 @@ class CompanyProfileActivity : AppCompatActivity() {
         val contentLayout = findViewById<LinearLayout>(R.id.contentLayout)
         contentLayout?.setBackgroundColor(surfaceColor)
 
+        // Company info card — same as chat list cards
+        findViewById<com.google.android.material.card.MaterialCardView>(R.id.companyInfoCard)?.setCardBackgroundColor(surfaceColor)
+
         findViewById<TextView>(R.id.tvCompanyName)?.setTextColor(textPrimary)
         findViewById<TextView>(R.id.tvMemberCount)?.setTextColor(textSecondary)
+        findViewById<android.widget.ImageButton>(R.id.btnEditCompanyName)?.imageTintList = android.content.res.ColorStateList.valueOf(primary)
 
         findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fabCompanyActions)?.apply {
             backgroundTintList = android.content.res.ColorStateList.valueOf(primary)
             imageTintList = android.content.res.ColorStateList.valueOf(onPrimary)
         }
+    }
+
+    private fun showRenameCompanyDialog(tvCompanyName: TextView) {
+        val sheet = lavender.client.android.ui.widget.StandardBottomSheet(this, R.layout.dialog_edit_username)
+        val inputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.usernameInputLayout)
+        val editNewUsername = sheet.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.editNewUsername)
+        val btnCancel = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+        val btnSave = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSave)
+
+        sheet.setTitle(getString(R.string.company))
+        inputLayout?.hint = getString(R.string.company)
+        inputLayout?.startIconDrawable = null
+        editNewUsername?.setText(tvCompanyName.text)
+        editNewUsername?.selectAll()
+        editNewUsername?.requestFocus()
+
+        btnCancel?.setOnClickListener { sheet.dismiss() }
+
+        btnSave?.setOnClickListener {
+            val newName = editNewUsername?.text.toString().trim()
+            if (newName.isEmpty() || newName == tvCompanyName.text) {
+                sheet.dismiss()
+                return@setOnClickListener
+            }
+
+            btnSave.isEnabled = false
+
+            lifecycleScope.launch {
+                val response = withContext(Dispatchers.IO) {
+                    GrpcCompanyClient.updateCompany(companyId, name = newName)
+                }
+                runOnUiThread {
+                    btnSave.isEnabled = true
+                    if (response?.success == true) {
+                        tvCompanyName.text = newName
+                        Toast.makeText(this@CompanyProfileActivity, getString(R.string.company_updated), Toast.LENGTH_SHORT).show()
+                        sheet.dismiss()
+                    } else {
+                        Toast.makeText(this@CompanyProfileActivity, getString(R.string.error_colon, "Failed"), Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+
+        sheet.show()
     }
 
     private fun uploadCompanyLogo(uri: Uri) {

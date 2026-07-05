@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcCompanyClient
+import lavender.client.android.data.session.SessionManager
 
 class CompanyListFragment : Fragment() {
 
@@ -44,6 +45,8 @@ class CompanyListFragment : Fragment() {
     private lateinit var tvEmpty: TextView
     private var companyId: String = ""
     private var type: String = ""
+    private var currentUserId: String = ""
+    private var memberCount: Int = 0
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_company_list, container, false)
@@ -53,6 +56,7 @@ class CompanyListFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         companyId = arguments?.getString(ARG_COMPANY_ID) ?: ""
         type = arguments?.getString(ARG_TYPE) ?: TYPE_MEMBERS
+        currentUserId = SessionManager.session.value.userId
 
         recyclerView = view.findViewById(R.id.recyclerView)
         progressBar = view.findViewById(R.id.progressBar)
@@ -82,7 +86,10 @@ class CompanyListFragment : Fragment() {
         }
         progressBar.visibility = View.GONE
 
-        if (response?.members.isNullOrEmpty()) {
+        val members = response?.members
+        memberCount = members?.size ?: 0
+
+        if (members.isNullOrEmpty()) {
             tvEmpty.visibility = View.VISIBLE
         } else {
             val adapter = CompanyMemberAdapter(
@@ -90,21 +97,33 @@ class CompanyListFragment : Fragment() {
                 onMoreClick = { member, view -> showMemberOptions(member, view) }
             )
             recyclerView.adapter = adapter
-            adapter.submitList(response?.members)
+            adapter.submitList(members)
         }
     }
 
     private fun showMemberOptions(member: lavender.client.android.data.proto.CompanyMemberProto, anchorView: View) {
-        val options = arrayOf(
-            getString(R.string.remove_member),
-            getString(R.string.change_position)
-        )
+        val isSelf = member.userId == currentUserId
+        val isOwnerMember = member.position?.level == 3
+
+        // Owner cannot remove themselves if they're the only member
+        if (isSelf && isOwnerMember && memberCount <= 1) {
+            Toast.makeText(context, R.string.owner_cannot_remove_self, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val options = if (isSelf && isOwnerMember) {
+            // Owner can only change position (not remove self if last member)
+            arrayOf(getString(R.string.change_position))
+        } else {
+            arrayOf(getString(R.string.remove_member), getString(R.string.change_position))
+        }
 
         AlertDialog.Builder(requireContext())
             .setItems(options) { _, which ->
-                when (which) {
-                    0 -> removeMember(member)
-                    1 -> showChangePositionDialog(member)
+                when {
+                    options.size == 1 -> showChangePositionDialog(member)
+                    which == 0 -> removeMember(member)
+                    which == 1 -> showChangePositionDialog(member)
                 }
             }
             .show()
@@ -113,7 +132,7 @@ class CompanyListFragment : Fragment() {
     private fun removeMember(member: lavender.client.android.data.proto.CompanyMemberProto) {
         AlertDialog.Builder(requireContext())
             .setTitle(R.string.remove_member)
-            .setMessage("Remove ${member.username} from company?")
+            .setMessage(getString(R.string.remove_member_confirm, member.username))
             .setPositiveButton(R.string.remove_member) { _, _ ->
                 lifecycleScope.launch {
                     val response = withContext(Dispatchers.IO) {
@@ -143,7 +162,25 @@ class CompanyListFragment : Fragment() {
                 return@launch
             }
 
-            val titles = positions.map { it.title }.toTypedArray()
+            val titles = positions.map { pos ->
+                val englishNames = mapOf(0 to "Employee", 1 to "Manager", 2 to "Top Manager", 3 to "Owner")
+                val levelName = when (pos.level) {
+                    0 -> getString(R.string.employee)
+                    1 -> getString(R.string.manager)
+                    2 -> getString(R.string.top_manager)
+                    3 -> getString(R.string.owner)
+                    else -> pos.title
+                }
+                val englishName = englishNames[pos.level]
+                if (englishName != null && pos.title.equals(englishName, ignoreCase = true)) {
+                    levelName
+                } else if (pos.title != levelName) {
+                    "${pos.title} ($levelName)"
+                } else {
+                    levelName
+                }
+            }.toTypedArray()
+
             val currentIndex = positions.indexOfFirst { it.id == member.position?.id }.coerceAtLeast(0)
 
             AlertDialog.Builder(requireContext())
@@ -211,7 +248,7 @@ class CompanyListFragment : Fragment() {
         etLevel.setText(position.level.toString())
 
         AlertDialog.Builder(requireContext())
-            .setTitle(R.string.create_position)
+            .setTitle(R.string.edit_position)
             .setView(dialogView)
             .setPositiveButton(R.string.change) { _, _ ->
                 val title = etTitle.text.toString().trim()
@@ -241,7 +278,7 @@ class CompanyListFragment : Fragment() {
     private fun deletePosition(position: lavender.client.android.data.proto.CompanyPositionProto) {
         AlertDialog.Builder(requireContext())
             .setTitle(R.string.delete_position)
-            .setMessage("Delete position '${position.title}'?")
+            .setMessage(getString(R.string.delete_position) + " \"${position.title}\"?")
             .setPositiveButton(R.string.delete_position) { _, _ ->
                 lifecycleScope.launch {
                     val response = withContext(Dispatchers.IO) {
