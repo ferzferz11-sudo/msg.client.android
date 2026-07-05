@@ -980,6 +980,7 @@
     <string name="position_level">Level</string>
     <string name="chat_access">Chat Access</string>
     <string name="create_company_chat">Create Company Chat</string>
+    <string name="chat_name_hint">Chat name</string>
     <string name="company_chat_created">Company chat created</string>
     <string name="employee">Employee</string>
     <string name="manager">Manager</string>

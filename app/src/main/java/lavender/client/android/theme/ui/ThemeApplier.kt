@@ -284,10 +284,15 @@ object ThemeApplier {
             }
         }
 
-        // Settings/Edit Profile headers
-        (activity.findViewById<View>(R.id.bioLabelText) as? TextView)?.setTextColor(customPrimary)
+        // Company settings icon
+        (activity.findViewById<View>(R.id.btnCompanyAction) as? ImageButton)?.imageTintList = ColorStateList.valueOf(customPrimary)
 
-        listOf(R.id.biometricCard, R.id.devicesCard, R.id.bioCard, R.id.avatarCard, R.id.settingsCard).forEach { id ->
+        // Settings/Edit Profile headers
+        listOf(R.id.bioLabelText, R.id.tvCompanyLabel).forEach { id ->
+            (activity.findViewById<View>(id) as? TextView)?.setTextColor(customPrimary)
+        }
+
+        listOf(R.id.biometricCard, R.id.devicesCard, R.id.bioCard, R.id.avatarCard, R.id.settingsCard, R.id.companyCard).forEach { id ->
             activity.findViewById<View>(id)?.let { view ->
                 if (view is MaterialCardView) {
                     view.setCardBackgroundColor(ColorStateList.valueOf(surfaceColor))

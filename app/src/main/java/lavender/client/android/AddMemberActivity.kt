@@ -18,6 +18,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.grpc.GrpcCompanyClient
+import lavender.client.android.data.session.SessionManager
+import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
+import lavender.client.android.theme.ui.ThemeUi
 
 class AddMemberActivity : AppCompatActivity() {
 
@@ -27,6 +31,9 @@ class AddMemberActivity : AppCompatActivity() {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_member)
+
+        val username = SessionManager.session.value.username
+        ThemeUi.bind(this, username)
 
         companyId = intent.getStringExtra("COMPANY_ID") ?: ""
         if (companyId.isEmpty()) {
@@ -66,6 +73,21 @@ class AddMemberActivity : AppCompatActivity() {
                 recyclerView.adapter = adapter
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyThemeToViews()
+    }
+
+    private fun applyThemeToViews() {
+        val theme = ThemeStore.currentTheme()
+        val surfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, android.graphics.Color.WHITE)
+        val textPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, android.graphics.Color.BLACK)
+        val textSecondary = ThemeUtils.parseSafeColor(theme.textSecondaryColor, android.graphics.Color.GRAY)
+
+        findViewById<View>(android.R.id.content)?.setBackgroundColor(surfaceColor)
+        findViewById<TextView>(R.id.tvEmpty)?.setTextColor(textSecondary)
     }
 
     private fun showSelectPositionDialog(userId: String, username: String) {

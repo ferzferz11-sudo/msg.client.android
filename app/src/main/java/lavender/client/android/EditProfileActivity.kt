@@ -55,6 +55,7 @@ class EditProfileActivity : AppCompatActivity() {
     private var currentAvatarProgressBar: ProgressBar? = null
     private var currentFullAvatarUrl: String = ""
     private var initialBio: String = ""
+    private var currentCompanyId: String = ""
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -62,6 +63,12 @@ class EditProfileActivity : AppCompatActivity() {
                 selectedAvatarUri = uri
                 uploadAvatarToServer(uri)
             }
+        }
+    }
+
+    private val companyLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            reloadProfile()
         }
     }
 
@@ -107,7 +114,9 @@ class EditProfileActivity : AppCompatActivity() {
         val companyCard = findViewById<android.view.View>(R.id.companyCard)
         val tvCompanyName = findViewById<android.widget.TextView>(R.id.tvCompanyName)
         val tvCompanyPosition = findViewById<android.widget.TextView>(R.id.tvCompanyPosition)
-        val btnCompanyAction = findViewById<Button>(R.id.btnCompanyAction)
+        val btnCompanyAction = findViewById<android.widget.ImageButton>(R.id.btnCompanyAction)
+        val ivCompanyLogo = findViewById<de.hdodenhof.circleimageview.CircleImageView>(R.id.ivCompanyLogo)
+        val tvCompanyLabel = findViewById<android.widget.TextView>(R.id.tvCompanyLabel)
 
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -132,23 +141,46 @@ class EditProfileActivity : AppCompatActivity() {
 
                     // Company section
                     if (profile.companyId.isNotEmpty()) {
+                        currentCompanyId = profile.companyId
                         companyCard.isVisible = true
                         tvCompanyName.text = profile.companyName
-                        tvCompanyPosition.text = getString(R.string.company_position, profile.positionTitle, profile.positionLevel)
-                        btnCompanyAction.text = getString(R.string.my_company)
+                        tvCompanyPosition.text = formatCompanyPosition(profile.positionTitle, profile.positionLevel)
+                        ivCompanyLogo.isVisible = false
                         btnCompanyAction.setOnClickListener {
                             val intent = android.content.Intent(this@EditProfileActivity, CompanyProfileActivity::class.java).apply {
                                 putExtra("COMPANY_ID", profile.companyId)
                             }
-                            startActivity(intent)
+                            companyLauncher.launch(intent)
+                        }
+                        companyCard.setOnClickListener {
+                            val intent = android.content.Intent(this@EditProfileActivity, CompanyProfileActivity::class.java).apply {
+                                putExtra("COMPANY_ID", profile.companyId)
+                            }
+                            companyLauncher.launch(intent)
+                        }
+                        // Load company logo
+                        lifecycleScope.launch {
+                            val companyResp = withContext(Dispatchers.IO) {
+                                lavender.client.android.data.grpc.GrpcCompanyClient.getCompany(profile.companyId)
+                            }
+                            val logoUrl = companyResp?.company?.avatarUrl
+                            if (!logoUrl.isNullOrEmpty()) {
+                                runOnUiThread {
+                                    ivCompanyLogo.isVisible = true
+                                    Glide.with(this@EditProfileActivity)
+                                        .load(logoUrl)
+                                        .placeholder(R.drawable.ic_default_avatar)
+                                        .into(ivCompanyLogo)
+                                }
+                            }
                         }
                         // Check for multi-company
                         lifecycleScope.launch {
                             val companiesResponse = lavender.client.android.data.grpc.GrpcCompanyClient.getUserCompanies()
                             if (companiesResponse != null && companiesResponse.companies.size > 1) {
                                 runOnUiThread {
-                                    tvCompanyPosition.text = getString(R.string.company_position, profile.positionTitle, profile.positionLevel) +
-                                        " (${companiesResponse.companies.size} ${getString(R.string.company_badge).lowercase()}s)"
+                                    tvCompanyPosition.text = formatCompanyPosition(profile.positionTitle, profile.positionLevel) +
+                                        " (${companiesResponse.companies.size} ${getString(R.string.company_badge).lowercase()})"
                                     // Add long-press to switch company
                                     btnCompanyAction.setOnLongClickListener {
                                         showCompanySwitcher(companiesResponse.companies)
@@ -158,11 +190,15 @@ class EditProfileActivity : AppCompatActivity() {
                             }
                         }
                     } else {
+                        currentCompanyId = ""
                         companyCard.isVisible = true
-                        tvCompanyName.text = getString(R.string.no_company)
+                        ivCompanyLogo.isVisible = false
+                        tvCompanyName.text = getString(R.string.create_company)
                         tvCompanyPosition.isVisible = false
-                        btnCompanyAction.text = getString(R.string.create_company)
                         btnCompanyAction.setOnClickListener {
+                            showCreateCompanyDialog()
+                        }
+                        companyCard.setOnClickListener {
                             showCreateCompanyDialog()
                         }
                     }
@@ -570,11 +606,14 @@ class EditProfileActivity : AppCompatActivity() {
 
     private fun showCreateCompanyDialog() {
         val sheet = StandardBottomSheet(this, R.layout.dialog_edit_username)
+        val inputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.usernameInputLayout)
         val editNewUsername = sheet.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.editNewUsername)
         val btnCancel = sheet.findViewById<MaterialButton>(R.id.btnCancel)
         val btnSave = sheet.findViewById<MaterialButton>(R.id.btnSave)
 
         sheet.setTitle(getString(R.string.create_company))
+        inputLayout?.hint = getString(R.string.create_company_name_hint)
+        inputLayout?.startIconDrawable = null
         editNewUsername?.hint = getString(R.string.create_company_name_hint)
         editNewUsername?.text?.clear()
         editNewUsername?.requestFocus()
@@ -596,13 +635,15 @@ class EditProfileActivity : AppCompatActivity() {
                     btnSave.isEnabled = true
                     if (response?.success == true) {
                         Toast.makeText(this@EditProfileActivity, getString(R.string.company_created), Toast.LENGTH_SHORT).show()
-                        // Auto-set as primary company
+                        val newCompanyId = response.company?.id ?: ""
                         lifecycleScope.launch {
-                            lavender.client.android.data.grpc.GrpcCompanyClient.setPrimaryCompany(response.company?.id ?: "")
+                            lavender.client.android.data.grpc.GrpcCompanyClient.setPrimaryCompany(newCompanyId)
                         }
                         sheet.dismiss()
-                        setResult(RESULT_OK)
-                        finish()
+                        val intent = android.content.Intent(this@EditProfileActivity, CompanyProfileActivity::class.java).apply {
+                            putExtra("COMPANY_ID", newCompanyId)
+                        }
+                        companyLauncher.launch(intent)
                     } else {
                         Toast.makeText(this@EditProfileActivity, getString(R.string.error_colon, "Failed to create company"), Toast.LENGTH_LONG).show()
                     }
@@ -611,6 +652,79 @@ class EditProfileActivity : AppCompatActivity() {
         }
 
         sheet.show()
+    }
+
+    private fun formatCompanyPosition(positionTitle: String, positionLevel: Int): String {
+        val englishNames = mapOf(
+            0 to "Employee",
+            1 to "Manager",
+            2 to "Top Manager",
+            3 to "Owner"
+        )
+        val levelName = when (positionLevel) {
+            0 -> getString(R.string.employee)
+            1 -> getString(R.string.manager)
+            2 -> getString(R.string.top_manager)
+            3 -> getString(R.string.owner)
+            else -> positionTitle
+        }
+        if (positionTitle.isEmpty()) return levelName
+        val englishName = englishNames[positionLevel]
+        return if (englishName != null && positionTitle.equals(englishName, ignoreCase = true)) {
+            levelName
+        } else if (positionTitle != levelName) {
+            "$positionTitle ($levelName)"
+        } else {
+            levelName
+        }
+    }
+
+    private fun reloadProfile() {
+        lifecycleScope.launch {
+            val profile = lavender.client.android.data.grpc.ProfileClient.getProfile(this@EditProfileActivity)
+            runOnUiThread {
+                if (profile != null) {
+                    currentCompanyId = profile.companyId
+                    val companyCard = findViewById<android.view.View>(R.id.companyCard)
+                    val tvCompanyName = findViewById<android.widget.TextView>(R.id.tvCompanyName)
+                    val tvCompanyPosition = findViewById<android.widget.TextView>(R.id.tvCompanyPosition)
+                    val ivCompanyLogo = findViewById<de.hdodenhof.circleimageview.CircleImageView>(R.id.ivCompanyLogo)
+
+                    if (profile.companyId.isNotEmpty()) {
+                        companyCard.isVisible = true
+                        tvCompanyName.text = profile.companyName
+                        tvCompanyPosition.isVisible = true
+                        tvCompanyPosition.text = formatCompanyPosition(profile.positionTitle, profile.positionLevel)
+                        lifecycleScope.launch {
+                            val companyResp = withContext(Dispatchers.IO) {
+                                lavender.client.android.data.grpc.GrpcCompanyClient.getCompany(profile.companyId)
+                            }
+                            val logoUrl = companyResp?.company?.avatarUrl
+                            runOnUiThread {
+                                if (!logoUrl.isNullOrEmpty()) {
+                                    ivCompanyLogo.isVisible = true
+                                    Glide.with(this@EditProfileActivity)
+                                        .load(logoUrl)
+                                        .placeholder(R.drawable.ic_default_avatar)
+                                        .into(ivCompanyLogo)
+                                } else {
+                                    ivCompanyLogo.isVisible = false
+                                }
+                            }
+                        }
+                    } else {
+                        currentCompanyId = ""
+                        companyCard.isVisible = true
+                        ivCompanyLogo.isVisible = false
+                        tvCompanyName.text = getString(R.string.create_company)
+                        tvCompanyPosition.isVisible = false
+                        companyCard.setOnClickListener {
+                            showCreateCompanyDialog()
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun showCompanySwitcher(companies: List<lavender.client.android.data.proto.CompanyCompanyMemberProto>) {

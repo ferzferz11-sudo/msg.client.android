@@ -545,3 +545,23 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **Server sends hardcoded "Image" / "Voice message"** — stored in `chats.last_message_text` column. Client must translate for non-English locales
 - **Translation in 3 places** — ChatListViewModel (real-time), ChatAdapter (display), SuperAdminAdapter (admin panel)
 - **Content hash uses userId (UUID)** — not username, to avoid hash mismatch when allUsers is empty
+
+## Missing Layout ID Fatal (v1.3.2.1)
+
+- **`findViewById` returns null when view ID doesn't exist in layout** — even if the ID is defined in another layout file (R.id exists in generated R class). Kotlin treats the return as platform type `T!`, so `.setOnClickListener` compiles fine but throws NPE at runtime
+- **`btnDeleteProfile` in `activity_edit_profile.xml`** — button had no `android:id`, code called `findViewById<Button>(R.id.btnDeleteProfile)` → null → NPE on `setOnClickListener`
+- **Always verify:** every `findViewById` call must match a view in the CURRENT layout, not just any layout in the project
+
+## Company Logo Upload (v1.3.2.1)
+
+- **`CompanyProto.avatarUrl`** — company logo stored as `avatarUrl` field in `CompanyProto`
+- **`UpdateCompanyRequestProto`** — field 3 = `avatarUrl`, sent via `GrpcCompanyClient.updateCompany()`
+- **Upload flow:** HTTP `/upload-avatar` → get URL → `updateCompany(companyId, avatarUrl=url)`
+- **Display:** `Glide.with().load(logoUrl).placeholder(R.drawable.ic_default_avatar).into(ivCompanyLogo)`
+- **Owner-only:** logo change button only visible/functional for company owner
+
+## CompanyProfileActivity Theme (v1.3.2.1)
+
+- **`ThemeUi.bind()` must be called in `onCreate()`** after `setContentView()` — collects `ThemeStore.theme` StateFlow
+- **`applyThemeToViews()` in `onResume()`** — applies theme colors to views not handled by `ThemeApplier`
+- **`companyCard` added to `ThemeApplier`** — automatically themed with `surfaceColor` background

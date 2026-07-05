@@ -979,6 +979,7 @@
     <string name="position_level">Уровень</string>
     <string name="chat_access">Доступ к чатам</string>
     <string name="create_company_chat">Создать корпоративный чат</string>
+    <string name="chat_name_hint">Название чата</string>
     <string name="company_chat_created">Корпоративный чат создан</string>
     <string name="employee">Сотрудник</string>
     <string name="manager">Менеджер</string>

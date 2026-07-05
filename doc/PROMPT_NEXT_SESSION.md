@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.2.0 | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-04
+**Версия:** v1.3.2.1 | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-04
 
 ---
 
@@ -47,6 +47,32 @@
 5. v2 server only — никаких v1 fallbacks
 6. Перед коммитом: `./gradlew assembleDebug`
 7. НЕ bump'ать версию — bump делает только пользователь
+
+---
+
+## v1.3.2.1 — Company System Fixes + Logo
+
+### Исправлено
+
+- **Fatal crash** в EditProfileActivity — кнопка "Удалить профиль" не имела `android:id` → NPE
+- **Диалог создания компании** — подсказка была от редактирования username, исправлена на "Название компании"
+- **Навигация после создания** — теперь открывает "Моя компания" вместо возврата на главную
+
+### Улучшено
+
+- **CompanyProfileActivity** — адаптация к кастомным темам (ThemeUi.bind + applyThemeToViews)
+- **Логотип компании** — загрузка в "Моя компания" (клик → галерея), отображение в карточке в профиле
+- **companyCard** добавлен в ThemeApplier для автоматической адаптации
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `activity_edit_profile.xml` | +btnDeleteProfile id, companyCard с логотипом |
+| `activity_company_profile.xml` | +ivCompanyLogo, адаптация к темам |
+| `EditProfileActivity.kt` | Исправлен диалог создания, загрузка логотипа, навигация |
+| `CompanyProfileActivity.kt` | ThemeUi, applyThemeToViews, загрузка логотипа |
+| `ThemeApplier.kt` | +companyCard в список карточек |
 
 ---
 
@@ -122,7 +148,6 @@ GetUserCompanies, SetPrimaryCompany
 
 ## Backlog
 
-- [ ] Company avatar upload
 - [ ] Invite code for JoinCompany
 - [ ] Company chat notifications
 - [ ] Company settings (edit name, delete)
