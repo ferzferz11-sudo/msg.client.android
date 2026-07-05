@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.2.5 | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-05
+**Версия:** v1.3.2.5 (выпущена) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-05
 
 ---
 
@@ -229,8 +229,19 @@ GetUserCompanies, SetPrimaryCompany
 
 ## Backlog
 
+**Company:**
 - [ ] Invite code for JoinCompany
 - [ ] Company chat notifications
 - [ ] Company settings (edit name, delete)
 - [ ] Push notifications for company events
 - [ ] Per-company position cache (for non-primary companies in multi-company)
+
+**Optimization (medium):**
+- [ ] `ChatAdapter.notifyDataSetChanged()` → `notifyItemChanged()` для updateOnlineUsers/updateAllUsers (сейчас полный rebind при каждом обновлении онлинов)
+- [ ] `deletedMessageHashes` — добавить LRU cap (10000) для предотвращения неограниченного роста в долгих сессиях
+- [ ] `readBytes()` в ChatInputDelegate — проверять размер файла через ContentResolver.query() перед загрузкой в память (OOM риск на устройствах с 2GB RAM)
+
+**Cleanup (low):**
+- [ ] `GrpcClient.kt` — unused `context` параметр в facade методах (pinChat, unpinChat, etc.)
+- [ ] `GrpcClient.kt` — redundant CoroutineScope (life time = app, same as RealGrpcClient.scope)
+- [ ] `ChatListActivity` — два OnScrollListener на одном RecyclerView (объединить)

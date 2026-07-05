@@ -622,3 +622,53 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **Fix:** `if (createChat) { if (selected.size == 1) createDirectChat else createGroupChat }`
 - **String key renamed:** `create_direct_chat_after` → `create_chat_after` (EN/RU)
 - **Empty participant list in group:** `showAddParticipantSheet()` filters out existing participants + contacts not in user's contact list. When result is empty, show `setEmptyState(true, getString(R.string.all_contacts_already_in_group))`
+
+## AuthResponseV2 User Field Mapping (v1.3.2.5)
+
+- **Server User proto fields:** 1=id, 2=username, 3=email, 4=avatar_url, 5=bio, 6=status, 7=created_at(Timestamp), 8=last_seen_at(Timestamp)
+- **Client marshaller was missing field 4** — avatarUrl parsed from field 5 (bio), bio from field 6 (status), status from field 7 (created_at as String — type mismatch!)
+- **Fix:** Added field 4 → avatarUrl, shifted 5→bio, 6→status, removed field 7/8 parsing (Timestamp not needed in auth response)
+
+## GetPinnedMessagesRequest Swapped Fields (v1.3.2.5)
+
+- **Server proto:** field 1=user_id, field 2=chat_id
+- **Client marshaller had them reversed:** field 1=chatId, field 2=userId
+- **Fix:** Swapped to match server: field 1=userId, field 2=chatId
+- **Added limit/offset:** fields 3/4 added to data class and marshaller
+
+## GetFavoritesResponse v1-v2 Type Mismatch (v1.3.2.5)
+
+- **Server proto:** `repeated Message messages = 1;` — uses v1 `Message` type
+- **Client was parsing as `MessageV2Proto`** — completely different field numbers (v1: user=2, text=3; v2: roomId=2, senderId=3, text=4)
+- **Fix:** Parse as `MessageProto` (v1), then convert via `v1ToV2()` helper
+- **v1→v2 mapping:** user→senderId, imageUrl+voiceUrl+duration→media(MessageMediaProto), reactions list→reactions JSON bytes
+
+## RealGrpcClient.currentUsername Never Assigned (v1.3.2.5)
+
+- **`currentUsername` was declared but never set** — `setUserId()` existed but no `setUsername()`
+- **Impact:** All operations using `getUsername = { currentUsername }` callback received null: typing signals, call auto-start, markRead, FORCE_DISCONNECT matching
+- **Fix:** Added `setUsername()` to RealGrpcClient + GrpcClient facade. `SessionManager.updateSession()` now calls `GrpcClient.setUsername(it)` alongside `setUserId()`
+
+## markRead Double Callback (v1.3.2.5)
+
+- **gRPC unary call:** `onMessage` fires first, then `onClose` always fires after
+- **Client called `onComp?.invoke()` in both** — callback executed twice
+- **Fix:** Removed `onComp?.invoke()` from `onMessage`, kept only in `onClose`
+
+## ChatListViewModel Thread Safety (v1.3.2.5)
+
+- **gRPC callbacks run on IO threads** — `toggleMute` and `deleteChat` callbacks mutated `allChats` (a plain `var`) from gRPC thread
+- **Fix:** Wrapped callback bodies in `viewModelScope.launch(Dispatchers.Main)` for all gRPC callbacks that mutate shared state
+
+## ChatAdapter notifyDataSetChanged (not blocking, medium priority)
+
+- **5 places use `notifyDataSetChanged()`:** setSelectionMode, toggleSelection, clearSelection, updateOnlineUsers, updateAllUsers
+- **Main data path correctly uses DiffUtil** — `setSections()` with `DiffUtil.calculateDiff()`
+- **updateOnlineUsers/updateAllUsers** called on every presence change (60s + real-time) — full rebind of all visible items
+- **Fix (next session):** Use `notifyItemChanged()` for affected items only
+
+## deletedMessageHashes Unbounded Growth (not blocking, low priority)
+
+- **ConcurrentHashMap.newKeySet()** grows with every deleted message, loaded from SharedPreferences on startup
+- **Growth rate:** human-limited (~10-50 deletions per day, ~40 bytes each)
+- **Fix (next session):** Add LRU cap at 10000 entries

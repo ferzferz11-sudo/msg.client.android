@@ -9,6 +9,7 @@ import android.media.RingtoneManager
 import android.net.Uri
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.RemoteInput
 import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -161,6 +162,15 @@ class LavenderMessagingService : FirebaseMessagingService() {
         val channelId = "lavender_messages_v2"
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
+        // Enable notification channel to allow direct reply
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val existingChannel = notificationManager.getNotificationChannel(channelId)
+            if (existingChannel != null && !existingChannel.importance.equals(NotificationManager.IMPORTANCE_HIGH)) {
+                existingChannel.importance = NotificationManager.IMPORTANCE_HIGH
+                notificationManager.createNotificationChannel(existingChannel)
+            }
+        }
+
         // Delete old channel (created with wrong importance, can't be changed)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             notificationManager.getNotificationChannel("lavender_messages")?.let {
@@ -257,6 +267,28 @@ class LavenderMessagingService : FirebaseMessagingService() {
         val extras = android.os.Bundle()
         extras.putString("room_id", roomId)
         notificationBuilder.addExtras(extras)
+
+        // Reply action (inline reply from notification)
+        val replyIntent = Intent(this, NotificationReplyReceiver::class.java).apply {
+            putExtra(NotificationReplyReceiver.EXTRA_ROOM_ID, roomId)
+            putExtra("room_id", roomId)
+        }
+        val replyPendingIntent = PendingIntent.getBroadcast(
+            this,
+            roomId.hashCode() + 10000,
+            replyIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+        )
+        val remoteInput = RemoteInput.Builder(NotificationReplyReceiver.REPLY_KEY)
+            .setLabel(getString(R.string.reply))
+            .build()
+        notificationBuilder.addAction(
+            NotificationCompat.Action.Builder(
+                R.drawable.send_24,
+                getString(R.string.reply),
+                replyPendingIntent
+            ).addRemoteInput(remoteInput).build()
+        )
 
         // Применяем стиль (если выбран messaging)
         val style = prefs.getString("notification_style", "standard")

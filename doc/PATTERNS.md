@@ -1087,3 +1087,53 @@ String resources:
   ├── chat_preview_image: "Image" / "Изображение"
   └── chat_preview_voice: "Voice message" / "Голосовое сообщение"
 ```
+
+---
+
+## v1.3.2.5
+
+### gRPC Callback Thread Safety Pattern (v1.3.2.5)
+```
+gRPC callbacks run on IO threads, NOT Main thread:
+  ├── toggleMute callback → viewModelScope.launch(Dispatchers.Main) { mutate allChats }
+  ├── deleteChat callback → viewModelScope.launch(Dispatchers.Main) { mutate allChats }
+  └── Any callback that mutates UI state → wrap in Dispatchers.Main
+
+Pattern:
+  GrpcClient.someMethod(arg) { success ->
+      viewModelScope.launch(Dispatchers.Main) {
+          if (success) { /* mutate state, update UI */ }
+      }
+  }
+```
+
+### AuthResponseV2 User Proto Mapping (v1.3.2.5)
+```
+Server User proto fields:
+  1=id, 2=username, 3=email, 4=avatar_url, 5=bio, 6=status
+  7=created_at(Timestamp), 8=last_seen_at(Timestamp)
+
+Client marshaller: field 4→avatarUrl, 5→bio, 6→status
+  — Fields 7-8 NOT parsed (Timestamp not needed in auth response)
+  — Fields 1-3: id, username, email (correct)
+```
+
+### Favorites v1-v2 Conversion Pattern (v1.3.2.5)
+```
+GetFavoritesResponse: server sends v1 Message, client needs v2 MessageV2Proto
+  — Parse with MessageProtoMarshaller (v1)
+  — Convert via v1ToV2() helper:
+    ├── user → senderId
+    ├── imageUrl + voiceUrl + duration → media: MessageMediaProto
+    ├── reactions: List<ReactionProto> → reactions: ByteArray (JSON)
+    ├── repliedTo* → reply: MessageReplyProto
+    └── isE2Ee/e2EePayload → isE2EE/e2eePayload (naming only)
+```
+
+### RealGrpcClient.setUsername Pattern (v1.3.2.5)
+```
+currentUsername MUST be set after login:
+  ├── SessionManager.updateSession() → GrpcClient.setUsername(it)
+  ├── Used by: typing signals, call auto-start, markRead, FORCE_DISCONNECT
+  └── Without it, all getUsername = { currentUsername } callbacks return null
+```
