@@ -236,6 +236,9 @@ class ProfileActivity : AppCompatActivity() {
                     runOnUiThread {
                         sheet.setLoading(false)
                         userAdapter.setUsers(filtered)
+                        if (filtered.isEmpty()) {
+                            sheet.setEmptyState(true, getString(R.string.all_contacts_already_in_group))
+                        }
                     }
                 }
             }

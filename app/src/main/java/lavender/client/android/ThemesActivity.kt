@@ -54,11 +54,8 @@ class ThemesActivity : AppCompatActivity() {
         activeThemeId = currentThemeId
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        supportActionBar?.apply {
-            title = ""
-            setDisplayHomeAsUpEnabled(true)
-        }
+        toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
+        toolbar.navigationIcon?.setTint(getColorOnPrimary())
         
         val actionApply = findViewById<android.widget.ImageView>(R.id.actionApply)
         val actionEdit = findViewById<android.widget.ImageView>(R.id.actionEdit)
@@ -92,10 +89,10 @@ class ThemesActivity : AppCompatActivity() {
                 
                 if (hasSelection) {
                     toolbarTitle.text = getString(R.string.selected_count, count)
-                    supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
+                    setBackIcon(toolbar, true)
                 } else {
                     toolbarTitle.text = getString(R.string.themes)
-                    supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_back_arrow)
+                    setBackIcon(toolbar, false)
                 }
             },
             currentThemeId = currentThemeId
@@ -270,6 +267,18 @@ class ThemesActivity : AppCompatActivity() {
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    private fun getColorOnPrimary(): Int {
+        val theme = lavender.client.android.theme.ThemeStore.currentTheme()
+        return lavender.client.android.theme.ThemeUtils.parseSafeColor(theme.onPrimaryColor, android.graphics.Color.WHITE)
+    }
+
+    private fun setBackIcon(toolbar: com.google.android.material.appbar.MaterialToolbar, isClose: Boolean) {
+        val iconRes = if (isClose) R.drawable.ic_close else R.drawable.ic_back_arrow
+        toolbar.navigationIcon = androidx.core.content.ContextCompat.getDrawable(this, iconRes)?.apply {
+            setTint(getColorOnPrimary())
+        }
     }
 
     private fun openThemePaletteForNewTheme() {

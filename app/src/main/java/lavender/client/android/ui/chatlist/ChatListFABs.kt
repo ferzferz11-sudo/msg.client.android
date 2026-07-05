@@ -83,7 +83,7 @@ internal fun showAddContactDialog(activity: ChatListActivity) {
         .setActionButtonText(activity.getString(R.string.add))
         .setExtraInputVisible(false)
         .setLoading(true)
-        .setCreateChatCheckboxVisible(true, activity.getString(R.string.create_direct_chat_after))
+        .setCreateChatCheckboxVisible(true, activity.getString(R.string.create_chat_after))
 
     val currentContacts = mutableSetOf<String>()
 

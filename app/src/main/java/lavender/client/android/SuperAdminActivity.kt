@@ -83,6 +83,7 @@ class SuperAdminActivity : AppCompatActivity() {
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = getString(R.string.super_admin)
+        toolbar.navigationIcon?.setTint(getColorOnPrimary())
         toolbar.setNavigationOnClickListener { finish() }
 
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { view, insets ->
@@ -321,6 +322,11 @@ class SuperAdminActivity : AppCompatActivity() {
         }
     }
 
+    private fun getColorOnPrimary(): Int {
+        val theme = ThemeStore.currentTheme()
+        return lavender.client.android.theme.ThemeUtils.parseSafeColor(theme.onPrimaryColor, android.graphics.Color.WHITE)
+    }
+
     @SuppressLint("SetTextI18n")
     private fun updateUI(users: List<UserInfoProto>, chats: List<ChatInfo>) {
         val emptyStateText = findViewById<TextView>(R.id.emptyStateText)
@@ -335,6 +341,7 @@ class SuperAdminActivity : AppCompatActivity() {
             supportActionBar?.title = getString(R.string.selected_count, if (currentMode == Mode.USERS) selectedUsernames.size else selectedChatIds.size)
             supportActionBar?.setDisplayHomeAsUpEnabled(true)
             supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
+            findViewById<MaterialToolbar>(R.id.toolbar).navigationIcon?.setTint(getColorOnPrimary())
         } else {
             supportActionBar?.title = getString(R.string.super_admin)
             supportActionBar?.setHomeAsUpIndicator(null)
@@ -373,6 +380,7 @@ class SuperAdminActivity : AppCompatActivity() {
             supportActionBar?.title = getString(R.string.selected_count, if (currentMode == Mode.USERS) selectedUsernames.size else selectedChatIds.size)
             supportActionBar?.setDisplayHomeAsUpEnabled(true)
             supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
+            findViewById<MaterialToolbar>(R.id.toolbar).navigationIcon?.setTint(getColorOnPrimary())
         } else {
             supportActionBar?.title = getString(R.string.super_admin)
             supportActionBar?.setHomeAsUpIndicator(null)

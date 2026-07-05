@@ -19,8 +19,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.databinding.ActivityContactsBinding
-import lavender.client.android.theme.ThemeStore
-import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.widget.SearchableListBottomSheet
 import lavender.client.android.ui.adapter.UserAdapter
@@ -68,11 +66,8 @@ class ContactsActivity : AppCompatActivity() {
             insets
         }
 
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.apply {
-            title = ""
-            setDisplayHomeAsUpEnabled(true)
-        }
+        binding.toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
+        binding.toolbar.navigationIcon?.setTint(getColorOnPrimary())
         
         binding.toolbar.setNavigationOnClickListener {
             if (binding.searchCard.isVisible) {
@@ -114,16 +109,17 @@ class ContactsActivity : AppCompatActivity() {
     }
 
     private fun updateToolbarAvatar() {
-        val avatarCache = grpcClient.getAvatarCache()
-        val myAvatarUrl = avatarCache[username]
-        val currentTheme = ThemeStore.currentTheme()
-        
-        binding.toolbarUserAvatar.isVisible = true
-        if (!myAvatarUrl.isNullOrEmpty()) {
-            com.bumptech.glide.Glide.with(this).load(myAvatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(binding.toolbarUserAvatar)
-            binding.toolbarUserAvatar.clearColorFilter()
-        } else {
-            ThemeUtils.applyDefaultAvatar(binding.toolbarUserAvatar, currentTheme)
+    }
+
+    private fun getColorOnPrimary(): Int {
+        val theme = lavender.client.android.theme.ThemeStore.currentTheme()
+        return lavender.client.android.theme.ThemeUtils.parseSafeColor(theme.onPrimaryColor, android.graphics.Color.WHITE)
+    }
+
+    private fun setBackIcon(isClose: Boolean) {
+        val iconRes = if (isClose) R.drawable.ic_close else R.drawable.ic_back_arrow
+        binding.toolbar.navigationIcon = androidx.core.content.ContextCompat.getDrawable(this, iconRes)?.apply {
+            setTint(getColorOnPrimary())
         }
     }
 
@@ -132,10 +128,9 @@ class ContactsActivity : AppCompatActivity() {
         binding.searchEditText.requestFocus()
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.showSoftInput(binding.searchEditText, 0)
-        supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
+        setBackIcon(true)
         
         binding.actionSearch.isVisible = false
-        binding.toolbarUserAvatar.isVisible = false
     }
 
     private fun hideSearchBar() {
@@ -146,9 +141,8 @@ class ContactsActivity : AppCompatActivity() {
         imm.hideSoftInputFromWindow(binding.searchEditText.windowToken, 0)
         
         val hasSelection = adapter.getSelectedUsers().isNotEmpty()
-        supportActionBar?.setHomeAsUpIndicator(if (hasSelection) R.drawable.ic_close else R.drawable.ic_back_arrow)
+        setBackIcon(hasSelection)
         binding.actionSearch.isVisible = !hasSelection
-        binding.toolbarUserAvatar.isVisible = !hasSelection
     }
 
     override fun onResume() {
@@ -171,12 +165,11 @@ class ContactsActivity : AppCompatActivity() {
             onSelectionChanged = { count ->
                 val hasSelection = count > 0
                 binding.toolbarTitle.text = if (hasSelection) getString(R.string.selected_count, count) else getString(R.string.contacts)
-                supportActionBar?.setHomeAsUpIndicator(if (hasSelection || binding.searchCard.isVisible) R.drawable.ic_close else R.drawable.ic_back_arrow)
+                setBackIcon(hasSelection || binding.searchCard.isVisible)
                 
                 binding.actionCreateChat.isVisible = hasSelection
                 binding.actionDelete.isVisible = hasSelection
                 binding.actionSearch.isVisible = !hasSelection && !binding.searchCard.isVisible
-                binding.toolbarUserAvatar.isVisible = !hasSelection && !binding.searchCard.isVisible
             },
             avatarCache = grpcClient.getAvatarCache(),
             onlineUsers = grpcClient.users.value
@@ -237,7 +230,7 @@ class ContactsActivity : AppCompatActivity() {
             .setActionButtonText(getString(R.string.add))
             .setExtraInputVisible(false)
             .setLoading(true)
-            .setCreateChatCheckboxVisible(true, getString(R.string.create_direct_chat_after))
+            .setCreateChatCheckboxVisible(true, getString(R.string.create_chat_after))
 
         val userAdapter = UserAdapter(
             lifecycleScope,
@@ -282,28 +275,32 @@ class ContactsActivity : AppCompatActivity() {
                         completed++
                         if (completed == total) {
                             runOnUiThread {
-                                Toast.makeText(this, R.string.contact_added, Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this, getString(R.string.contacts_added, selected.size), Toast.LENGTH_SHORT).show()
                                 sheet.dismiss()
-                                if (createChat && selected.size == 1) {
-                                    try {
-                                        startActivity(Intent(this, SplashLoadingActivity::class.java))
-                                    } catch (_: Exception) {}
-                                    val targetUser = selected.first()
-                                    grpcClient.createDirectChat(username, targetUser) { chatId ->
-                                        runOnUiThread {
-                                            SplashLoadingActivity.finishIfShowing()
-                                            if (chatId != null && chatId.isNotEmpty()) {
-                                                Toast.makeText(this, getString(R.string.chat_created_with, targetUser), Toast.LENGTH_SHORT).show()
-                                                val intent = Intent(this, NewChatActivity::class.java).apply {
-                                                    putExtra("USERNAME", username)
-                                                    putExtra("ROOM_ID", chatId)
+                                if (createChat) {
+                                    if (selected.size == 1) {
+                                        try {
+                                            startActivity(Intent(this, SplashLoadingActivity::class.java))
+                                        } catch (_: Exception) {}
+                                        val targetUser = selected.first()
+                                        grpcClient.createDirectChat(username, targetUser) { chatId ->
+                                            runOnUiThread {
+                                                SplashLoadingActivity.finishIfShowing()
+                                                if (chatId != null && chatId.isNotEmpty()) {
+                                                    Toast.makeText(this, getString(R.string.chat_created_with, targetUser), Toast.LENGTH_SHORT).show()
+                                                    val intent = Intent(this, NewChatActivity::class.java).apply {
+                                                        putExtra("USERNAME", username)
+                                                        putExtra("ROOM_ID", chatId)
+                                                    }
+                                                    startActivity(intent)
+                                                } else {
+                                                    Toast.makeText(this, R.string.failed_to_create_chat, Toast.LENGTH_SHORT).show()
+                                                    loadContacts()
                                                 }
-                                                startActivity(intent)
-                                            } else {
-                                                Toast.makeText(this, R.string.failed_to_create_chat, Toast.LENGTH_SHORT).show()
-                                                loadContacts()
                                             }
                                         }
+                                    } else {
+                                        createGroupChat(getString(R.string.default_group_name), selected + username)
                                     }
                                 } else {
                                     loadContacts()

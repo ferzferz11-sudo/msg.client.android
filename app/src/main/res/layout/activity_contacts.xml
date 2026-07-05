@@ -22,6 +22,7 @@
         android:elevation="0dp"
         app:navigationIcon="@drawable/ic_back_arrow"
         app:navigationIconTint="?attr/colorOnPrimary"
+        app:titleTextColor="?attr/colorOnPrimary"
         app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout
@@ -29,14 +30,6 @@
             android:layout_height="match_parent"
             android:orientation="horizontal"
             android:gravity="center_vertical">
-
-            <de.hdodenhof.circleimageview.CircleImageView
-                android:id="@+id/toolbarUserAvatar"
-                android:layout_width="42dp"
-                android:layout_height="42dp"
-                android:layout_marginEnd="12dp"
-                android:src="@drawable/ic_default_avatar"
-                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/toolbarTitle"
