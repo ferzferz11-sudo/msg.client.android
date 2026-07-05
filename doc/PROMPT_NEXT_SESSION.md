@@ -50,6 +50,37 @@
 
 ---
 
+## v1.3.2.5 — Client Audit: Critical Marshaller Fixes + Thread Safety
+
+### Исправлено
+
+**Marshaller'ы (3 критических бага):**
+- `AuthResponseV2` — User field mapping: пропускалось поле 4 (avatar_url), поля 5-7 были сдвинуты
+- `GetPinnedMessagesRequest` — userId/chatId поменяны местами (field 1/2)
+- `GetFavoritesResponse` — сервер отправляет v1 `Message`, клиент парсил как v2. Добавлен конвертер v1→v2
+- `GetPinnedMessagesRequest` — добавлены limit/offset (field 3/4)
+
+**Thread safety (4 исправления):**
+- `RealGrpcClient.currentUsername` — никогда не присваивался (всегда null). Добавлен `setUsername()` + вызов из `SessionManager.updateSession()`
+- `markRead` callback — вызывался дважды (onMessage + onClose). Убран из onMessage
+- `toggleMute`/`deleteChat` — callback'и на gRPC thread мутировали `allChats`. Обёрнуты в `viewModelScope.launch(Dispatchers.Main)`
+- `db()` — улучшена проверка null-before-assign
+
+**Темы:**
+- `CustomThemeProto` — добавлено поле `isDark`
+- Парсинг/сериализация `outgoingTextColor` (field 18), `incomingTextColor` (field 19)
+
+**ViewModel:**
+- `ChatListActivity` — теперь использует `ViewModelProvider` вместо ручного создания
+
+**Сервер:**
+- `chatV2RowToProto` — добавлены IsSecret, PeerPublicKey, E2eeReady, ActiveAgentId, AgentMode, CompanyId, CompanyChatAccess, CompanyMinPositionLevel
+- `ChatWithAIV2` response — добавлены HasRagContext и ModelUsed
+- `MarkRead` — JWT контекст + BroadcastToRoom("READ_ALL")
+- JWT auth fix — все handlers извлекают `GetUserID(ctx)` с fallback
+
+---
+
 ## v1.3.2.4 — Toolbar Standardization + Group Chat Fix + Theme Consistency
 
 ### Добавлено
