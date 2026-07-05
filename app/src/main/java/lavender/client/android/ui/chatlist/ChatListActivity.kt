@@ -151,6 +151,15 @@ class ChatListActivity : AppCompatActivity() {
 
         ThemeUi.bind(this, username)
 
+        // Request POST_NOTIFICATIONS permission on Android 13+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                androidx.core.app.ActivityCompat.requestPermissions(this,
+                    arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 2001)
+            }
+        }
+
         // Init views
         toolbar = findViewById(R.id.toolbar)
         tvToolbarTitle = findViewById(R.id.tvToolbarTitle)
@@ -325,6 +334,10 @@ class ChatListActivity : AppCompatActivity() {
                 .registerOnSharedPreferenceChangeListener(coord.prefsListener)
             coord.updateIndicatorVisibility()
         }
+
+        // Switch ChatV2 stream to empty room — so server sends push notifications
+        // and messages are not auto-marked as read when user is on chat list
+        GrpcClient.startChatV2("") { /* ignore */ }
 
         // Token refresh on resume — handles long idle (doze, overnight)
         // Coroutine-based refresh to avoid blocking Main thread
