@@ -267,6 +267,8 @@ class ChatAdapter(
         private val statusIndicator: View = itemView.findViewById(R.id.statusIndicator)
         private val tvLastSeen: TextView = itemView.findViewById(R.id.tvLastSeen)
         private val tvCompanyBadge: TextView = itemView.findViewById(R.id.tvCompanyBadge)
+        private val tvConferenceBadge: TextView = itemView.findViewById(R.id.tvConferenceBadge)
+        private val btnEnterLobby: ImageView = itemView.findViewById(R.id.btnEnterLobby)
         private val cardView: com.google.android.material.card.MaterialCardView =
             itemView as com.google.android.material.card.MaterialCardView
 
@@ -280,8 +282,15 @@ class ChatAdapter(
             // Company badge
             tvCompanyBadge.isVisible = chat.companyId.isNotEmpty()
 
+            // Conference badge
+            tvConferenceBadge.isVisible = chat.type == "conference"
+
             if (chat.isSecret) {
                 tvChatType.text = itemView.context.getString(R.string.e2ee_verified)
+                tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
+                tvChatType.setTypeface(null, if (hasUnread) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
+            } else if (chat.type == "conference") {
+                tvChatType.text = itemView.context.getString(R.string.conference)
                 tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
                 tvChatType.setTypeface(null, if (hasUnread) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
             } else if (chat.lastMessageText.isNotEmpty()) {
@@ -305,11 +314,26 @@ class ChatAdapter(
                 tvUnreadCount.isVisible = false
             }
 
+            // Conference lobby button — visible for conference chats, hidden in selection mode
+            btnEnterLobby.isVisible = chat.type == "conference" && !selectionMode
+            btnEnterLobby.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
+            btnEnterLobby.setOnClickListener { v ->
+                val ctx = v.context
+                val intent = android.content.Intent(ctx, lavender.client.android.ConferenceLobbyActivity::class.java).apply {
+                    putExtra("ROOM_ID", chat.id)
+                    putExtra("CHAT_NAME", chat.name)
+                    putExtra("PARTICIPANTS", chat.participants)
+                    putExtra("CREATOR", chat.creator)
+                }
+                ctx.startActivity(intent)
+            }
+
             ivMuteIndicator.isVisible = chat.isMuted && !selectionMode
 
-            // Selection mode
+            // Selection mode — themed checkbox
             cbChatSelect.isVisible = selectionMode
             cbChatSelect.isChecked = isSelected
+            cbChatSelect.buttonTintList = android.content.res.ColorStateList.valueOf(primaryColor)
 
             // Background: highlight if selected, unread tint if has unread messages
             val bgColor = when {
@@ -317,6 +341,7 @@ class ChatAdapter(
                 chat.unreadCount > 0 -> unreadColor
                 else -> surfaceColor
             }
+            cbChatSelect.backgroundTintList = android.content.res.ColorStateList.valueOf(bgColor)
             cardView.setCardBackgroundColor(bgColor)
 
             // Online status + last seen — direct chats only

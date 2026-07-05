@@ -103,6 +103,21 @@
                     android:contentDescription="@string/company_badge" />
 
                 <TextView
+                    android:id="@+id/tvConferenceBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="2dp"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnPrimary"
+                    android:background="@drawable/unread_count_background"
+                    android:visibility="gone"
+                    android:text="@string/conference"
+                    android:contentDescription="@string/conference" />
+
+                <TextView
                     android:id="@+id/tvLastSeen"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

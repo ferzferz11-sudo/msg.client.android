@@ -228,6 +228,7 @@
     <string name="message_edited">Message edited</string>
     <string name="edited_label">edited</string>
     <string name="group_info">Group Info</string>
+    <string name="conference_info">Conference Info</string>
     <string name="delete_group">Delete Group</string>
     <string name="delete_group_confirm">Are you sure you want to delete this group?</string>
     <string name="group_creator">Group creator</string>
@@ -729,6 +730,7 @@
     <string name="participants_already_joined">%d participants already joined</string>
     <string name="join_conference_action">Join Conference</string>
     <string name="lobby_title">Conference Lobby</string>
+    <string name="open_lobby">Open Lobby</string>
     <string name="new_conference_format">Conference %s</string>
     <string name="edit_topic">Edit Topic</string>
     <string name="plus_5_min">+5 min</string>

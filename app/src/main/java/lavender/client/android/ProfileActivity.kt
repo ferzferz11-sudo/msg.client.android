@@ -63,6 +63,7 @@ class ProfileActivity : AppCompatActivity() {
     private var intentAvatarUrl: String = ""
     private var intentFullAvatarUrl: String = ""
     private var intentChatName: String = ""
+    private var chatType: String = ""
     private var selectedAvatarUri: Uri? = null
     private var currentProfileAvatar: CircleImageView? = null
     private var participantsAdapter: ParticipantAdapter? = null
@@ -102,15 +103,22 @@ class ProfileActivity : AppCompatActivity() {
         intentAvatarUrl = intent.getStringExtra("avatar_url") ?: ""
         intentFullAvatarUrl = intent.getStringExtra("full_avatar_url") ?: ""
         intentChatName = intent.getStringExtra("chat_name") ?: ""
+        chatType = intent.getStringExtra("chat_type") ?: ""
+        val chatType = intent.getStringExtra("chat_type") ?: ""
 
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = if (isGroup) getString(R.string.group_info) else getString(R.string.profile)
+        supportActionBar?.title = when {
+            chatType == "conference" -> getString(R.string.conference_info)
+            isGroup -> getString(R.string.group_info)
+            else -> getString(R.string.profile)
+        }
         toolbar.setNavigationOnClickListener { finish() }
 
         if (isGroup) {
             viewModel.loadGroupData(roomId, intentParticipants, intentCreator, intentAvatarUrl, intentFullAvatarUrl, intentChatName)
             setupGroupObservers()
+            setupGroupFab()
         } else {
             viewModel.loadUserProfile(username)
             setupProfileObservers()
@@ -163,6 +171,92 @@ class ProfileActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun setupGroupFab() {
+        val fab = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fabAddMember)
+        fab?.isVisible = true
+        fab?.setOnClickListener {
+            if (chatType == "conference") {
+                showConferenceActionSheet()
+            } else {
+                showAddParticipantSheet()
+            }
+        }
+    }
+
+    private fun showConferenceActionSheet() {
+        lavender.client.android.ui.widget.ActionBottomSheet(this)
+            .setTitle(getString(R.string.conference))
+            .setActions(listOf(
+                lavender.client.android.ui.widget.SheetAction(
+                    1, android.R.drawable.ic_menu_add, getString(R.string.add_participants)
+                ) { showAddParticipantSheet() },
+                lavender.client.android.ui.widget.SheetAction(
+                    2, R.drawable.ic_groups_2, getString(R.string.open_lobby)
+                ) {
+                    val intent = Intent(this, ConferenceLobbyActivity::class.java).apply {
+                        putExtra("ROOM_ID", roomId)
+                        putExtra("CHAT_NAME", intentChatName)
+                        putExtra("PARTICIPANTS", intentParticipants)
+                        putExtra("CREATOR", intentCreator)
+                    }
+                    startActivity(intent)
+                }
+            )).showWithNavigation()
+    }
+
+    private fun showAddParticipantSheet() {
+        val sheet = SearchableListBottomSheet(this)
+            .setTitle(getString(R.string.add_participants))
+            .setActionButtonText(getString(R.string.add))
+            .setExtraInputVisible(false)
+            .setLoading(true)
+
+        val userAdapter = SelectableUserAdapter(lifecycleScope, avatarCache = GrpcClient.getAvatarCache()) { count ->
+            sheet.setActionButtonEnabled(count > 0)
+            sheet.setActionButtonText(if (count > 0) "${getString(R.string.add)} ($count)" else getString(R.string.add))
+        }
+        sheet.setAdapter(userAdapter)
+
+        val currentParticipants = try {
+            val arr = org.json.JSONArray(intentParticipants)
+            val set = mutableSetOf<String>()
+            for (i in 0 until arr.length()) set.add(arr.getString(i))
+            set
+        } catch (_: Exception) { emptySet() }
+
+        GrpcClient.getContacts(grpcClient.getCurrentUsername() ?: "") { contacts ->
+            val currentContacts = contacts.toSet()
+            lifecycleScope.launch {
+                GrpcClient.allUsers.collect { allUsersList ->
+                    val filtered = allUsersList
+                        .map { it.username }
+                        .filter { it != grpcClient.getCurrentUsername() && !currentParticipants.contains(it) && currentContacts.contains(it) }
+                    runOnUiThread {
+                        sheet.setLoading(false)
+                        userAdapter.setUsers(filtered)
+                    }
+                }
+            }
+        }
+
+        sheet.onSearchTextChanged { query -> userAdapter.filter(query) }
+
+        sheet.onActionClick {
+            val selected = userAdapter.getSelectedUsers()
+            if (selected.isEmpty()) return@onActionClick
+            GrpcClient.addParticipants(roomId, selected) { success, msg ->
+                runOnUiThread {
+                    sheet.dismiss()
+                    Toast.makeText(this, if (success) getString(R.string.member_added) else msg, Toast.LENGTH_SHORT).show()
+                    if (success) {
+                        viewModel.loadGroupData(roomId, intentParticipants, intentCreator, intentAvatarUrl, intentFullAvatarUrl, intentChatName)
+                    }
+                }
+            }
+        }
+        sheet.show()
     }
 
     @SuppressLint("SetTextI18n")

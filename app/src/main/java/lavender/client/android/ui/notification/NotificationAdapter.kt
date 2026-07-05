@@ -1,16 +1,18 @@
 package lavender.client.android.ui.notification
 
+import android.graphics.Color
 import android.graphics.Typeface
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import lavender.client.android.R
 import lavender.client.android.data.proto.ServerNotificationProto
+import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 
 /**
  * NotificationAdapter — адаптер для списка уведомлений.
@@ -46,20 +48,27 @@ class NotificationAdapter(
             message.text = notif.message
             timestamp.text = notif.timestamp
 
-            // Visual distinction for unread notifications
+            val theme = ThemeStore.currentTheme()
+            val primaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
+            val surfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
+            val textPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+            val textSecondary = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.LTGRAY)
+
             if (!notif.isRead) {
                 title.setTypeface(null, Typeface.BOLD)
-                title.alpha = 1.0f
-                message.alpha = 1.0f
-                // Subtle accent background for unread
-                val bgColor = ContextCompat.getColor(itemView.context, R.color.notification_unread_bg)
-                itemView.setBackgroundColor(bgColor)
+                title.setTextColor(textPrimary)
+                message.setTextColor(textSecondary)
+                timestamp.setTextColor(textSecondary)
+                val unreadBg = Color.argb(25, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor))
+                itemView.setBackgroundColor(unreadBg)
             } else {
                 title.setTypeface(null, Typeface.NORMAL)
+                title.setTextColor(textPrimary)
                 title.alpha = 0.85f
+                message.setTextColor(textSecondary)
                 message.alpha = 0.7f
-                // Transparent background for read
-                itemView.setBackgroundColor(ContextCompat.getColor(itemView.context, android.R.color.transparent))
+                timestamp.setTextColor(textSecondary)
+                itemView.setBackgroundColor(surfaceColor)
             }
 
             itemView.setOnClickListener { onClick(notif) }

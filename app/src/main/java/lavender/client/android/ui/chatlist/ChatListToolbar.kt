@@ -153,7 +153,6 @@ internal fun showSettingsSheet(activity: ChatListActivity, onBack: (() -> Unit)?
 
     sheet.setOnDismissListener {
         if (!activity.isNavigatingDeeper) onBack?.invoke()
-        activity.isNavigatingDeeper = false
     }
 
     sheet.show()
@@ -241,7 +240,6 @@ internal fun showAdditionalSettingsSheet(activity: ChatListActivity, onBack: (()
 
     sheet.setOnDismissListener {
         if (!activity.isNavigatingDeeper) onBack?.invoke()
-        activity.isNavigatingDeeper = false
     }
 
     sheet.show()
@@ -279,6 +277,15 @@ internal fun showAboutDialog(activity: ChatListActivity) {
 
 internal fun showAboutDialog(activity: ChatListActivity, onBack: (() -> Unit)?) {
     val sheet = StandardBottomSheet(activity, R.layout.dialog_about)
+    val appVersion = try {
+        activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: ""
+    } catch (_: Exception) { "" }
+    val appVersionText = sheet.findViewById<TextView>(R.id.appVersionText)
+    if (appVersion.isNotEmpty()) {
+        appVersionText?.text = activity.getString(R.string.app_version_format, appVersion)
+    } else {
+        appVersionText?.visibility = View.GONE
+    }
     val serverVersion = GrpcClient.serverVersion.value
     val serverVersionText = sheet.findViewById<TextView>(R.id.serverVersionText)
     if (serverVersion.isNotEmpty()) {
@@ -307,8 +314,8 @@ internal fun showAboutDialog(activity: ChatListActivity, onBack: (() -> Unit)?) 
     sheet.findViewById<View>(R.id.btnClose)?.setOnClickListener { sheet.dismiss() }
     sheet.setOnDismissListener {
         if (!activity.isNavigatingDeeper) onBack?.invoke()
-        activity.isNavigatingDeeper = false
     }
+
     sheet.show()
 }
 

@@ -172,11 +172,16 @@ class ChatToolbarDelegate(
 
     private fun openProfile() {
         if (chatType == "conference") {
-            val intent = Intent(activity, ConferenceLobbyActivity::class.java).apply {
-                putExtra("ROOM_ID", roomId)
-                putExtra("CHAT_NAME", chatName)
-                putExtra("PARTICIPANTS", participantsJson)
-                putExtra("CREATOR", creator)
+            val intent = Intent(activity, ProfileActivity::class.java).apply {
+                putExtra("username", chatName)
+                putExtra("is_group", true)
+                putExtra("room_id", roomId)
+                putExtra("avatar_url", chatAvatarUrl)
+                putExtra("full_avatar_url", chatFullAvatarUrl)
+                putExtra("participants", participantsJson)
+                putExtra("creator", creator)
+                putExtra("chat_name", chatName)
+                putExtra("chat_type", chatType)
             }
             activity.startActivity(intent)
             return
@@ -239,8 +244,7 @@ class ChatToolbarDelegate(
 
     private fun setupLobbyButton() {
         if (chatType == "conference") {
-            val isMeAdmin = username.trim().equals(creator.trim(), ignoreCase = true) && creator.isNotEmpty()
-            btnLobby.isVisible = isMeAdmin
+            btnLobby.isVisible = true
             btnLobby.setOnClickListener {
                 val intent = Intent(activity, ConferenceLobbyActivity::class.java).apply {
                     putExtra("ROOM_ID", roomId)
@@ -253,6 +257,7 @@ class ChatToolbarDelegate(
         } else {
             btnLobby.isVisible = false
         }
+        btnLobby.requestLayout()
     }
 
     fun setNavigationIcon(iconResId: Int) {

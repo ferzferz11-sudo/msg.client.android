@@ -245,7 +245,7 @@ object ThemeApplier {
         }
 
         // FABs
-        listOf(R.id.fabAi, R.id.fabAddChat, R.id.addContactFab, R.id.addThemeFab).forEach { id ->
+        listOf(R.id.fabAi, R.id.fabAddChat, R.id.addContactFab, R.id.addThemeFab, R.id.fabAddMember).forEach { id ->
             (activity.findViewById<View>(id) as? com.google.android.material.floatingactionbutton.FloatingActionButton)?.apply {
                 backgroundTintList = ColorStateList.valueOf(customPrimary)
                 imageTintList = ColorStateList.valueOf(customOnPrimary)
@@ -301,6 +301,9 @@ object ThemeApplier {
                 }
             }
         }
+
+        // Conference badge background tint
+        activity.findViewById<TextView>(R.id.tvConferenceBadge)?.backgroundTintList = ColorStateList.valueOf(customPrimary)
     }
 
     fun applyToDialog(dialog: com.google.android.material.bottomsheet.BottomSheetDialog, theme: Theme) {

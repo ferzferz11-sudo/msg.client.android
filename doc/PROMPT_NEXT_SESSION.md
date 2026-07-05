@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.2.2 | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-05
+**Версия:** v1.3.2.3 | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-05
 
 ---
 
@@ -50,7 +50,46 @@
 
 ---
 
-## v1.3.2.1 — Company System Fixes + Logo
+## v1.3.2.3 — Conference Fixes + Theme Adaptation + Navigation
+
+### Добавлено
+
+- **Конференции — визуальное отличие:** значок в списке чатов, кнопка лобби, тип чата
+- **Конференции — сервер:** поле `type` в `CreateGroupChatRequest`, сервер создаёт `conference` тип
+- **Информация о группе/конференции:** FAB [+] для добавления участников, шторка с опциями
+- **О программе:** отображение версии приложения
+
+### Улучшено
+
+- **Темы:** чекбокс выбора, уведомления, FAB [+] адаптированы к кастомным темам
+
+### Исправлено
+
+- **Навигация:** кнопка "назад" из Безопасности/Уведомлений возвращает на "Доп. настройки"
+- **isNavigatingDeeper:** флаг сбрасывается только в `settingsActivityLauncher` callback
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `item_chat.xml` | +tvConferenceBadge, btnEnterLobby виден для конференций |
+| `ChatAdapter.kt` | Conference badge, тип чата "Конференция", btnEnterLobby с кликом |
+| `ChatToolbarDelegate.kt` | btnLobby для всех участников, requestLayout(), openProfile для конференций |
+| `ProfileActivity.kt` | chatType, setupGroupFab(), showConferenceActionSheet(), showAddParticipantSheet() |
+| `activity_profile.xml` | +fabAddMember FAB |
+| `ThemeApplier.kt` | +fabAddMember, +tvConferenceBadge |
+| `ChatListToolbar.kt` | showAboutDialog: +appVersion, fix isNavigatingDeeper reset |
+| `dialog_about.xml` | +appVersionText |
+| `NotificationAdapter.kt` | ThemeStore colors вместо хардкода |
+| `NewChatActivity.kt` | Убран FAB из чата (перенесён в ProfileActivity) |
+| `activity_new_chat.xml` | Убран fabAddParticipant |
+| `ChatListFABs.kt` | showCreateConferenceDialog — type "conference" |
+| `messenger.proto` (server) | +type field 6 в CreateGroupChatRequest |
+| `server_chats.go` (server) | req.Type вместо хардкода "group" |
+
+---
+
+## v1.3.2.2 — Company Polish
 
 ### Исправлено
 

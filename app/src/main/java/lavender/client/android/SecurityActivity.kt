@@ -70,6 +70,10 @@ class SecurityActivity : AppCompatActivity() {
             setDisplayHomeAsUpEnabled(true)
             setDisplayShowTitleEnabled(false)
         }
+        val onPrimary = try {
+            lavender.client.android.theme.ThemeStore.currentTheme().onPrimaryColor.toColorInt()
+        } catch (_: Exception) { android.graphics.Color.WHITE }
+        toolbar.navigationIcon?.setTint(onPrimary)
         toolbar.setNavigationOnClickListener { finish() }
 
         // Handle system bars insets

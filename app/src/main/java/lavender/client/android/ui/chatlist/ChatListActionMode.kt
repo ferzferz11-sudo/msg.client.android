@@ -16,7 +16,6 @@ import lavender.client.android.data.grpc.*
 
 internal fun enterSelectionMode(activity: ChatListActivity) {
     activity.isSelectionMode = true
-    // Hide avatar container (FrameLayout wrapper), not just the ImageView
     activity.ivToolbarUserAvatar?.parent?.let { (it as? android.view.View)?.isVisible = false }
     activity.llToolbarTitleContainer?.isVisible = true
     activity.ivFavorites?.isVisible = false
@@ -32,11 +31,7 @@ internal fun enterSelectionMode(activity: ChatListActivity) {
         onMenuItemClicked(activity, item)
     }
     activity.toolbar?.setNavigationIcon(R.drawable.ic_back_arrow)
-    activity.toolbar?.navigationIcon?.let {
-        val wrapped = androidx.core.graphics.drawable.DrawableCompat.wrap(it)
-        androidx.core.graphics.drawable.DrawableCompat.setTint(wrapped, iconColor)
-        activity.toolbar?.navigationIcon = wrapped
-    }
+    activity.toolbar?.navigationIcon?.setTint(iconColor)
     activity.toolbar?.setNavigationOnClickListener { exitSelectionMode(activity) }
     activity.tvToolbarTitle?.setTextColor(iconColor)
     updateActionModeTitle(activity)

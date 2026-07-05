@@ -215,6 +215,7 @@
     <string name="message_edited">Сообщение отредактировано</string>
     <string name="edited_label">изменено</string>
     <string name="group_info">Информация о группе</string>
+    <string name="conference_info">Информация о конференции</string>
     <string name="delete_group">Удалить группу</string>
     <string name="delete_group_confirm">Вы уверены, что хотите удалить эту группу?</string>
     <string name="group_creator">Создатель группы</string>
@@ -656,6 +657,7 @@
     <string name="participants_already_joined">%d участников уже в звонке</string>
     <string name="join_conference_action">Присоединиться к конференции</string>
     <string name="lobby_title">Лобби конференции</string>
+    <string name="open_lobby">Открыть лобби</string>
     <string name="new_conference_format">Конференция %s</string>
     <string name="edit_topic">Редактировать тему</string>
     <string name="plus_5_min">+5 мин</string>
