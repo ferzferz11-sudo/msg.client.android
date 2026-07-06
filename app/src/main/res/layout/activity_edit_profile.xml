@@ -236,17 +236,31 @@
                             android:id="@+id/tvCompanyName"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textColor="?android:attr/textColorPrimary"
+                            android:textColor="?attr/colorOnSurface"
                             android:textSize="18sp"
                             android:textStyle="bold"
                             android:layout_marginBottom="2dp" />
 
-                        <TextView
-                            android:id="@+id/tvCompanyPosition"
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/positionBubble"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textColor="?android:attr/textColorSecondary"
-                            android:textSize="14sp" />
+                            android:layout_marginTop="6dp"
+                            app:cardBackgroundColor="?attr/colorPrimary"
+                            app:cardCornerRadius="12dp"
+                            app:cardElevation="0dp"
+                            app:strokeWidth="0dp">
+
+                            <TextView
+                                android:id="@+id/tvCompanyPosition"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:paddingHorizontal="12dp"
+                                android:paddingVertical="4dp"
+                                android:textColor="?attr/colorOnPrimary"
+                                android:textSize="13sp" />
+
+                        </com.google.android.material.card.MaterialCardView>
 
                     </LinearLayout>
 

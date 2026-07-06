@@ -290,9 +290,10 @@ class LavenderMessagingService : FirebaseMessagingService() {
             ).addRemoteInput(remoteInput).build()
         )
 
-        // Применяем стиль (если выбран messaging)
+        // Применяем стиль — MessagingStyle обязателен для inline reply на Android 12+
         val style = prefs.getString("notification_style", "standard")
-        if (style == "messaging") {
+        val useMessagingStyle = style == "messaging" || android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
+        if (useMessagingStyle) {
             val user = androidx.core.app.Person.Builder().setName(title).build()
             val messagingStyle = NotificationCompat.MessagingStyle(user)
                 .addMessage(body, System.currentTimeMillis(), user)
@@ -416,6 +417,17 @@ class LavenderMessagingService : FirebaseMessagingService() {
             val extras = android.os.Bundle()
             extras.putString("room_id", roomId)
             notificationBuilder.addExtras(extras)
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                val user = androidx.core.app.Person.Builder().setName(title).build()
+                val messagingStyle = NotificationCompat.MessagingStyle(user)
+                    .addMessage(body, System.currentTimeMillis(), user)
+                if (roomId != "general") {
+                    messagingStyle.setConversationTitle(title)
+                    messagingStyle.setGroupConversation(!roomId.startsWith("direct_"))
+                }
+                notificationBuilder.setStyle(messagingStyle)
+            }
 
             notificationManager.notify(roomId.hashCode(), notificationBuilder.build())
             Log.d("FCM", "Stream notification shown for room: $roomId")

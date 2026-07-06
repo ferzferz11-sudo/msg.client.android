@@ -832,6 +832,8 @@
     <!-- i18n: FCM notifications -->
     <string name="new_message">New message</string>
     <string name="incoming_call">Incoming call</string>
+    <string name="notification_permission_denied">Notification permission is required to receive alerts. Enable notifications in app settings.</string>
+    <string name="open_settings">Open settings</string>
     <string name="call_from">Calling %s</string>
     <string name="lavender_calls_channel">Lava Calls</string>
     <string name="decline_call">Decline</string>

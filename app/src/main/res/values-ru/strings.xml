@@ -832,6 +832,8 @@
     <!-- i18n: FCM notifications -->
     <string name="new_message">Новое сообщение</string>
     <string name="incoming_call">Входящий звонок</string>
+    <string name="notification_permission_denied">Для получения уведомлений необходимо разрешение. Включите уведомления в настройках приложения.</string>
+    <string name="open_settings">Открыть настройки</string>
     <string name="call_from">Звонит %s</string>
     <string name="lavender_calls_channel">Звонки Лава</string>
     <string name="decline_call">Отклонить</string>

@@ -378,10 +378,14 @@ object RealGrpcClient {
 
     // ====== Chat Stream V2 ======
 
-    // ====== Typing (delegated) ======
-    private fun startTypingStream() { typingClient.startTypingStream() }
+    // ====== Typing (via ChatV2 stream) ======
     fun sendTypingSignal(username: String, isTyping: Boolean) {
-        typingClient.sendTypingSignal(username, isTyping, currentRoomId, currentUserId ?: "")
+        chatV2RequestObserver?.onNext(
+            ChatV2MessageProto(
+                roomId = currentRoomId,
+                typing = ChatV2TypingProto(isTyping = isTyping)
+            )
+        )
     }
 
     // ====== ChatV2 Stream ======
@@ -420,7 +424,6 @@ object RealGrpcClient {
                     val firstMsg = ChatV2MessageProto(jwtToken = accessToken, roomId = roomId, clientVersion = lavender.client.android.BuildConfig.VERSION_NAME)
                     observer.onNext(firstMsg)
                     _authStatus.value = null
-                    startTypingStream()
                 } else {
                     Log.w(TAG, "ChatV2: no JWT token available")
                     _authStatus.value = "AUTH_FAILED"
@@ -528,6 +531,21 @@ object RealGrpcClient {
                                     _users.value = userList
                                 }
                             } catch (e: Exception) { Log.e(TAG, "Error parsing online users update", e) }
+                        }
+                        "TYPING" -> {
+                            try {
+                                val parts = sysMessage.split("|", limit = 2)
+                                if (parts.size == 2) {
+                                    val typist = parts[0]
+                                    val isTyping = parts[1].toBooleanStrictOrNull() ?: false
+                                    val targetRoom = value.roomId.ifEmpty { currentRoomId }
+                                    _typingUsers.update { current ->
+                                        val roomTyping = current[targetRoom]?.toMutableSet() ?: mutableSetOf()
+                                        if (isTyping) roomTyping.add(typist) else roomTyping.remove(typist)
+                                        current + (targetRoom to roomTyping)
+                                    }
+                                }
+                            } catch (e: Exception) { Log.e(TAG, "Error parsing typing signal", e) }
                         }
                         "REACTION_V2" -> {
                             try {
