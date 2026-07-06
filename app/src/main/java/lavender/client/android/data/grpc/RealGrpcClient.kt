@@ -380,6 +380,11 @@ object RealGrpcClient {
 
     // ====== Typing (via ChatV2 stream) ======
     fun sendTypingSignal(username: String, isTyping: Boolean) {
+        if (chatV2RequestObserver == null) {
+            Log.w(TAG, "sendTypingSignal: chatV2RequestObserver is null, dropping signal")
+            return
+        }
+        Log.d(TAG, "sendTypingSignal: roomId=$currentRoomId, isTyping=$isTyping")
         chatV2RequestObserver?.onNext(
             ChatV2MessageProto(
                 roomId = currentRoomId,
@@ -539,6 +544,7 @@ object RealGrpcClient {
                                     val typist = parts[0]
                                     val isTyping = parts[1].toBooleanStrictOrNull() ?: false
                                     val targetRoom = value.roomId.ifEmpty { currentRoomId }
+                                    Log.d(TAG, "TYPING received: typist=$typist, isTyping=$isTyping, targetRoom=$targetRoom, currentRoomId=$currentRoomId")
                                     _typingUsers.update { current ->
                                         val roomTyping = current[targetRoom]?.toMutableSet() ?: mutableSetOf()
                                         if (isTyping) roomTyping.add(typist) else roomTyping.remove(typist)

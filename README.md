@@ -1,8 +1,8 @@
 # Lavender Messenger — Android Client
 
 **Author:** Pavel Davydov (ferz)
-**Version:** 1.3.0.15
-**Language:** Kotlin 2.3.21
+**Version:** 1.3.2.10
+**Language:** Kotlin 2.4.0
 
 Native Android client for Lavender Messenger with gRPC bidirectional streaming, E2EE, Material Design 3, AI v2 chat integration, Marketplace, Reve Image Generation, and Remote Agent.
 
@@ -101,7 +101,7 @@ app/src/main/java/lavender/client/android/
 
 | Component          | Technology                                    |
 |--------------------|-----------------------------------------------|
-| Language           | Kotlin 2.3.21                                 |
+| Language           | Kotlin 2.4.0                                 |
 | Architecture       | MVVM                                          |
 | Async              | Kotlin Coroutines + StateFlow                 |
 | Network            | gRPC (bidirectional streaming)                |

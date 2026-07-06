@@ -69,10 +69,17 @@ class LavenderMessagingService : FirebaseMessagingService() {
 
     private fun handleIncomingCall(callId: String, senderId: String, senderName: String) {
         Log.d("FCM", "Handling incoming VOIP call: $callId from $senderId ($senderName)")
+
+        CallManager.init(applicationContext)
+
+        if (CallManager.currentCall.value != null) {
+            Log.d("FCM", "Already in a call, ignoring incoming call push for $callId")
+            return
+        }
+
         val serverAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this)
             ?: "82.146.43.235"
 
-        CallManager.init(applicationContext)
         GrpcClient.connect(serverAddress, context = applicationContext)
 
         CoroutineScope(Dispatchers.IO).launch {

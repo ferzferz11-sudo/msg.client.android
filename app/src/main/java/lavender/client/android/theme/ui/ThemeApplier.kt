@@ -292,6 +292,9 @@ object ThemeApplier {
             (activity.findViewById<View>(id) as? TextView)?.setTextColor(customPrimary)
         }
 
+        // Company name — use textPrimary for readability on dark themes
+        (activity.findViewById<View>(R.id.tvCompanyName) as? TextView)?.setTextColor(textPrimary)
+
         listOf(R.id.biometricCard, R.id.devicesCard, R.id.bioCard, R.id.avatarCard, R.id.settingsCard, R.id.companyCard).forEach { id ->
             activity.findViewById<View>(id)?.let { view ->
                 if (view is MaterialCardView) {

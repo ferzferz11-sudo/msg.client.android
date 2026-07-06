@@ -430,6 +430,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
     override fun onDestroy() {
         super.onDestroy()
+        dismissCallNotification()
         callController?.cancel()
         cancelConnectionTimeout()
         soundManager.destroy()
@@ -439,6 +440,13 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         binding.remoteView.release()
         webRtcClient?.close()
         eglBase.release()
+    }
+
+    private fun dismissCallNotification() {
+        if (callId.isNotEmpty()) {
+            val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
+            nm.cancel(callId.hashCode())
+        }
     }
 
     private fun hasPermissions() = PERMISSIONS.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }

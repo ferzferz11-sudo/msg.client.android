@@ -1,5 +1,45 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.2.10] - 2026-07-06
+
+### Исправлено
+
+**Звонки — уведомление не исчезает после завершения:**
+- `CallActivity.onDestroy()` не вызывал `NotificationManager.cancel()` → уведомление висело в шторке после hangup
+- `CallManager.hangup()/rejectCall()/clearCurrentCall()` теперь вызывают `dismissCallNotification()`
+
+**Звонки — push приходит когда CallActivity уже открыта:**
+- `LavenderMessagingService.handleIncomingCall()` не проверял состояние звонка → push приходил даже когда пользователь уже в CallActivity
+- Добавлена проверка `CallManager.currentCall.value != null` — push игнорируется если уже в звонке
+
+**Звонки — push всегда отправлялся при INITIATE (сервер):**
+- Сервер отправлял FCM push безусловно даже если `BroadcastCall` доставил сигнал через gRPC stream
+- Теперь push отправляется только если `!delivered` (receiver offline)
+
+**Звонки — старые ACCEPT/REJECT приходят через минуты (сервер):**
+- Сервер не проверял статус звонка — ACCEPT пришедший через 1.5 минуты перезаписывал `completed` на `active`
+- Добавлен `GetCallStatus()` guard — ACCEPT/REJECT игнорируются если статус `completed` или `rejected`
+- Клиент игнорирует ACCEPT когда `_currentCall.value == null`
+
+**Редактирование профиля — название компании:**
+- `tvCompanyName` имел `?attr/colorOnSurface` в XML, но `ThemeApplier` не переопределял цвет → чёрный текст на тёмных темах
+- Добавлен `tvCompanyName.setTextColor(textPrimary)` в `ThemeApplier.apply()`
+
+### Добавлено
+
+**Unified AddMemberSheet:**
+- Новый виджет `AddMemberSheet` — единая шторка добавления участников для групп и компаний
+- Поддержка поиска, мульти-выбора, кнопки действия (через `SearchableListBottomSheet`)
+- Для компаний: после выбора участников показывается диалог выбора должности
+- `CompanyProfileActivity` теперь использует `AddMemberSheet` вместо `AddMemberBottomSheet`
+
+**Debug logging — typing:**
+- Клиент: `sendTypingSignal` логирует `roomId` и `isTyping`
+- Сервер: `[ChatV2] TYPING from ... in room ... (isTyping=...)`
+- Клиент: TYPING receiver логирует `typist`, `isTyping`, `targetRoom`
+
+---
+
 ## [1.3.2.9] - 2026-07-06
 
 ### Исправлено

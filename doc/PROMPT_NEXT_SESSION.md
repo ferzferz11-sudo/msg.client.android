@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.2.9 (готова к выпуску) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-06
+**Версия:** v1.3.2.10 (готова к выпуску) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-06
 
 ---
 
@@ -47,6 +47,35 @@
 5. v2 server only — никаких v1 fallbacks
 6. Перед коммитом: `./gradlew assembleDebug`
 7. НЕ bump'ать версию — bump делает только пользователь
+
+---
+
+## v1.3.2.10 — Call Notification Fixes + Company Theme + AddMember Widget
+
+### Исправлено
+
+**Звонки — уведомление не исчезает:**
+- `CallActivity.onDestroy()` + `CallManager.hangup/reject/clearCurrentCall` теперь вызывают `dismissCallNotification()`
+
+**Звонки — push при открытом CallActivity:**
+- `LavenderMessagingService.handleIncomingCall()` — проверка `CallManager.currentCall.value != null` перед показом push
+
+**Звонки — push всегда при INITIATE (сервер):**
+- Push теперь отправляется только если `!delivered` (receiver offline)
+
+**Звонки — stale ACCEPT/REJECT (сервер):**
+- `GetCallStatus()` guard — ACCEPT/REJECT игнорируются если статус `completed`/`rejected`
+- Клиент игнорирует ACCEPT когда нет активного звонка
+
+**Тема — название компании чёрное на тёмном:**
+- `ThemeApplier` добавил `tvCompanyName.setTextColor(textPrimary)`
+
+### Добавлено
+
+**AddMemberSheet:**
+- Unified виджет добавления участников (группы + компании)
+- Поиск, мульти-выбор, кнопка действия
+- Для компаний — диалог выбора должности
 
 ---
 

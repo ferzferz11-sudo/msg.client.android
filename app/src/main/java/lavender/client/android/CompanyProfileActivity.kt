@@ -172,11 +172,14 @@ class CompanyProfileActivity : AppCompatActivity() {
             .setTitle(getString(R.string.my_company))
             .setActions(listOf(
                 SheetAction(1, R.drawable.ic_contacts, getString(R.string.add_member)) {
-                    val addSheet = lavender.client.android.ui.widget.AddMemberBottomSheet.newInstance(companyId) {
+                    lavender.client.android.ui.widget.AddMemberSheet(
+                        this,
+                        lavender.client.android.ui.widget.AddMemberSheet.Mode.COMPANY,
+                        companyId
+                    ) {
                         val viewPager = findViewById<ViewPager2>(R.id.viewPager)
                         viewPager.adapter?.notifyDataSetChanged()
-                    }
-                    addSheet.show(supportFragmentManager, "add_member")
+                    }.showAddMember()
                 },
                 SheetAction(2, R.drawable.ic_add, getString(R.string.create_company_chat)) {
                     lifecycleScope.launch {

@@ -91,6 +91,12 @@ object CallManager {
                     Log.w(TAG, "Already in a call, ignoring INITIATE")
                 }
             }
+            CallMessageProto.Type.ACCEPT -> {
+                if (_currentCall.value == null) {
+                    Log.w(TAG, "Ignoring stale ACCEPT — no active call (callId: ${signal.callId})")
+                    return
+                }
+            }
             CallMessageProto.Type.INITIATE_CONFERENCE -> {
                 if (_currentCall.value == null) {
                     _currentCall.value = signal
@@ -144,6 +150,10 @@ object CallManager {
 
     fun clearCurrentCall() {
         Log.d(TAG, "Clearing current call state")
+        val call = _currentCall.value
+        if (call != null && call.callId.isNotEmpty()) {
+            dismissCallNotification(call.callId)
+        }
         _currentCall.value = null
     }
 
@@ -156,6 +166,7 @@ object CallManager {
             type = CallMessageProto.Type.HANGUP
         )
         scope.launch { _incomingSignals.emit(signal) }
+        dismissCallNotification(callId)
         _currentCall.value = null
     }
 
@@ -181,6 +192,7 @@ object CallManager {
             type = CallMessageProto.Type.REJECT
         )
         GrpcClient.sendCallSignal(signal)
+        dismissCallNotification(call.callId)
         _currentCall.value = null
     }
 
@@ -198,7 +210,16 @@ object CallManager {
             type = CallMessageProto.Type.HANGUP
         )
         GrpcClient.sendCallSignal(signal)
+        dismissCallNotification(call.callId)
         _currentCall.value = null
+    }
+
+    private fun dismissCallNotification(callId: String) {
+        if (callId.isEmpty()) return
+        appContext?.let { ctx ->
+            val nm = ctx.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            nm.cancel(callId.hashCode())
+        }
     }
 
     fun isMe(id: String): Boolean {
