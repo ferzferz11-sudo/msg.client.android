@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.2.0 | **Updated:** 2026-07-04
+**Version:** v1.3.2.9 | **Updated:** 2026-07-06
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -672,3 +672,16 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **ConcurrentHashMap.newKeySet()** grows with every deleted message, loaded from SharedPreferences on startup
 - **Growth rate:** human-limited (~10-50 deletions per day, ~40 bytes each)
 - **Fix (next session):** Add LRU cap at 10000 entries
+
+## TURN Credentials Auth (v1.3.2.9)
+
+- **`fetchTurnCredentials()` used raw `java.net.URL`** — no Authorization header → server returns 401 → client falls back to STUN-only (Google STUN) → no TURN relay → behind CGNAT devices can't establish P2P
+- **Fix:** Added `AuthManager.getBearerToken()` to Authorization header
+- **Symptom:** Calls connect at signaling level (ICE candidates exchanged) but media never flows. Works on same-network devices (STUN sufficient), fails on mobile carriers (CGNAT requires TURN relay)
+
+## Typing Room Switch (v1.3.2.9, server fix)
+
+- **Server didn't update `currentRoom` on room switch** — client sends `ChatV2MessageProto(roomId = newRoom)` without payload, server's switch statement falls through, `currentRoom` stays at auth-time room
+- **Typing broadcast went to wrong room** — `BroadcastToRoom(currentRoom, ...)` used stale room
+- **Fix (server):** Added `msg.RoomId != currentRoom` check before switch, updates `currentRoom` + `hub.SetV2Room()`
+- **Requires server restart** to deploy

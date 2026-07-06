@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.2.7 (выпущена) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-05
+**Версия:** v1.3.2.9 (готова к выпуску) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-06
 
 ---
 
@@ -47,6 +47,24 @@
 5. v2 server only — никаких v1 fallbacks
 6. Перед коммитом: `./gradlew assembleDebug`
 7. НЕ bump'ать версию — bump делает только пользователь
+
+---
+
+## v1.3.2.9 — Call Fix + Typing Fix
+
+### Исправлено
+
+**Звонки — TURN credentials без JWT:**
+- `CallActivity.fetchTurnCredentials()` не отправлял Authorization заголовок → сервер возвращал 401 → fallback на STUN-only → за CGNAT P2P не работал
+- Добавлен `AuthManager.getBearerToken()` в Authorization заголовок
+
+**Звонки — имя собеседника:**
+- При исходящем звонке показывался UUID вместо имени
+- `CallNavigator.startCall()` не передавал `SENDER_NAME` — добавлен параметр `senderName`
+
+**Сервер (требует деплой):**
+- `server_chat.go` — добавлена обработка room switch: сервер теперь обновляет `currentRoom` и `hub.SetV2Room()` при переключении чата
+- Без этого typing рассылался в старый чат (тот что при авторизации)
 
 ---
 

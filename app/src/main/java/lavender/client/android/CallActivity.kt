@@ -251,6 +251,10 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 5000
                 connection.readTimeout = 5000
+                val bearerToken = lavender.client.android.data.auth.AuthManager.getBearerToken(this@CallActivity)
+                if (bearerToken != null) {
+                    connection.setRequestProperty("Authorization", bearerToken)
+                }
 
                 val response = connection.inputStream.bufferedReader().readText()
                 val json = org.json.JSONObject(response)

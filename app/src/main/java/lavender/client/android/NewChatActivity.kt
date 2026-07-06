@@ -560,7 +560,7 @@ class NewChatActivity : AppCompatActivity() {
                     val otherUserId = lavender.client.android.data.grpc.GrpcClient.allUsers.value
                         .firstOrNull { it.username == other }?.userId ?: other
                     lavender.client.android.data.calls.CallManager.initiateCall(other)
-                    lavender.client.android.data.calls.CallNavigator.startCall(this, otherUserId)
+                    lavender.client.android.data.calls.CallNavigator.startCall(this, otherUserId, other)
                 }
                 true
             }

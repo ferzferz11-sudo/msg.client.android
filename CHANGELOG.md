@@ -1,5 +1,24 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.2.9] - 2026-07-06
+
+### Исправлено
+
+**Звонки — TURN credentials без JWT:**
+- `CallActivity.fetchTurnCredentials()` не отправлял Authorization заголовок → сервер возвращал 401 → клиент fallback на STUN-only (Google STUN) → без TURN relay за CGNAT P2P не устанавливался
+- Добавлен `AuthManager.getBearerToken()` в Authorization заголовок запроса TURN credentials
+
+**Звонки — имя собеседника:**
+- При исходящем звонке CallActivity показывал UUID вместо имени пользователя
+- `CallNavigator.startCall()` не передавал `SENDER_NAME` в intent
+- Добавлен параметр `senderName` в `CallNavigator.startCall()` + передача из `NewChatActivity`
+
+**Сервер (требует деплой):**
+- Печатает: сервер не обновлял `currentRoom` при переключении чата → typing рассылался в старый чат
+- `server_chat.go` — добавлена обработка room switch (обновление `currentRoom` и `hub.SetV2Room()`)
+
+---
+
 ## [1.3.2.8] - 2026-07-06
 
 ### Исправлено
