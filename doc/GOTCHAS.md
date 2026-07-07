@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.2.10 | **Updated:** 2026-07-06
+**Version:** v1.3.2.11 | **Updated:** 2026-07-07
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -685,3 +685,36 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **Typing broadcast went to wrong room** — `BroadcastToRoom(currentRoom, ...)` used stale room
 - **Fix (server):** Added `msg.RoomId != currentRoom` check before switch, updates `currentRoom` + `hub.SetV2Room()`
 - **Requires server restart** to deploy
+
+## JWT Refresh Token Missing Username (v1.3.3.7)
+
+- **Root cause of empty `connectedUser`/`room` in all ChatV2 connections** — `authClaims` for refresh token did NOT include `Username` field. Only `UserID` and `DeviceID` were set.
+- **Flow:** User logs in → access token has username ✓ → token refreshes → new access token has `Username: ""` (from refresh token claims) → all ChatV2 connections show `connectedUser = ""` → typing broadcasts to room "" → `BroadcastCall` can't match receiver
+- **Symptoms:** `[ChatV2]  connected to room ` (empty user AND room), typing doesn't work, ACCEPT not delivered to caller
+- **Fix (server):** Added `Username: username` to `refreshClaims` in `auth_jwt.go`
+- **After fix:** All users must re-login (or wait for token expiry + refresh) to get new JWT with username
+- **Also fixed:** `BroadcastCall` receiver resolution — if `ReceiverId` is username (not UUID), resolve via `GetUserIDByUsername()` before matching against `callStreams` map
+
+## setDecorFitsSystemWindows Before super.onCreate (v1.3.2.11)
+
+- **`NewChatActivity` was the ONLY activity** calling `setDecorFitsSystemWindows(window, false)` BEFORE `super.onCreate()`
+- On API 31+ (Android 12+), this is a real system call that modifies window decor behavior
+- Calling before `super.onCreate()` means `AppCompatActivity` base initialization runs AFTER the flag is set → decor view in inconsistent state → crash during `setContentView()`
+- On API 29 (Android 10), this is a no-op → no crash
+- On API 31 (Android 12), this is a real system call → crash
+- On API 34 (Android 14), may not crash but ordering is still wrong
+- **Fix:** Moved `setDecorFitsSystemWindows` after `super.onCreate()`
+
+## OutOfMemoryError in uploadFile (v1.3.2.11)
+
+- **`ShareReceiverActivity.uploadFile()`** used `stream.readBytes()` which reads entire file into a single byte array
+- Large images (20MB+) → `OutOfMemoryError` (extends `Error`, NOT `Exception`)
+- `catch (e: Exception)` does NOT catch `Error` subclasses → app crashes
+- **Fix:** Added separate `catch (e: OutOfMemoryError)` with user-friendly Toast
+- **Same risk exists in:** `AudioUploader.kt`, `ChatInputDelegate.kt` — any place using `readBytes()` on large files
+
+## Call Notification Not Dismissed (v1.3.2.10)
+
+- **`CallActivity.onDestroy()`** did not dismiss the call notification — only `CALL_ENDED` FCM push or `CallActionService` DECLINE removed it
+- **Fix (client):** Added `dismissCallNotification()` in `CallActivity.onDestroy()`, `CallManager.hangup()`, `CallManager.rejectCall()`, `CallManager.clearCurrentCall()`, `CallManager.handleCallEndedPush()`
+- **Push when already in call:** `LavenderMessagingService.handleIncomingCall()` now checks `CallManager.currentCall.value != null` before showing notification

@@ -15,6 +15,7 @@ import lavender.client.android.theme.Theme
 import lavender.client.android.theme.ThemeStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -40,11 +41,17 @@ class ServerAuthBottomSheet(
 
     private var statusIndicator: View? = null
     private val updateManager = UpdateManager(context)
+    private val scope = CoroutineScope(Dispatchers.Main)
+    private var healthCheckJob: Job? = null
 
     init {
         initViews()
         checkServerHealth()
         checkForUpdate()
+        setOnDismissListener {
+            healthCheckJob?.cancel()
+            scope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
+        }
     }
 
     private fun initViews() {
@@ -96,7 +103,7 @@ class ServerAuthBottomSheet(
         }
 
         // Observe download state
-        CoroutineScope(Dispatchers.Main).launch {
+        scope.launch {
             updateManager.isDownloadingInstance.collect { downloading ->
                 if (!downloading) {
                     val prefs = context.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE)
@@ -140,7 +147,7 @@ class ServerAuthBottomSheet(
             updateStatusIndicator(true)
             return
         }
-        CoroutineScope(Dispatchers.IO).launch {
+        healthCheckJob = scope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 val url = URL("http://$serverHost:$httpPort/health")
                 val connection = url.openConnection() as HttpURLConnection

@@ -616,7 +616,7 @@ object RealGrpcClient {
                                 scheduleMarkRead(currentRoomId, myUsername)
                             } else {
                                 appContext?.let { ctx ->
-                                    val title = msg.user
+                                    val title = msg.user.ifEmpty { "New message" }
                                     val body = msg.text.take(200)
                                     lavender.client.android.data.fcm.LavenderMessagingService.showNotificationFromStream(ctx, title, body, currentRoomId)
                                 }

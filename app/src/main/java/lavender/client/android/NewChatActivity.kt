@@ -103,8 +103,8 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var historyLoadingProgress: ProgressBar
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_new_chat)
 
         loadDataFromIntent()

@@ -500,11 +500,16 @@ class ShareReceiverActivity : AppCompatActivity() {
 
     private suspend fun uploadFile(uri: Uri): String? = withContext(Dispatchers.IO) {
         try {
-            val stream = contentResolver.openInputStream(uri)
-            val bytes = stream?.readBytes()
-            stream?.close()
-            if (bytes == null) return@withContext null
-
+            val stream = contentResolver.openInputStream(uri) ?: return@withContext null
+            val bytes = try {
+                stream.use { it.readBytes() }
+            } catch (e: OutOfMemoryError) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ShareReceiverActivity, getString(R.string.file_too_large), Toast.LENGTH_LONG).show()
+                }
+                return@withContext null
+            }
             if (bytes.size > lavender.client.android.data.grpc.ProfileClient.maxUploadSize) {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(this@ShareReceiverActivity, getString(R.string.file_too_large), Toast.LENGTH_LONG).show()

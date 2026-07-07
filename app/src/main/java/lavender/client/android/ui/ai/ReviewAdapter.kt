@@ -30,7 +30,7 @@ class ReviewAdapter : ListAdapter<AgentReview, ReviewAdapter.ViewHolder>(ReviewD
         private val createdAt: TextView = itemView.findViewById(R.id.createdAt)
 
         fun bind(review: AgentReview) {
-            userId.text = review.userId
+            userId.text = review.userId.takeIf { !it.contains("-") } ?: "User"
             rating.rating = review.rating.toFloat()
             reviewText.text = review.review
             createdAt.text = review.createdAt

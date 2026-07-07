@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.2.10 (готова к выпуску) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-06
+**Версия:** v1.3.2.11 (готова к выпуску) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-06
 
 ---
 
@@ -47,6 +47,22 @@
 5. v2 server only — никаких v1 fallbacks
 6. Перед коммитом: `./gradlew assembleDebug`
 7. НЕ bump'ать версию — bump делает только пользователь
+
+---
+
+## v1.3.2.11 — Crash Fixes
+
+### Исправлено
+
+**Android 12 краш при входе в чат:**
+- `NewChatActivity.onCreate()` — `setDecorFitsSystemWindows(false)` вызывался ДО `super.onCreate()` (единственная активити с таким порядком)
+- На API 31+ это ломало инициализацию decor view → краш
+- Перемещён вызов после `super.onCreate()`
+
+**Краш при шаринге картинки:**
+- `ShareReceiverActivity.uploadFile()` — `readBytes()` читает весь файл в память
+- Большая картинка → `OutOfMemoryError` (extends `Error`, не `Exception`) → не ловился
+- Добавлен `catch (e: OutOfMemoryError)` с Toast "Файл слишком большой"
 
 ---
 

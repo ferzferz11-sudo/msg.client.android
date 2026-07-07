@@ -51,22 +51,27 @@ class PaletteFragment : Fragment() {
     private fun getColorItems(): List<ColorItem> {
         val currentColors = callback?.getCurrentColors() ?: return emptyList()
 
-        return listOf(
-            ColorItem(getString(R.string.color_primary), currentColors["primaryColor"]!!, getString(R.string.color_primary_desc), "primaryColor"),
-            ColorItem(getString(R.string.color_background), currentColors["backgroundColor"]!!, getString(R.string.color_background_desc), "backgroundColor"),
-            ColorItem(getString(R.string.color_surface), currentColors["surfaceColor"]!!, getString(R.string.color_surface_desc), "surfaceColor"),
-            ColorItem(getString(R.string.color_surface_container), currentColors["surfaceContainer"]!!, getString(R.string.color_surface_container_desc), "surfaceContainer"),
-            ColorItem(getString(R.string.color_text_primary), currentColors["textPrimaryColor"]!!, getString(R.string.color_text_primary_desc), "textPrimaryColor"),
-            ColorItem(getString(R.string.color_text_secondary), currentColors["textSecondaryColor"]!!, getString(R.string.color_text_secondary_desc), "textSecondaryColor"),
-            ColorItem(getString(R.string.color_on_primary), currentColors["onPrimaryColor"]!!, getString(R.string.color_on_primary_desc), "onPrimaryColor"),
-            ColorItem(getString(R.string.color_on_surface), currentColors["onSurfaceColor"]!!, getString(R.string.color_on_surface_desc), "onSurfaceColor"),
-            ColorItem(getString(R.string.color_bottom_panel), currentColors["bottomPanelColor"]!!, getString(R.string.color_bottom_panel_desc), "bottomPanelColor"),
-            ColorItem(getString(R.string.color_on_bottom_panel), currentColors["onBottomPanelColor"]!!, getString(R.string.color_on_bottom_panel_desc), "onBottomPanelColor"),
-            ColorItem(getString(R.string.color_outgoing_bubble), currentColors["outgoingBubbleColor"]!!, getString(R.string.color_outgoing_bubble_desc), "outgoingBubbleColor"),
-            ColorItem(getString(R.string.color_incoming_bubble), currentColors["incomingBubbleColor"]!!, getString(R.string.color_incoming_bubble_desc), "incomingBubbleColor"),
-            ColorItem(getString(R.string.color_outgoing_text), currentColors["outgoingTextColor"]!!, getString(R.string.color_outgoing_text_desc), "outgoingTextColor"),
-            ColorItem(getString(R.string.color_incoming_text), currentColors["incomingTextColor"]!!, getString(R.string.color_incoming_text_desc), "incomingTextColor")
+        val fields = listOf(
+            Triple("primaryColor", R.string.color_primary, R.string.color_primary_desc),
+            Triple("backgroundColor", R.string.color_background, R.string.color_background_desc),
+            Triple("surfaceColor", R.string.color_surface, R.string.color_surface_desc),
+            Triple("surfaceContainer", R.string.color_surface_container, R.string.color_surface_container_desc),
+            Triple("textPrimaryColor", R.string.color_text_primary, R.string.color_text_primary_desc),
+            Triple("textSecondaryColor", R.string.color_text_secondary, R.string.color_text_secondary_desc),
+            Triple("onPrimaryColor", R.string.color_on_primary, R.string.color_on_primary_desc),
+            Triple("onSurfaceColor", R.string.color_on_surface, R.string.color_on_surface_desc),
+            Triple("bottomPanelColor", R.string.color_bottom_panel, R.string.color_bottom_panel_desc),
+            Triple("onBottomPanelColor", R.string.color_on_bottom_panel, R.string.color_on_bottom_panel_desc),
+            Triple("outgoingBubbleColor", R.string.color_outgoing_bubble, R.string.color_outgoing_bubble_desc),
+            Triple("incomingBubbleColor", R.string.color_incoming_bubble, R.string.color_incoming_bubble_desc),
+            Triple("outgoingTextColor", R.string.color_outgoing_text, R.string.color_outgoing_text_desc),
+            Triple("incomingTextColor", R.string.color_incoming_text, R.string.color_incoming_text_desc)
         )
+
+        return fields.mapNotNull { (fieldName, nameRes, descRes) ->
+            val hex = currentColors[fieldName] ?: return@mapNotNull null
+            ColorItem(getString(nameRes), hex, getString(descRes), fieldName)
+        }
     }
 
     private fun showColorPicker(fieldName: String, currentColor: String) {

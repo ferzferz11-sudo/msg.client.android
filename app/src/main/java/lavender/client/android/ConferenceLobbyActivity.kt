@@ -110,7 +110,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
             if (myId.isNotEmpty()) {
                 GrpcClient.removeParticipant(roomId, myId) { success, _ ->
                     if (success) {
-                        runOnUiThread {
+                        safeRunOnUiThread {
                             Toast.makeText(this, R.string.left_conference, Toast.LENGTH_SHORT).show()
                             finish()
                         }
@@ -274,15 +274,15 @@ class ConferenceLobbyActivity : AppCompatActivity() {
                         GrpcClient.getUserAvatar(username) { /* cached */ }
                     }
                     
-                    runOnUiThread { 
+                    safeRunOnUiThread { 
                         sheet.setLoading(false)
                         adapter.setUsers(usersToInvite) 
                     }
                 } catch (_: Exception) {
-                    runOnUiThread { sheet.setLoading(false) }
+                    safeRunOnUiThread { sheet.setLoading(false) }
                 }
             } else {
-                runOnUiThread { sheet.setLoading(false) }
+                safeRunOnUiThread { sheet.setLoading(false) }
             }
         }
 
@@ -300,6 +300,10 @@ class ConferenceLobbyActivity : AppCompatActivity() {
         sheet.show()
     }
 
+    private fun safeRunOnUiThread(block: () -> Unit) {
+        if (!isFinishing && !isDestroyed) runOnUiThread(block)
+    }
+
     private fun observeConferenceStatus() {
         lifecycleScope.launch {
             CallManager.incomingSignals.collectLatest { signal ->
@@ -307,7 +311,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
                     when (signal.type) {
                         CallMessageProto.Type.JOIN_CONFERENCE -> handlePresence(signal)
                         CallMessageProto.Type.END_CONFERENCE -> {
-                            runOnUiThread {
+                            safeRunOnUiThread {
                                 Toast.makeText(this@ConferenceLobbyActivity, R.string.conference_ended, Toast.LENGTH_SHORT).show()
                                 finish()
                             }
@@ -329,7 +333,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
             // Block entry to ended or deleted conferences
             val isEnded = response.optBoolean("ended", false) || response.optBoolean("is_deleted", false)
             if (isEnded) {
-                runOnUiThread {
+                safeRunOnUiThread {
                     Toast.makeText(this@ConferenceLobbyActivity, R.string.conference_ended, Toast.LENGTH_LONG).show()
                     finish()
                 }
@@ -350,7 +354,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
             val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername()
             isCreator = myId == conferenceCreatorId
 
-            runOnUiThread {
+            safeRunOnUiThread {
                 if (topic.isNotEmpty()) {
                     currentTopic = topic
                     binding.tvTopic.text = currentTopic
@@ -435,7 +439,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
         
         webRtcClient = WebRtcClient(this, eglBase.eglBaseContext, object : WebRtcClient.Observer {
             override fun onLocalStream(stream: MediaStream) {
-                runOnUiThread {
+                safeRunOnUiThread {
                     stream.videoTracks.getOrNull(0)?.addSink(binding.localPreview)
                 }
             }
@@ -454,7 +458,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
         val url = session.fullAvatarUrl
         val theme = ThemeStore.currentTheme()
         
-        runOnUiThread {
+        safeRunOnUiThread {
             if (url.isNotEmpty()) {
                 Glide.with(this@ConferenceLobbyActivity)
                     .load(url)

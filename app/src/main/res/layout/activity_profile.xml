@@ -153,7 +153,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
-                            app:cardBackgroundColor="?attr/colorPrimary"
+                            app:cardBackgroundColor="?attr/colorPrimaryContainer"
                             app:cardCornerRadius="12dp"
                             app:cardElevation="0dp"
                             app:strokeWidth="0dp">
@@ -165,7 +165,7 @@
                                 android:paddingHorizontal="12dp"
                                 android:paddingVertical="4dp"
                                 android:textSize="13sp"
-                                android:textColor="?attr/colorOnPrimary" />
+                                android:textColor="?attr/colorOnPrimaryContainer" />
 
                         </com.google.android.material.card.MaterialCardView>
 

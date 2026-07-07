@@ -67,6 +67,13 @@
 
     <color name="ic_launcher_background">#1E1E1E</color>
 
+    <!-- Message bubble colors -->
+    <color name="bg_message_user">#FF6200EE</color>
+    <color name="bg_message_agent">#FF373737</color>
+    <color name="bg_date_separator">#4D000000</color>
+    <color name="bg_input_stroke">#DDDDDD</color>
+    <color name="bg_reply_container">#15000000</color>
+
     <!-- Notification colors -->
     <color name="notification_unread_bg">#1A5F9EA0</color> <!-- Semi-transparent primary -->
 </resources>

@@ -147,7 +147,7 @@ class AIBottomSheet(
                 }
                 icon.setImageResource(R.drawable.ic_agents)
                 icon.imageTintList = ColorStateList.valueOf(primColor)
-                val displayName = agent.name.ifEmpty { agent.id }
+                val displayName = agent.name.ifEmpty { "Agent" }
                 val status = AgentStatus.fromProviderConfig(agent.providerConfig)
                 val statusDot = when (status) {
                     AgentStatus.AVAILABLE -> "\uD83D\uDFE2"

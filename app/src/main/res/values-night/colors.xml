@@ -41,4 +41,11 @@
     
     <!-- Recording colors -->
     <color name="red">#FF4444</color>
+
+    <!-- Message bubble colors (dark theme) -->
+    <color name="bg_message_user">#5F9EA0</color>
+    <color name="bg_message_agent">#363636</color>
+    <color name="bg_date_separator">#33FFFFFF</color>
+    <color name="bg_input_stroke">#50FFFFFF</color>
+    <color name="bg_reply_container">#15FFFFFF</color>
 </resources>

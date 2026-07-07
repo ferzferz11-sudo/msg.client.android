@@ -1,8 +1,57 @@
 # Lava Messenger — Android Changelog
 
-## [1.3.2.10] - 2026-07-06
+## [1.3.2.11] - 2026-07-07
+
+### Улучшения
+
+**Темы — позиция/должность泡泡 в dark mode:**
+- `positionBubble` в профиле, редактировании профиля и списке участников компании использовал `?attr/colorPrimary` (#1E1E1E в dark mode) → невидим на тёмном фоне
+- Заменён на `?attr/colorPrimaryContainer` / `?attr/colorOnPrimaryContainer` — виден в обеих темах
+
+**Темы — пузыри сообщений, даты, ввод:**
+- `bg_message_user.xml` (фиолетовый #FF6200EE), `bg_message_agent.xml` (#373737), `bg_date_separator.xml` (#4D000000) — захардкоженные цвета без night-вариантов
+- Вынесены в color-ресурсы с `values-night/` вариантами: в dark mode пузыри адаптированы
+- `bg_input_field.xml` stroke #DDDDDD → theme-aware ресурс
+- Контейнер ответов (#15000000) → `bg_reply_container` с night-вариантом
+
+**Темы — текст и индикаторы:**
+- Имя агента в чате (`?attr/colorPrimary` → невидим в dark mode) → `?attr/colorOnSurfaceVariant`
+- Индикатор набора — аналогично
+- Reply bar в `widget_chat.xml` → `colorOnSurfaceVariant`
+
+**Стабильность — краши при уничтожении экрана:**
+- `CallActivity`, `EditProfileActivity`, `ConferenceLobbyActivity` — ~40 `runOnUiThread` вызовов без проверки `isFinishing`/`isDestroyed`
+- Добавлен `safeRunOnUiThread()` хелпер с лайфсайкл-проверкой
+
+**Стабильность — утечка корутины:**
+- `ServerAuthBottomSheet` — `CoroutineScope(Dispatchers.Main).launch { ...collect{} }` никогда не отменялся
+- Заменён на управляемый scope + отмена при закрытии bottom sheet
+
+**Стабильность — !! на Map:**
+- `ThemePaletteActivity`, `PaletteFragment` — 28 `!!` на `currentColors[key]` → краш если ключ отсутствует
+- Заменены на `?: return` / `getOrDefault`
+
+**Звонки — имя вместо UUID:**
+- Входящий звонок показывал UUID вместо имени если `sender_name` пустой в FCM
+- `CallActivity` — placeholder вместо UUID + async-резолв через gRPC
+- `showCallNotification` — дефолт `senderName = ""` вместо `senderId`
+- `ReviewAdapter`, `AIBottomSheet`, `UsageStatsAdapter` — "User"/"Agent" вместо raw UUID
 
 ### Исправлено
+
+**Краш при входе в чат на Android 12:**
+- `NewChatActivity.onCreate()` вызывал `setDecorFitsSystemWindows(false)` ДО `super.onCreate()` — единственная активити с таким порядком
+- На API 31+ это ломало инициализацию decor view → краш при открытии чата
+- Перемещён вызов после `super.onCreate()`
+
+**Краш при шаринге картинки:**
+- `ShareReceiverActivity.uploadFile()` использовал `readBytes()` для чтения всего файла в память
+- Большая картинка → `OutOfMemoryError` (extends `Error`, не `Exception`) → не ловился `catch (e: Exception)`
+- Добавлен отдельный `catch (e: OutOfMemoryError)` с показом "Файл слишком большой"
+
+---
+
+## [1.3.2.10] - 2026-07-06
 
 **Звонки — уведомление не исчезает после завершения:**
 - `CallActivity.onDestroy()` не вызывал `NotificationManager.cancel()` → уведомление висело в шторке после hangup

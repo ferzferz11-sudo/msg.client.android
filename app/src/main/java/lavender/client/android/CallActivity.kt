@@ -94,8 +94,12 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         }
         GrpcClient.startCallSession()
 
-        binding.tvCallerName.text = if (isConference) getString(R.string.group_conference) else senderName.ifEmpty { receiverId }
-        if (!isConference) loadOtherParticipantAvatar()
+        val displayName = senderName.ifEmpty { getString(R.string.call_status_incoming) }
+        binding.tvCallerName.text = if (isConference) getString(R.string.group_conference) else displayName
+        if (!isConference) {
+            loadOtherParticipantAvatar()
+            if (senderName.isEmpty()) resolveCallerName(receiverId)
+        }
 
         if (isIncoming && !isConference) {
             binding.btnAccept.visibility = View.VISIBLE
@@ -141,6 +145,10 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         connectionTimeoutRunnable = null
     }
 
+    private fun safeRunOnUiThread(block: () -> Unit) {
+        if (!isFinishing && !isDestroyed) runOnUiThread(block)
+    }
+
     private fun setupController() {
         callController?.cancel()
         callController = CallController(callId, receiverId, isIncoming, isConference, roomId, webRtcClient, object : CallController.Listener {
@@ -148,14 +156,14 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
                 soundManager.stop()
                 cancelConnectionTimeout()
                 viewModel.startTimer()
-                runOnUiThread {
+                safeRunOnUiThread {
                     binding.tvCallStatus.text = getString(R.string.call_status_connecting)
                     binding.tvCallDuration.visibility = View.VISIBLE
                 }
             }
 
             override fun onCallTerminated(reason: String) {
-                runOnUiThread {
+                safeRunOnUiThread {
                     cancelConnectionTimeout()
                     Toast.makeText(this@CallActivity, reason, Toast.LENGTH_SHORT).show()
                     finish()
@@ -164,14 +172,14 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
             override fun onConferencePresenceUpdated(participants: List<String>, creatorId: String) {
                 val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername()
-                runOnUiThread {
+                safeRunOnUiThread {
                     binding.tvCallStatus.text = getString(R.string.in_conference_format, participants.joinToString(", "))
                     binding.btnEndForAll.visibility = if (myId == creatorId) View.VISIBLE else View.GONE
                 }
             }
 
             override fun onStatusUpdate(status: String) {
-                runOnUiThread { binding.tvCallStatus.text = status }
+                safeRunOnUiThread { binding.tvCallStatus.text = status }
             }
 
             override fun onIdAssigned(newCallId: String) {
@@ -196,7 +204,9 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             isIncoming = intent.getBooleanExtra("IS_INCOMING", false)
             isConference = intent.getBooleanExtra("IS_CONFERENCE", false)
             val senderName = intent.getStringExtra("SENDER_NAME") ?: ""
-            binding.tvCallerName.text = if (isConference) getString(R.string.group_conference) else senderName.ifEmpty { receiverId }
+            val displayName = senderName.ifEmpty { getString(R.string.call_status_incoming) }
+            binding.tvCallerName.text = if (isConference) getString(R.string.group_conference) else displayName
+            if (!isConference && senderName.isEmpty()) resolveCallerName(receiverId)
             
             if (isConference) CallManager.joinConference(roomId)
             else CallManager.syncCallState(callId, receiverId, isIncoming)
@@ -294,7 +304,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
         // Get TURN credentials from server
         fetchTurnCredentials { iceServers ->
-            runOnUiThread {
+            safeRunOnUiThread {
                 webRtcClient?.initPeerConnection(iceServers)
                 setupWebRtcListeners()
                 onReady?.invoke()
@@ -309,14 +319,14 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             when (state) {
                 PeerConnection.IceConnectionState.CONNECTED, PeerConnection.IceConnectionState.COMPLETED -> {
                     Log.d(TAG, "WebRTC connection established!")
-                    runOnUiThread {
+                    safeRunOnUiThread {
                         cancelConnectionTimeout()
                         binding.tvCallStatus.text = getString(R.string.call_status_connected)
                     }
                 }
                 PeerConnection.IceConnectionState.FAILED -> {
                     Log.e(TAG, "WebRTC connection FAILED!")
-                    runOnUiThread {
+                    safeRunOnUiThread {
                         Toast.makeText(this@CallActivity, getString(R.string.call_connection_error), Toast.LENGTH_SHORT).show()
                         CallManager.hangup()
                         finish()
@@ -344,7 +354,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     }
 
     override fun onLocalStream(stream: MediaStream) {
-        runOnUiThread {
+        safeRunOnUiThread {
             stream.videoTracks.getOrNull(0)?.addSink(binding.localView)
             if (isConference && !isRemoteViewInitialized) {
                 if (!binding.remoteView.isVisible) {
@@ -358,7 +368,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     }
 
     override fun onRemoteStream(stream: MediaStream) {
-        runOnUiThread {
+        safeRunOnUiThread {
             if (!isRemoteViewInitialized) {
                 binding.remoteView.init(eglBase.eglBaseContext, null)
                 isRemoteViewInitialized = true
@@ -370,7 +380,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
     override fun onRemoteTrack(track: MediaStreamTrack) {
         if (track is VideoTrack) {
-            runOnUiThread {
+            safeRunOnUiThread {
                 if (!isRemoteViewInitialized) {
                     binding.remoteView.init(eglBase.eglBaseContext, null)
                     binding.remoteView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FILL)
@@ -393,12 +403,12 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
     override fun onOfferCreated(description: SessionDescription) {
         CallManager.sendWebRtcSignal(receiverId, CallMessageProto.Type.OFFER, description.description)
-        runOnUiThread { binding.tvCallStatus.text = getString(R.string.call_status_connecting) }
+        safeRunOnUiThread { binding.tvCallStatus.text = getString(R.string.call_status_connecting) }
     }
 
     override fun onAnswerCreated(description: SessionDescription) {
         CallManager.sendWebRtcSignal(receiverId, CallMessageProto.Type.ANSWER, description.description)
-        runOnUiThread { 
+        safeRunOnUiThread { 
             binding.tvCallStatus.text = getString(R.string.call_status_connected) 
             binding.tvCallDuration.visibility = View.VISIBLE
             viewModel.startTimer()
@@ -406,22 +416,33 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     }
 
     override fun onRemoteDescriptionSet() {
-        if (!isConference) runOnUiThread { binding.tvCallStatus.text = getString(R.string.call_status_connecting) }
+        if (!isConference) safeRunOnUiThread { binding.tvCallStatus.text = getString(R.string.call_status_connecting) }
         if (isIncoming && webRtcClient != null) webRtcClient?.createAnswer()
     }
 
     private fun loadOtherParticipantAvatar() {
         if (receiverId.isEmpty()) return
         GrpcClient.getUserAvatar(receiverId) { avatarUrl ->
-            if (avatarUrl.isNotEmpty()) runOnUiThread {
+            if (avatarUrl.isNotEmpty()) safeRunOnUiThread {
                 Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(binding.imgAvatar)
                 Glide.with(this).load(avatarUrl).centerCrop().into(binding.imgBgBlur)
             }
         }
     }
 
+    private fun resolveCallerName(userId: String) {
+        GrpcClient.getUserProfile(userId) { profile ->
+            val name = profile?.username?.takeIf { it.isNotEmpty() }
+            if (name != null) {
+                safeRunOnUiThread {
+                    binding.tvCallerName.text = name
+                }
+            }
+        }
+    }
+
     private fun updateVideoVisibility() {
-        runOnUiThread {
+        safeRunOnUiThread {
             binding.localView.isVisible = isCameraEnabled
             binding.remoteView.isVisible = isCameraEnabled
             binding.imgAvatar.isVisible = !isCameraEnabled

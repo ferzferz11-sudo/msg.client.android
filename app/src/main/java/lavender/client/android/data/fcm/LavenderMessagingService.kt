@@ -110,7 +110,8 @@ class LavenderMessagingService : FirebaseMessagingService() {
         Log.d("FCM", "Dismissed call notification for call: $callId")
     }
 
-    private fun showCallNotification(senderId: String, callId: String, senderName: String = senderId) {
+    private fun showCallNotification(senderId: String, callId: String, senderName: String = "") {
+        val displaySender = senderName.ifEmpty { getString(R.string.call_status_incoming) }
         val channelId = "lavender_calls"
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
@@ -150,7 +151,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_notification_small)
             .setContentTitle(getString(R.string.incoming_call))
-            .setContentText(getString(R.string.call_from, senderName))
+            .setContentText(getString(R.string.call_from, displaySender))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setOngoing(true)
