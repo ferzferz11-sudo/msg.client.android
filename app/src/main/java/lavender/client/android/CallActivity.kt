@@ -266,6 +266,15 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
                     connection.setRequestProperty("Authorization", bearerToken)
                 }
 
+                val responseCode = connection.responseCode
+                if (responseCode != 200) {
+                    Log.e(TAG, "TURN credentials failed (HTTP $responseCode), using STUN only")
+                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        if (!isFinishing && !isDestroyed) callback(listOf(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()))
+                    }
+                    return@launch
+                }
+
                 val response = connection.inputStream.bufferedReader().readText()
                 val json = org.json.JSONObject(response)
                 val iceServers = json.getJSONArray("iceServers")
@@ -291,7 +300,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
                     if (!isFinishing && !isDestroyed) callback(servers)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to fetch TURN credentials, using STUN only", e)
+                Log.e(TAG, "Failed to fetch TURN credentials: ${e.message}")
                 withContext(kotlinx.coroutines.Dispatchers.Main) {
                     if (!isFinishing && !isDestroyed) callback(listOf(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()))
                 }
@@ -318,14 +327,14 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             Log.d(TAG, "ICE connection state: $state")
             when (state) {
                 PeerConnection.IceConnectionState.CONNECTED, PeerConnection.IceConnectionState.COMPLETED -> {
-                    Log.d(TAG, "WebRTC connection established!")
+                    Log.d(TAG, "WebRTC connected")
                     safeRunOnUiThread {
                         cancelConnectionTimeout()
                         binding.tvCallStatus.text = getString(R.string.call_status_connected)
                     }
                 }
                 PeerConnection.IceConnectionState.FAILED -> {
-                    Log.e(TAG, "WebRTC connection FAILED!")
+                    Log.e(TAG, "WebRTC ICE FAILED")
                     safeRunOnUiThread {
                         Toast.makeText(this@CallActivity, getString(R.string.call_connection_error), Toast.LENGTH_SHORT).show()
                         CallManager.hangup()
@@ -333,8 +342,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
                     }
                 }
                 PeerConnection.IceConnectionState.DISCONNECTED -> {
-                    Log.w(TAG, "WebRTC connection disconnected")
-                    // Don't immediately fail — may recover
+                    Log.w(TAG, "WebRTC disconnected")
                 }
                 else -> {}
             }

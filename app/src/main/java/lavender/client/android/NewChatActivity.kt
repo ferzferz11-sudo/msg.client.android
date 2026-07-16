@@ -104,7 +104,11 @@ class NewChatActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        try {
+            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        } catch (e: Exception) {
+            android.util.Log.e("NewChatActivity", "setDecorFitsSystemWindows failed: ${e.message}")
+        }
         setContentView(R.layout.activity_new_chat)
 
         loadDataFromIntent()
@@ -122,24 +126,39 @@ class NewChatActivity : AppCompatActivity() {
 
         grpcClient.setRoomId(roomId)
 
-        initDelegates()
-        initSharedViews()
+        try {
+            initDelegates()
+            initSharedViews()
+        } catch (e: Exception) {
+            android.util.Log.e("NewChatActivity", "initDelegates/initSharedViews failed: ${e.message}", e)
+            Toast.makeText(this, "Chat init error", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
 
         ThemeUi.bind(this, username)
         setupTheme()
         setupRecyclerView()
-        setupDelegates()
+        try {
+            setupDelegates()
+        } catch (e: Exception) {
+            android.util.Log.e("NewChatActivity", "setupDelegates failed: ${e.message}", e)
+        }
         setupObservers()
         setupKeyboardHandling()
 
         viewModel.fetchChatMetadata(username, roomId, isDirect, participantsJson, chatName) { meta ->
-            runOnUiThread {
-                chatName = meta.chatName; isDirect = meta.isDirect; chatType = meta.chatType
-                participantsJson = meta.participantsJson; creator = meta.creator
-                chatAvatarUrl = meta.avatarUrl; chatFullAvatarUrl = meta.fullAvatarUrl
-                toolbarDelegate.configure(roomId, username, chatName, isDirect, chatType, participantsJson, creator, chatAvatarUrl, chatFullAvatarUrl, isSecret)
-                toolbarDelegate.setup()
-                adapter.isGroupChat = !isDirect; adapter.adminUsername = creator
+            try {
+                runOnUiThread {
+                    chatName = meta.chatName; isDirect = meta.isDirect; chatType = meta.chatType
+                    participantsJson = meta.participantsJson; creator = meta.creator
+                    chatAvatarUrl = meta.avatarUrl; chatFullAvatarUrl = meta.fullAvatarUrl
+                    toolbarDelegate.configure(roomId, username, chatName, isDirect, chatType, participantsJson, creator, chatAvatarUrl, chatFullAvatarUrl, isSecret)
+                    toolbarDelegate.setup()
+                    adapter.isGroupChat = !isDirect; adapter.adminUsername = creator
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("NewChatActivity", "fetchChatMetadata callback error: ${e.message}", e)
             }
         }
 
@@ -254,16 +273,18 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun setupTheme() {
-        val customTheme = ThemeStore.currentTheme()
         try {
-            val pColor = customTheme.primaryColor.toColorInt()
-            historyLoadingProgress.indeterminateTintList = ColorStateList.valueOf(pColor)
-            swipeRefreshLayout.setColorSchemeColors(pColor)
-        } catch (_: Exception) {}
+            val customTheme = ThemeStore.currentTheme()
+            try {
+                val pColor = customTheme.primaryColor.toColorInt()
+                historyLoadingProgress.indeterminateTintList = ColorStateList.valueOf(pColor)
+                swipeRefreshLayout.setColorSchemeColors(pColor)
+            } catch (_: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.e("NewChatActivity", "setupTheme failed: ${e.message}")
+        }
 
         swipeRefreshLayout.setOnRefreshListener {
-            // Don't clearRoomMessages — it wipes the cache and loses pending messages.
-            // Just force-reload from server via loadHistory.
             viewModel.forceLoadHistory()
             swipeRefreshLayout.isRefreshing = false
         }
@@ -330,24 +351,28 @@ class NewChatActivity : AppCompatActivity() {
                     val currentTypists = typingMap[roomId]?.filter { it != username && it != currentUserId } ?: emptyList()
                     Triple(onlineUsers, status, currentTypists)
                 }.collect { (onlineUsers, status, currentTypists) ->
-                    val isConnected = status == ConnectionStatus.READY
-                    val isConnecting = status == ConnectionStatus.CONNECTING
-                    val otherUser = toolbarDelegate.getOtherParticipant()
-                    val otherUserLastSeenAt = otherUser?.let { u ->
-                        grpcClient.allUsers.value.find { it.username == u }?.lastSeenAt
-                    }
-                    toolbarDelegate.updateSubtitle(onlineUsers, isConnected, currentTypists, otherUserLastSeenAt)
-                    inputDelegate.messageInput.isEnabled = !isConnecting
-                    inputDelegate.sendButton.isEnabled = !isConnecting
-                    inputDelegate.attachButton.isEnabled = !isConnecting
-                    inputDelegate.audioButton.isEnabled = !isConnecting
-                    if (isConnected) {
-                        viewModel.syncChatListIfNeeded(this@NewChatActivity)
-                        if (adapter.currentList.isEmpty()) {
-                            shouldScrollToBottom = true
+                    try {
+                        val isConnected = status == ConnectionStatus.READY
+                        val isConnecting = status == ConnectionStatus.CONNECTING
+                        val otherUser = toolbarDelegate.getOtherParticipant()
+                        val otherUserLastSeenAt = otherUser?.let { u ->
+                            grpcClient.allUsers.value.find { it.username == u }?.lastSeenAt
                         }
-                        viewModel.loadHistory()
-                        viewModel.loadPinnedMessages(this@NewChatActivity)
+                        toolbarDelegate.updateSubtitle(onlineUsers, isConnected, currentTypists, otherUserLastSeenAt)
+                        inputDelegate.messageInput.isEnabled = !isConnecting
+                        inputDelegate.sendButton.isEnabled = !isConnecting
+                        inputDelegate.attachButton.isEnabled = !isConnecting
+                        inputDelegate.audioButton.isEnabled = !isConnecting
+                        if (isConnected) {
+                            viewModel.syncChatListIfNeeded(this@NewChatActivity)
+                            if (adapter.currentList.isEmpty()) {
+                                shouldScrollToBottom = true
+                            }
+                            viewModel.loadHistory()
+                            viewModel.loadPinnedMessages(this@NewChatActivity)
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("NewChatActivity", "Connection observer error: ${e.message}", e)
                     }
                 }
             }
@@ -498,13 +523,17 @@ class NewChatActivity : AppCompatActivity() {
             }
         }
         viewModel.fetchChatMetadata(username, roomId, isDirect, participantsJson, chatName) { meta ->
-            runOnUiThread {
-                chatName = meta.chatName; isDirect = meta.isDirect; chatType = meta.chatType
-                participantsJson = meta.participantsJson; creator = meta.creator
-                chatAvatarUrl = meta.avatarUrl; chatFullAvatarUrl = meta.fullAvatarUrl
-                toolbarDelegate.configure(roomId, username, chatName, isDirect, chatType, participantsJson, creator, chatAvatarUrl, chatFullAvatarUrl, isSecret)
-                toolbarDelegate.setup()
-                adapter.isGroupChat = !isDirect; adapter.adminUsername = creator
+            try {
+                runOnUiThread {
+                    chatName = meta.chatName; isDirect = meta.isDirect; chatType = meta.chatType
+                    participantsJson = meta.participantsJson; creator = meta.creator
+                    chatAvatarUrl = meta.avatarUrl; chatFullAvatarUrl = meta.fullAvatarUrl
+                    toolbarDelegate.configure(roomId, username, chatName, isDirect, chatType, participantsJson, creator, chatAvatarUrl, chatFullAvatarUrl, isSecret)
+                    toolbarDelegate.setup()
+                    adapter.isGroupChat = !isDirect; adapter.adminUsername = creator
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("NewChatActivity", "fetchChatMetadata callback error: ${e.message}", e)
             }
         }
         viewModel.loadPinnedMessages(this)

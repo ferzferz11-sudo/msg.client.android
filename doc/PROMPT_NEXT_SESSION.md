@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.2.11 (готова к выпуску) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-06
+**Версия:** v1.3.2.12 (готова к выпуску) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-16
 
 ---
 
@@ -47,6 +47,32 @@
 5. v2 server only — никаких v1 fallbacks
 6. Перед коммитом: `./gradlew assembleDebug`
 7. НЕ bump'ать версию — bump делает только пользователь
+
+---
+
+## v1.3.2.12 — Defensive Error Handling for Chat Entry Crashes
+
+### Исправлено
+
+**ThemeApplier.apply() — главный источник крашей на некоторых устройствах:**
+- ~50 операций с view без try-catch. На некоторых комбинациях manufacturer + API level падал `WindowInsetsControllerCompat`, `DrawableCompat.wrap(bg.mutate())` или другие операции
+- Разбит на 5 секций с try-catch: WindowInsets, background, toolbar, widgets, panels/forms
+- `ThemeUi.bind()` — обёрнут `ThemeApplier.apply()` в try-catch
+
+**ChatToolbarDelegate.setup():**
+- `setSupportActionBar()` + `ThemeStore.currentTheme().toColorInt()` без try-catch
+- Все 3 метода (secret/favorites/normal) обёрнуты с fallback на базовый UI
+
+**NewChatActivity — полная защита от крашей:**
+- `initDelegates()` / `initSharedViews()` → try-catch + finish()
+- `setupDelegates()` → try-catch
+- `combine` flow collector → try-catch
+- `fetchChatMetadata` callback → try-catch
+- `setupTheme()` → try-catch
+- `setDecorFitsSystemWindows` → try-catch
+
+**Убран мёртвый код:**
+- ThemeApplier искал `tvToolbarTitle` / `tvToolbarSubtitle` которых нет в layout
 
 ---
 

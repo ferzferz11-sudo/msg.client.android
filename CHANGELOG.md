@@ -1,5 +1,34 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.2.12] - 2026-07-16
+
+### Исправлено
+
+**Краши при входе в чаты на некоторых устройствах:**
+- `ThemeApplier.apply()` не имел обработки ошибок — ~50 операций с view без try-catch. На некоторых комбинациях manufacturer + API level падал `WindowInsetsControllerCompat`, `DrawableCompat.wrap(bg.mutate())` или другие операции → необработанный краш Activity
+- Добавлен try-catch в 5 секций ThemeApplier: WindowInsets, background, toolbar, widgets, panels/forms
+- `ThemeUi.bind()` — обёрнут `ThemeApplier.apply()` в try-catch для защиты от crash в coroutine scope
+
+**Краш при инициализации тулбара чата:**
+- `ChatToolbarDelegate.setup()` — `setSupportActionBar()` + `ThemeStore.currentTheme().xxxColor.toColorInt()` без try-catch
+- `setupSecretChatToolbar()` / `setupFavoritesToolbar()` / `setupNormalToolbar()` — добавлен try-catch с fallback на базовый UI (текст без темизации)
+
+**Краш в connection observer:**
+- `combine` flow collector в `NewChatActivity.setupObservers()` — необработанное исключение в coroutine scope убивало collector
+- Обёрнут в try-catch с логированием
+
+**Защита от крашей при инициализации:**
+- `NewChatActivity.onCreate()` — `initDelegates()` / `initSharedViews()` обёрнуты в try-catch с `finish()` при ошибке
+- `setupDelegates()` обёрнут в try-catch
+- `fetchChatMetadata` callback обёрнут в try-catch
+- `setupTheme()` обёрнут в try-catch
+- `setDecorFitsSystemWindows` обёрнут в try-catch
+
+**Убран мёртвый код:**
+- `ThemeApplier` искал `R.id.tvToolbarTitle` / `R.id.tvToolbarSubtitle` — этих IDs нет в `activity_new_chat.xml` (там `toolbarTitle` / `toolbarSubtitle`). Safe-call спасал от краша, но код был бесполезен
+
+---
+
 ## [1.3.2.11] - 2026-07-07
 
 ### Улучшения

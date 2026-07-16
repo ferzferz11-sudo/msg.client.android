@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.2.11 | **Updated:** 2026-07-07
+**Version:** v1.3.2.12 | **Updated:** 2026-07-16
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -718,3 +718,28 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **`CallActivity.onDestroy()`** did not dismiss the call notification — only `CALL_ENDED` FCM push or `CallActionService` DECLINE removed it
 - **Fix (client):** Added `dismissCallNotification()` in `CallActivity.onDestroy()`, `CallManager.hangup()`, `CallManager.rejectCall()`, `CallManager.clearCurrentCall()`, `CallManager.handleCallEndedPush()`
 - **Push when already in call:** `LavenderMessagingService.handleIncomingCall()` now checks `CallManager.currentCall.value != null` before showing notification
+
+## ThemeApplier Crashes on Some Devices (v1.3.2.12)
+
+- **`ThemeApplier.apply()` was the #1 uncaught crash source for chat entry** — ~50 view operations without any try-catch. Called via `ThemeUi.bind()` → `repeatOnLifecycle(STARTED)`, so any exception in `apply()` crashed the Activity
+- **Device-specific:** Crashed on some manufacturer + API level combinations (e.g. `WindowInsetsControllerCompat` failed on certain MIUI/OneUI builds, `DrawableCompat.wrap(bg.mutate())` on others). Working on most devices
+- **Fix:** Split `apply()` into 5 try-catch sections: WindowInsets, background decorView, toolbar, widgets/tabLayout, panels/forms. Each section logs to Logcat and continues
+- **`ThemeUi.bind()`** — outer try-catch around `ThemeApplier.apply()` prevents coroutine scope crash
+- **`ChatToolbarDelegate.setup()`** — `setSupportActionBar()` + `ThemeStore.currentTheme().toColorInt()` could crash on invalid theme colors. Now wrapped in try-catch with fallback to basic UI
+- **Rule:** Always wrap `ThemeApplier.apply()` and any code that calls `ThemeStore.currentTheme()` + `.toColorInt()` in try-catch. Custom themes can have invalid color strings
+
+## Dead Code in ThemeApplier (v1.3.2.12)
+
+- **`R.id.tvToolbarTitle` / `R.id.tvToolbarSubtitle`** — ThemeApplier searched for these IDs inside the toolbar, but they don't exist in any layout (the actual IDs are `toolbarTitle` / `toolbarSubtitle`). Safe-call `?.` prevented crash but code was dead
+- **Removed** — no functional change
+
+## Defensive Error Handling Pattern (v1.3.2.12)
+
+- **`NewChatActivity.onCreate()`** — all init calls wrapped in try-catch:
+  - `initDelegates()` / `initSharedViews()` → try-catch + `finish()` + `return`
+  - `setupDelegates()` → try-catch (non-fatal, chat opens without full delegate setup)
+  - `combine` flow collector → try-catch (prevents coroutine scope crash)
+  - `fetchChatMetadata` callback → try-catch
+  - `setupTheme()` → try-catch
+  - `setDecorFitsSystemWindows` → try-catch
+- **Purpose:** Prevent crashes on devices where we can't get logcat. Error messages go to Logcat for future diagnosis
