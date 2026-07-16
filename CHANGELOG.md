@@ -1,5 +1,23 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.2.13] - 2026-07-16
+
+### Исправлено
+
+**Token refresh race condition — вынужденный повторный вход:**
+- Три независимых пути вызывали `GrpcClient.refreshToken()`: периодический (60s, Main thread), `ensureFreshToken()` (перед gRPC, IO thread), `forceTokenRefresh()` (pull-to-refresh, IO thread)
+- Сервер использует ротацию refresh token с reuse detection: каждый успешный refresh генерирует новый JTI. При отправке повторно использованного JTI сервер вызывает `RevokeDevice()` — всё устройство отключается (`is_active = FALSE`)
+- `isRefreshing` флаг защищал только `ensureFreshToken()`. `performTokenRefresh()` и `forceTokenRefresh()` работали без взаимной блокировки. Когда 60s таймер совпадал с pull-to-refresh или `loadChats()`, оба читали один и тот же старый refresh token и отправляли его на сервер → сервер обрабатывал первый → ротация → обрабатывал второй → reuse detected → revoke device → forced re-login
+- Заменён `isRefreshing: Boolean` на `refreshGuard: AtomicBoolean`. Все три пути используют `compareAndSet(false, true)` для захвата guard. `waitForRefreshComplete()` polling 100ms. Каждый путь повторно проверяет свежесть токена после ожидания
+
+**Lint — HardwareIds warning:**
+- `Settings.Secure.getString(contentResolver, ANDROID_ID)` — lint предупреждал об использовании device identifier. Добавлен `@SuppressLint("HardwareIds")` с комментарием
+
+**Duration API:**
+- `withTimeoutOrNull(10000)` → `withTimeoutOrNull(10.seconds)` (3 места)
+
+---
+
 ## [1.3.2.12] - 2026-07-16
 
 ### Исправлено

@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.2.12 | **Updated:** 2026-07-16
+**Version:** v1.3.2.13 | **Updated:** 2026-07-16
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -743,3 +743,12 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
   - `setupTheme()` → try-catch
   - `setDecorFitsSystemWindows` → try-catch
 - **Purpose:** Prevent crashes on devices where we can't get logcat. Error messages go to Logcat for future diagnosis
+
+## Token Refresh Race Condition (v1.3.2.13)
+
+- **Three paths call `GrpcClient.refreshToken()` independently:** `performTokenRefresh()` (periodic 60s, Main thread), `ensureFreshToken()` (before gRPC calls, IO thread), `forceTokenRefresh()` (pull-to-refresh, IO thread)
+- **Server implements refresh token rotation with reuse detection:** each successful refresh rotates the JTI (JWT ID). Submitting a previously-used JTI triggers `RevokeDevice()` — the entire device session is killed (`is_active = FALSE`)
+- **Root cause:** old `isRefreshing` flag only guarded `ensureFreshToken()`. `performTokenRefresh()` and `forceTokenRefresh()` had no mutual exclusion. When the 60s periodic timer fired simultaneously with a pull-to-refresh or `loadChats()`, both read the same old refresh token and sent it to the server. Server processed the first → rotated. Server processed the second → reuse detected → device revoked → user forced to re-login
+- **Fix:** replaced `isRefreshing` with `refreshGuard: AtomicBoolean`. All three paths use `compareAndSet(false, true)` to acquire the guard. `waitForRefreshComplete()` helper polls until guard is released. Each path re-checks token freshness after waiting — if another refresh already completed, skips redundant refresh
+- **Server confirmation:** `auth_jwt.go:103-116` `ValidateToken` checks JWT expiry. `db_auth_devices.go:188-204` `ValidateRefreshToken` checks DB `is_active` AND JTI match. `auth_service_v2.go:355-360` on reuse: `RevokeDevice()` + log `refresh_reuse_detected`
+- **Impact:** intermittent forced re-login despite auto-refresh working. Most likely triggered when app returns from background (Doze) and both periodic timer + loadChats fire simultaneously

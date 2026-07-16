@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.2.12 | **Updated:** 2026-07-16
+**Version:** v1.3.2.13 | **Updated:** 2026-07-16
 
 ---
 
@@ -1136,4 +1136,39 @@ currentUsername MUST be set after login:
   ├── SessionManager.updateSession() → GrpcClient.setUsername(it)
   ├── Used by: typing signals, call auto-start, markRead, FORCE_DISCONNECT
   └── Without it, all getUsername = { currentUsername } callbacks return null
+```
+
+---
+
+## v1.3.2.13
+
+### Token Refresh Guard Pattern (v1.3.2.13)
+```
+SessionManager — unified refresh guard
+  ├── refreshGuard: AtomicBoolean(false) — single guard for all refresh paths
+  ├── waitForRefreshComplete() — polls until refreshGuard is released
+  │
+  ├── performTokenRefresh (periodic 60s, suspend/Main):
+  │   └── compareAndSet(false, true) → skip if false (another refresh in progress)
+  │
+  ├── ensureFreshToken (sync, blocking/IO):
+  │   ├── waitForRefreshComplete() → re-check expiry → skip if fresh
+  │   ├── compareAndSet(false, true) → wait + bail if false
+  │   └── try/finally { refreshGuard.set(false) }
+  │
+  └── forceTokenRefresh (pull-to-refresh, blocking/IO):
+      ├── waitForRefreshComplete() → re-check expiry → skip if fresh
+      ├── compareAndSet(false, true) → wait + bail if false
+      └── try/finally { refreshGuard.set(false) }
+
+Server refresh token rotation:
+  ├── Each RefreshToken call → new JTI, old JTI invalidated
+  ├── Reuse detection: JTI mismatch → RevokeDevice(user_id, device_id)
+  └── RevokeDevice → is_active = FALSE → all subsequent refresh attempts fail
+
+Why AtomicBoolean (not Mutex/synchronized):
+  ├── performTokenRefresh is suspend — can't hold JVM lock across suspension
+  ├── ensureFreshToken/forceTokenRefresh are blocking — can't use coroutine Mutex
+  ├── AtomicBoolean.compareAndSet is thread-safe, non-blocking
+  └── try/finally guarantees guard release on any exit path
 ```

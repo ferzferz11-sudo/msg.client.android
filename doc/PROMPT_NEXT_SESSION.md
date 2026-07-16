@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.2.12 (готова к выпуску) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-16
+**Версия:** v1.3.2.13 (готова к выпуску) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-16
 
 ---
 
@@ -47,6 +47,24 @@
 5. v2 server only — никаких v1 fallbacks
 6. Перед коммитом: `./gradlew assembleDebug`
 7. НЕ bump'ать версию — bump делает только пользователь
+
+---
+
+## v1.3.2.13 — Token Refresh Race Condition Fix
+
+### Исправлено
+
+**Token refresh race condition — вынужденный повторный вход:**
+- Три независимых пути вызывали `GrpcClient.refreshToken()`: периодический (60s), `ensureFreshToken()` (перед gRPC), `forceTokenRefresh()` (pull-to-refresh)
+- Сервер использует ротацию refresh token с reuse detection: повторная отправка старого JTI → `RevokeDevice()` → устройство отключается
+- `isRefreshing` флаг защищал только `ensureFreshToken()`. Два других пути работали без блокировки → параллельная отправка одного токена → reuse detected → forced re-login
+- Заменён `isRefreshing: Boolean` на `refreshGuard: AtomicBoolean` с `compareAndSet` для всех трёх путей. `waitForRefreshComplete()` polling 100ms
+
+**Lint — HardwareIds warning:**
+- `@SuppressLint("HardwareIds")` на `getDeviceId()` — ANDROID_ID используется намеренно
+
+**Duration API:**
+- `withTimeoutOrNull(10000)` → `withTimeoutOrNull(10.seconds)` (3 места)
 
 ---
 
