@@ -24,7 +24,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.MapPickerActivity
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
@@ -431,72 +433,93 @@ class ChatInputDelegate(
     private fun sendSelectedImages() {
         val text = messageInput.text.toString().trim()
         val urls = mutableListOf<String>()
-        var count = 0
         val total = selectedImageUris.size
-        val uploadProgressContainer = activity.findViewById<View>(R.id.uploadProgressContainer)
-        val uploadProgressText = activity.findViewById<TextView>(R.id.uploadProgressText)
-        val uploadProgressBar = activity.findViewById<android.widget.ProgressBar>(R.id.uploadProgressBar)
+        if (total == 0) return
 
-        uploadProgressContainer.isVisible = true
-        uploadProgressText.text = activity.getString(R.string.uploading_images, 0, total)
-        uploadProgressBar.progress = 0
+        sendButton.isEnabled = false
+        attachButton.isEnabled = false
 
-        selectedImageUris.forEach { uri ->
-            val bytes = activity.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            if (bytes != null) {
-                if (bytes.size > ProfileClient.maxUploadSize) {
-                    count++
-                    activity.runOnUiThread {
-                        uploadProgressBar.progress = ((count.toFloat() / total) * 100).toInt()
-                        uploadProgressText.text = activity.getString(R.string.uploading_images, count, total)
-                        if (count == total) {
-                            uploadProgressContainer.isVisible = false
-                            if (urls.isNotEmpty()) sendGalleryMessage(text, urls)
-                            else showToast(activity.getString(R.string.file_too_large))
-                        }
-                    }
-                    return@forEach
+        activity.lifecycleScope.launch {
+            for ((index, uri) in selectedImageUris.withIndex()) {
+                val itemView = imagePreviewContainer.getChildAt(index)
+                val overlay = itemView?.findViewById<View>(R.id.uploadOverlay)
+                val spinner = itemView?.findViewById<View>(R.id.uploadSpinner)
+                val errorIcon = itemView?.findViewById<View>(R.id.uploadErrorIcon)
+                val successIcon = itemView?.findViewById<View>(R.id.uploadSuccessIcon)
+                val removeBtn = itemView?.findViewById<View>(R.id.removeImageButton)
+
+                withContext(Dispatchers.Main) {
+                    overlay?.visibility = View.VISIBLE
+                    spinner?.visibility = View.VISIBLE
+                    errorIcon?.visibility = View.GONE
+                    successIcon?.visibility = View.GONE
+                    removeBtn?.visibility = View.GONE
                 }
-                val body = MultipartBody.Part.createFormData("image", getFileName(uri) ?: "image.jpg",
-                    bytes.toRequestBody("application/octet-stream".toMediaTypeOrNull()))
-                val uploadUrl = "${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(activity)}/upload-image"
-                android.util.Log.d("ChatInput", "Uploading image to: $uploadUrl (bytes=${bytes.size})")
-                val req = Request.Builder()
-                    .url(uploadUrl)
-                    .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build()).build()
-                HttpClient.client.newCall(req).enqueue(object : okhttp3.Callback {
-                    override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
-                        android.util.Log.e("ChatInput", "Upload failed: ${e.message}", e)
-                        activity.runOnUiThread { uploadProgressContainer.isVisible = false; showToast("Upload failed: ${e.message}") }
-                    }
-                    override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
-                        val rb = response.body.string()
-                        android.util.Log.d("ChatInput", "Upload response: code=${response.code} body=${rb.take(200)}")
-                        if (response.code == 400 && rb.contains("too large")) {
-                            activity.runOnUiThread { uploadProgressContainer.isVisible = false; showToast(activity.getString(R.string.file_too_large)) }
-                            return
-                        }
-                        if (!response.isSuccessful || rb.contains("404")) {
-                            activity.runOnUiThread { uploadProgressContainer.isVisible = false; showToast(activity.getString(R.string.failed_to_upload_file)) }
-                            return
-                        }
-                        val url = if (rb.contains("\"url\"")) try { JSONObject(rb).getString("url") } catch (_: Exception) { "" }
-                        else if (rb.startsWith("http")) rb else ""
-                        if (url.isNotEmpty() && !url.contains("404")) urls.add(url)
-                        count++
-                        activity.runOnUiThread {
-                            uploadProgressBar.progress = ((count.toFloat() / total) * 100).toInt()
-                            uploadProgressText.text = activity.getString(R.string.uploading_images, count, total)
-                            if (count == total) {
-                                uploadProgressContainer.isVisible = false
-                                if (urls.isNotEmpty()) sendGalleryMessage(text, urls)
-                                else showToast("Upload failed")
+
+                val result = withContext(Dispatchers.IO) {
+                    try {
+                        val bytes = activity.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                        if (bytes == null) {
+                            UploadResult.Error("Cannot read file")
+                        } else if (bytes.size > ProfileClient.maxUploadSize) {
+                            UploadResult.Error(activity.getString(R.string.file_too_large))
+                        } else {
+                            val fn = getFileName(uri) ?: "image.jpg"
+                            val body = MultipartBody.Part.createFormData("image", fn,
+                                bytes.toRequestBody("application/octet-stream".toMediaTypeOrNull()))
+                            val req = Request.Builder()
+                                .url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(activity)}/upload-image")
+                                .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build()).build()
+                            val response = HttpClient.client.newCall(req).execute()
+                            val rb = response.body.string()
+                            response.close()
+                            if (response.code == 400 && rb.contains("too large")) {
+                                UploadResult.Error(activity.getString(R.string.file_too_large))
+                            } else if (!response.isSuccessful || rb.contains("404")) {
+                                UploadResult.Error(activity.getString(R.string.failed_to_upload_file))
+                            } else {
+                                val url = if (rb.contains("\"url\"")) try { org.json.JSONObject(rb).getString("url") } catch (_: Exception) { "" }
+                                else if (rb.startsWith("http")) rb else ""
+                                if (url.isNotEmpty() && !url.contains("404")) UploadResult.Success(url)
+                                else UploadResult.Error("Upload failed")
                             }
                         }
+                    } catch (e: Exception) {
+                        UploadResult.Error(e.message ?: "Unknown error")
                     }
-                })
+                }
+
+                withContext(Dispatchers.Main) {
+                    when (result) {
+                        is UploadResult.Success -> {
+                            urls.add(result.url)
+                            spinner?.visibility = View.GONE
+                            successIcon?.visibility = View.VISIBLE
+                        }
+                        is UploadResult.Error -> {
+                            spinner?.visibility = View.GONE
+                            errorIcon?.visibility = View.VISIBLE
+                            removeBtn?.visibility = View.VISIBLE
+                        }
+                    }
+                }
+            }
+
+            withContext(Dispatchers.Main) {
+                sendButton.isEnabled = true
+                attachButton.isEnabled = true
+                if (urls.isNotEmpty()) {
+                    sendGalleryMessage(text, urls)
+                } else {
+                    showToast(activity.getString(R.string.failed_to_upload_file))
+                }
             }
         }
+    }
+
+    private sealed class UploadResult {
+        data class Success(val url: String) : UploadResult()
+        data class Error(val message: String) : UploadResult()
     }
 
     private fun sendGalleryMessage(text: String, imageUrls: List<String>) {

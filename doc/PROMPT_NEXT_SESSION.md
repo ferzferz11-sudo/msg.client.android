@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.2.16 (выпущена) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-17
+**Версия:** v1.3.2.17 (выпущена) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-17
 
 ---
 
@@ -50,9 +50,45 @@
 
 ---
 
-## v1.3.2.16 — UI Polish + Gallery Thumbnails + Inline Username
+## v1.3.2.17 — Position Bubble Theme Fix + Inline Username Card
 
 ### Исправлено
+
+**Плашка должности — тема:**
+- На тёмных темах фон был прозрачный синий, текст читался плохо
+- Фон: `surfaceColor` (0.6 alpha) вместо `primaryColor` (0.12 alpha)
+- Текст: `textPrimaryColor` программно вместо `?attr/colorOnPrimaryContainer`
+
+**Inline @username карточка:**
+- Заменён простой TextView на MaterialCardView в стиле "Кратко о себе"
+- Заголовок "Имя" / "Name" (primary цвет, bold)
+- Значение @username под ним
+- Тап на всю карточку → шторка редактирования
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `EditProfileActivity.kt` | positionBubble: surfaceColor + textPrimary, usernameCard click |
+| `ProfileActivity.kt` | positionBubble: surfaceColor + textPrimary |
+| `activity_edit_profile.xml` | usernameCard (MaterialCardView) вместо tvInlineUsername |
+| `strings.xml` (EN/RU) | +username_label |
+| `CHANGELOG.md` | v1.3.2.17 |
+
+---
+
+## v1.3.2.16 — UI Polish + Gallery Thumbnails + Inline Username + Sequential Upload
+
+### Исправлено
+
+**Загрузка галереи — параллельная → последовательная:**
+- Фото загружались одновременно → сервер перегружался, процесс прерывался
+- Переделано на последовательную загрузку через `withContext(Dispatchers.IO)` + `execute()` (синхронный)
+- Ошибка одного фото не прерывает загрузку остальных
+
+**Загрузка галереи — индикация на миниатюрах:**
+- Сpinner при загрузке, галочка при успехе, крестик при ошибке
+- Сообщение в чат отправляется только после полной загрузки
 
 **Темы — фон плашек в чат-листе:**
 - `ChatAdapter.updateTheme()` — сброс кэша цветов + `notifyItemRangeChanged`
@@ -89,6 +125,8 @@
 | `item_message.xml` | -tvGalleryCount, +rvGalleryThumbnails |
 | `MessageAdapter.kt` | +ThumbnailGridAdapter, bindImageContent rewrite |
 | `dimens.xml` | +chat_gallery_thumb_size |
+| `image_preview_container.xml` | +upload overlay/spinner/error/success icons |
+| `ChatInputDelegate.kt` | sendSelectedImages rewrite: sequential upload + per-thumb progress |
 | `CHANGELOG.md` | v1.3.2.16 |
 
 ---

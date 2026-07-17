@@ -411,8 +411,10 @@ class ProfileActivity : AppCompatActivity() {
         val bioTitle = findViewById<TextView>(R.id.bioTitle)
         bioTitle?.setTextColor(primaryColor)
         val positionBubble = findViewById<com.google.android.material.card.MaterialCardView>(R.id.positionBubble)
-        val primaryContainerBg = android.graphics.Color.argb(30, android.graphics.Color.red(primaryColor), android.graphics.Color.green(primaryColor), android.graphics.Color.blue(primaryColor))
+        val surfaceColor = ThemeUtils.parseSafeColor(currentTheme.surfaceColor, android.graphics.Color.WHITE)
+        val primaryContainerBg = ThemeUtils.adjustAlpha(surfaceColor, 0.6f)
         positionBubble?.setCardBackgroundColor(ColorStateList.valueOf(primaryContainerBg))
+        findViewById<TextView>(R.id.tvProfileCompanyPosition)?.setTextColor(ThemeUtils.parseSafeColor(currentTheme.textPrimaryColor, android.graphics.Color.BLACK))
     }
 
     @SuppressLint("SetTextI18n")

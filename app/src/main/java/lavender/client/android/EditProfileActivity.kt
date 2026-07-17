@@ -2,6 +2,7 @@ package lavender.client.android
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -109,6 +110,7 @@ class EditProfileActivity : AppCompatActivity() {
         }
         val avatarImageView = findViewById<CircleImageView>(R.id.ivProfileAvatar)
         val editTextBio = findViewById<EditText>(R.id.editTextBio)
+        val usernameCard = findViewById<android.view.View>(R.id.usernameCard)
         val tvInlineUsername = findViewById<android.widget.TextView>(R.id.tvInlineUsername)
         val btnChangeBio = findViewById<Button>(R.id.btnChangeBio)
         val btnChangePassword = findViewById<Button>(R.id.btnChangePassword)
@@ -152,10 +154,11 @@ class EditProfileActivity : AppCompatActivity() {
                         tvCompanyName.text = profile.companyName
                         tvCompanyPosition.text = formatCompanyPosition(profile.positionTitle, profile.positionLevel)
                         val posBubble = findViewById<com.google.android.material.card.MaterialCardView>(R.id.positionBubble)
-                        val primColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().primaryColor, android.graphics.Color.BLUE)
-                        posBubble?.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(
-                            android.graphics.Color.argb(30, android.graphics.Color.red(primColor), android.graphics.Color.green(primColor), android.graphics.Color.blue(primColor))
-                        ))
+                        val currentTheme = ThemeStore.currentTheme()
+                        val surfaceColor = ThemeUtils.parseSafeColor(currentTheme.surfaceColor, android.graphics.Color.WHITE)
+                        val textPrimary = ThemeUtils.parseSafeColor(currentTheme.textPrimaryColor, android.graphics.Color.BLACK)
+                        posBubble?.setCardBackgroundColor(ColorStateList.valueOf(ThemeUtils.adjustAlpha(surfaceColor, 0.6f)))
+                        tvCompanyPosition.setTextColor(textPrimary)
                         ivCompanyLogo.isVisible = false
                         btnCompanyAction.setOnClickListener {
                             val intent = android.content.Intent(this@EditProfileActivity, CompanyProfileActivity::class.java).apply {
@@ -295,7 +298,7 @@ class EditProfileActivity : AppCompatActivity() {
             pickImageLauncher.launch(intent)
         }
 
-        tvInlineUsername.setOnClickListener {
+        usernameCard.setOnClickListener {
             showChangeUsernameDialog()
         }
 
@@ -707,10 +710,11 @@ class EditProfileActivity : AppCompatActivity() {
                         tvCompanyPosition.isVisible = true
                         tvCompanyPosition.text = formatCompanyPosition(profile.positionTitle, profile.positionLevel)
                         val posBubble = findViewById<com.google.android.material.card.MaterialCardView>(R.id.positionBubble)
-                        val primColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().primaryColor, android.graphics.Color.BLUE)
-                        posBubble?.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(
-                            android.graphics.Color.argb(30, android.graphics.Color.red(primColor), android.graphics.Color.green(primColor), android.graphics.Color.blue(primColor))
-                        ))
+                        val currentTheme = ThemeStore.currentTheme()
+                        val surfaceColor = ThemeUtils.parseSafeColor(currentTheme.surfaceColor, android.graphics.Color.WHITE)
+                        val textPrimary = ThemeUtils.parseSafeColor(currentTheme.textPrimaryColor, android.graphics.Color.BLACK)
+                        posBubble?.setCardBackgroundColor(ColorStateList.valueOf(ThemeUtils.adjustAlpha(surfaceColor, 0.6f)))
+                        tvCompanyPosition.setTextColor(textPrimary)
                         lifecycleScope.launch {
                             val companyResp = withContext(Dispatchers.IO) {
                                 lavender.client.android.data.grpc.GrpcCompanyClient.getCompany(profile.companyId)

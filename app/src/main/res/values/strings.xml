@@ -260,6 +260,7 @@
     <string name="loading">Loading…</string>
     <string name="change_bio">Save</string>
     <string name="bio_label">Bio</string>
+    <string name="username_label">Name</string>
     <string name="tell_about_yourself">Tell about yourself</string>
     <string name="edit_profile_title">Edit Profile</string>
     <string name="fcm_token_label">FCM Token:</string>
