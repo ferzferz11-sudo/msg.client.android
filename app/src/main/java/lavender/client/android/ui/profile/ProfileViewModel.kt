@@ -34,7 +34,8 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         val companyName: String = "",
         val positionTitle: String = "",
         val positionLevel: Int = 0,
-        val userId: String = ""
+        val userId: String = "",
+        val email: String = ""
     )
 
     data class GroupData(
@@ -79,7 +80,8 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     companyName = profile?.companyName ?: "",
                     positionTitle = profile?.positionTitle ?: "",
                     positionLevel = profile?.positionLevel ?: 0,
-                    userId = profile?.userId ?: ""
+                    userId = profile?.userId ?: "",
+                    email = profile?.email ?: ""
                 )
                 if (profile != null && profile.avatarUrl.isNotEmpty()) {
                     GrpcClient.updateAvatarCache(username, profile.avatarUrl, profile.fullAvatarUrl.ifEmpty { profile.avatarUrl })

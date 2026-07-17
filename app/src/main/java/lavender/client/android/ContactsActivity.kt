@@ -160,6 +160,9 @@ class ContactsActivity : AppCompatActivity() {
         adapter = UserAdapter(
             lifecycleScope,
             onUserClick = { selectedUser ->
+                openProfile(selectedUser)
+            },
+            onUserLongClick = { selectedUser ->
                 adapter.toggleSelection(selectedUser)
             },
             onSelectionChanged = { count ->
@@ -192,6 +195,14 @@ class ContactsActivity : AppCompatActivity() {
                 binding.emptyStateContainer.isVisible = contacts.isEmpty()
             }
         }
+    }
+
+    private fun openProfile(targetUser: String) {
+        val intent = Intent(this, ProfileActivity::class.java).apply {
+            putExtra("username", targetUser)
+            putExtra("is_group", false)
+        }
+        startActivity(intent)
     }
 
     private fun createChatFromSelection() {

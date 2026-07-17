@@ -218,6 +218,13 @@
     <string name="participants_online_count">%1$d participants (%2$d online)</string>
     <string name="search">Search</string>
     <string name="video_call">Video Call</string>
+    <string name="voice_call">Voice Call</string>
+    <string name="message">Message</string>
+    <string name="email">Email</string>
+    <string name="send_email">Send Email</string>
+    <string name="action_voice_call">Voice call</string>
+    <string name="action_video_call">Video call</string>
+    <string name="no_email_app">No email app found</string>
     <string name="no_results">No results</string>
     <string name="search_results_format">%1$d/%2$d</string>
     <string name="edit_message">Edit Message</string>

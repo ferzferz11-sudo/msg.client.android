@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.view.View
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -104,7 +105,6 @@ class ProfileActivity : AppCompatActivity() {
         intentFullAvatarUrl = intent.getStringExtra("full_avatar_url") ?: ""
         intentChatName = intent.getStringExtra("chat_name") ?: ""
         chatType = intent.getStringExtra("chat_type") ?: ""
-        val chatType = intent.getStringExtra("chat_type") ?: ""
 
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -274,6 +274,11 @@ class ProfileActivity : AppCompatActivity() {
         val tvProfileCompanyName = findViewById<TextView>(R.id.tvProfileCompanyName)
         val tvProfileCompanyPosition = findViewById<TextView>(R.id.tvProfileCompanyPosition)
         val ivProfileCompanyLogo = findViewById<de.hdodenhof.circleimageview.CircleImageView>(R.id.ivProfileCompanyLogo)
+        val profileActionsRow = findViewById<LinearLayout>(R.id.profileActionsRow)
+        val actionMessage = findViewById<View>(R.id.actionMessage)
+        val actionVoiceCall = findViewById<View>(R.id.actionVoiceCall)
+        val actionVideoCall = findViewById<View>(R.id.actionVideoCall)
+        val actionEmail = findViewById<View>(R.id.actionEmail)
 
         currentProfileAvatar = profileAvatar
         profileName.text = data.username
@@ -300,6 +305,63 @@ class ProfileActivity : AppCompatActivity() {
             profileStatus.setTextColor(typedValue.data)
         }
         profileStatus.isVisible = true
+
+        // Action icons row (Telegram-style) — only for other users' profiles
+        val isOwnProfile = data.username == grpcClient.getCurrentUsername()
+        if (!isOwnProfile && profileActionsRow != null) {
+            profileActionsRow.isVisible = true
+
+            actionMessage?.setOnClickListener {
+                val currentUsername = grpcClient.getCurrentUsername() ?: return@setOnClickListener
+                grpcClient.createDirectChat(currentUsername, data.username) { chatId ->
+                    if (chatId != null) {
+                        runOnUiThread {
+                            val intent = Intent(this, NewChatActivity::class.java).apply {
+                                putExtra("USERNAME", currentUsername)
+                                putExtra("ROOM_ID", chatId)
+                                putExtra("CHAT_NAME", data.username)
+                                putExtra("IS_DIRECT", true)
+                                putExtra("PARTICIPANTS", "[\"$currentUsername\", \"${data.username}\"]")
+                            }
+                            startActivity(intent)
+                        }
+                    }
+                }
+            }
+
+            actionVoiceCall?.setOnClickListener {
+                val currentUsername = grpcClient.getCurrentUsername() ?: return@setOnClickListener
+                val otherUserId = data.userId.ifEmpty { data.username }
+                lavender.client.android.data.calls.CallManager.initiateCall(data.username)
+                lavender.client.android.data.calls.CallNavigator.startCall(this, otherUserId, data.username)
+            }
+
+            actionVideoCall?.setOnClickListener {
+                val currentUsername = grpcClient.getCurrentUsername() ?: return@setOnClickListener
+                val otherUserId = data.userId.ifEmpty { data.username }
+                lavender.client.android.data.calls.CallManager.initiateCall(data.username)
+                lavender.client.android.data.calls.CallNavigator.startCall(this, otherUserId, data.username)
+            }
+
+            if (data.email.isNotEmpty()) {
+                actionEmail?.isVisible = true
+                val emailAddr = data.email
+                actionEmail?.setOnClickListener {
+                    val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
+                        this.data = Uri.parse("mailto:$emailAddr")
+                    }
+                    try {
+                        startActivity(emailIntent)
+                    } catch (e: Exception) {
+                        Toast.makeText(this, R.string.no_email_app, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else {
+                actionEmail?.isVisible = false
+            }
+        } else {
+            profileActionsRow?.isVisible = false
+        }
 
         // Company section
         if (data.companyId.isNotEmpty() && companyCard != null) {

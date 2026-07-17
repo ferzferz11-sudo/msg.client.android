@@ -205,6 +205,13 @@
     <string name="participants_online_count">%1$d участников (%2$d онлайн)</string>
     <string name="search">Поиск</string>
     <string name="video_call">Видеозвонок</string>
+    <string name="voice_call">Звонок</string>
+    <string name="message">Написать</string>
+    <string name="email">Почта</string>
+    <string name="send_email">Отправить письмо</string>
+    <string name="action_voice_call">Голосовой звонок</string>
+    <string name="action_video_call">Видеозвонок</string>
+    <string name="no_email_app">Почтовое приложение не найдено</string>
     <string name="no_results">Нет результатов</string>
     <string name="search_results_format">%1$d/%2$d</string>
     <string name="edit_message">Редактировать сообщение</string>
