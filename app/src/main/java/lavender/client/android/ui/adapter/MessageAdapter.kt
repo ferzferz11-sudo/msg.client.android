@@ -24,6 +24,7 @@ import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import lavender.client.android.R
+import android.graphics.Typeface
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.theme.ThemeStore
@@ -179,8 +180,13 @@ class MessageAdapter(
             val isSystem = message.user == "SYSTEM" && !isCallMessage
 
             bindBubbleStyle(isOutgoing, isSystem, finalSurface, pTextColor, secColor, canShowSenderInfo, theme)
-            if (isCallMessage) bindCallMessage(message, isOutgoing, pTextColor, ctx) else { messageText.text = message.text; messageText.textSize = 16f; messageText.setTypeface(null, android.graphics.Typeface.NORMAL); messageText.setTextColor(pTextColor) }
+            if (isCallMessage) bindCallMessage(message, isOutgoing, pTextColor, ctx) else { messageText.text = message.text; messageText.textSize = 16f; messageText.setTypeface(null, Typeface.NORMAL); messageText.setTextColor(pTextColor) }
             timeText.setTextColor(secColor); timeText.isVisible = !shouldHideTime; editedText.setTextColor(secColor)
+            if (isOutgoing) bindReadStatus(message, secColor, ctx) else { readStatusIcon.isVisible = false }
+
+            val safeTs = if (message.timestamp > System.currentTimeMillis()) System.currentTimeMillis() else message.timestamp
+            timeText.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(safeTs))
+            timeText.isVisible = !shouldHideTime
 
             if (message.voiceUrl.isNotEmpty()) bindAudioContent(message, isOutgoing, isSelectionMode, theme, onClick, onLongClick, adapterPosition)
             else { audioMessageView.isVisible = false; bindTextContent(message, isOutgoing, isSelectionMode, pTextColor, theme, ctx, onClick, onLongClick, adapterPosition) }
@@ -196,7 +202,7 @@ class MessageAdapter(
                 android.util.Log.e("MessageAdapter", "bind crashed for msg ${message.id}: ${e.message}", e)
                 try {
                     messageText.text = message.text.ifEmpty { "…" }
-                    messageText.setTextColor(android.graphics.Color.WHITE)
+                    messageText.setTextColor(Color.WHITE)
                     messageText.isVisible = true
                     avatarImageView.isVisible = false
                     timeText.isVisible = false
@@ -236,7 +242,7 @@ class MessageAdapter(
             val statusText = when { isMissed -> if (isOutgoing) ctx.getString(R.string.call_not_accepted) else ctx.getString(R.string.call_missed)
                 isCompleted -> { val dur = raw.substringAfter("(").substringBefore(")"); if (isOutgoing) ctx.getString(R.string.call_outgoing_with_duration, dur) else ctx.getString(R.string.call_incoming_with_duration, dur) }
                 else -> if (isOutgoing) ctx.getString(R.string.call_outgoing_video) else ctx.getString(R.string.call_incoming_video) }
-            messageText.text = "$icon $statusText"; messageText.textSize = 15f; messageText.setTypeface(null, android.graphics.Typeface.BOLD)
+            messageText.text = "$icon $statusText"; messageText.textSize = 15f; messageText.setTypeface(null, Typeface.BOLD)
             messageText.setTextColor(if (isMissed && !isOutgoing) "#FF5252".toColorInt() else textColor)
         }
 
@@ -318,7 +324,7 @@ class MessageAdapter(
                 if (username in mentionedUsers || mentionedUsers.isEmpty()) {
                     val start = match.range.first; val end = match.range.last + 1
                     spannable.setSpan(android.text.style.ForegroundColorSpan(mentionColor), start, end, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    spannable.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, end, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    spannable.setSpan(android.text.style.StyleSpan(Typeface.BOLD), start, end, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                     spannable.setSpan(object : android.text.style.ClickableSpan() {
                         override fun onClick(widget: android.view.View) {
                             // Mention click — no action for now, just visual feedback

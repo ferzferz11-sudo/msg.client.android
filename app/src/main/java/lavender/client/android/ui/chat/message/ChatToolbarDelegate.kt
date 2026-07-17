@@ -4,6 +4,8 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.view.View
+import android.graphics.Color
+import android.graphics.Typeface
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -306,9 +308,9 @@ class ChatToolbarDelegate(
             return
         }
         val cop = getThemeColor(com.google.android.material.R.attr.colorOnPrimary)
-        val cg = android.graphics.Color.parseColor("#32E672") // holo_green_light equivalent
+        val cg = Color.parseColor("#32E672") // holo_green_light equivalent
         toolbarSubtitle.isVisible = true
-        toolbarSubtitle.setTypeface(null, android.graphics.Typeface.NORMAL)
+        toolbarSubtitle.setTypeface(null, Typeface.NORMAL)
 
         if (isSecret) {
             if (!isConnected) {
@@ -337,7 +339,7 @@ class ChatToolbarDelegate(
                     activity.getString(R.string.user_is_typing, typists.first())
                 else activity.getString(R.string.users_are_typing, typists.size)
                 toolbarSubtitle.setTextColor(cop)
-                toolbarSubtitle.setTypeface(null, android.graphics.Typeface.ITALIC)
+                toolbarSubtitle.setTypeface(null, Typeface.ITALIC)
             }
             isDirect -> {
                 val other = getOtherParticipant()

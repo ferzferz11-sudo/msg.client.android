@@ -1,6 +1,7 @@
 package lavender.client.android.ui.adapter
 
 import android.graphics.Color
+import android.graphics.Typeface
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -282,7 +283,7 @@ class ChatAdapter(
             if (hasUnread) android.util.Log.d("ChatAdapter", "BIND UNREAD: ${chat.name} unreadCount=${chat.unreadCount}")
             tvChatName.text = chat.getDisplayName(currentUsername)
             tvChatName.setTextColor(if (hasUnread) primaryColor else textPrimary)
-            tvChatName.setTypeface(null, if (hasUnread) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
+            tvChatName.setTypeface(null, if (hasUnread) Typeface.BOLD else Typeface.NORMAL)
 
             // Company badge
             tvCompanyBadge.isVisible = chat.companyId.isNotEmpty()
@@ -293,15 +294,15 @@ class ChatAdapter(
             if (chat.isSecret) {
                 tvChatType.text = itemView.context.getString(R.string.e2ee_verified)
                 tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
-                tvChatType.setTypeface(null, if (hasUnread) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
+                tvChatType.setTypeface(null, if (hasUnread) Typeface.BOLD else Typeface.NORMAL)
             } else if (chat.type == "conference") {
                 tvChatType.text = itemView.context.getString(R.string.conference)
                 tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
-                tvChatType.setTypeface(null, if (hasUnread) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
+                tvChatType.setTypeface(null, if (hasUnread) Typeface.BOLD else Typeface.NORMAL)
             } else if (chat.lastMessageText.isNotEmpty()) {
                 tvChatType.text = translateMediaPreview(chat.lastMessageText)
                 tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
-                tvChatType.setTypeface(null, if (hasUnread) android.graphics.Typeface.NORMAL else android.graphics.Typeface.NORMAL)
+                tvChatType.setTypeface(null, if (hasUnread) Typeface.NORMAL else Typeface.NORMAL)
             } else {
                 tvChatType.text = itemView.context.getString(R.string.no_messages)
                 tvChatType.setTextColor(textSecondary)
@@ -314,7 +315,7 @@ class ChatAdapter(
                 // Badge background uses primary color
                 tvUnreadCount.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
                 // Text color: white for dark primary, black for light primary
-                tvUnreadCount.setTextColor(if (ThemeUtils.isLight(primaryColor)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                tvUnreadCount.setTextColor(if (ThemeUtils.isLight(primaryColor)) Color.BLACK else Color.WHITE)
             } else {
                 tvUnreadCount.isVisible = false
             }
@@ -340,7 +341,7 @@ class ChatAdapter(
             cbChatSelect.isChecked = isSelected
             cbChatSelect.buttonTintList = android.content.res.ColorStateList.valueOf(primaryColor)
 
-            // Background: highlight if selected, unread tint if has unread messages
+            // Background: highlight if selected, unread tint if it has unread messages
             val bgColor = when {
                 isSelected -> selectedColor
                 chat.unreadCount > 0 -> unreadColor

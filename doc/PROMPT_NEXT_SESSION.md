@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.2.18 (готова) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-17
+**Версия:** v1.3.2.19 (выпущена) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-17
 
 ---
 
@@ -47,6 +47,37 @@
 5. v2 server only — никаких v1 fallbacks
 6. Перед коммитом: `./gradlew assembleDebug`
 7. НЕ bump'ать версию — bump делает только пользователь
+
+---
+
+## v1.3.2.19 — Message Display Fixes + Profile UI Polish
+
+### Исправлено
+
+**Сообщения:**
+- Восстановлены `bindReadStatus()` и `timeText.text` — случайно удалены при рефакторинге v1.3.2.16-18
+- Индикаторы отправленности/прочитанности снова отображаются
+- Убрано лишнее пространство между текстом и реакциями
+
+**Профиль:**
+- Иконка "назад" теперь видна (повторный `setNavigationIconTint` после `applyThemeToView`)
+- Плашка должности: `adjustAlpha(primaryColor, 0.15f)` вместо `adjustAlpha(surfaceColor, 0.6f)`
+
+**Редактирование профиля:**
+- Заголовок "Имя" адаптирован к теме (добавлен `usernameLabel` ID + обработка в ThemeApplier)
+- Отступы текста "Имя" и "Кратко о себе" выровнены (убран лишний TextInputLayout)
+- "Изменить пароль" выровнена по левому краю с padding=16dp
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `MessageAdapter.kt` | Восстановлены `bindReadStatus()` + `timeText.text` |
+| `ProfileActivity.kt` | `navigationIcon` tint после `applyThemeToView`, positionBubble fix |
+| `EditProfileActivity.kt` | positionBubble fix (primaryColor 0.15f alpha) |
+| `activity_edit_profile.xml` | +usernameLabel id, -TextInputLayout, settingsCard padding |
+| `ThemeApplier.kt` | +usernameLabel в primary-colored labels |
+| `CHANGELOG.md` | v1.3.2.19 |
 
 ---
 

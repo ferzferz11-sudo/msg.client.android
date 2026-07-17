@@ -2,6 +2,7 @@ package lavender.client.android
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.graphics.Typeface
 import android.util.Log
 import lavender.client.android.ui.chatlist.ChatListActivity
 import android.os.Bundle
@@ -116,7 +117,7 @@ class SplashActivity : AppCompatActivity() {
         val appNameText = TextView(this).apply {
             text = getString(R.string.lavender_messenger)
             textSize = 28f
-            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTypeface(null, Typeface.BOLD)
             setTextColor(resources.getColor(R.color.lavender_mist, null))
             gravity = android.view.Gravity.CENTER
             alpha = 0f

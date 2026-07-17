@@ -94,7 +94,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
 
         showCallNotification(senderId, callId, senderName)
 
-        val callIntent = android.content.Intent(this, lavender.client.android.CallActivity::class.java).apply {
+        val callIntent = Intent(this, lavender.client.android.CallActivity::class.java).apply {
             flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra("CALL_ID", callId)
             putExtra("RECEIVER_ID", senderId)

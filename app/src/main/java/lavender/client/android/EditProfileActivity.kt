@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
+import android.text.InputType
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
@@ -121,8 +122,8 @@ class EditProfileActivity : AppCompatActivity() {
         val tvCompanyName = findViewById<android.widget.TextView>(R.id.tvCompanyName)
         val tvCompanyPosition = findViewById<android.widget.TextView>(R.id.tvCompanyPosition)
         val btnCompanyAction = findViewById<android.widget.ImageButton>(R.id.btnCompanyAction)
-        val ivCompanyLogo = findViewById<de.hdodenhof.circleimageview.CircleImageView>(R.id.ivCompanyLogo)
-        val tvCompanyLabel = findViewById<android.widget.TextView>(R.id.tvCompanyLabel)
+        val ivCompanyLogo = findViewById<CircleImageView>(R.id.ivCompanyLogo)
+
 
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -155,19 +156,20 @@ class EditProfileActivity : AppCompatActivity() {
                         tvCompanyPosition.text = formatCompanyPosition(profile.positionTitle, profile.positionLevel)
                         val posBubble = findViewById<com.google.android.material.card.MaterialCardView>(R.id.positionBubble)
                         val currentTheme = ThemeStore.currentTheme()
-                        val surfaceColor = ThemeUtils.parseSafeColor(currentTheme.surfaceColor, android.graphics.Color.WHITE)
+                        val primaryColor = ThemeUtils.parseSafeColor(currentTheme.primaryColor, android.graphics.Color.BLUE)
+                        val primaryContainerBg = ThemeUtils.adjustAlpha(primaryColor, 0.15f)
+                        posBubble?.setCardBackgroundColor(ColorStateList.valueOf(primaryContainerBg))
                         val textPrimary = ThemeUtils.parseSafeColor(currentTheme.textPrimaryColor, android.graphics.Color.BLACK)
-                        posBubble?.setCardBackgroundColor(ColorStateList.valueOf(ThemeUtils.adjustAlpha(surfaceColor, 0.6f)))
                         tvCompanyPosition.setTextColor(textPrimary)
                         ivCompanyLogo.isVisible = false
                         btnCompanyAction.setOnClickListener {
-                            val intent = android.content.Intent(this@EditProfileActivity, CompanyProfileActivity::class.java).apply {
+                            val intent = Intent(this@EditProfileActivity, CompanyProfileActivity::class.java).apply {
                                 putExtra("COMPANY_ID", profile.companyId)
                             }
                             companyLauncher.launch(intent)
                         }
                         companyCard.setOnClickListener {
-                            val intent = android.content.Intent(this@EditProfileActivity, CompanyProfileActivity::class.java).apply {
+                            val intent = Intent(this@EditProfileActivity, CompanyProfileActivity::class.java).apply {
                                 putExtra("COMPANY_ID", profile.companyId)
                             }
                             companyLauncher.launch(intent)
@@ -254,7 +256,7 @@ class EditProfileActivity : AppCompatActivity() {
         btnDeleteProfile.setOnClickListener {
             val passwordInput = EditText(this).apply {
                 hint = getString(R.string.enter_password)
-                inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             }
             AlertDialog.Builder(this)
                 .setTitle(R.string.delete_profile)
@@ -654,7 +656,7 @@ class EditProfileActivity : AppCompatActivity() {
                             lavender.client.android.data.grpc.GrpcCompanyClient.setPrimaryCompany(newCompanyId)
                         }
                         sheet.dismiss()
-                        val intent = android.content.Intent(this@EditProfileActivity, CompanyProfileActivity::class.java).apply {
+                        val intent = Intent(this@EditProfileActivity, CompanyProfileActivity::class.java).apply {
                             putExtra("COMPANY_ID", newCompanyId)
                         }
                         companyLauncher.launch(intent)
@@ -702,7 +704,7 @@ class EditProfileActivity : AppCompatActivity() {
                     val companyCard = findViewById<android.view.View>(R.id.companyCard)
                     val tvCompanyName = findViewById<android.widget.TextView>(R.id.tvCompanyName)
                     val tvCompanyPosition = findViewById<android.widget.TextView>(R.id.tvCompanyPosition)
-                    val ivCompanyLogo = findViewById<de.hdodenhof.circleimageview.CircleImageView>(R.id.ivCompanyLogo)
+                    val ivCompanyLogo = findViewById<CircleImageView>(R.id.ivCompanyLogo)
 
                     if (profile.companyId.isNotEmpty()) {
                         companyCard.isVisible = true
@@ -711,9 +713,10 @@ class EditProfileActivity : AppCompatActivity() {
                         tvCompanyPosition.text = formatCompanyPosition(profile.positionTitle, profile.positionLevel)
                         val posBubble = findViewById<com.google.android.material.card.MaterialCardView>(R.id.positionBubble)
                         val currentTheme = ThemeStore.currentTheme()
-                        val surfaceColor = ThemeUtils.parseSafeColor(currentTheme.surfaceColor, android.graphics.Color.WHITE)
+                        val primaryColor = ThemeUtils.parseSafeColor(currentTheme.primaryColor, android.graphics.Color.BLUE)
+                        val primaryContainerBg = ThemeUtils.adjustAlpha(primaryColor, 0.15f)
+                        posBubble?.setCardBackgroundColor(ColorStateList.valueOf(primaryContainerBg))
                         val textPrimary = ThemeUtils.parseSafeColor(currentTheme.textPrimaryColor, android.graphics.Color.BLACK)
-                        posBubble?.setCardBackgroundColor(ColorStateList.valueOf(ThemeUtils.adjustAlpha(surfaceColor, 0.6f)))
                         tvCompanyPosition.setTextColor(textPrimary)
                         lifecycleScope.launch {
                             val companyResp = withContext(Dispatchers.IO) {
@@ -755,7 +758,7 @@ class EditProfileActivity : AppCompatActivity() {
             "${company.company?.name ?: "?"} — $position$primary"
         }.toTypedArray()
 
-        val currentCompanyId = lavender.client.android.data.session.SessionManager.session.value.companyId
+        val currentCompanyId = SessionManager.session.value.companyId
         val currentIndex = companies.indexOfFirst { it.company?.id == currentCompanyId }.coerceAtLeast(0)
 
         AlertDialog.Builder(this)

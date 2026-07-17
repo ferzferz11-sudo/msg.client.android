@@ -411,10 +411,10 @@ class ProfileActivity : AppCompatActivity() {
         val bioTitle = findViewById<TextView>(R.id.bioTitle)
         bioTitle?.setTextColor(primaryColor)
         val positionBubble = findViewById<com.google.android.material.card.MaterialCardView>(R.id.positionBubble)
-        val surfaceColor = ThemeUtils.parseSafeColor(currentTheme.surfaceColor, android.graphics.Color.WHITE)
-        val primaryContainerBg = ThemeUtils.adjustAlpha(surfaceColor, 0.6f)
+        val primaryContainerBg = ThemeUtils.adjustAlpha(primaryColor, 0.15f)
         positionBubble?.setCardBackgroundColor(ColorStateList.valueOf(primaryContainerBg))
         findViewById<TextView>(R.id.tvProfileCompanyPosition)?.setTextColor(ThemeUtils.parseSafeColor(currentTheme.textPrimaryColor, android.graphics.Color.BLACK))
+        findViewById<MaterialToolbar>(R.id.toolbar)?.navigationIcon?.setTint(getColorOnPrimary())
     }
 
     @SuppressLint("SetTextI18n")
@@ -524,6 +524,7 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         applyThemeToView(findViewById(android.R.id.content), currentTheme)
+        findViewById<MaterialToolbar>(R.id.toolbar)?.navigationIcon?.setTint(getColorOnPrimary())
     }
 
     private fun setupAvatarClickListener(profileAvatar: CircleImageView, fullImageUrl: String) {

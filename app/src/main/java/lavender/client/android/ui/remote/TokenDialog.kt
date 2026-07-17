@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.view.View
+import android.text.InputType
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import com.google.android.material.checkbox.MaterialCheckBox
@@ -119,7 +120,7 @@ class TokenDialog(
             setTextColor(txtColor)
             setHintTextColor(txtColor and 0x80FFFFFF.toInt())
             maxLines = 1
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            inputType = InputType.TYPE_CLASS_NUMBER
             setText("24")
             id = View.generateViewId()
         }

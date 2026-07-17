@@ -1,5 +1,40 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.2.19] - 2026-07-17
+
+### Исправлено
+
+**Сообщения — лишнее пространство между текстом и реакциями:**
+- При рефакторинге v1.3.2.16-18 случайно удалены строки установки `timeText.text` и `bindReadStatus()` из `MessageAdapter.bind()`
+- `llMessageMeta` имел высоту但 пустой контент → лишнее пространство перед реакциями
+
+**Сообщения — индикаторы отправленности и прочитанности:**
+- `bindReadStatus()` не вызывался для исходящих сообщений → иконки статуса не отображались
+- Восстановлен вызов `bindReadStatus()` и форматирование времени в `MessageAdapter.kt`
+
+**Профиль — иконка "назад" не видна:**
+- `applyThemeToView()` рекурсивно окрашивал все `ImageView` в `primary` цвет, включая иконку навигации в toolbar
+- Добавлен повторный вызов `setNavigationIconTint(getColorOnPrimary())` после `applyThemeToView()` в `updateProfileUI()` и `updateGroupUI()`
+
+**Редактирование профиля — заголовок "Имя" не адаптирован к теме:**
+- TextView без `android:id` → `ThemeApplier` не мог найти и применить цвет
+- Добавлен `android:id="@+id/usernameLabel"` и обработка в `ThemeApplier`
+
+**Редактирование профиля — отступы текста "Имя" и "Кратко о себе":**
+- Убран лишний `TextInputLayout` обёртка вокруг `editTextBio` (hintEnabled=false, boxBackgroundMode=none)
+- Оба текста теперь имеют одинаковый левый отступ 16dp
+
+**Плашка должности — невидимый фон:**
+- `adjustAlpha(surfaceColor, 0.6f)` → фон сливается с карточкой на тёмных темах
+- Заменён на `adjustAlpha(primaryColor, 0.15f)` — видимый на любом фоне
+- Исправлено в `ProfileActivity.updateProfileUI()`, `EditProfileActivity.setupUI()` и `reloadProfile()`
+
+**Редактирование профиля — "Изменить пароль" не выровнена:**
+- Кнопка была по центру без отступов
+- Добавлен `padding="16dp"` в родительский `LinearLayout` для выравнивания с другими блоками
+
+---
+
 ## [1.3.2.18] - 2026-07-17
 
 ### Исправлено

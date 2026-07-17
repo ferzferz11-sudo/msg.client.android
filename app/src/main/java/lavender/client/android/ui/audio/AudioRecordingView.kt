@@ -90,7 +90,7 @@ class AudioRecordingView @JvmOverloads constructor(
 
         if (isRecording) {
             recordButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                ThemeUtils.adjustAlpha(android.graphics.Color.RED, 0.3f)
+                ThemeUtils.adjustAlpha(Color.RED, 0.3f)
             )
             recordButton.imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
         } else {
@@ -109,7 +109,7 @@ class AudioRecordingView @JvmOverloads constructor(
         
         // Set waveform colors
         waveformView.setWaveformColors(
-            lavender.client.android.theme.ThemeUtils.adjustAlpha(textPrimary, 0.4f),
+            ThemeUtils.adjustAlpha(textPrimary, 0.4f),
             primColor
         )
     }

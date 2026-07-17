@@ -3,6 +3,7 @@ package lavender.client.android.ui.chatlist
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.widget.ImageView
@@ -11,26 +12,22 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.tabs.TabLayout
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
-import kotlinx.coroutines.Dispatchers
-import kotlin.time.Duration.Companion.seconds
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.R
-import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.grpc.ConnectionStatus
+import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.data.session.SessionManager
@@ -38,8 +35,9 @@ import lavender.client.android.data.updates.UpdateManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
-import lavender.client.android.ui.widget.AIBottomSheet
 import lavender.client.android.ui.adapter.ChatAdapter
+import lavender.client.android.ui.widget.AIBottomSheet
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * ChatListActivity — единый Activity для списка чатов.
@@ -173,9 +171,9 @@ class ChatListActivity : AppCompatActivity() {
 
         // Favorites button
         ivFavorites?.setOnClickListener {
-            val favoritesChat = lavender.client.android.data.models.ChatInfo(
+            val favoritesChat = ChatInfo(
                 id = "favorites_$username",
-                name = getString(lavender.client.android.R.string.favorites),
+                name = getString(R.string.favorites),
                 type = "favorites",
                 lastMessageText = "",
                 lastMessageTime = 0L
@@ -200,7 +198,7 @@ class ChatListActivity : AppCompatActivity() {
                 if (color != 0) {
                     val shape = android.graphics.drawable.GradientDrawable().apply {
                         shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                        setColor(android.graphics.Color.argb(alpha, android.graphics.Color.red(color), android.graphics.Color.green(color), android.graphics.Color.blue(color)))
+                        setColor(Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color)))
                     }
                     tb.background = shape
                 } else {
@@ -212,9 +210,7 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         // Make AppBarLayout transparent so toolbar transparency shows through
-        findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.appBarLayout)?.let { appBar ->
-            appBar.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-        }
+        findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.appBarLayout)?.setBackgroundColor(Color.TRANSPARENT)
 
         // Setup toolbar actions
         setupToolbarActions(this, username)
@@ -349,7 +345,7 @@ class ChatListActivity : AppCompatActivity() {
         if (lavender.client.android.data.auth.AuthManager.isTokenExpiredOrExpiring(this)) {
             lifecycleScope.launch {
                 withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    lavender.client.android.data.session.SessionManager.ensureFreshToken(this@ChatListActivity)
+                    SessionManager.ensureFreshToken(this@ChatListActivity)
                 }
             }
         }
@@ -401,7 +397,7 @@ class ChatListActivity : AppCompatActivity() {
                     .setTitle(R.string.notifications)
                     .setMessage(R.string.notification_permission_denied)
                     .setPositiveButton(R.string.open_settings) { _, _ ->
-                        val intent = android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                        val intent = Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
                             putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, packageName)
                         }
                         startActivity(intent)

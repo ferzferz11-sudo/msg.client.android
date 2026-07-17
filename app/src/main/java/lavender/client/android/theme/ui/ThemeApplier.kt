@@ -278,7 +278,7 @@ object ThemeApplier {
 
             (activity.findViewById<View>(R.id.btnCompanyAction) as? ImageButton)?.imageTintList = ColorStateList.valueOf(customPrimary)
 
-            listOf(R.id.bioLabelText, R.id.tvCompanyLabel).forEach { id ->
+            listOf(R.id.bioLabelText, R.id.tvCompanyLabel, R.id.usernameLabel).forEach { id ->
                 (activity.findViewById<View>(id) as? TextView)?.setTextColor(customPrimary)
             }
 

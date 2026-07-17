@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.graphics.Typeface
 import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
@@ -430,7 +431,7 @@ class RemoteAgentSettingsFragment : Fragment(), RemoteAgentManager.RemoteAgentSt
         val tokenView = TextView(ctx).apply {
             text = token; setTextColor(txtColor); textSize = 13f
             setPadding(0, 16, 0, 16); setTextIsSelectable(true)
-            typeface = android.graphics.Typeface.MONOSPACE; id = View.generateViewId()
+            typeface = Typeface.MONOSPACE; id = View.generateViewId()
         }
         container.addView(label); container.addView(tokenView)
 
@@ -442,7 +443,7 @@ class RemoteAgentSettingsFragment : Fragment(), RemoteAgentManager.RemoteAgentSt
         val cmdView = TextView(ctx).apply {
             text = agentCmd; setTextColor(txtColor); textSize = 11f
             setPadding(0, 8, 0, 8); setTextIsSelectable(true)
-            typeface = android.graphics.Typeface.MONOSPACE
+            typeface = Typeface.MONOSPACE
             setBackgroundColor(ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK))
             id = View.generateViewId()
         }

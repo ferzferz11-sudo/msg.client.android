@@ -149,8 +149,8 @@ class NotificationActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
         when (item.itemId) {
-            1 -> startActivity(android.content.Intent(this, NotificationLogActivity::class.java))
-            //2 -> startActivity(android.content.Intent(this, FCMLogsActivity::class.java))
+            1 -> startActivity(Intent(this, NotificationLogActivity::class.java))
+            //2 -> startActivity(Intent(this, FCMLogsActivity::class.java))
         }
         return super.onOptionsItemSelected(item)
     }
