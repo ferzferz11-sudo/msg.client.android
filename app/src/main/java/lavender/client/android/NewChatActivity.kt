@@ -150,6 +150,7 @@ class NewChatActivity : AppCompatActivity() {
         viewModel.fetchChatMetadata(username, roomId, isDirect, participantsJson, chatName) { meta ->
             try {
                 runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
                     chatName = meta.chatName; isDirect = meta.isDirect; chatType = meta.chatType
                     participantsJson = meta.participantsJson; creator = meta.creator
                     chatAvatarUrl = meta.avatarUrl; chatFullAvatarUrl = meta.fullAvatarUrl
@@ -324,16 +325,20 @@ class NewChatActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.messages.collect { roomMessages ->
-                    val hasNewMessages = roomMessages.size > lastMessageCount
-                    val isNewFromOther = hasNewMessages && roomMessages.lastOrNull()?.user != username
-                    adapter.submitList(roomMessages) {
-                        if (shouldScrollToBottom || (isNewFromOther && isNearBottom())) {
-                            shouldScrollToBottom = false
-                            messagesRecyclerView.post { messagesRecyclerView.scrollToPosition(roomMessages.size - 1) }
+                    try {
+                        val hasNewMessages = roomMessages.size > lastMessageCount
+                        val isNewFromOther = hasNewMessages && roomMessages.lastOrNull()?.user != username
+                        adapter.submitList(roomMessages) {
+                            if (shouldScrollToBottom || (isNewFromOther && isNearBottom())) {
+                                shouldScrollToBottom = false
+                                messagesRecyclerView.post { messagesRecyclerView.scrollToPosition(roomMessages.size - 1) }
+                            }
                         }
+                        if (hasNewMessages && roomMessages.any { it.user != username && !it.isRead }) viewModel.markRead(username)
+                        lastMessageCount = roomMessages.size
+                    } catch (e: Exception) {
+                        android.util.Log.e("NewChatActivity", "messages.collect error: ${e.message}", e)
                     }
-                    if (hasNewMessages && roomMessages.any { it.user != username && !it.isRead }) viewModel.markRead(username)
-                    lastMessageCount = roomMessages.size
                 }
             }
         }
@@ -360,7 +365,7 @@ class NewChatActivity : AppCompatActivity() {
                         val otherUserLastSeenAt = otherUser?.let { u ->
                             grpcClient.allUsers.value.find { it.username == u }?.lastSeenAt
                         }
-                        toolbarDelegate.updateSubtitle(onlineUsers, isConnected, currentTypists, otherUserLastSeenAt)
+                        toolbarDelegate.updateSubtitle(onlineUsers, isConnected, currentTypists, otherUserLastSeenAt, grpcClient.serverShuttingDown.value)
                         inputDelegate.messageInput.isEnabled = !isConnecting
                         inputDelegate.sendButton.isEnabled = !isConnecting
                         inputDelegate.attachButton.isEnabled = !isConnecting
@@ -527,6 +532,7 @@ class NewChatActivity : AppCompatActivity() {
         viewModel.fetchChatMetadata(username, roomId, isDirect, participantsJson, chatName) { meta ->
             try {
                 runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
                     chatName = meta.chatName; isDirect = meta.isDirect; chatType = meta.chatType
                     participantsJson = meta.participantsJson; creator = meta.creator
                     chatAvatarUrl = meta.avatarUrl; chatFullAvatarUrl = meta.fullAvatarUrl

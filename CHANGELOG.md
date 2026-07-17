@@ -1,5 +1,26 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.2.18] - 2026-07-17
+
+### Исправлено
+
+**Краш при входе в чат на некоторых устройствах:**
+- `MessageAdapter.bind()` обёрнут в полный try-catch с fallback-отрисовкой
+- `ThemeStore.currentTheme()` в bind() защищён fallback на BuiltInThemes.dark
+- Glide загрузка аватаров обёрнута в try-catch
+- `ThemeUtils.applyDefaultAvatar()` обёрнут в try-catch
+- `fetchChatMetadata` callback — добавлена проверка `isFinishing`/`isDestroyed`
+- Messages collector — добавлен try-catch
+- Добавлен `UncaughtExceptionHandler` — crash info сохраняется в SharedPreferences
+
+**Статус сервера при обновлении:**
+- Текст "Server restarting…" → "Server updating…" / "Сервер обновляется…"
+- Статус отображается при `DISCONNECTED`/`FAILED` если `serverShuttingDown=true`
+- `ChatToolbarDelegate.updateSubtitle()` принимает `isServerShuttingDown`
+- `NewChatActivity` передаёт `serverShuttingDown` в `updateSubtitle()`
+
+---
+
 ## [1.3.2.17] - 2026-07-17
 
 ### Исправлено

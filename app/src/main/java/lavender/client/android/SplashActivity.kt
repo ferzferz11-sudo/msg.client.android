@@ -26,6 +26,16 @@ class SplashActivity : AppCompatActivity() {
 
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
 
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            try {
+                prefs.edit {
+                    putString("last_crash", "${throwable.javaClass.simpleName}: ${throwable.message}\n${throwable.stackTraceToString().take(2000)}")
+                    putLong("last_crash_time", System.currentTimeMillis())
+                }
+            } catch (_: Exception) {}
+            Thread.getDefaultUncaughtExceptionHandler()?.uncaughtException(thread, throwable)
+        }
+
         // Initialize language to Russian on first launch
         if (!prefs.contains("language")) {
             prefs.edit { putString("language", "ru") }

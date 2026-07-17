@@ -958,7 +958,7 @@
     <!-- ChatList v2: connection status -->
     <string name="connection_online">В сети</string>
     <string name="connection_offline">Не в сети</string>
-    <string name="server_restarting">Сервер перезапускается…</string>
+    <string name="server_restarting">Сервер обновляется…</string>
 
     <!-- Chat list media previews -->
     <string name="chat_preview_image">Изображение</string>

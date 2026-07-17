@@ -145,9 +145,10 @@ class MessageAdapter(
         fun bind(message: Message, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean,
                  isConsecutive: Boolean, isSelectionMode: Boolean, adapterPosition: Int, showDateSeparator: Boolean,
                  onClick: (Int) -> Unit, onLongClick: (Int) -> Unit, onMessageLongClick: ((Message) -> Unit)?) {
+            try {
             val ctx = itemView.context
             val isGroup = this@MessageAdapter.isGroupChat
-            val theme = ThemeStore.currentTheme()
+            val theme = try { ThemeStore.currentTheme() } catch (_: Exception) { lavender.client.android.theme.BuiltInThemes.dark }
             val isCompletelyEmpty = message.text.isEmpty() && message.imageUrl.isEmpty() && message.voiceUrl.isEmpty() && message.imageUrls.isEmpty()
             btnDownloadFile.isVisible = false
             if (isCompletelyEmpty) { itemView.visibility = View.GONE; itemView.layoutParams = itemView.layoutParams.also { it.height = 0 }; return }
@@ -157,7 +158,15 @@ class MessageAdapter(
             messageText.text = message.text; userText.text = message.user; messageText.movementMethod = null
             val canShowSenderInfo = isGroup && !isOutgoing && !isConsecutive && !isSelectionMode
             userText.isVisible = canShowSenderInfo
-            if (canShowSenderInfo) { avatarImageView.isVisible = true; if (message.avatarUrl.isNotEmpty()) { Glide.with(ctx).load(message.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(avatarImageView); avatarImageView.imageTintList = null } else { ThemeUtils.applyDefaultAvatar(avatarImageView, theme, theme.incomingBubbleColor) } }
+            if (canShowSenderInfo) {
+                avatarImageView.isVisible = true
+                if (message.avatarUrl.isNotEmpty()) {
+                    try { Glide.with(ctx).load(message.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(avatarImageView) } catch (_: Exception) {}
+                    avatarImageView.imageTintList = null
+                } else {
+                    try { ThemeUtils.applyDefaultAvatar(avatarImageView, theme, theme.incomingBubbleColor) } catch (_: Exception) {}
+                }
+            }
             else { avatarImageView.visibility = if (isOutgoing) View.GONE else View.INVISIBLE }
 
             bindAlignment(message, isOutgoing, isConsecutive, isSelectionMode, isGroup)
@@ -172,11 +181,6 @@ class MessageAdapter(
             bindBubbleStyle(isOutgoing, isSystem, finalSurface, pTextColor, secColor, canShowSenderInfo, theme)
             if (isCallMessage) bindCallMessage(message, isOutgoing, pTextColor, ctx) else { messageText.text = message.text; messageText.textSize = 16f; messageText.setTypeface(null, android.graphics.Typeface.NORMAL); messageText.setTextColor(pTextColor) }
             timeText.setTextColor(secColor); timeText.isVisible = !shouldHideTime; editedText.setTextColor(secColor)
-            if (isOutgoing) bindReadStatus(message, secColor, ctx) else { readStatusIcon.isVisible = false }
-
-            val safeTs = if (message.timestamp > System.currentTimeMillis()) System.currentTimeMillis() else message.timestamp
-            timeText.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(safeTs))
-            timeText.isVisible = !shouldHideTime
 
             if (message.voiceUrl.isNotEmpty()) bindAudioContent(message, isOutgoing, isSelectionMode, theme, onClick, onLongClick, adapterPosition)
             else { audioMessageView.isVisible = false; bindTextContent(message, isOutgoing, isSelectionMode, pTextColor, theme, ctx, onClick, onLongClick, adapterPosition) }
@@ -188,6 +192,19 @@ class MessageAdapter(
             bindContainerClicks(isSelectionMode, onClick, onLongClick, adapterPosition)
             bindPinnedBadge(message, theme, ctx)
             reactionsText.setOnClickListener { if (isSelectionMode) onClick(bindingAdapterPosition) else onMessageClick(message) }
+            } catch (e: Exception) {
+                android.util.Log.e("MessageAdapter", "bind crashed for msg ${message.id}: ${e.message}", e)
+                try {
+                    messageText.text = message.text.ifEmpty { "…" }
+                    messageText.setTextColor(android.graphics.Color.WHITE)
+                    messageText.isVisible = true
+                    avatarImageView.isVisible = false
+                    timeText.isVisible = false
+                    audioMessageView.isVisible = false
+                    messageImageView.isVisible = false
+                    galleryThumbnailsRecyclerView.isVisible = false
+                } catch (_: Exception) {}
+            }
         }
 
         private fun bindAlignment(message: Message, isOutgoing: Boolean, isConsecutive: Boolean, isSelectionMode: Boolean, isGroup: Boolean) {

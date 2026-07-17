@@ -298,7 +298,7 @@ class ChatToolbarDelegate(
         }
     }
 
-    fun updateSubtitle(onlineUsers: List<String>, isConnected: Boolean, typists: List<String>, otherUserLastSeenAt: com.google.protobuf.Timestamp? = null) {
+    fun updateSubtitle(onlineUsers: List<String>, isConnected: Boolean, typists: List<String>, otherUserLastSeenAt: com.google.protobuf.Timestamp? = null, isServerShuttingDown: Boolean = false) {
         if (roomId.startsWith("favorites_")) {
             toolbarSubtitle.isVisible = true
             toolbarSubtitle.text = activity.getString(R.string.favorites)
@@ -312,7 +312,7 @@ class ChatToolbarDelegate(
 
         if (isSecret) {
             if (!isConnected) {
-                toolbarSubtitle.text = activity.getString(R.string.connecting)
+                toolbarSubtitle.text = if (isServerShuttingDown) activity.getString(R.string.server_restarting) else activity.getString(R.string.connecting)
                 toolbarSubtitle.setTextColor(cop)
             } else if (isE2eeInProgress) {
                 toolbarSubtitle.text = activity.getString(R.string.e2ee_pending)
@@ -329,7 +329,7 @@ class ChatToolbarDelegate(
 
         when {
             !isConnected -> {
-                toolbarSubtitle.text = activity.getString(R.string.connecting)
+                toolbarSubtitle.text = if (isServerShuttingDown) activity.getString(R.string.server_restarting) else activity.getString(R.string.connecting)
                 toolbarSubtitle.setTextColor(cop)
             }
             typists.isNotEmpty() -> {

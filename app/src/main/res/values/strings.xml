@@ -959,7 +959,7 @@
     <string name="connecting">Connecting…</string>
     <string name="connection_online">Online</string>
     <string name="connection_offline">Offline</string>
-    <string name="server_restarting">Server restarting…</string>
+    <string name="server_restarting">Server updating…</string>
 
     <!-- Chat list media previews -->
     <string name="chat_preview_image">Image</string>

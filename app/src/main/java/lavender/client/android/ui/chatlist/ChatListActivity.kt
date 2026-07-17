@@ -293,11 +293,12 @@ class ChatListActivity : AppCompatActivity() {
                     ConnectionStatus.CONNECTING -> getString(R.string.connecting)
                     ConnectionStatus.READY -> getString(R.string.connection_online)
                     ConnectionStatus.DISCONNECTED -> {
-                        if (CredentialStore.getServerAddress(this@ChatListActivity).isNotEmpty()) getString(R.string.connecting)
+                        if (GrpcClient.serverShuttingDown.value) getString(R.string.server_restarting)
+                        else if (CredentialStore.getServerAddress(this@ChatListActivity).isNotEmpty()) getString(R.string.connecting)
                         else getString(R.string.connection_offline)
                     }
                     ConnectionStatus.RECONNECTING -> if (GrpcClient.serverShuttingDown.value) getString(R.string.server_restarting) else getString(R.string.connecting)
-                    ConnectionStatus.FAILED -> getString(R.string.connection_offline)
+                    ConnectionStatus.FAILED -> if (GrpcClient.serverShuttingDown.value) getString(R.string.server_restarting) else getString(R.string.connection_offline)
                 }
                 tvToolbarSubtitle?.text = statusText
                 tvToolbarSubtitle?.isVisible = statusText.isNotEmpty()
