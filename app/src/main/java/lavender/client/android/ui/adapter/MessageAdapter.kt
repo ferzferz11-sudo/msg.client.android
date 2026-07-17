@@ -25,6 +25,7 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import lavender.client.android.R
 import lavender.client.android.data.models.Message
+import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import java.text.SimpleDateFormat
@@ -136,7 +137,7 @@ class MessageAdapter(
                 override fun getOutline(view: View, outline: android.graphics.Outline) { outline.setRoundRect(0, 0, view.width, view.height, 16f * itemView.resources.displayMetrics.density) }
             }
         }
-        private val galleryCountIndicator: TextView = itemView.findViewById(R.id.tvGalleryCount)
+        val galleryThumbnailsRecyclerView: RecyclerView = itemView.findViewById(R.id.rvGalleryThumbnails)
         val audioMessageView: lavender.client.android.ui.audio.AudioMessageView = itemView.findViewById(R.id.audioMessageView)
         val reactionsText: TextView = itemView.findViewById(R.id.tvReactions)
         private val btnDownloadFile: ImageButton = itemView.findViewById(R.id.btnDownloadFile)
@@ -312,18 +313,36 @@ class MessageAdapter(
 
         private fun bindImageContent(message: Message, isOutgoing: Boolean, isSelectionMode: Boolean, onClick: (Int) -> Unit, onLongClick: (Int) -> Unit, pos: Int, ctx: android.content.Context) {
             val isFile = message.text.startsWith("File: "); val hasSingle = message.imageUrl.isNotEmpty(); val hasGallery = message.imageUrls.isNotEmpty()
-            val shouldShow = (hasSingle || hasGallery) && message.voiceUrl.isEmpty() && !isFile; messageImageView.isVisible = shouldShow
-            if (!shouldShow) { messageImageView.setOnClickListener(null); messageImageView.setOnLongClickListener(null); galleryCountIndicator.isVisible = false; return }
-            val displayUrl = if (hasGallery) message.imageUrls.first() else message.imageUrl
-            val imageUrl = if (displayUrl.startsWith("http")) displayUrl.trim() else "${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(ctx)}" + displayUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
-            Glide.with(ctx).load(imageUrl).diskCacheStrategy(DiskCacheStrategy.ALL).placeholder(R.drawable.ic_image_placeholder).error(R.drawable.ic_image_placeholder).timeout(60000).dontAnimate().centerCrop().override(Target.SIZE_ORIGINAL)
-                .listener(object : RequestListener<android.graphics.drawable.Drawable> {
-                    override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean { if (message.text.isEmpty()) { messageText.text = "🖼 ${ctx.getString(R.string.error_loading_image)}"; messageText.isVisible = true }; return false }
-                    override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any, target: Target<android.graphics.drawable.Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean { if (message.text.isEmpty()) messageText.isVisible = false; return false }
-                }).into(messageImageView)
-            galleryCountIndicator.isVisible = hasGallery && message.imageUrls.size > 1; if (galleryCountIndicator.isVisible) { galleryCountIndicator.text = "+${message.imageUrls.size - 1}"; messageImageView.contentDescription = "Gallery with ${message.imageUrls.size} images" }
-            messageImageView.setOnClickListener { if (isSelectionMode) onClick(pos) else { val url = displayUrl.lowercase(); val isVideo = url.endsWith(".mp4") || url.endsWith(".webm") || url.endsWith(".mkv") || url.endsWith(".mov"); if (isVideo) { val absUrl = if (displayUrl.startsWith("http")) displayUrl.trim() else "${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(ctx)}" + displayUrl.trim().let { if (it.startsWith("/")) it else "/$it" }; ctx.startActivity(android.content.Intent(ctx, lavender.client.android.VideoPlayerActivity::class.java).apply { putExtra("VIDEO_URL", absUrl); putExtra("IS_LOCAL", false) }) } else { val allUrls = if (hasGallery) message.imageUrls else currentList.filter { it.imageUrl.isNotEmpty() }.map { it.imageUrl }; ctx.startActivity(android.content.Intent(ctx, lavender.client.android.FullScreenImageActivity::class.java).apply { putExtra("image_url", displayUrl); putExtra("chat_id", chatId); putStringArrayListExtra("image_urls", ArrayList(allUrls)); putExtra("current_index", allUrls.indexOf(displayUrl)) }) } } }
-            messageImageView.setOnLongClickListener { if (isSelectionMode) onLongClick(pos) else { onLongClick(pos) }; true }
+            val isMultiImage = hasGallery && message.imageUrls.size > 1
+            val shouldShow = (hasSingle || hasGallery) && message.voiceUrl.isEmpty() && !isFile
+            messageImageView.isVisible = shouldShow && !isMultiImage
+            galleryThumbnailsRecyclerView.isVisible = shouldShow && isMultiImage
+            if (!shouldShow) { messageImageView.setOnClickListener(null); messageImageView.setOnLongClickListener(null); return }
+            if (isMultiImage) {
+                val urls = message.imageUrls.map { url ->
+                    if (url.startsWith("http")) url.trim() else "${CredentialStore.getHttpServerUrl(ctx)}" + url.trim().let { if (it.startsWith("/")) it else "/$it" }
+                }
+                val adapter = ThumbnailGridAdapter(urls) { clickIndex ->
+                    if (isSelectionMode) onClick(pos) else {
+                        ctx.startActivity(android.content.Intent(ctx, lavender.client.android.FullScreenImageActivity::class.java).apply {
+                            putStringArrayListExtra("image_urls", ArrayList(urls))
+                            putExtra("current_index", clickIndex)
+                        })
+                    }
+                }
+                galleryThumbnailsRecyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(ctx, androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false)
+                galleryThumbnailsRecyclerView.adapter = adapter
+            } else {
+                val displayUrl = if (hasGallery) message.imageUrls.first() else message.imageUrl
+                val imageUrl = if (displayUrl.startsWith("http")) displayUrl.trim() else "${CredentialStore.getHttpServerUrl(ctx)}" + displayUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
+                Glide.with(ctx).load(imageUrl).diskCacheStrategy(DiskCacheStrategy.ALL).placeholder(R.drawable.ic_image_placeholder).error(R.drawable.ic_image_placeholder).timeout(60000).dontAnimate().centerCrop().override(Target.SIZE_ORIGINAL)
+                    .listener(object : RequestListener<android.graphics.drawable.Drawable> {
+                        override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean { if (message.text.isEmpty()) { messageText.text = "🖼 ${ctx.getString(R.string.error_loading_image)}"; messageText.isVisible = true }; return false }
+                        override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any, target: Target<android.graphics.drawable.Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean { if (message.text.isEmpty()) messageText.isVisible = false; return false }
+                    }).into(messageImageView)
+                messageImageView.setOnClickListener { if (isSelectionMode) onClick(pos) else { val url = displayUrl.lowercase(); val isVideo = url.endsWith(".mp4") || url.endsWith(".webm") || url.endsWith(".mkv") || url.endsWith(".mov"); if (isVideo) { val absUrl = if (displayUrl.startsWith("http")) displayUrl.trim() else "${CredentialStore.getHttpServerUrl(ctx)}" + displayUrl.trim().let { if (it.startsWith("/")) it else "/$it" }; ctx.startActivity(android.content.Intent(ctx, lavender.client.android.VideoPlayerActivity::class.java).apply { putExtra("VIDEO_URL", absUrl); putExtra("IS_LOCAL", false) }) } else { val allUrls = if (hasGallery) message.imageUrls else currentList.filter { it.imageUrl.isNotEmpty() }.map { it.imageUrl }; ctx.startActivity(android.content.Intent(ctx, lavender.client.android.FullScreenImageActivity::class.java).apply { putExtra("image_url", displayUrl); putExtra("chat_id", chatId); putStringArrayListExtra("image_urls", ArrayList(allUrls)); putExtra("current_index", allUrls.indexOf(displayUrl)) }) } } }
+                messageImageView.setOnLongClickListener { if (isSelectionMode) onLongClick(pos) else { onLongClick(pos) }; true }
+            }
         }
 
         private fun bindReactions(message: Message, theme: lavender.client.android.theme.Theme, isOutgoing: Boolean, onClick: (Int) -> Unit) {
@@ -369,4 +388,41 @@ class MessageAdapter(
     private fun parseSafeColor(colorStr: String, defaultColor: Int): Int = try { colorStr.toColorInt() } catch (_: Exception) { defaultColor }
     data class MessageColors(val incomingBg: Int, val incomingText: Int, val outgoingBg: Int, val outgoingText: Int)
     class MessageDiffCallback : DiffUtil.ItemCallback<Message>() { override fun areItemsTheSame(a: Message, b: Message): Boolean = a.id == b.id; override fun areContentsTheSame(a: Message, b: Message): Boolean = a == b }
+
+    private class ThumbnailGridAdapter(
+        private val urls: List<String>,
+        private val onThumbnailClick: (Int) -> Unit
+    ) : RecyclerView.Adapter<ThumbnailGridAdapter.ThumbnailViewHolder>() {
+
+        inner class ThumbnailViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            val image: ImageView = itemView.findViewById(R.id.thumbnailImage)
+            val border: View = itemView.findViewById(R.id.selectedBorder)
+            init {
+                border.visibility = View.GONE
+            }
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ThumbnailViewHolder {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_thumbnail, parent, false)
+            view.layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                parent.resources.getDimensionPixelSize(R.dimen.chat_gallery_thumb_size).coerceAtLeast(64)
+            )
+            return ThumbnailViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: ThumbnailViewHolder, position: Int) {
+            val url = urls[position]
+            Glide.with(holder.itemView.context)
+                .load(url)
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .centerCrop()
+                .placeholder(R.drawable.ic_image_placeholder)
+                .error(R.drawable.ic_image_placeholder)
+                .into(holder.image)
+            holder.itemView.setOnClickListener { onThumbnailClick(position) }
+        }
+
+        override fun getItemCount() = urls.size.coerceAtMost(4)
+    }
 }

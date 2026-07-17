@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.2.15 (выпущена) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-17
+**Версия:** v1.3.2.16 (выпущена) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-17
 
 ---
 
@@ -47,6 +47,49 @@
 5. v2 server only — никаких v1 fallbacks
 6. Перед коммитом: `./gradlew assembleDebug`
 7. НЕ bump'ать версию — bump делает только пользователь
+
+---
+
+## v1.3.2.16 — UI Polish + Gallery Thumbnails + Inline Username
+
+### Исправлено
+
+**Темы — фон плашек в чат-листе:**
+- `ChatAdapter.updateTheme()` — сброс кэша цветов + `notifyItemRangeChanged`
+- Вызов в `ChatListActivity.onResume()` после `ThemeApplier.apply()`
+
+**Профиль — стрелка "назад":**
+- Убран `setSupportActionBar()`, тулбар управляется напрямую
+
+**Профиль — заголовок "О себе" + позиция:**
+- `bioTitle.setTextColor(primaryColor)` + `positionBubble` фон программно
+
+**Галерея просмотра — порядок:**
+- Миниатюры сверху, счётчик снизу
+
+### Добавлено
+
+**Галерея в чате — кликабельные миниатюры:**
+- Для 2+ фото: горизонтальная полоса миниатюр вместо "+N"
+- `ThumbnailGridAdapter` в `MessageAdapter`
+
+**Редактирование профиля — inline @username:**
+- `@username` под аватаром, тап → шторка редактирования
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `ChatAdapter.kt` | +updateTheme() |
+| `ChatListActivity.kt` | +chatAdapter.updateTheme() в onResume |
+| `ProfileActivity.kt` | -setSupportActionBar, +getColorOnPrimary, +bioTitle/positionBubble |
+| `EditProfileActivity.kt` | -btnChangeUsername, +tvInlineUsername, +positionBubble fix |
+| `activity_edit_profile.xml` | +tvInlineUsername, -btnChangeUsername, -divider |
+| `activity_full_screen_image.xml` | swap thumbnails/counter |
+| `item_message.xml` | -tvGalleryCount, +rvGalleryThumbnails |
+| `MessageAdapter.kt` | +ThumbnailGridAdapter, bindImageContent rewrite |
+| `dimens.xml` | +chat_gallery_thumb_size |
+| `CHANGELOG.md` | v1.3.2.16 |
 
 ---
 

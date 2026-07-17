@@ -1,4 +1,5 @@
 <resources>
     <dimen name="fab_margin">16dp</dimen>
     <dimen name="custom_toolbar_height">64dp</dimen>
+    <dimen name="chat_gallery_thumb_size">64dp</dimen>
 </resources>

@@ -331,6 +331,7 @@ class ChatListActivity : AppCompatActivity() {
 
         ThemeStore.init(this)
         ThemeApplier.apply(this, ThemeStore.currentTheme())
+        if (::chatAdapter.isInitialized) chatAdapter.updateTheme()
         // Register update prefs listener
         updateCoordinator?.let { coord ->
             getSharedPreferences("UpdatePrefs", MODE_PRIVATE)

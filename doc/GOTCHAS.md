@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.2.15 | **Updated:** 2026-07-17
+**Version:** v1.3.2.16 | **Updated:** 2026-07-17
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -777,3 +777,28 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **`item_thumbnail.xml`** — FrameLayout with ImageView (56dp, centerCrop) + selectedBorder View (60dp, GradientDrawable white stroke)
 - **`ThumbnailAdapter`** — inner class in FullScreenImageActivity, handles click → callback to update currentIndex + loadImage + updateThumbnailHighlight
 - **Layout change:** root changed from FrameLayout to vertical LinearLayout (image in FrameLayout with weight=1, bottomBar below)
+
+## ChatAdapter Theme Cache (v1.3.2.16)
+
+- **`ChatAdapter.colorsInitialized` never reset** — `initColors()` short-circuits after first call. Theme changes don't affect card backgrounds until adapter is recreated
+- **Fix:** Added `updateTheme()` method (sets `colorsInitialized=false` + `notifyItemRangeChanged`). Called from `ChatListActivity.onResume()` after `ThemeApplier.apply()`
+- **Pattern:** Same as `UserAdapter.updateTheme()` (line 63-66) — all adapters with cached theme colors need this method
+
+## ProfileActivity setSupportActionBar (v1.3.2.16)
+
+- **`setSupportActionBar(toolbar)` overrides navigation icon tint** — ActionBar takes control, replaces XML-defined icon+tint with its own. Arrow invisible but still clickable
+- **Fix:** Remove `setSupportActionBar()`, manage toolbar directly: `setNavigationIcon()` + `setTint(getColorOnPrimary())`
+- **Same fix applied to:** ContactsActivity, ThemesActivity, SuperAdminActivity in v1.3.2.4
+
+## Chat Gallery Thumbnails (v1.3.2.16)
+
+- **Replaced `tvGalleryCount` (+N overlay) with `rvGalleryThumbnails`** — horizontal RecyclerView showing up to 4 clickable thumbnails for multi-image messages
+- **`ThumbnailGridAdapter`** — inner class in `MessageAdapter`, uses `item_thumbnail.xml` (reused from FullScreenImageActivity)
+- **Single images:** still use `ivMessageImage` (unchanged behavior)
+- **`CredentialStore.getHttpServerUrl(ctx)`** — required for relative URL resolution in thumbnails
+
+## Inline Username in EditProfile (v1.3.2.16)
+
+- **Replaced `btnChangeUsername` button with `tvInlineUsername`** — shows `@username` below avatar, tappable to open same `showChangeUsernameDialog()`
+- **Layout:** `activity_edit_profile.xml` — `tvInlineUsername` added after avatar card, before bio card
+- **Removed:** `btnChangeUsername` button and divider from settings card

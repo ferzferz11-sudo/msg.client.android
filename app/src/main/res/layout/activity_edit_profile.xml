@@ -83,6 +83,24 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Inline username -->
+            <TextView
+                android:id="@+id/tvInlineUsername"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="-8dp"
+                android:layout_marginBottom="16dp"
+                android:textSize="16sp"
+                android:textColor="?attr/colorPrimary"
+                android:background="?attr/selectableItemBackground"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="4dp"
+                android:drawableStart="@drawable/ic_person_edit"
+                android:drawablePadding="8dp"
+                android:drawableTint="?attr/colorPrimary"
+                android:gravity="center_vertical"
+                android:textAllCaps="false" />
+
             <!-- Bio Section -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/bioCard"
@@ -158,22 +176,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnChangeUsername"
-                        style="@style/Widget.MaterialComponents.Button.TextButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="56dp"
-                        android:text="@string/change_username"
-                        android:textAllCaps="false"
-                        app:icon="@drawable/ic_person_edit"
-                        android:layout_gravity="center_horizontal" />
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="?attr/colorOnSurfaceVariant"
-                        android:alpha="0.2" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnChangePassword"

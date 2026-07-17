@@ -109,7 +109,7 @@ class EditProfileActivity : AppCompatActivity() {
         }
         val avatarImageView = findViewById<CircleImageView>(R.id.ivProfileAvatar)
         val editTextBio = findViewById<EditText>(R.id.editTextBio)
-        val btnChangeUsername = findViewById<Button>(R.id.btnChangeUsername)
+        val tvInlineUsername = findViewById<android.widget.TextView>(R.id.tvInlineUsername)
         val btnChangeBio = findViewById<Button>(R.id.btnChangeBio)
         val btnChangePassword = findViewById<Button>(R.id.btnChangePassword)
         val btnChangeAvatar = findViewById<Button>(R.id.btnChangeAvatar)
@@ -131,6 +131,7 @@ class EditProfileActivity : AppCompatActivity() {
         // Store references
         currentAvatarImageView = avatarImageView
         currentAvatarProgressBar = avatarProgressBar
+        tvInlineUsername.text = "@$username"
 
         // Load current profile (bio) — v2: user_id from JWT
         Log.d("EditProfile", "Loading profile for user: $username")
@@ -142,6 +143,7 @@ class EditProfileActivity : AppCompatActivity() {
                     initialBio = profile.bio
                     editTextBio.setText(profile.bio)
                     btnChangeBio.isVisible = false
+                    tvInlineUsername.text = "@${profile.username.ifEmpty { username }}"
 
                     // Company section
                     if (profile.companyId.isNotEmpty()) {
@@ -149,6 +151,11 @@ class EditProfileActivity : AppCompatActivity() {
                         companyCard.isVisible = true
                         tvCompanyName.text = profile.companyName
                         tvCompanyPosition.text = formatCompanyPosition(profile.positionTitle, profile.positionLevel)
+                        val posBubble = findViewById<com.google.android.material.card.MaterialCardView>(R.id.positionBubble)
+                        val primColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().primaryColor, android.graphics.Color.BLUE)
+                        posBubble?.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(
+                            android.graphics.Color.argb(30, android.graphics.Color.red(primColor), android.graphics.Color.green(primColor), android.graphics.Color.blue(primColor))
+                        ))
                         ivCompanyLogo.isVisible = false
                         btnCompanyAction.setOnClickListener {
                             val intent = android.content.Intent(this@EditProfileActivity, CompanyProfileActivity::class.java).apply {
@@ -288,7 +295,7 @@ class EditProfileActivity : AppCompatActivity() {
             pickImageLauncher.launch(intent)
         }
 
-        btnChangeUsername.setOnClickListener {
+        tvInlineUsername.setOnClickListener {
             showChangeUsernameDialog()
         }
 
@@ -699,6 +706,11 @@ class EditProfileActivity : AppCompatActivity() {
                         tvCompanyName.text = profile.companyName
                         tvCompanyPosition.isVisible = true
                         tvCompanyPosition.text = formatCompanyPosition(profile.positionTitle, profile.positionLevel)
+                        val posBubble = findViewById<com.google.android.material.card.MaterialCardView>(R.id.positionBubble)
+                        val primColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().primaryColor, android.graphics.Color.BLUE)
+                        posBubble?.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(
+                            android.graphics.Color.argb(30, android.graphics.Color.red(primColor), android.graphics.Color.green(primColor), android.graphics.Color.blue(primColor))
+                        ))
                         lifecycleScope.launch {
                             val companyResp = withContext(Dispatchers.IO) {
                                 lavender.client.android.data.grpc.GrpcCompanyClient.getCompany(profile.companyId)

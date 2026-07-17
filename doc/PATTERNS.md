@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.2.15 | **Updated:** 2026-07-17
+**Version:** v1.3.2.16 | **Updated:** 2026-07-17
 
 ---
 
@@ -1171,4 +1171,52 @@ Why AtomicBoolean (not Mutex/synchronized):
   ├── ensureFreshToken/forceTokenRefresh are blocking — can't use coroutine Mutex
   ├── AtomicBoolean.compareAndSet is thread-safe, non-blocking
   └── try/finally guarantees guard release on any exit path
+```
+
+---
+
+## v1.3.2.16
+
+### ChatAdapter Theme Reset Pattern (v1.3.2.16)
+```
+ChatAdapter — cached theme colors
+  ├── colorsInitialized: Boolean — set true on first bind
+  ├── initColors(view) — reads ThemeStore.currentTheme() once, caches colors
+  └── updateTheme() — resets colorsInitialized=false + notifyItemRangeChanged
+
+ChatListActivity.onResume()
+  ├── ThemeStore.init(this)
+  ├── ThemeApplier.apply(this, ThemeStore.currentTheme())
+  └── chatAdapter.updateTheme() — forces re-read of theme colors
+
+Pattern: ALL adapters with cached theme colors need updateTheme()
+  — ChatAdapter: card backgrounds, text colors
+  — UserAdapter: already has updateTheme() (v1.3.1.08)
+```
+
+### Inline Username Pattern (v1.3.2.16)
+```
+EditProfileActivity — inline @username
+  ├── tvInlineUsername: TextView — shows "@username" below avatar
+  ├── Click → showChangeUsernameDialog() (existing bottom sheet)
+  ├── Set in setupUI(): tvInlineUsername.text = "@$username"
+  └── Updated after profile load: tvInlineUsername.text = "@${profile.username}"
+
+Removed: btnChangeUsername button + divider from settings card
+  — Redundant with inline display
+```
+
+### Chat Gallery Thumbnail Pattern (v1.3.2.16)
+```
+item_message.xml
+  ├── flImageContainer (FrameLayout)
+  │   ├── ivMessageImage — single image (unchanged)
+  │   └── rvGalleryThumbnails — horizontal RecyclerView for galleries
+
+MessageAdapter.bindImageContent()
+  ├── Single image: show ivMessageImage, hide rvGalleryThumbnails
+  └── Gallery (2+): hide ivMessageImage, show rvGalleryThumbnails
+      ├── ThumbnailGridAdapter — inner class, max 4 items
+      ├── item_thumbnail.xml — reused from FullScreenImageActivity
+      └── Click → FullScreenImageActivity with all URLs + index
 ```

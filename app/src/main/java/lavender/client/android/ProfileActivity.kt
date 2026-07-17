@@ -107,13 +107,14 @@ class ProfileActivity : AppCompatActivity() {
         intentChatName = intent.getStringExtra("chat_name") ?: ""
         chatType = intent.getStringExtra("chat_type") ?: ""
 
-        setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = when {
+        toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
+        toolbar.navigationIcon?.setTint(getColorOnPrimary())
+        toolbar.title = when {
             chatType == "conference" -> getString(R.string.conference_info)
             isGroup -> getString(R.string.group_info)
             else -> getString(R.string.profile)
         }
+        toolbar.setTitleTextColor(getColorOnPrimary())
         toolbar.setNavigationOnClickListener { finish() }
 
         if (isGroup) {
@@ -407,6 +408,11 @@ class ProfileActivity : AppCompatActivity() {
         bioCard?.setCardBackgroundColor(ColorStateList.valueOf(currentTheme.surfaceColor.toColorInt()))
         bioCard?.strokeColor = ThemeUtils.adjustAlpha(currentTheme.onSurfaceColor.toColorInt(), 0.2f)
         applyThemeToView(findViewById(android.R.id.content), currentTheme)
+        val bioTitle = findViewById<TextView>(R.id.bioTitle)
+        bioTitle?.setTextColor(primaryColor)
+        val positionBubble = findViewById<com.google.android.material.card.MaterialCardView>(R.id.positionBubble)
+        val primaryContainerBg = android.graphics.Color.argb(30, android.graphics.Color.red(primaryColor), android.graphics.Color.green(primaryColor), android.graphics.Color.blue(primaryColor))
+        positionBubble?.setCardBackgroundColor(ColorStateList.valueOf(primaryContainerBg))
     }
 
     @SuppressLint("SetTextI18n")
@@ -689,5 +695,10 @@ class ProfileActivity : AppCompatActivity() {
             }
             is android.view.ViewGroup -> { for (i in 0 until view.childCount) applyThemeToView(view.getChildAt(i), theme) }
         }
+    }
+
+    private fun getColorOnPrimary(): Int {
+        val theme = ThemeStore.currentTheme()
+        return ThemeUtils.parseSafeColor(theme.onPrimaryColor, android.graphics.Color.WHITE)
     }
 }

@@ -82,6 +82,11 @@ class ChatAdapter(
         colorsInitialized = true
     }
 
+    fun updateTheme() {
+        colorsInitialized = false
+        notifyItemRangeChanged(0, itemCount)
+    }
+
     // ======= Public API =======
 
     /**

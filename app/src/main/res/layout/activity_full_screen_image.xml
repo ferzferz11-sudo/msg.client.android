@@ -71,6 +71,13 @@
         android:paddingBottom="8dp"
         android:visibility="gone">
 
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/thumbnailsRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:clipToPadding="false"
+            android:paddingHorizontal="8dp" />
+
         <TextView
             android:id="@+id/tvImageCounter"
             android:layout_width="wrap_content"
@@ -78,14 +85,7 @@
             android:layout_gravity="center_horizontal"
             android:textColor="@android:color/white"
             android:textSize="12sp"
-            android:layout_marginBottom="8dp" />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/thumbnailsRecyclerView"
-            android:layout_width="match_parent"
-            android:layout_height="64dp"
-            android:clipToPadding="false"
-            android:paddingHorizontal="8dp" />
+            android:layout_marginTop="8dp" />
 
     </LinearLayout>
 
