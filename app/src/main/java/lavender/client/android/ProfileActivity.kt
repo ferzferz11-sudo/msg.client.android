@@ -85,6 +85,7 @@ class ProfileActivity : AppCompatActivity() {
         setContentView(R.layout.activity_profile)
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val currentMe = prefs.getString("username", "") ?: ""
+        ThemeStore.init(this)
         ThemeUi.bind(this, currentMe)
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
@@ -677,6 +678,7 @@ class ProfileActivity : AppCompatActivity() {
             }
             is CircleImageView -> { view.borderColor = primary; view.borderWidth = (2 * resources.displayMetrics.density).toInt() }
             is android.widget.CheckBox -> view.buttonTintList = ColorStateList.valueOf(primary)
+            is android.widget.ImageView -> view.imageTintList = ColorStateList.valueOf(primary)
             is TextView -> {
                 if (view.id == R.id.participantsTitle || view.id == R.id.profileName || view.id == R.id.bioTitle || view.id == R.id.settingsTitle) view.setTextColor(primary)
                 else view.setTextColor(textPrimary)

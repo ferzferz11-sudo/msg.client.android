@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.2.14 | **Updated:** 2026-07-17
+**Version:** v1.3.2.15 | **Updated:** 2026-07-17
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -762,3 +762,18 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **Fix:** replaced `isRefreshing` with `refreshGuard: AtomicBoolean`. All three paths use `compareAndSet(false, true)` to acquire the guard. `waitForRefreshComplete()` helper polls until guard is released. Each path re-checks token freshness after waiting — if another refresh already completed, skips redundant refresh
 - **Server confirmation:** `auth_jwt.go:103-116` `ValidateToken` checks JWT expiry. `db_auth_devices.go:188-204` `ValidateRefreshToken` checks DB `is_active` AND JTI match. `auth_service_v2.go:355-360` on reuse: `RevokeDevice()` + log `refresh_reuse_detected`
 - **Impact:** intermittent forced re-login despite auto-refresh working. Most likely triggered when app returns from background (Doze) and both periodic timer + loadChats fire simultaneously
+
+## Edited Message Not Updating (v1.3.2.15)
+
+- **`editMessageV2()` only handled errors** — on success, the edited message text was not updated in `_messages` StateFlow or Room DB. The `ListAdapter`DiffUtil` didn't detect the change because the `Message` object was stale
+- **Fix:** `RealGrpcClient.editMessageV2()` now updates `_messages` via `update { current.map { if (id == it.id) it.copy(text, edited=true) else it } }` and Room DB via `messageDao().updateMessageText(id, text, edited=true)` immediately on success
+- **ChatV2 stream does NOT broadcast edits** — unlike DELETE_MESSAGE, there is no EDIT_MESSAGE system message type. Edited messages only appear when `loadHistoryV2` is called (app restart or pull-to-refresh)
+- **`MessageDao.updateMessageText()`** — new Room DAO method: `UPDATE messages SET text = :text, edited = :edited WHERE id = :messageId`
+
+## Gallery Thumbnails in FullScreenImageActivity (v1.3.2.15)
+
+- **Previous UX:** single image with swipe + +x overlay for galleries — users didn't realize they could swipe or tap +x
+- **New UX:** bottom bar with horizontal RecyclerView of 56x56dp thumbnails, counter text ("1 / 5"), current thumbnail highlighted with white border (3dp stroke), others at 50% alpha. Smooth scroll to current on swipe. Tap thumbnail → jump to that image
+- **`item_thumbnail.xml`** — FrameLayout with ImageView (56dp, centerCrop) + selectedBorder View (60dp, GradientDrawable white stroke)
+- **`ThumbnailAdapter`** — inner class in FullScreenImageActivity, handles click → callback to update currentIndex + loadImage + updateThumbnailHighlight
+- **Layout change:** root changed from FrameLayout to vertical LinearLayout (image in FrameLayout with weight=1, bottomBar below)

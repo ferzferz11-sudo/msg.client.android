@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.view.GestureDetector
+import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
@@ -14,6 +15,7 @@ import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -22,8 +24,10 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
@@ -42,9 +46,13 @@ class FullScreenImageActivity : AppCompatActivity() {
     private lateinit var loadingProgress: ProgressBar
     private lateinit var gestureDetector: GestureDetector
     private lateinit var scaleGestureDetector: ScaleGestureDetector
+    private lateinit var thumbnailsRecyclerView: androidx.recyclerview.widget.RecyclerView
+    private lateinit var tvImageCounter: android.widget.TextView
+    private lateinit var bottomBar: android.view.View
 
     private var imageUrls: List<String> = emptyList()
     private var currentIndex: Int = 0
+    private var thumbnailAdapter: ThumbnailAdapter? = null
 
     // Zoom state
     private var currentScale = 1f
@@ -132,6 +140,25 @@ class FullScreenImageActivity : AppCompatActivity() {
             // Fallback: just show the single image
             imageUrls = listOf(imageUrl)
             currentIndex = 0
+        }
+
+        // Setup thumbnail navigation
+        thumbnailsRecyclerView = findViewById(R.id.thumbnailsRecyclerView)
+        tvImageCounter = findViewById(R.id.tvImageCounter)
+        bottomBar = findViewById(R.id.bottomBar)
+
+        if (imageUrls.size > 1) {
+            bottomBar.visibility = View.VISIBLE
+            thumbnailAdapter = ThumbnailAdapter(imageUrls) { position ->
+                currentIndex = position
+                loadImage(imageUrls[currentIndex])
+                updateThumbnailHighlight()
+            }
+            thumbnailsRecyclerView.adapter = thumbnailAdapter
+            thumbnailsRecyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this, androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false)
+            updateThumbnailHighlight()
+        } else {
+            bottomBar.visibility = View.GONE
         }
 
         loadImage(imageUrls[currentIndex])
@@ -241,6 +268,7 @@ class FullScreenImageActivity : AppCompatActivity() {
         if (imageUrls.size > 1) {
             currentIndex = (currentIndex + 1) % imageUrls.size
             loadImage(imageUrls[currentIndex])
+            updateThumbnailHighlight()
         }
     }
 
@@ -248,6 +276,20 @@ class FullScreenImageActivity : AppCompatActivity() {
         if (imageUrls.size > 1) {
             currentIndex = if (currentIndex - 1 < 0) imageUrls.size - 1 else currentIndex - 1
             loadImage(imageUrls[currentIndex])
+            updateThumbnailHighlight()
+        }
+    }
+
+    private fun updateThumbnailHighlight() {
+        if (imageUrls.size <= 1) return
+        tvImageCounter.text = "${currentIndex + 1} / ${imageUrls.size}"
+        thumbnailAdapter?.setSelectedPosition(currentIndex)
+        val layoutManager = thumbnailsRecyclerView.layoutManager as? androidx.recyclerview.widget.LinearLayoutManager
+        val targetPos = currentIndex
+        val firstVisible = layoutManager?.findFirstCompletelyVisibleItemPosition() ?: 0
+        val lastVisible = layoutManager?.findLastCompletelyVisibleItemPosition() ?: 0
+        if (targetPos < firstVisible || targetPos > lastVisible) {
+            thumbnailsRecyclerView.smoothScrollToPosition(targetPos)
         }
     }
 
@@ -388,6 +430,61 @@ class FullScreenImageActivity : AppCompatActivity() {
                     .setDuration(200)
                     .start()
             }
+        }
+    }
+
+    private class ThumbnailAdapter(
+        private val urls: List<String>,
+        private val onThumbnailClick: (Int) -> Unit
+    ) : RecyclerView.Adapter<ThumbnailAdapter.ThumbnailViewHolder>() {
+
+        private var selectedPosition = 0
+
+        fun setSelectedPosition(position: Int) {
+            val old = selectedPosition
+            selectedPosition = position
+            if (old != position) {
+                notifyItemChanged(old)
+                notifyItemChanged(position)
+            }
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ThumbnailViewHolder {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_thumbnail, parent, false)
+            return ThumbnailViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: ThumbnailViewHolder, position: Int) {
+            val url = urls[position]
+            val fullUrl = if (url.startsWith("http")) url.trim()
+                else "${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(holder.itemView.context)}" + url.trim().let { if (it.startsWith("/")) it else "/$it" }
+
+            Glide.with(holder.itemView.context)
+                .load(fullUrl)
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .centerCrop()
+                .placeholder(R.drawable.ic_image_placeholder)
+                .into(holder.thumbnailImage)
+
+            val isSelected = position == selectedPosition
+            holder.thumbnailImage.alpha = if (isSelected) 1.0f else 0.5f
+            holder.selectedBorder.visibility = if (isSelected) View.VISIBLE else View.GONE
+            if (isSelected) {
+                holder.selectedBorder.background = android.graphics.drawable.GradientDrawable().apply {
+                    setStroke(3, android.graphics.Color.WHITE)
+                    setColor(android.graphics.Color.TRANSPARENT)
+                    cornerRadius = 8f * holder.itemView.resources.displayMetrics.density
+                }
+            }
+
+            holder.itemView.setOnClickListener { onThumbnailClick(position) }
+        }
+
+        override fun getItemCount(): Int = urls.size
+
+        class ThumbnailViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            val thumbnailImage: ImageView = itemView.findViewById(R.id.thumbnailImage)
+            val selectedBorder: View = itemView.findViewById(R.id.selectedBorder)
         }
     }
 }

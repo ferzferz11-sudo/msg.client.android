@@ -672,7 +672,17 @@ object RealGrpcClient {
     }
 
     fun editMessageV2(id: String, text: String, cb: (Boolean, String) -> Unit) {
-        messageV2Client.editMessageV2(id, text, cb)
+        messageV2Client.editMessageV2(id, text) { success, msg ->
+            if (success) {
+                _messages.update { current ->
+                    current.map { m -> if (m.id == id) m.copy(text = text, edited = true) else m }
+                }
+                scope.launch(Dispatchers.IO) {
+                    db()?.messageDao()?.updateMessageText(id, text, edited = true)
+                }
+            }
+            cb(success, msg)
+        }
     }
 
     fun deleteMessageV2(messageIds: List<String>, cb: (Boolean) -> Unit = {}) {

@@ -228,6 +228,9 @@ class UserAdapter(
                 currentTheme?.let { ThemeUtils.applyDefaultAvatar(userAvatar, it) }
             }
 
+            checkBox.setOnClickListener {
+                onUserClick(username)
+            }
             itemView.setOnClickListener { onUserClick(username) }
             itemView.setOnLongClickListener {
                 onUserLongClick?.invoke(username)

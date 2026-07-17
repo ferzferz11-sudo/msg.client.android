@@ -328,6 +328,9 @@ class ChatListActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
+
+        ThemeStore.init(this)
+        ThemeApplier.apply(this, ThemeStore.currentTheme())
         // Register update prefs listener
         updateCoordinator?.let { coord ->
             getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
