@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.2.13 | **Updated:** 2026-07-16
+**Version:** v1.3.2.14 | **Updated:** 2026-07-17
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -507,6 +507,16 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **Fix:** `handleIncomingCall()` now always calls `startActivity(CallActivity)` directly in addition to showing notification
 - **Notification still needed:** ringtone, decline button, visible when screen off
 - **`SENDER_NAME` missing from notification intent** — CallActivity showed UUID instead of caller name when opened from notification tap. Fix: added `SENDER_NAME` to notification intent
+
+## Push Notifications Not Dismissed / Splash on Tap (v1.3.2.14)
+
+- **FCM service runs before session init** — `SessionManager.session.value.username` is empty when `showNotification()` is called from `LavenderMessagingService.onMessageReceived()` before `SessionManager.initFromPrefs()`. Intent targets `SplashActivity` instead of `NewChatActivity` → splash screen on tap
+- **`showNotificationFromStream()` hardcoded `USERNAME=""`** — PendingIntent extras had empty username → if NewChatActivity not on stack, new instance loads with empty data
+- **Fix:** Both `showNotification()` and `showNotificationFromStream()` now always target `NewChatActivity` with fallback username from SharedPreferences. `loadDataFromIntent()` handles empty username via session/prefs fallback
+- **`onNewIntent()` returned early without dismissing** — when same room notification tapped, `if (newRoomId == roomId) return` skipped `dismissNotificationsForRoom()` → notification persisted
+- **Fix:** `dismissNotificationsForRoom(newRoomId)` called before the early return check
+- **`markRead` callback delayed notification dismiss** — `dismissNotificationsForRoom` was only called via gRPC `markRead` callback, which had network latency
+- **Fix:** Immediate `dismissNotificationsForRoom(roomId)` in `NewChatActivity.onCreate()` after `switchRoom`
 
 ## Swipe-to-Refresh Stuck Spinner (v1.3.1.22)
 

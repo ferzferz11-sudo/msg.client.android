@@ -1,5 +1,37 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.2.14] - 2026-07-17
+
+### Исправлено
+
+**Push-уведомления — не удалялись при входе в чат:**
+- `dismissNotificationsForRoom` вызывался только через `markRead` (gRPC callback), что задерживало удаление
+- Добавлен немедленный `dismissNotificationsForRoom` в `NewChatActivity.onCreate()` сразу после `switchRoom`
+
+**Push-уведомления — сплеш-экран при тапе на уведомление в открытом чате:**
+- `showNotification()` (FCM) создавал intent на `SplashActivity` когда `session.username` был пуст (FCM-сервис не инициализировал сессию)
+- `showNotificationFromStream()` хардкодил `USERNAME=""` в intent
+- Оба метода теперь всегда создают intent на `NewChatActivity` с fallback username из SharedPreferences
+
+**Push-уведомления — тап на уведомление в открытом чате не удалял его:**
+- `onNewIntent()` в `NewChatActivity` возвращался раньше для того же roomId без удаления уведомления
+- Добавлен `dismissNotificationsForRoom` до проверки `if (newRoomId == roomId) return`
+
+### Добавлено
+
+**ContactsActivity — навигация по контактам:**
+- Короткий тап → открывает профиль контакта (`ProfileActivity`)
+- Длинный тап → входит в режим выбора (toggle selection)
+
+**ProfileActivity — иконки действий (Telegram-стиль):**
+- Ряд иконок ниже статуса, выше блока "О себе" (только для чужих профилей)
+- Иконка сообщения → создание/открытие личного чата
+- Иконка звонка → голосовой звонок
+- Иконка видеозвонка → видеозвонок
+- Иконка почты → внешнее почтовое приложение (только если email заполнен в профиле)
+
+---
+
 ## [1.3.2.13] - 2026-07-16
 
 ### Исправлено
