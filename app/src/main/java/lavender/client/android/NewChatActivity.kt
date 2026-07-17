@@ -164,6 +164,8 @@ class NewChatActivity : AppCompatActivity() {
 
         viewModel.switchRoom(roomId)
 
+        lavender.client.android.data.fcm.LavenderMessagingService.dismissNotificationsForRoom(this, roomId)
+
         SessionManager.updateDeviceInfo(this)
         val session = SessionManager.session.value
         viewModel.startChatV2(roomId) { _ ->
@@ -550,6 +552,9 @@ class NewChatActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         val newRoomId = intent.getStringExtra("ROOM_ID") ?: intent.getStringExtra("roomId") ?: return
+
+        lavender.client.android.data.fcm.LavenderMessagingService.dismissNotificationsForRoom(this, newRoomId)
+
         if (newRoomId == roomId) return
         roomId = newRoomId
         loadDataFromIntent()

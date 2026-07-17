@@ -207,29 +207,24 @@ class LavenderMessagingService : FirebaseMessagingService() {
             notificationManager.createNotificationChannel(channel)
         }
 
-        // Read credentials from secure storage
+        // Read credentials from secure storage — fallback to prefs if session not yet initialized
         val session = lavender.client.android.data.session.SessionManager.session.value
-        val username = session.username
+        var username = session.username
         val serverAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this) ?: ""
+        if (username.isEmpty()) {
+            val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+            username = prefs.getString("username", "") ?: ""
+        }
 
-        val intent = if (username.isNotEmpty()) {
-            // Логин есть — летим сразу в NewChatActivity
-            Intent(this, lavender.client.android.NewChatActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                putExtra("USERNAME", username)
-                putExtra("SERVER_ADDRESS", serverAddress)
-                putExtra("ROOM_ID", roomId)
-                putExtra("CHAT_NAME", title)
-                putExtra("IS_DIRECT", !roomId.startsWith("group_") && roomId != "general")
-                putExtra("from_notification", true)
-            }
-        } else {
-            // Логина нет — идем в SplashActivity
-            Intent(this, lavender.client.android.SplashActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                putExtra("ROOM_ID", roomId)
-                putExtra("from_notification", true)
-            }
+        // Always target NewChatActivity — it handles missing session via loadDataFromIntent fallback
+        val intent = Intent(this, lavender.client.android.NewChatActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("USERNAME", username)
+            putExtra("SERVER_ADDRESS", serverAddress)
+            putExtra("ROOM_ID", roomId)
+            putExtra("CHAT_NAME", title)
+            putExtra("IS_DIRECT", !roomId.startsWith("group_") && roomId != "general")
+            putExtra("from_notification", true)
         }
 
         // Уникальный PendingIntent для каждой комнаты
@@ -383,9 +378,16 @@ class LavenderMessagingService : FirebaseMessagingService() {
                 notificationManager.createNotificationChannel(channel)
             }
 
+            val session = lavender.client.android.data.session.SessionManager.session.value
+            var username = session.username
+            if (username.isEmpty()) {
+                val prefs = context.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
+                username = prefs.getString("username", "") ?: ""
+            }
+
             val intent = Intent(context, lavender.client.android.NewChatActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                putExtra("USERNAME", "")
+                putExtra("USERNAME", username)
                 putExtra("SERVER_ADDRESS", lavender.client.android.data.session.CredentialStore.getServerAddress(context) ?: "")
                 putExtra("ROOM_ID", roomId)
                 putExtra("CHAT_NAME", title)
