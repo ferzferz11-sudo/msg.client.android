@@ -149,6 +149,23 @@ class CompanyProfileActivity : AppCompatActivity() {
                     showRenameCompanyDialog(tvCompanyName)
                 }
 
+                // Show current user's position bubble
+                val session = SessionManager.session.value
+                val positionBubble = findViewById<com.google.android.material.card.MaterialCardView>(R.id.positionBubble)
+                val tvPosition = findViewById<TextView>(R.id.tvPosition)
+                if (session.positionTitle.isNotEmpty() || session.positionLevel > 0) {
+                    positionBubble?.isVisible = true
+                    tvPosition?.text = formatCompanyPosition(session.positionTitle, session.positionLevel)
+                    val currentTheme = ThemeStore.currentTheme()
+                    val primaryColor = ThemeUtils.parseSafeColor(currentTheme.primaryColor, android.graphics.Color.BLUE)
+                    val primaryContainerBg = ThemeUtils.adjustAlpha(primaryColor, 0.15f)
+                    positionBubble?.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(primaryContainerBg))
+                    val textPrimary = ThemeUtils.parseSafeColor(currentTheme.textPrimaryColor, android.graphics.Color.BLACK)
+                    tvPosition?.setTextColor(textPrimary)
+                } else {
+                    positionBubble?.isVisible = false
+                }
+
                 // Load company logo
                 ivCompanyLogo.isVisible = true
                 if (currentCompanyAvatarUrl.isNotEmpty()) {
@@ -387,6 +404,26 @@ class CompanyProfileActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(this@CompanyProfileActivity, getString(R.string.error_colon, "Failed"), Toast.LENGTH_LONG).show()
             }
+        }
+    }
+
+    private fun formatCompanyPosition(positionTitle: String, positionLevel: Int): String {
+        val englishNames = mapOf(0 to "Employee", 1 to "Manager", 2 to "Top Manager", 3 to "Owner")
+        val levelName = when (positionLevel) {
+            0 -> getString(R.string.employee)
+            1 -> getString(R.string.manager)
+            2 -> getString(R.string.top_manager)
+            3 -> getString(R.string.owner)
+            else -> positionTitle
+        }
+        if (positionTitle.isEmpty()) return levelName
+        val englishName = englishNames[positionLevel]
+        return if (englishName != null && positionTitle.equals(englishName, ignoreCase = true)) {
+            levelName
+        } else if (positionTitle != levelName) {
+            "$positionTitle ($levelName)"
+        } else {
+            levelName
         }
     }
 

@@ -251,9 +251,11 @@ class NewChatActivity : AppCompatActivity() {
         e2eeDelegate.configure(roomId, isSecret, toolbarDelegate.toolbarSubtitle)
         e2eeDelegate.onKeyExchangeStart = {
             toolbarDelegate.isE2eeInProgress = true
+            toolbarDelegate.refreshSubtitle()
         }
         e2eeDelegate.onKeyExchangeComplete = { success ->
             toolbarDelegate.isE2eeInProgress = false
+            toolbarDelegate.refreshSubtitle()
             if (success) {
                 inputDelegate.setSecretState(true)
                 runOnUiThread {

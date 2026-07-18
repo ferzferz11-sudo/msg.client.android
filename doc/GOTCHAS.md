@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.2.19 | **Updated:** 2026-07-17
+**Version:** v1.3.2.20 | **Updated:** 2026-07-18
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -802,3 +802,29 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **Replaced `btnChangeUsername` button with `tvInlineUsername`** — shows `@username` below avatar, tappable to open same `showChangeUsernameDialog()`
 - **Layout:** `activity_edit_profile.xml` — `tvInlineUsername` added after avatar card, before bio card
 - **Removed:** `btnChangeUsername` button and divider from settings card
+
+## Orientation Change in Chat (v1.3.2.20)
+
+- **NewChatActivity did NOT have `configChanges`** — Activity was destroyed and recreated on orientation change, losing all delegate state (toolbar, E2EE, typing)
+- **Fix:** Added `android:configChanges="orientation|screenSize|keyboardHidden"` to NewChatActivity in AndroidManifest.xml
+- **Same pattern as ChatListActivity** which already had configChanges
+- **Impact:** E2EE key exchange state, toolbar subtitle, typing indicators all preserved on rotation
+
+## E2EE Key Exchange Stuck (v1.3.2.20)
+
+- **`isE2eeInProgress` flag changed but `updateSubtitle()` was not called** — the flag was set by E2EE callbacks but `updateSubtitle()` only ran via observer flow (StateFlow changes). No StateFlow change = no subtitle update = "Обмен ключами..." shown indefinitely
+- **Fix:** Added `refreshSubtitle()` to `ChatToolbarDelegate` that stores last parameters from `updateSubtitle()` and re-evaluates. Auto-called when `isE2eeInProgress` changes via custom setter
+- **Also called explicitly** from `onKeyExchangeStart` and `onKeyExchangeComplete` callbacks in NewChatActivity
+
+## ThemeApplier Card List (v1.3.2.20)
+
+- **`usernameCard` was missing from ThemeApplier's card list** — cards in the list get `surfaceColor` background, but `usernameCard` was omitted → transparent background inconsistent with other sections
+- **Fix:** Added `R.id.usernameCard` to the list at ThemeApplier.kt:287
+- **Always verify:** every MaterialCardView that should be themed must be in this list
+
+## Company Position Consistency (v1.3.2.20)
+
+- **EditProfileActivity showed position bubble, CompanyProfileActivity did not** — inconsistent display of user's position across the app
+- **Fix:** Added `positionBubble` (MaterialCardView) to `activity_company_profile.xml` with same styling as EditProfileActivity
+- **Position loaded from `SessionManager.session`** — `positionTitle` and `positionLevel` fields updated by `fetchAdminStatus()`
+- **Same `formatCompanyPosition()` logic** duplicated in both activities for consistent localization

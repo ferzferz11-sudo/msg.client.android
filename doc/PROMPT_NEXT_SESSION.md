@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.2.19 (выпущена) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-17
+**Версия:** v1.3.2.20 (выпущена) | **Ветка:** feat/1.3.2.x | **Дата:** 2026-07-18
 
 ---
 
@@ -47,6 +47,40 @@
 5. v2 server only — никаких v1 fallbacks
 6. Перед коммитом: `./gradlew assembleDebug`
 7. НЕ bump'ать версию — bump делает только пользователь
+
+---
+
+## v1.3.2.20 — Orientation Fix + Style Consistency + E2EE Fix
+
+### Исправлено
+
+**Смена ориентации в чате:**
+- `NewChatActivity` пересоздавалась при повороте → терялись delegate'ы → статус тулбара сбрасывался
+- Добавлен `configChanges="orientation|screenSize|keyboardHidden"` в AndroidManifest.xml
+
+**Редактирование профиля — @username:**
+- `usernameCard` не был в списке карточек ThemeApplier → фон оставался прозрачным
+- Добавлен `R.id.usernameCard` в список карточек
+
+**Компания — единый стиль:**
+- `CompanyProfileActivity` не показывала плашку должности
+- Добавлен `positionBubble` с тем же стилем что и в EditProfileActivity
+
+**Секретный чат — обмен ключами зависает:**
+- `isE2eeInProgress` менялся, но `updateSubtitle()` не вызывался
+- Добавлен `refreshSubtitle()` в ChatToolbarDelegate с автосохранением параметров
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `AndroidManifest.xml` | +configChanges для NewChatActivity |
+| `ThemeApplier.kt` | +usernameCard в список карточек |
+| `activity_company_profile.xml` | +positionBubble |
+| `CompanyProfileActivity.kt` | +position display, +formatCompanyPosition() |
+| `ChatToolbarDelegate.kt` | +refreshSubtitle(), auto-refresh |
+| `NewChatActivity.kt` | +refreshSubtitle() в E2EE callbacks |
+| `CHANGELOG.md` | v1.3.2.20 |
 
 ---
 

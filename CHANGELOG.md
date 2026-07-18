@@ -1,5 +1,43 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.2.20] - 2026-07-18
+
+### Исправлено
+
+**Смена ориентации экрана в чате сбрасывает статус тулбара:**
+- `NewChatActivity` не имел `configChanges` — при повороте экрана Activity пересоздавалась, теряя состояние всех delegate'ов (toolbar, E2EE, typing status)
+- Статус подключения/набора текста/E2EE сбрасывался на дефолтный
+- Добавлен `android:configChanges="orientation|screenSize|keyboardHidden"` в AndroidManifest.xml — Activity больше не пересоздаётся при повороте
+
+**Редактирование профиля — секция @username не адаптирована к теме:**
+- `usernameCard` отсутствовал в списке карточек `ThemeApplier` — фон оставался прозрачным вместо `surfaceColor`
+- Добавлен `R.id.usernameCard` в список карточек ThemeApplier, теперь получает `surfaceColor` фон как все остальные секции
+
+**Единый стиль отображения компании/должности:**
+- `CompanyProfileActivity` не показывала плашку должности текущего пользователя
+- Добавлен `positionBubble` (MaterialCardView) в `activity_company_profile.xml` с тем же стилем что и в `EditProfileActivity`
+- Позиция загружается из `SessionManager.session` и отображается с `primaryColor 0.15f alpha` фоном и `textPrimaryColor` текстом
+
+**Секретный чат — обмен ключами бесконечно зависает в статусе "Обмен ключами...":**
+- `updateSubtitle()` вызывался только через observer flow (при изменении StateFlow connection/users/typing). Флаг `isE2eeInProgress` менялся, но subtitle не обновлялся
+- Добавлен `refreshSubtitle()` метод в `ChatToolbarDelegate` с автосохранением последних параметров `updateSubtitle()`
+- Сеттер `isE2eeInProgress` теперь вызывает `refreshSubtitle()` автоматически
+- E2EE callbacks (`onKeyExchangeStart`, `onKeyExchangeComplete`) в `NewChatActivity` теперь вызывают `toolbarDelegate.refreshSubtitle()`
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `AndroidManifest.xml` | +`configChanges` для NewChatActivity |
+| `ThemeApplier.kt` | +`usernameCard` в список карточек |
+| `activity_company_profile.xml` | +positionBubble (MaterialCardView) |
+| `CompanyProfileActivity.kt` | +position display, +formatCompanyPosition() |
+| `ChatToolbarDelegate.kt` | +refreshSubtitle(), +last* параметры, auto-refresh в isE2eeInProgress setter |
+| `NewChatActivity.kt` | +refreshSubtitle() в E2EE callbacks |
+| `CHANGELOG.md` | v1.3.2.20 |
+
+---
+
 ## [1.3.2.19] - 2026-07-17
 
 ### Исправлено

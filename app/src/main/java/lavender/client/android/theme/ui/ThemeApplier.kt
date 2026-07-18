@@ -284,7 +284,7 @@ object ThemeApplier {
 
             (activity.findViewById<View>(R.id.tvCompanyName) as? TextView)?.setTextColor(textPrimary)
 
-            listOf(R.id.biometricCard, R.id.devicesCard, R.id.bioCard, R.id.avatarCard, R.id.settingsCard, R.id.companyCard).forEach { id ->
+            listOf(R.id.biometricCard, R.id.devicesCard, R.id.bioCard, R.id.avatarCard, R.id.settingsCard, R.id.companyCard, R.id.usernameCard).forEach { id ->
                 activity.findViewById<View>(id)?.let { view ->
                     if (view is MaterialCardView) {
                         view.setCardBackgroundColor(ColorStateList.valueOf(surfaceColor))

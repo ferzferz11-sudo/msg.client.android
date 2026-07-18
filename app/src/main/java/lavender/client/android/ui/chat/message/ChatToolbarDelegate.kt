@@ -51,6 +51,10 @@ class ChatToolbarDelegate(
     private var isSecret: Boolean = false
     var isE2eeInProgress: Boolean = false
 
+    fun refreshSubtitle() {
+        updateSubtitle(lastOnlineUsers, lastIsConnected, lastTypists, lastOtherUserLastSeenAt, lastIsServerShuttingDown)
+    }
+
     fun initViews() {
         toolbar = activity.findViewById(R.id.toolbar)
         toolbarTitle = activity.findViewById(R.id.toolbarTitle)
@@ -301,6 +305,11 @@ class ChatToolbarDelegate(
     }
 
     fun updateSubtitle(onlineUsers: List<String>, isConnected: Boolean, typists: List<String>, otherUserLastSeenAt: com.google.protobuf.Timestamp? = null, isServerShuttingDown: Boolean = false) {
+        lastOnlineUsers = onlineUsers
+        lastIsConnected = isConnected
+        lastTypists = typists
+        lastOtherUserLastSeenAt = otherUserLastSeenAt
+        lastIsServerShuttingDown = isServerShuttingDown
         if (roomId.startsWith("favorites_")) {
             toolbarSubtitle.isVisible = true
             toolbarSubtitle.text = activity.getString(R.string.favorites)
@@ -357,6 +366,11 @@ class ChatToolbarDelegate(
         }
     }
 
+    private var lastOnlineUsers: List<String> = emptyList()
+    private var lastIsConnected: Boolean = false
+    private var lastTypists: List<String> = emptyList()
+    private var lastOtherUserLastSeenAt: com.google.protobuf.Timestamp? = null
+    private var lastIsServerShuttingDown: Boolean = false
     private var cachedOtherUser: String? = null
 
     fun getOtherParticipant(): String? {
