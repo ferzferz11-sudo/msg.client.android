@@ -520,10 +520,10 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
-        // Observe loading
+        // Observe loading — no preloader, just auto-dismiss swipe
         lifecycleScope.launch {
             viewModel.isLoading.collectLatest { loading ->
-                swipeRefresh?.isRefreshing = loading
+                if (!loading) swipeRefresh?.isRefreshing = false
             }
         }
 

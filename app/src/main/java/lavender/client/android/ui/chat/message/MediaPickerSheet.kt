@@ -12,7 +12,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.tabs.TabLayout
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Sticker
@@ -39,14 +41,17 @@ class MediaPickerSheet(
 
     private var allPacks = listOf<StickerPack>()
     private var currentPacks = listOf<StickerPack>()
+    private var emojiInitialized = false
 
     fun showPicker() {
-        setupEmojiTab()
         setupStickerTab()
         show()
+        root?.post { setupEmojiTab() }
     }
 
     private fun setupEmojiTab() {
+        if (emojiInitialized) return
+        emojiInitialized = true
         val emojiGrid = findViewById<GridLayout>(R.id.emojiGrid) ?: return
         val emojis = listOf(
             "😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚",
@@ -123,8 +128,12 @@ class MediaPickerSheet(
         val owner = activity as? LifecycleOwner ?: return
         owner.lifecycleScope.launch {
             try {
-                val publicResponse = GrpcClient.getPublicStickerPacks(limit = 50)
-                val userResponse = GrpcClient.getUserStickerPacks()
+                val publicResponse = withContext(Dispatchers.IO) {
+                    GrpcClient.getPublicStickerPacks(limit = 50)
+                }
+                val userResponse = withContext(Dispatchers.IO) {
+                    GrpcClient.getUserStickerPacks()
+                }
 
                 val publicPacks = publicResponse?.packs?.map { proto ->
                     StickerPack(
@@ -166,9 +175,7 @@ class MediaPickerSheet(
 
                 if (combinedPacks.isNotEmpty()) {
                     stickerPackAdapter.submitList(combinedPacks)
-                    if (combinedPacks.isNotEmpty()) {
-                        loadPackStickers(combinedPacks[0])
-                    }
+                    loadPackStickers(combinedPacks[0])
                 } else {
                     showEmptyState()
                 }
