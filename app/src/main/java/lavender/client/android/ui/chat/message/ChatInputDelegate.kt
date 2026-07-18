@@ -325,39 +325,17 @@ class ChatInputDelegate(
     // ======= Emoji Picker =======
 
     fun showMediaPicker() {
-        val sheet = StandardBottomSheet(activity, R.layout.dialog_emoji_picker)
-        val emojiGrid = sheet.findViewById<android.widget.GridLayout>(R.id.emojiGrid)
-        val emojis = listOf(
-            "😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚",
-            "😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🤩","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣",
-            "😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤔",
-            "🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴",
-            "🤢","🤮","🤧","🥵","🥶","😷","🤒","🤕","🤑","🤠","😈","👿","👹","👺","🤡","💩","👻","💀","☠️","👽",
-            "👾","🤖","🎃","😺","😸","😹","😻","😼","😽","🙀","😿","😾","👋","🤚","🖐","✋","🖖","👌","🤏","✌️",
-            "🤞","🤟","🤘","🤙","👈","👉","👆","🖕","👇","☝️","👍","👎","✊","👊","🤛","🤜","👏","🙌","👐","🤲",
-            "🤝","🙏","✍️","💅","🤳","💪","🦾","🦵","🦿","🦶"
+        val sheet = MediaPickerSheet(
+            activity = activity,
+            onEmojiSelected = { emoji ->
+                val cp = messageInput.selectionStart
+                val ct = messageInput.text.toString()
+                messageInput.setText(ct.substring(0, cp) + emoji + ct.substring(cp))
+                messageInput.setSelection(cp + emoji.length)
+            },
+            onStickerSelected = { sticker -> sendStickerMessage(sticker) }
         )
-        val size = (48 * activity.resources.displayMetrics.density).toInt()
-        for (emoji in emojis) {
-            val tv = TextView(activity).apply {
-                text = emoji
-                textSize = 24f
-                gravity = android.view.Gravity.CENTER
-                layoutParams = android.view.ViewGroup.LayoutParams(size, size)
-                val v = TypedValue()
-                activity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, v, true)
-                setBackgroundResource(v.resourceId)
-                setOnClickListener {
-                    val cp = messageInput.selectionStart
-                    val ct = messageInput.text.toString()
-                    messageInput.setText(ct.substring(0, cp) + emoji + ct.substring(cp))
-                    messageInput.setSelection(cp + emoji.length)
-                    sheet.dismiss()
-                }
-            }
-            emojiGrid?.addView(tv)
-        }
-        sheet.show()
+        sheet.showPicker()
     }
 
     fun showEmojiPicker() {

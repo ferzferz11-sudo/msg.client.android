@@ -74,36 +74,37 @@ class ShareReceiverActivity : AppCompatActivity() {
             SessionManager.initFromPrefs(this)
             username = SessionManager.session.value.username
 
-            // Apply theme before setting content view
-            val currentTheme = ThemeStore.currentTheme()
+            val currentTheme = try { ThemeStore.currentTheme() } catch (_: Exception) { lavender.client.android.theme.BuiltInThemes.dark }
             ThemeUtils.applyThemeToActivity(this, currentTheme)
             
             binding = ActivityShareReceiverBinding.inflate(layoutInflater)
             setContentView(binding.root)
 
-            // Ensure gRPC connection
-            if (GrpcClient.connectionStatus.value != ConnectionStatus.READY) {
-                val serverAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this) ?: ""
-                if (serverAddress.isNotEmpty()) {
-                    val parts = serverAddress.split(":")
-                    val host = parts.firstOrNull() ?: serverAddress
-                    val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-                    GrpcClient.connect(host, false, port, this)
-                }
-            }
-
-            // Handle shared intent
             handleSharedIntent()
-            
-            // Setup UI
             setupUI()
             
-            // Load chats
-            loadChats()
+            lifecycleScope.launch {
+                ensureConnection()
+                loadChats()
+            }
         } catch (e: Exception) {
             android.util.Log.e("ShareReceiver", "Fatal error in onCreate", e)
             Toast.makeText(this, getString(R.string.error) + ": ${e.message}", Toast.LENGTH_LONG).show()
             finish()
+        }
+    }
+
+    private suspend fun ensureConnection() {
+        if (GrpcClient.connectionStatus.value == ConnectionStatus.READY) return
+        val serverAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this) ?: return
+        if (serverAddress.isEmpty()) return
+        withContext(Dispatchers.IO) {
+            try {
+                val parts = serverAddress.split(":")
+                val host = parts.firstOrNull() ?: serverAddress
+                val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+                GrpcClient.connect(host, false, port, this@ShareReceiverActivity)
+            } catch (_: Exception) {}
         }
     }
 

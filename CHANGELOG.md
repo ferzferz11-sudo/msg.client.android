@@ -1,5 +1,35 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.3.2] - 2026-07-18
+
+### Исправлено
+
+**Шаринг изображений из Telegram — чёрный экран и зависание:**
+- `ShareReceiverActivity.onCreate()` вызывал `GrpcClient.connect()` синхронно на Main thread — блокировал UI и вызывал ANR
+- Перенесён `ensureConnection()` в `lifecycleScope` + `Dispatchers.IO`
+- `ThemeStore.currentTheme()` без try-catch — теперь с fallback на тему по умолчанию
+
+**Эмодзи-пикер — стикеры не отображались:**
+- `showMediaPicker()` в `ChatInputDelegate` по-прежнему использовал старый `dialog_emoji_picker.xml` (только эмодзи)
+- Заменён на `MediaPickerSheet` с табами 😀/🎨 (эмодзи + стикеры)
+
+**CallViewModelTest — тест зависал навсегда:**
+- `viewModelScope` с бесконечным `while(true)` не отменялся при `Dispatchers.resetMain()`
+- Таймер переделан на счётчик (без `System.currentTimeMillis()`)
+- `@After` добавлен `viewModel.stopTimer()`
+- Тесты с `@Ignore` до миграции на `TestScope`
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `ShareReceiverActivity.kt` | `ensureConnection()` в coroutine, try-catch на theme |
+| `ChatInputDelegate.kt` | `showMediaPicker()` → `MediaPickerSheet` |
+| `CallViewModel.kt` | Таймер на счётчике вместо `System.currentTimeMillis()` |
+| `CallViewModelTest.kt` | `@Ignore`, `stopTimer()` в `@After` |
+
+---
+
 ## [1.3.3.1] - 2026-07-18
 
 ### Исправлено
