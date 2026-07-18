@@ -2,6 +2,7 @@ package lavender.client.android
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.widget.EditText
@@ -12,6 +13,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -20,6 +22,7 @@ import lavender.client.android.data.models.Sticker
 import lavender.client.android.data.models.StickerPack
 import lavender.client.android.network.HttpClient
 import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.ui.sticker.StickerGridAdapter
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -43,7 +46,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
     private var packId: String? = null
     private var isDraft = true
 
-    private val pickLottieLauncher = registerForActivityResult(
+    private val pickStickerLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -66,6 +69,8 @@ class StickerPackCreateActivity : AppCompatActivity() {
         btnSave = findViewById(R.id.btnSave)
         btnSubmit = findViewById(R.id.btnSubmit)
 
+        applyThemeToFields()
+
         toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
         toolbar.navigationIcon?.setTint(getColor(R.color.white))
         toolbar.setNavigationOnClickListener { finish() }
@@ -73,7 +78,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
         rvStickers.layoutManager = GridLayoutManager(this, 4)
         rvStickers.adapter = stickerGridAdapter
 
-        btnAddSticker.setOnClickListener { pickLottieFile() }
+        btnAddSticker.setOnClickListener { pickStickerFile() }
         btnSave.setOnClickListener { savePack() }
         btnSubmit.setOnClickListener { submitPack() }
 
@@ -85,6 +90,56 @@ class StickerPackCreateActivity : AppCompatActivity() {
             toolbar.title = getString(R.string.sticker_create_pack)
             btnSubmit.visibility = android.view.View.GONE
         }
+    }
+
+    private fun applyThemeToFields() {
+        try {
+            val theme = ThemeStore.currentTheme()
+            val primaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
+            val textPrimaryColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+            val surfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
+            val onSurfaceColor = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.WHITE)
+
+            listOf(etTitle, etName).forEach { et ->
+                et.setTextColor(textPrimaryColor)
+                et.setHintTextColor(ThemeUtils.adjustAlpha(textPrimaryColor, 0.5f))
+                et.highlightColor = ThemeUtils.adjustAlpha(primaryColor, 0.3f)
+            }
+
+            findViewById<android.view.View>(android.R.id.content)?.let { contentView ->
+                themeInputLayoutsIn(contentView, primaryColor, onSurfaceColor, surfaceColor, textPrimaryColor)
+            }
+
+            btnAddSticker.strokeColor = android.content.res.ColorStateList.valueOf(primaryColor)
+            btnAddSticker.setTextColor(primaryColor)
+            btnAddSticker.iconTint = android.content.res.ColorStateList.valueOf(primaryColor)
+        } catch (_: Exception) {}
+    }
+
+    private fun themeInputLayoutsIn(view: android.view.View, primaryColor: Int, onSurfaceColor: Int, surfaceColor: Int, textPrimaryColor: Int) {
+        if (view is TextInputLayout) {
+            themeInputLayout(view, primaryColor, onSurfaceColor, surfaceColor)
+        }
+        if (view is EditText) {
+            view.setTextColor(textPrimaryColor)
+            view.setHintTextColor(ThemeUtils.adjustAlpha(textPrimaryColor, 0.5f))
+        }
+        if (view is android.view.ViewGroup) {
+            for (i in 0 until view.childCount) {
+                themeInputLayoutsIn(view.getChildAt(i), primaryColor, onSurfaceColor, surfaceColor, textPrimaryColor)
+            }
+        }
+    }
+
+    private fun themeInputLayout(layout: TextInputLayout, primaryColor: Int, onSurfaceColor: Int, surfaceColor: Int) {
+        val strokeColorStateList = android.content.res.ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
+            intArrayOf(primaryColor, ThemeUtils.adjustAlpha(onSurfaceColor, 0.3f))
+        )
+        layout.boxBackgroundColor = surfaceColor
+        layout.setBoxStrokeColorStateList(strokeColorStateList)
+        layout.hintTextColor = android.content.res.ColorStateList.valueOf(primaryColor)
+        layout.defaultHintTextColor = android.content.res.ColorStateList.valueOf(ThemeUtils.adjustAlpha(onSurfaceColor, 0.7f))
     }
 
     private fun loadPack() {
@@ -105,24 +160,34 @@ class StickerPackCreateActivity : AppCompatActivity() {
         }
     }
 
-    private fun pickLottieFile() {
+    private fun pickStickerFile() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = "application/json"
+            type = "*/*"
+            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf(
+                "application/json",
+                "image/jpeg",
+                "image/png",
+                "image/webp"
+            ))
         }
-        pickLottieLauncher.launch(intent)
+        pickStickerLauncher.launch(intent)
     }
 
     private fun uploadSticker(uri: Uri) {
         lifecycleScope.launch {
             try {
-                val json = withContext(Dispatchers.IO) {
-                    contentResolver.openInputStream(uri)?.bufferedReader()?.readText()
-                } ?: return@launch
+                val mimeType = contentResolver.getType(uri) ?: "application/octet-stream"
+                val isImage = mimeType.startsWith("image/")
 
                 val url = withContext(Dispatchers.IO) {
-                    val body = json.toRequestBody("application/json".toMediaTypeOrNull())
-                    val part = MultipartBody.Part.createFormData("sticker", "sticker.json", body)
+                    val inputStream = contentResolver.openInputStream(uri) ?: return@withContext ""
+                    val bytes = inputStream.readBytes()
+                    inputStream.close()
+
+                    val fileName = if (isImage) "sticker.png" else "sticker.json"
+                    val body = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
+                    val part = MultipartBody.Part.createFormData("sticker", fileName, body)
                     val request = Request.Builder()
                         .url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(this@StickerPackCreateActivity)}/upload-sticker")
                         .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(part).build())
@@ -142,10 +207,10 @@ class StickerPackCreateActivity : AppCompatActivity() {
                     )
                     currentStickers.add(newSticker)
                     stickerGridAdapter.submitList(currentStickers.toList())
-                    Toast.makeText(this@StickerPackCreateActivity, "Sticker added", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_added), Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@StickerPackCreateActivity, "Upload failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@StickerPackCreateActivity, "${getString(R.string.sticker_upload_failed)}: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -153,7 +218,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
     private fun savePack() {
         val title = etTitle.text.toString().trim()
         if (title.isEmpty()) {
-            Toast.makeText(this, "Title is required", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.sticker_title_required), Toast.LENGTH_SHORT).show()
             return
         }
         val name = etName.text.toString().trim().ifEmpty { title.lowercase().replace(" ", "_") }
@@ -162,7 +227,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
             try {
                 if (packId != null) {
                     GrpcClient.updateStickerPack(packId!!, title = title)
-                    Toast.makeText(this@StickerPackCreateActivity, "Pack updated", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_pack_updated), Toast.LENGTH_SHORT).show()
                 } else {
                     val result = GrpcClient.createStickerPack(title, name)
                     if (result?.success == true) {
@@ -174,7 +239,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
                                 sticker.emoji, sticker.width, sticker.height
                             )
                         }
-                        Toast.makeText(this@StickerPackCreateActivity, "Pack created", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_pack_created), Toast.LENGTH_SHORT).show()
                         finish()
                     } else {
                         Toast.makeText(this@StickerPackCreateActivity, result?.error ?: "Failed", Toast.LENGTH_SHORT).show()
@@ -191,7 +256,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val result = GrpcClient.submitStickerPackForApproval(id)
             if (result?.success == true) {
-                Toast.makeText(this@StickerPackCreateActivity, "Submitted for approval", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_submitted), Toast.LENGTH_SHORT).show()
                 finish()
             } else {
                 Toast.makeText(this@StickerPackCreateActivity, result?.error ?: "Failed", Toast.LENGTH_SHORT).show()

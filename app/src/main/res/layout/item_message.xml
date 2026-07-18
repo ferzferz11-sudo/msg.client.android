@@ -188,6 +188,16 @@
                     android:clickable="true"
                     android:focusable="true" />
 
+                <ImageView
+                    android:id="@+id/ivStickerImage"
+                    android:layout_width="150dp"
+                    android:layout_height="150dp"
+                    android:visibility="gone"
+                    android:scaleType="fitCenter"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:adjustViewBounds="true" />
+
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvGalleryThumbnails"
                     android:layout_width="wrap_content"

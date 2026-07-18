@@ -4,11 +4,13 @@ import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.airbnb.lottie.LottieAnimationView
+import com.bumptech.glide.Glide
 import lavender.client.android.R
 import lavender.client.android.data.models.StickerPack
 
@@ -26,39 +28,69 @@ class StickerPackListAdapter(
         holder.bind(getItem(position))
     }
 
+    override fun onViewRecycled(holder: PackViewHolder) {
+        super.onViewRecycled(holder)
+        holder.unbind()
+    }
+
     inner class PackViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val coverView: LottieAnimationView = itemView.findViewById(R.id.lottieCover)
+        private val coverImageView: ImageView? = itemView.findViewById(R.id.coverImageView)
         private val titleText: TextView = itemView.findViewById(R.id.tvTitle)
         private val countText: TextView = itemView.findViewById(R.id.tvStickerCount)
         private val statusText: TextView = itemView.findViewById(R.id.tvStatus)
 
         fun bind(pack: StickerPack) {
+            val ctx = itemView.context
             titleText.text = pack.title
-            countText.text = "${pack.stickers.size} stickers"
+            countText.text = ctx.resources.getQuantityString(R.plurals.sticker_count, pack.stickers.size, pack.stickers.size)
 
+            val statusRes = when (pack.status) {
+                "approved" -> R.string.sticker_approved
+                "pending" -> R.string.sticker_pending
+                "rejected" -> R.string.sticker_rejected
+                else -> R.string.sticker_draft
+            }
             val statusColor = when (pack.status) {
                 "approved" -> Color.parseColor("#4CAF50")
                 "pending" -> Color.parseColor("#FFC107")
                 "rejected" -> Color.parseColor("#F44336")
                 else -> Color.GRAY
             }
-            statusText.text = pack.status.replaceFirstChar { it.uppercase() }
+            statusText.setText(statusRes)
             statusText.setTextColor(statusColor)
 
             val coverSticker = pack.stickers.firstOrNull { it.id == pack.coverStickerId }
                 ?: pack.stickers.firstOrNull()
 
             if (coverSticker != null) {
-                coverView.setAnimation(coverSticker.lottieUrl)
-                coverView.repeatCount = 0
-                coverView.playAnimation()
-                coverView.visibility = View.VISIBLE
+                val url = coverSticker.lottieUrl
+                val isLottie = url.endsWith(".json", ignoreCase = true)
+                if (isLottie) {
+                    coverView.visibility = View.VISIBLE
+                    coverImageView?.visibility = View.GONE
+                    coverView.setAnimation(url)
+                    coverView.repeatCount = 0
+                    coverView.playAnimation()
+                } else {
+                    coverView.visibility = View.GONE
+                    coverImageView?.let { iv ->
+                        iv.visibility = View.VISIBLE
+                        Glide.with(itemView.context).load(url).centerCrop().into(iv)
+                    }
+                }
             } else {
                 coverView.visibility = View.GONE
+                coverImageView?.visibility = View.GONE
             }
 
             itemView.setOnClickListener { onPackClick(pack) }
             itemView.setOnLongClickListener { onPackLongClick?.invoke(pack); true }
+        }
+
+        fun unbind() {
+            coverView.cancelAnimation()
+            coverView.clearAnimation()
         }
     }
 

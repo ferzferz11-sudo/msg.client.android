@@ -69,7 +69,7 @@ class MediaPickerSheet(
             root?.post { setupEmojiTab() }
         } catch (e: Exception) {
             android.util.Log.e("MediaPickerSheet", "showPicker failed", e)
-            try { android.widget.Toast.makeText(activity, "Picker error: ${e.message}", android.widget.Toast.LENGTH_SHORT).show() } catch (_: Exception) {}
+            try { android.widget.Toast.makeText(activity, android.R.string.cancel, android.widget.Toast.LENGTH_SHORT).show() } catch (_: Exception) {}
         }
     }
 
@@ -191,8 +191,7 @@ class MediaPickerSheet(
                     )
                 } ?: emptyList()
 
-                val allUserPacks = userPacks.filter { it.status != "approved" }
-                val combinedPacks = (allUserPacks + publicPacks).distinctBy { it.id }
+                val combinedPacks = (userPacks + publicPacks).filter { it.stickers.isNotEmpty() }.distinctBy { it.id }
 
                 allPacks = combinedPacks
                 currentPacks = combinedPacks

@@ -1033,5 +1033,18 @@
     <string name="sticker_remove_sticker">Удалить</string>
     <string name="sticker_delete_pack">Удалить пакет</string>
     <string name="sticker_edit_pack">Редактировать пакет</string>
+    <string name="sticker_added">Стикер добавлен</string>
+    <string name="sticker_pack_created">Пакет создан</string>
+    <string name="sticker_pack_updated">Пакет обновлён</string>
+    <string name="sticker_upload_failed">Ошибка загрузки</string>
+    <string name="sticker_title_required">Введите название</string>
+    <string name="sticker_submitted">Отправлено на согласование</string>
+    <string name="sticker_pick_image">Выбрать изображение</string>
+    <plurals name="sticker_count">
+        <item quantity="one">%d стикер</item>
+        <item quantity="few">%d стикера</item>
+        <item quantity="many">%d стикеров</item>
+        <item quantity="other">%d стикеров</item>
+    </plurals>
 
 </resources>

@@ -1,5 +1,72 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.3.4] - 2026-07-18
+
+### Исправлено
+
+**Система стикеров — полный аудит и исправления:**
+
+**Создание пакета стикеров — текст не виден на тёмной теме:**
+- `StickerPackCreateActivity` не темизировал `TextInputLayout` и `EditText`
+- Добавлен `applyThemeToFields()` — программная темизация полей ввода из текущей темы
+
+**Кнопка "Добавить стикер" не темизирована:**
+- OutlinedButton стиль не обрабатывался `ThemeApplier`
+- Добавлена ручная темизация `strokeColor` и `textColor`
+
+**Файловый пикер — принимал только JSON (Lottie):**
+- Теперь принимает `image/jpeg`, `image/png`, `image/webp` наряду с `application/json`
+- Изображения загружаются на сервер через `/upload-sticker` с правильным MIME-типом
+
+**Тосты не переведены на русский:**
+- Добавлены строковые ресурсы EN/RU: `sticker_added`, `sticker_pack_created`, `sticker_pack_updated`, `sticker_upload_failed`, `sticker_title_required`, `sticker_submitted`, `sticker_pick_image`
+- Кнопка "Save" → `@string/save`
+
+**Шторка стикеров — пустые пакеты отображались:**
+- `MediaPickerSheet` фильтрует пакеты без стикеров: `it.stickers.isNotEmpty()`
+
+**Шторка стикеров — утверждённые пакеты пользователя не отображались:**
+- Фильтр `!= "approved"` ошибочно исключал утверждённые пакеты
+- Исправлено на объединение всех пакетов с дедупликацией по ID
+
+**Шторка стикеров — табы не адаптированы к темам:**
+- Добавлен `applyTheme()` в `MediaPickerSheet` — темизация `TabLayout` из текущей темы
+
+**Библиотека стикеров — хардкод English и цветов:**
+- `"${count} stickers"` → `resources.getQuantityString(R.plurals.sticker_count)`
+- Статусы → строковые ресурсы: `sticker_approved`, `sticker_pending`, `sticker_rejected`
+- Цвета статусов временно hardcoded (Material3 не экспозирует `colorError` в XML)
+
+**Сетка стикеров — поддержка изображений:**
+- `StickerGridAdapter` теперь определяет тип стикера по URL (`.json` = Lottie, иначе = Glide)
+- `thumbnailView` теперь используется для отображения изображений
+- `repeatCount = 0` вместо `Int.MAX_VALUE` — анимация проигрывается один раз
+- Добавлен `onViewRecycled()` с `cancelAnimation()` для освобождения ресурсов
+
+**Сообщение стикера в чате — поддержка изображений:**
+- `MessageAdapter.bindStickerContent()` теперь проверяет URL: Lottie → `LottieAnimationView`, изображение → `Glide`
+- Добавлен `ivStickerImage` (`ImageView`) в `item_message.xml`
+
+**Сетка стикеров — Life-cycle утечки:**
+- `onViewRecycled()` вызывает `cancelAnimation()` и `clearAnimation()` для Lottie
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `StickerPackCreateActivity.kt` | `applyThemeToFields()`, темизация EditText/TextInputLayout, файловый пикер для изображений, i18n тостов |
+| `MediaPickerSheet.kt` | `applyTheme()` для TabLayout, фильтр пустых пакетов, исправлен фильтр approved |
+| `StickerGridAdapter.kt` | Поддержка изображений (Glide), `repeatCount=0`, `onViewRecycled()` |
+| `StickerPackListAdapter.kt` | i18n (plurals, статусы), поддержка изображений в обложке |
+| `MessageAdapter.kt` | `stickerImageView` + Glide fallback для изображений |
+| `ChatInputDelegate.kt` | `onCreateStickerPack` callback → `StickerPackCreateActivity` |
+| `activity_sticker_pack_create.xml` | Кнопка "Save" → `@string/save` |
+| `item_sticker_pack.xml` | `coverImageView` для изображений |
+| `item_message.xml` | `ivStickerImage` для изображений |
+| `strings.xml` (EN/RU) | +`sticker_added`, `sticker_pack_created`, `sticker_pack_updated`, `sticker_upload_failed`, `sticker_title_required`, `sticker_submitted`, `sticker_pick_image`, `sticker_count` (plurals) |
+
+---
+
 ## [1.3.3.3] - 2026-07-18
 
 ### Исправлено

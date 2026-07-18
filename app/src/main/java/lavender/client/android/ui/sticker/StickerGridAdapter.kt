@@ -4,7 +4,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -26,22 +25,42 @@ class StickerGridAdapter(
         holder.bind(getItem(position))
     }
 
+    override fun onViewRecycled(holder: StickerViewHolder) {
+        super.onViewRecycled(holder)
+        holder.unbind()
+    }
+
     inner class StickerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val lottieView: LottieAnimationView = itemView.findViewById(R.id.lottieView)
         private val thumbnailView: ImageView = itemView.findViewById(R.id.thumbnailView)
 
         fun bind(sticker: Sticker) {
-            lottieView.setAnimation(sticker.lottieUrl)
-            lottieView.repeatCount = Int.MAX_VALUE
-            lottieView.playAnimation()
+            val url = sticker.lottieUrl
+            val isLottie = url.endsWith(".json", ignoreCase = true)
 
-            lottieView.setOnClickListener {
-                onStickerClick(sticker)
+            if (isLottie) {
+                lottieView.visibility = View.VISIBLE
+                thumbnailView.visibility = View.GONE
+                lottieView.setAnimation(url)
+                lottieView.repeatCount = 0
+                lottieView.playAnimation()
+            } else {
+                lottieView.visibility = View.GONE
+                thumbnailView.visibility = View.VISIBLE
+                Glide.with(itemView.context)
+                    .load(url)
+                    .centerCrop()
+                    .into(thumbnailView)
             }
 
-            lottieView.setOnLongClickListener {
-                true
-            }
+            val clickTarget: View = if (isLottie) lottieView else thumbnailView
+            clickTarget.setOnClickListener { onStickerClick(sticker) }
+            clickTarget.setOnLongClickListener { true }
+        }
+
+        fun unbind() {
+            lottieView.cancelAnimation()
+            lottieView.clearAnimation()
         }
     }
 

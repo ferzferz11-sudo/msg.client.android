@@ -1034,5 +1034,16 @@
     <string name="sticker_remove_sticker">Remove</string>
     <string name="sticker_delete_pack">Delete Pack</string>
     <string name="sticker_edit_pack">Edit Pack</string>
+    <string name="sticker_added">Sticker added</string>
+    <string name="sticker_pack_created">Pack created</string>
+    <string name="sticker_pack_updated">Pack updated</string>
+    <string name="sticker_upload_failed">Upload failed</string>
+    <string name="sticker_title_required">Title is required</string>
+    <string name="sticker_submitted">Submitted for approval</string>
+    <string name="sticker_pick_image">Select image</string>
+    <plurals name="sticker_count">
+        <item quantity="one">%d sticker</item>
+        <item quantity="other">%d stickers</item>
+    </plurals>
 
 </resources>

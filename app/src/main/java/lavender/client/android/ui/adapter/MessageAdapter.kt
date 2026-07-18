@@ -143,6 +143,7 @@ class MessageAdapter(
         val reactionsText: TextView = itemView.findViewById(R.id.tvReactions)
         private val btnDownloadFile: ImageButton = itemView.findViewById(R.id.btnDownloadFile)
         val lottieStickerView: com.airbnb.lottie.LottieAnimationView = itemView.findViewById(R.id.lottieStickerView)
+        val stickerImageView: ImageView = itemView.findViewById(R.id.ivStickerImage)
 
         fun bind(message: Message, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean,
                  isConsecutive: Boolean, isSelectionMode: Boolean, adapterPosition: Int, showDateSeparator: Boolean,
@@ -339,16 +340,25 @@ class MessageAdapter(
 
         private fun bindStickerContent(message: Message, isOutgoing: Boolean, isSelectionMode: Boolean, onClick: (Int) -> Unit, onLongClick: (Int) -> Unit, pos: Int, ctx: android.content.Context) {
             val isSticker = message.stickerUrl.isNotEmpty()
-            lottieStickerView.isVisible = isSticker
-            if (!isSticker) { lottieStickerView.setOnClickListener(null); lottieStickerView.setOnLongClickListener(null); return }
+            lottieStickerView.isVisible = false
+            stickerImageView.isVisible = false
+            if (!isSticker) { lottieStickerView.setOnClickListener(null); lottieStickerView.setOnLongClickListener(null); stickerImageView.setOnClickListener(null); stickerImageView.setOnLongClickListener(null); return }
 
             val stickerUrl = message.stickerUrl
-            lottieStickerView.setAnimation(stickerUrl)
-            lottieStickerView.repeatCount = 0
-            lottieStickerView.playAnimation()
-
-            lottieStickerView.setOnClickListener { if (isSelectionMode) onClick(pos) else onMessageClick(message) }
-            lottieStickerView.setOnLongClickListener { if (isSelectionMode) onLongClick(pos) else { onLongClick(pos) }; true }
+            val isLottie = stickerUrl.endsWith(".json", ignoreCase = true)
+            if (isLottie) {
+                lottieStickerView.isVisible = true
+                lottieStickerView.setAnimation(stickerUrl)
+                lottieStickerView.repeatCount = 0
+                lottieStickerView.playAnimation()
+                lottieStickerView.setOnClickListener { if (isSelectionMode) onClick(pos) else onMessageClick(message) }
+                lottieStickerView.setOnLongClickListener { if (isSelectionMode) onLongClick(pos) else { onLongClick(pos) }; true }
+            } else {
+                stickerImageView.isVisible = true
+                Glide.with(ctx).load(stickerUrl).centerCrop().into(stickerImageView)
+                stickerImageView.setOnClickListener { if (isSelectionMode) onClick(pos) else onMessageClick(message) }
+                stickerImageView.setOnLongClickListener { if (isSelectionMode) onLongClick(pos) else { onLongClick(pos) }; true }
+            }
         }
 
         private fun bindImageContent(message: Message, isOutgoing: Boolean, isSelectionMode: Boolean, onClick: (Int) -> Unit, onLongClick: (Int) -> Unit, pos: Int, ctx: android.content.Context) {
