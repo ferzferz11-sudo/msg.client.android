@@ -44,9 +44,15 @@ class MediaPickerSheet(
     private var emojiInitialized = false
 
     fun showPicker() {
-        setupStickerTab()
-        show()
-        root?.post { setupEmojiTab() }
+        if (activity.isFinishing || activity.isDestroyed) return
+        try {
+            setupStickerTab()
+            show()
+            root?.post { setupEmojiTab() }
+        } catch (e: Exception) {
+            android.util.Log.e("MediaPickerSheet", "showPicker failed", e)
+            try { android.widget.Toast.makeText(activity, "Picker error: ${e.message}", android.widget.Toast.LENGTH_SHORT).show() } catch (_: Exception) {}
+        }
     }
 
     private fun setupEmojiTab() {

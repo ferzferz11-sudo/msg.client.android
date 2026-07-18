@@ -131,14 +131,16 @@ open class StandardBottomSheet(
     }
 
     override fun applyTheme(theme: Theme) {
-        dialog?.let { ThemeApplier.applyToDialog(it, theme) }
-        
+        try {
+            dialog?.let { ThemeApplier.applyToDialog(it, theme) }
+        } catch (_: Exception) {}
+
         try {
             val bgColor = ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK)
             val primaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
             val onSurfaceColor = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.WHITE)
             val textPrimaryColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
-            
+
             root?.setBackgroundColor(bgColor)
             dragHandle?.backgroundTintList = ColorStateList.valueOf(primaryColor)
             titleView?.setTextColor(primaryColor)
@@ -286,9 +288,11 @@ open class StandardBottomSheet(
             window?.let { window ->
                 androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
             }
-            behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
         }
         dialog?.show()
+        try {
+            dialog?.behavior?.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+        } catch (_: Exception) {}
     }
 
     fun showWithNavigation() {
