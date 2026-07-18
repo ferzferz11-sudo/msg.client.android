@@ -1,6 +1,7 @@
 package lavender.client.android.ui.chat.message
 
 import android.app.Activity
+import android.graphics.Color
 import android.util.TypedValue
 import android.view.ViewGroup
 import android.widget.GridLayout
@@ -19,6 +20,8 @@ import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Sticker
 import lavender.client.android.data.models.StickerPack
+import lavender.client.android.theme.Theme
+import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.ui.sticker.StickerGridAdapter
 import lavender.client.android.ui.sticker.StickerPackAdapter
 import lavender.client.android.ui.widget.StandardBottomSheet
@@ -42,6 +45,21 @@ class MediaPickerSheet(
     private var allPacks = listOf<StickerPack>()
     private var currentPacks = listOf<StickerPack>()
     private var emojiInitialized = false
+
+    override fun applyTheme(theme: Theme) {
+        super.applyTheme(theme)
+        try {
+            val primaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
+            val textPrimaryColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+            val surfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
+
+            findViewById<TabLayout>(R.id.tabLayout)?.apply {
+                setBackgroundColor(surfaceColor)
+                setTabTextColors(ThemeUtils.adjustAlpha(textPrimaryColor, 0.6f), textPrimaryColor)
+                setSelectedTabIndicatorColor(primaryColor)
+            }
+        } catch (_: Exception) {}
+    }
 
     fun showPicker() {
         if (activity.isFinishing || activity.isDestroyed) return

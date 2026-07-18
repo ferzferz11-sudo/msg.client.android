@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.MapPickerActivity
 import lavender.client.android.R
+import lavender.client.android.StickerPackCreateActivity
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
 import lavender.client.android.ui.adapter.MentionAdapter
@@ -333,7 +334,10 @@ class ChatInputDelegate(
                 messageInput.setText(ct.substring(0, cp) + emoji + ct.substring(cp))
                 messageInput.setSelection(cp + emoji.length)
             },
-            onStickerSelected = { sticker -> sendStickerMessage(sticker) }
+            onStickerSelected = { sticker -> sendStickerMessage(sticker) },
+            onCreateStickerPack = {
+                activity.startActivity(Intent(activity, StickerPackCreateActivity::class.java))
+            }
         )
         sheet.showPicker()
     }
