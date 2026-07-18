@@ -122,6 +122,9 @@
 
         <activity android:name=".ui.LogViewerActivity" android:exported="false" />
 
+        <activity android:name=".StickerLibraryActivity" android:exported="false" />
+        <activity android:name=".StickerPackCreateActivity" android:exported="false" />
+
         <activity
             android:name=".MapPickerActivity"
             android:exported="false" />

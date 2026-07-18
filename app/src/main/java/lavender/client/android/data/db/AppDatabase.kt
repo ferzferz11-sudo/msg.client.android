@@ -7,11 +7,13 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [MessageEntity::class, ChatEntity::class, MarketplaceAgentEntity::class], version = 13, exportSchema = false)
+@Database(entities = [MessageEntity::class, ChatEntity::class, MarketplaceAgentEntity::class, StickerPackEntity::class, StickerEntity::class], version = 14, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun messageDao(): MessageDao
     abstract fun chatDao(): ChatDao
     abstract fun marketplaceDao(): MarketplaceDao
+    abstract fun stickerPackDao(): StickerPackDao
+    abstract fun stickerDao(): StickerDao
 
     companion object {
         @Volatile
@@ -192,6 +194,46 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS sticker_packs (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            title TEXT NOT NULL,
+                            name TEXT NOT NULL,
+                            creatorUserId TEXT NOT NULL,
+                            creatorUsername TEXT NOT NULL,
+                            coverStickerId TEXT NOT NULL DEFAULT '',
+                            status TEXT NOT NULL DEFAULT 'draft',
+                            rejectionReason TEXT NOT NULL DEFAULT '',
+                            isFeatured INTEGER NOT NULL DEFAULT 0,
+                            createdAt INTEGER NOT NULL DEFAULT 0,
+                            updatedAt INTEGER NOT NULL DEFAULT 0
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_sticker_packs_creatorUserId ON sticker_packs (creatorUserId)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_sticker_packs_status ON sticker_packs (status)")
+                } catch (_: Exception) {}
+                try {
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS stickers (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            packId TEXT NOT NULL,
+                            lottieUrl TEXT NOT NULL,
+                            thumbnailUrl TEXT NOT NULL DEFAULT '',
+                            emoji TEXT NOT NULL DEFAULT '',
+                            width INTEGER NOT NULL DEFAULT 512,
+                            height INTEGER NOT NULL DEFAULT 512,
+                            sortOrder INTEGER NOT NULL DEFAULT 0,
+                            createdAt INTEGER NOT NULL DEFAULT 0
+                        )
+                    """.trimIndent())
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_stickers_packId ON stickers (packId)")
+                } catch (_: Exception) {}
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -199,7 +241,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "lavender_cache"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
                 .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
                 .build()
                 INSTANCE = instance

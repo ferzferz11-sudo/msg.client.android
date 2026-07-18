@@ -641,4 +641,19 @@ object GrpcClient {
 
     suspend fun updateAIChatSettings(sessionId: String, apiKey: String = "", model: String = "") =
         realGrpcClient.aiV2Client.updateChatSettings(sessionId, apiKey, model)
+
+    // ======= Stickers =======
+    suspend fun createStickerPack(title: String, name: String) = GrpcStickerClient.createStickerPack(title, name)
+    suspend fun addSticker(packId: String, lottieUrl: String, thumbnailUrl: String, emoji: String, width: Int, height: Int) = GrpcStickerClient.addSticker(packId, lottieUrl, thumbnailUrl, emoji, width, height)
+    suspend fun removeSticker(packId: String, stickerId: String) = GrpcStickerClient.removeSticker(packId, stickerId)
+    suspend fun deleteStickerPack(packId: String) = GrpcStickerClient.deleteStickerPack(packId)
+    suspend fun getUserStickerPacks() = GrpcStickerClient.getUserStickerPacks()
+    suspend fun getPublicStickerPacks(cursor: String = "", limit: Int = 30) = GrpcStickerClient.getPublicStickerPacks(cursor, limit)
+    suspend fun getStickerPack(packId: String) = GrpcStickerClient.getStickerPack(packId)
+    suspend fun submitStickerPackForApproval(packId: String) = GrpcStickerClient.submitForApproval(packId)
+    suspend fun approveStickerPack(packId: String, approved: Boolean, reason: String = "") = GrpcStickerClient.approveStickerPack(packId, approved, reason)
+    suspend fun getPendingStickerPacks(cursor: String = "", limit: Int = 30) = GrpcStickerClient.getPendingStickerPacks(cursor, limit)
+    suspend fun searchStickerPacks(query: String, limit: Int = 20) = GrpcStickerClient.searchStickerPacks(query, limit)
+    suspend fun updateStickerPack(packId: String, title: String = "", coverStickerId: String = "") = GrpcStickerClient.updateStickerPack(packId, title, coverStickerId)
+    suspend fun setFeaturedStickerPack(packId: String, featured: Boolean) = GrpcStickerClient.setFeaturedStickerPack(packId, featured)
 }

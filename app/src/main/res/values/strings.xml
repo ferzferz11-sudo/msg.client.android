@@ -1016,4 +1016,23 @@
     <string name="share_app_description">Lava: secure business communications platform\nhttp://13.140.25.249</string>
     <string name="feedback_subject">Lava Feedback</string>
 
+    <!-- Stickers -->
+    <string name="sticker_empty">No stickers yet</string>
+    <string name="sticker_create_pack">Create Pack</string>
+    <string name="sticker_library">Sticker Library</string>
+    <string name="sticker_my_packs">My Packs</string>
+    <string name="sticker_public_packs">Public</string>
+    <string name="sticker_pending_packs">Pending</string>
+    <string name="sticker_pack_title">Pack Title</string>
+    <string name="sticker_pack_name">Pack Name</string>
+    <string name="sticker_submit_for_approval">Submit for Approval</string>
+    <string name="sticker_approved">Approved</string>
+    <string name="sticker_pending">Pending</string>
+    <string name="sticker_rejected">Rejected</string>
+    <string name="sticker_draft">Draft</string>
+    <string name="sticker_add_sticker">Add Sticker</string>
+    <string name="sticker_remove_sticker">Remove</string>
+    <string name="sticker_delete_pack">Delete Pack</string>
+    <string name="sticker_edit_pack">Edit Pack</string>
+
 </resources>

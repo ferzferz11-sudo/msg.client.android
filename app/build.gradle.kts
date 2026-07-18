@@ -136,6 +136,9 @@ dependencies {
     // JSch for SSH tunnel (Hermes Gateway)
     implementation(libs.jsch)
 
+    // Lottie for sticker animations
+    implementation(libs.lottie)
+
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.turbine)

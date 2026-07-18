@@ -95,3 +95,54 @@ interface MarketplaceDao {
         insertAll(agents)
     }
 }
+
+@Dao
+interface StickerPackDao {
+    @Query("SELECT * FROM sticker_packs WHERE creatorUserId = :userId")
+    suspend fun getPacksByUser(userId: String): List<StickerPackEntity>
+
+    @Query("SELECT * FROM sticker_packs WHERE status = 'approved' ORDER BY isFeatured DESC, updatedAt DESC")
+    suspend fun getPublicPacks(): List<StickerPackEntity>
+
+    @Query("SELECT * FROM sticker_packs WHERE status = 'pending'")
+    suspend fun getPendingPacks(): List<StickerPackEntity>
+
+    @Query("SELECT * FROM sticker_packs WHERE id = :packId")
+    suspend fun getPack(packId: String): StickerPackEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPack(pack: StickerPackEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPacks(packs: List<StickerPackEntity>)
+
+    @Query("DELETE FROM sticker_packs WHERE id = :packId")
+    suspend fun deletePack(packId: String)
+
+    @Query("DELETE FROM sticker_packs")
+    suspend fun clearAll()
+
+    @Transaction
+    suspend fun syncPacks(packs: List<StickerPackEntity>) {
+        clearAll()
+        insertPacks(packs)
+    }
+}
+
+@Dao
+interface StickerDao {
+    @Query("SELECT * FROM stickers WHERE packId = :packId ORDER BY sortOrder ASC")
+    suspend fun getStickersForPack(packId: String): List<StickerEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertStickers(stickers: List<StickerEntity>)
+
+    @Query("DELETE FROM stickers WHERE packId = :packId")
+    suspend fun deleteStickersForPack(packId: String)
+
+    @Query("DELETE FROM stickers WHERE id = :stickerId")
+    suspend fun deleteSticker(stickerId: String)
+
+    @Query("DELETE FROM stickers")
+    suspend fun clearAll()
+}

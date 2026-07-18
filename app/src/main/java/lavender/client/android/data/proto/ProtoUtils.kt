@@ -105,6 +105,7 @@ object ProtoUtils {
             .build()
 
         val media = when {
+            message.stickerUrl.isNotEmpty() -> MessageMediaProto(type = "sticker", url = message.stickerUrl, urls = listOf(message.stickerThumbnailUrl).filter { it.isNotEmpty() })
             message.voiceUrl.isNotEmpty() -> MessageMediaProto(type = "voice", url = message.voiceUrl, duration = message.duration)
             message.imageUrl.isNotEmpty() -> MessageMediaProto(
                 type = "image",
@@ -149,6 +150,7 @@ object ProtoUtils {
         var imageUrl = ""; var imageUrls = emptyList<String>()
         var voiceUrl = ""; var duration = 0
         var repliedToMessageId = ""; var repliedToText = ""
+        var stickerUrl = ""; var stickerThumbnailUrl = ""
 
         when {
             proto.media != null -> {
@@ -160,6 +162,10 @@ object ProtoUtils {
                     "voice" -> {
                         voiceUrl = proto.media.url
                         duration = proto.media.duration
+                    }
+                    "sticker" -> {
+                        stickerUrl = proto.media.url
+                        stickerThumbnailUrl = proto.media.urls.firstOrNull() ?: ""
                     }
                 }
             }
@@ -198,7 +204,9 @@ object ProtoUtils {
             duration = duration,
             userId = proto.senderId,
             isE2EE = proto.isE2EE,
-            e2eePayload = proto.e2eePayload
+            e2eePayload = proto.e2eePayload,
+            stickerUrl = stickerUrl,
+            stickerThumbnailUrl = stickerThumbnailUrl
         )
     }
 

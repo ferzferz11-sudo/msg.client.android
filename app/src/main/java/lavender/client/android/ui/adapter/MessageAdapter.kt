@@ -142,6 +142,7 @@ class MessageAdapter(
         val audioMessageView: lavender.client.android.ui.audio.AudioMessageView = itemView.findViewById(R.id.audioMessageView)
         val reactionsText: TextView = itemView.findViewById(R.id.tvReactions)
         private val btnDownloadFile: ImageButton = itemView.findViewById(R.id.btnDownloadFile)
+        val lottieStickerView: com.airbnb.lottie.LottieAnimationView = itemView.findViewById(R.id.lottieStickerView)
 
         fun bind(message: Message, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean,
                  isConsecutive: Boolean, isSelectionMode: Boolean, adapterPosition: Int, showDateSeparator: Boolean,
@@ -191,6 +192,7 @@ class MessageAdapter(
             if (message.voiceUrl.isNotEmpty()) bindAudioContent(message, isOutgoing, isSelectionMode, theme, onClick, onLongClick, adapterPosition)
             else { audioMessageView.isVisible = false; bindTextContent(message, isOutgoing, isSelectionMode, pTextColor, theme, ctx, onClick, onLongClick, adapterPosition) }
 
+            bindStickerContent(message, isOutgoing, isSelectionMode, onClick, onLongClick, adapterPosition, ctx)
             bindImageContent(message, isOutgoing, isSelectionMode, onClick, onLongClick, adapterPosition, ctx)
             bindReactions(message, theme, isOutgoing, onClick)
             bindReplyQuote(message, isOutgoing, theme)
@@ -267,9 +269,10 @@ class MessageAdapter(
         private fun bindTextContent(message: Message, isOutgoing: Boolean, isSelectionMode: Boolean, textColor: Int, theme: lavender.client.android.theme.Theme, ctx: android.content.Context, onClick: (Int) -> Unit, onLongClick: (Int) -> Unit, pos: Int) {
             val isFile = message.text.startsWith("File: ")
             val isLocation = message.text.startsWith("geo:")
+            val isSticker = message.stickerUrl.isNotEmpty()
             messageText.textSize = 16f; messageText.alpha = 1.0f
             editedText.text = ctx.getString(R.string.edited_label); editedText.isVisible = message.edited
-            messageText.isVisible = message.text.isNotEmpty() && message.text != "Image" && message.text != "Voice message" || (message.imageUrl.isNotEmpty() && message.text.isEmpty() && !isFile)
+            messageText.isVisible = !isSticker && (message.text.isNotEmpty() && message.text != "Image" && message.text != "Voice message" || (message.imageUrl.isNotEmpty() && message.text.isEmpty() && !isFile))
 
             if (isLocation) bindLocationContent(message, ctx, textColor, isSelectionMode, onClick, onLongClick, pos)
             else if (isFile) bindFileContent(message, ctx, textColor, isSelectionMode, onClick, onLongClick, pos)
@@ -332,6 +335,20 @@ class MessageAdapter(
                     }, start, end, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
             }
+        }
+
+        private fun bindStickerContent(message: Message, isOutgoing: Boolean, isSelectionMode: Boolean, onClick: (Int) -> Unit, onLongClick: (Int) -> Unit, pos: Int, ctx: android.content.Context) {
+            val isSticker = message.stickerUrl.isNotEmpty()
+            lottieStickerView.isVisible = isSticker
+            if (!isSticker) { lottieStickerView.setOnClickListener(null); lottieStickerView.setOnLongClickListener(null); return }
+
+            val stickerUrl = message.stickerUrl
+            lottieStickerView.setAnimation(stickerUrl)
+            lottieStickerView.repeatCount = 0
+            lottieStickerView.playAnimation()
+
+            lottieStickerView.setOnClickListener { if (isSelectionMode) onClick(pos) else onMessageClick(message) }
+            lottieStickerView.setOnLongClickListener { if (isSelectionMode) onLongClick(pos) else { onLongClick(pos) }; true }
         }
 
         private fun bindImageContent(message: Message, isOutgoing: Boolean, isSelectionMode: Boolean, onClick: (Int) -> Unit, onLongClick: (Int) -> Unit, pos: Int, ctx: android.content.Context) {

@@ -1,5 +1,79 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.3.0] - 2026-07-18
+
+### Добавлено
+
+**Система стикеров:**
+- Библиотека стикеров с Lottie-анимацией — стикеры загружаются как .json файлы и рендерятся через LottieAnimationView
+- Объединённый пикер «Эмодзи | Стикеры» — одна шторка с двумя вкладками (TabLayout) вместо отдельных кнопок
+- Пакеты стикеров — группировка стикеров по пакетам (как в Telegram), создание/удаление/редактирование пакетов
+- Создание стикеров — Activity для загрузки Lottie-файлов с устройства на сервер (multipart upload)
+- Отправка стикеров в чат — стикер отправляется как MessageMediaProto(type="sticker"), рендерится в MessageAdapter через LottieAnimationView
+- Публичная библиотека — одобренные админом пакеты доступны всем пользователям
+- Workflow согласования — пользователь создаёт пакет → отправляет на согласование → super_admin одобряет/отклоняет
+
+**Интерфейс:**
+- MediaPickerSheet — нижний пикер с вкладками Emoji (существующий网格 160 эмодзи) и Stickers (список пакетов + сетка стикеров)
+- StickerLibraryActivity — экран библиотеки стикеров с табами «Мои пакеты» / «Публичные», pull-to-refresh, FAB для создания
+- StickerPackCreateActivity — экран создания/редактирования пакета с текстовыми полями, загрузкой Lottie-файлов, кнопками «Сохранить» и «Отправить на согласование»
+
+**Data layer:**
+- GrpcStickerClient — 13 RPC-методов для StickerService (создание/удаление пакетов, добавление/удаление стикеров, поиск, согласование)
+- StickerMarshallers — 26 custom marshallers для StickerService proto-сообщений
+- StickerProto + Sticker domain models — прото-модели и доменные модели для стикеров
+- Room DB — sticker_packs + stickers таблицы с миграцией 13→14
+- GrpcClient facade — делегирование всех стикерных методов
+
+**Серверная часть (v1.3.4.0):**
+- messenger.StickerService — 13 RPC-методов (CreateStickerPack, AddSticker, RemoveSticker, DeleteStickerPack, GetUserStickerPacks, GetPublicStickerPacks, GetStickerPack, SubmitForApproval, ApproveStickerPack, GetPendingStickerPacks, SearchStickerPacks, UpdateStickerPack, SetFeaturedStickerPack)
+- HTTP эндпоинты — /upload-sticker (Lottie .json), /upload-sticker-thumbnail (PNG/JPG/WebP)
+- DB schema — sticker_packs (title, name, creator_user_id, status, is_featured) + stickers (pack_id, lottie_url, thumbnail_url, emoji)
+
+**Тесты:**
+- StickerMarshallersTest — 43 теста на proto-модели, marshallers, доменные модели
+- StickerDomainTest — тесты доменных моделей Sticker и StickerPack
+- StickerMessageTest — тесты конвертации стикерных сообщений (proto ↔ domain)
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `build.gradle.kts` | +lottie dependency |
+| `gradle/libs.versions.toml` | +lottie version catalog |
+| `AndroidManifest.xml` | +StickerLibraryActivity, +StickerPackCreateActivity |
+| `data/proto/StickerProto.kt` | NEW: 13+ proto data classes |
+| `data/proto/MessagesV2Proto.kt` | sticker media type support |
+| `data/proto/ProtoUtils.kt` | +sticker conversion |
+| `data/grpc/StickerMarshallers.kt` | NEW: 26 marshallers |
+| `data/grpc/GrpcStickerClient.kt` | NEW: 13 gRPC methods |
+| `data/grpc/GrpcClient.kt` | +sticker facade methods |
+| `data/models/Sticker.kt` | NEW: domain models |
+| `data/models/Message.kt` | +stickerUrl, stickerThumbnailUrl |
+| `data/db/StickerEntities.kt` | NEW: Room entities |
+| `data/db/Daos.kt` | +StickerPackDao, +StickerDao |
+| `data/db/AppDatabase.kt` | +sticker entities, migration 13→14 |
+| `data/sticker/StickerCacheManager.kt` | NEW: Lottie disk + memory cache |
+| `ui/chat/message/ChatInputDelegate.kt` | +showMediaPicker(), +sendStickerMessage() |
+| `ui/chat/message/MediaPickerSheet.kt` | NEW: combined emoji+sticker picker |
+| `ui/adapter/MessageAdapter.kt` | +bindStickerContent() |
+| `ui/sticker/StickerGridAdapter.kt` | NEW: sticker grid |
+| `ui/sticker/StickerPackAdapter.kt` | NEW: pack tabs |
+| `ui/sticker/StickerPackListAdapter.kt` | NEW: pack card list |
+| `StickerLibraryActivity.kt` | NEW: sticker library |
+| `StickerPackCreateActivity.kt` | NEW: pack create/edit |
+| `res/layout/sheet_media_picker.xml` | NEW: combined picker layout |
+| `res/layout/item_sticker_grid.xml` | NEW: sticker grid item |
+| `res/layout/item_sticker_pack_tab.xml` | NEW: pack tab item |
+| `res/layout/item_sticker_pack.xml` | NEW: pack card item |
+| `res/layout/item_message.xml` | +LottieAnimationView |
+| `res/layout/activity_sticker_library.xml` | NEW |
+| `res/layout/activity_sticker_pack_create.xml` | NEW |
+| `res/values/strings.xml` | +17 sticker strings |
+| `res/values-ru/strings.xml` | +17 sticker strings (RU) |
+
+---
+
 ## [1.3.2.20] - 2026-07-18
 
 ### Исправлено

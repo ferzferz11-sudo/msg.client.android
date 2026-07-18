@@ -1015,4 +1015,23 @@
     <string name="share_app_description">Лава: платформа защищенных бизнес-коммуникаций\nhttp://13.140.25.249</string>
     <string name="feedback_subject">Лава Обратная связь</string>
 
+    <!-- Stickers -->
+    <string name="sticker_empty">Пока нет стикеров</string>
+    <string name="sticker_create_pack">Создать пакет</string>
+    <string name="sticker_library">Библиотека стикеров</string>
+    <string name="sticker_my_packs">Мои пакеты</string>
+    <string name="sticker_public_packs">Публичные</string>
+    <string name="sticker_pending_packs">Ожидающие</string>
+    <string name="sticker_pack_title">Название пакета</string>
+    <string name="sticker_pack_name">Имя пакета</string>
+    <string name="sticker_submit_for_approval">Отправить на согласование</string>
+    <string name="sticker_approved">Одобрен</string>
+    <string name="sticker_pending">Ожидает</string>
+    <string name="sticker_rejected">Отклонён</string>
+    <string name="sticker_draft">Черновик</string>
+    <string name="sticker_add_sticker">Добавить стикер</string>
+    <string name="sticker_remove_sticker">Удалить</string>
+    <string name="sticker_delete_pack">Удалить пакет</string>
+    <string name="sticker_edit_pack">Редактировать пакет</string>
+
 </resources>

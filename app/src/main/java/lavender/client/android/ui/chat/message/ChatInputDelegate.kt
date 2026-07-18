@@ -251,7 +251,7 @@ class ChatInputDelegate(
             override fun afterTextChanged(s: Editable?) {}
         })
 
-        activity.findViewById<ImageButton>(R.id.emojiButton).setOnClickListener { showEmojiPicker() }
+        activity.findViewById<ImageButton>(R.id.emojiButton).setOnClickListener { showMediaPicker() }
     }
 
     fun resetInput() {
@@ -324,40 +324,45 @@ class ChatInputDelegate(
 
     // ======= Emoji Picker =======
 
-    fun showEmojiPicker() {
-        val sheet = StandardBottomSheet(activity, R.layout.dialog_emoji_picker)
-        val emojiGrid = sheet.findViewById<android.widget.GridLayout>(R.id.emojiGrid)
-        val emojis = listOf(
-            "😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚",
-            "😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🤩","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣",
-            "😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤔",
-            "🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴",
-            "🤢","🤮","🤧","🥵","🥶","😷","🤒","🤕","🤑","🤠","😈","👿","👹","👺","🤡","💩","👻","💀","☠️","👽",
-            "👾","🤖","🎃","😺","😸","😹","😻","😼","😽","🙀","😿","😾","👋","🤚","🖐","✋","🖖","👌","🤏","✌️",
-            "🤞","🤟","🤘","🤙","👈","👉","👆","🖕","👇","☝️","👍","👎","✊","👊","🤛","🤜","👏","🙌","👐","🤲",
-            "🤝","🙏","✍️","💅","🤳","💪","🦾","🦵","🦿","🦶"
-        )
-        val size = (48 * activity.resources.displayMetrics.density).toInt()
-        for (emoji in emojis) {
-            val tv = TextView(activity).apply {
-                text = emoji
-                textSize = 24f
-                gravity = android.view.Gravity.CENTER
-                layoutParams = android.view.ViewGroup.LayoutParams(size, size)
-                val v = TypedValue()
-                activity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, v, true)
-                setBackgroundResource(v.resourceId)
-                setOnClickListener {
-                    val cp = messageInput.selectionStart
-                    val ct = messageInput.text.toString()
-                    messageInput.setText(ct.substring(0, cp) + emoji + ct.substring(cp))
-                    messageInput.setSelection(cp + emoji.length)
-                    sheet.dismiss()
-                }
+    fun showMediaPicker() {
+        val pickerSheet = MediaPickerSheet(
+            activity = activity,
+            onEmojiSelected = { emoji ->
+                val cp = messageInput.selectionStart
+                val ct = messageInput.text.toString()
+                messageInput.setText(ct.substring(0, cp) + emoji + ct.substring(cp))
+                messageInput.setSelection(cp + emoji.length)
+            },
+            onStickerSelected = { sticker ->
+                sendStickerMessage(sticker)
             }
-            emojiGrid?.addView(tv)
-        }
-        sheet.show()
+        )
+        pickerSheet.showPicker()
+    }
+
+    fun showEmojiPicker() {
+        showMediaPicker()
+    }
+
+    private fun sendStickerMessage(sticker: lavender.client.android.data.models.Sticker) {
+        val msg = Message(
+            id = java.util.UUID.randomUUID().toString(),
+            user = username,
+            text = "",
+            timestamp = System.currentTimeMillis(),
+            roomId = roomId,
+            userId = grpcClient.getUserId() ?: "",
+            isSent = false,
+            stickerUrl = sticker.lottieUrl,
+            stickerThumbnailUrl = sticker.thumbnailUrl,
+            repliedToMessageId = replyingTo?.id ?: "",
+            repliedToUser = replyingTo?.user ?: "",
+            repliedToText = replyingTo?.text ?: ""
+        )
+        grpcClient.addLocalMessage(msg)
+        grpcClient.sendMessageV2(msg)
+        grpcClient.deleteDraft(roomId)
+        resetInput()
     }
 
     // ======= Attachments =======

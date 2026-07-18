@@ -180,6 +180,14 @@
                     android:visibility="gone"
                     android:contentDescription="@string/app_name" />
 
+                <com.airbnb.lottie.LottieAnimationView
+                    android:id="@+id/lottieStickerView"
+                    android:layout_width="150dp"
+                    android:layout_height="150dp"
+                    android:visibility="gone"
+                    android:clickable="true"
+                    android:focusable="true" />
+
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvGalleryThumbnails"
                     android:layout_width="wrap_content"

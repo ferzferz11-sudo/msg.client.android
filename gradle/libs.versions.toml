@@ -10,18 +10,18 @@ constraintlayout = "2.2.1"
 media3Common = "1.10.1"
 navigationFragmentKtx = "2.9.8"
 navigationUiKtx = "2.9.8"
-grpc = "1.82.0"
+grpc = "1.82.2"
 protobuf = "4.35.1"
 coroutines = "1.11.0"
 okhttp = "5.4.0"
 circleimageview = "3.1.0"
 swiperefreshlayout = "1.2.0"
-firebaseBom = "34.15.0"
+firebaseBom = "34.16.0"
 googleServices = "4.5.0"
 room = "2.8.4"
-kotlin = "2.4.0"
+kotlin = "2.4.10"
 ksp = "2.3.8"
-glide = "5.0.7"
+glide = "5.0.9"
 biometric = "1.1.0"
 webrtc = "144.7559.09"
 workmanager = "2.11.2"
@@ -31,6 +31,7 @@ turbine = "1.2.1"
 coroutinesTest = "1.11.0"
 jsch = "0.1.55"
 json = "20260522"
+lottie = "6.7.1"
 protobufPlugin = "0.10.0"
 
 [libraries]
@@ -71,6 +72,7 @@ turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
 jsch = { group = "com.jcraft", name = "jsch", version.ref = "jsch" }
 json = { group = "org.json", name = "json", version.ref = "json" }
+lottie = { group = "com.airbnb.android", name = "lottie", version.ref = "lottie" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
