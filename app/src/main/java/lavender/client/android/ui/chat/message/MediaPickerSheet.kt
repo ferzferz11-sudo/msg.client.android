@@ -90,7 +90,7 @@ class MediaPickerSheet(
 
     private fun setupStickerTab() {
         val tabLayout = findViewById<TabLayout>(R.id.tabLayout) ?: return
-        val emojiContainer = findViewById<LinearLayout>(R.id.emojiContainer)
+        val emojiContainer = findViewById<android.view.View>(R.id.emojiContainer)
         val stickerContainer = findViewById<LinearLayout>(R.id.stickerContainer)
         val rvPacks = findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvStickerPacks)
         val rvStickers = findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvStickers)

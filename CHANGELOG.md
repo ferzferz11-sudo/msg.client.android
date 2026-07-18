@@ -1,5 +1,44 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.3.3] - 2026-07-18
+
+### Исправлено
+
+**Шторка стикеров — фатал при открытии:**
+- `MediaPickerSheet` крашился с `ClassCastException`: `emojiContainer` (`NestedScrollView`) кастовался в `LinearLayout`
+- Исправлено на `findViewById<View>` — используется только `.isVisible`
+
+**Шторка стикеров — дополнительные защиты:**
+- `ThemeApplier.applyToDialog()` вызывался вне try-catch в `applyTheme()` — теперь обёрнут
+- `behavior.state = STATE_EXPANDED` вызывался до `dialog.show()` — перенесён после с try-catch
+- Добавлена проверка `activity.isFinishing/isDestroyed` в `showPicker()`
+
+**Админ-панель — список пользователей не отображался:**
+- `loadData()` зависал в цепочке `getAdminUserList` → `getAllChats` → `updateAdminUI`
+- Если `getAllChats` не отвечал — UI никогда не обновлялся
+- Пользователи теперь отображаются сразу после `getAdminUserList`, чаты грузятся отдельно
+
+**UNIMPLEMENTED: GetAllChats:**
+- Сервер не имеет метода `messenger.ChatService/GetAllChats`
+- `getAllChats()` переписан на рекурсивный сбор через `GetChatsV2` с лимитом 1000 и пагинацией
+
+**Прогресс загрузки обновления:**
+- Панель показывала только цифру `42%` — неочевидно
+- Теперь: `Загрузка: 42%` / `Downloading: 42%`
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `MediaPickerSheet.kt` | `emojiContainer` → `findViewById<View>`, try-catch в `showPicker()` |
+| `WidgetSystem.kt` | `ThemeApplier.applyToDialog` в try-catch, `behavior.state` после `dialog.show()` |
+| `ChatInputDelegate.kt` | Убран fallback на старый пикер |
+| `GrpcChatClient.kt` | `getAllChats` → рекурсивный `GetChatsV2` с пагинацией |
+| `SuperAdminActivity.kt` | Декаплинг `getAdminUserList` и `getAllChats` |
+| `strings.xml` | `percent_format` → `"Загрузка: %1$d%%"` |
+
+---
+
 ## [1.3.3.2] - 2026-07-18
 
 ### Исправлено

@@ -362,7 +362,7 @@
     <string name="checking_for_updates">Checking for updates…</string>
     <string name="chat_last_message_format">%1$s%2$s</string>
     <string name="plus_count_format">+%1$d</string>
-    <string name="percent_format">%1$d%%</string>
+    <string name="percent_format">Downloading: %1$d%%</string>
     <string name="online_count_format">%1$d/%2$d online</string>
     <string name="download_complete">Download complete!</string>
     <string name="manual_install_hint">If the installation doesn\'t start automatically, please click the button below.</string>

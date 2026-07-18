@@ -72,44 +72,21 @@ class GrpcChatClient(
     }
 
     fun getAllChats(callback: (List<ChatInfo>) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetAllChatsRequestProto, GetAllChatsResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetAllChats")
-            .setRequestMarshaller(GetAllChatsRequestMarshaller())
-            .setResponseMarshaller(GetAllChatsResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<GetAllChatsResponseProto>() {
-            override fun onMessage(message: GetAllChatsResponseProto) {
-                Log.d(TAG, "getAllChats: received ${message.chats.size} chats")
-                callback(message.chats.map { proto ->
-                    ChatInfo(
-                        id = proto.id, name = proto.name, type = proto.type,
-                        participants = proto.participants,
-                        createdAt = proto.createdAt?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
-                        unreadCount = proto.unreadCount,
-                        lastMessageTime = proto.lastMessageTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
-                        creator = proto.creator, lastMessageText = proto.lastMessageText,
-                        avatarUrl = proto.avatarUrl, fullAvatarUrl = proto.fullAvatarUrl,
-                        lastMessageUsername = proto.lastMessageUsername, isMuted = proto.isMuted,
-                        lastMessageHasImage = proto.lastMessageHasImage,
-                        allowMembersToAdd = proto.allowMembersToAdd,
-                        conferenceStartTime = proto.conferenceStartTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
-                        isSecret = proto.isSecret, peerPublicKey = proto.peerPublicKey,
-                        e2eeReady = proto.e2eeReady,
-                        companyId = proto.companyId, companyChatAccess = proto.companyChatAccess,
-                        companyMinPositionLevel = proto.companyMinPositionLevel
-                    )
-                })
+        val username = getUsername() ?: ""
+        val allChats = mutableListOf<ChatInfo>()
+
+        fun fetchPage(cursor: String) {
+            getChats(username, limit = 1000, cursor = cursor) { page ->
+                allChats.addAll(page.chats)
+                if (page.hasMore && page.nextCursor.isNotEmpty()) {
+                    fetchPage(page.nextCursor)
+                } else {
+                    Log.d(TAG, "getAllChats: collected ${allChats.size} chats via GetChatsV2")
+                    callback(allChats)
+                }
             }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) ErrorHandler.handle("GrpcChatClient.getAllChats", "Status: ${status.code} — ${status.description}")
-            }
-        }, io.grpc.Metadata())
-        call.sendMessage(GetAllChatsRequestProto())
-        call.halfClose()
-        call.request(1)
+        }
+        fetchPage("")
     }
 
     fun getChatListVersion(username: String, callback: (Long) -> Unit) {

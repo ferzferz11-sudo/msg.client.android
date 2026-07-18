@@ -301,15 +301,18 @@ class SuperAdminActivity : AppCompatActivity() {
             currentCursor = response.nextCursor
             hasMore = response.hasMore
             Log.d("SuperAdminActivity", "Loaded ${response.users.size} admin users, hasMore=$hasMore")
+            runOnUiThread {
+                swipeRefreshLayout.isRefreshing = false
+                updateAdminUI(adminUsers, allChats)
+            }
             grpcClient.getAllChats { chats ->
                 allChats = chats
                 Log.d("SuperAdminActivity", "Loaded ${chats.size} chats")
-                loadTimeout.cancel()
                 runOnUiThread {
-                    swipeRefreshLayout.isRefreshing = false
                     updateAdminUI(adminUsers, allChats)
                 }
             }
+            loadTimeout.cancel()
         }
     }
 
