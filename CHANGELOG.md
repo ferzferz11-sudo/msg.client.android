@@ -4,6 +4,12 @@
 
 ### Исправлено
 
+**Загрузка стикера — ошибка не показывалась при файле слишком большом:**
+- Сервер отвечал "file too large", но клиент проглатывал ошибку (пустой catch)
+- Теперь проверяется HTTP response code: 200 = успех, иначе — парсинг ошибки из response body
+- Добавлена автоматическая компрессия изображений >512KB перед загрузкой (масштабирование до 512px + PNG quality 90%)
+- Пользователь видит Toast с текстом ошибки от сервера
+
 **Система стикеров — полный аудит и исправления:**
 
 **Создание пакета стикеров — текст не виден на тёмной теме:**
@@ -60,6 +66,7 @@
 | `StickerPackListAdapter.kt` | i18n (plurals, статусы), поддержка изображений в обложке |
 | `MessageAdapter.kt` | `stickerImageView` + Glide fallback для изображений |
 | `ChatInputDelegate.kt` | `onCreateStickerPack` callback → `StickerPackCreateActivity` |
+| `StickerPackCreateActivity.kt` | Проверка HTTP response code, компрессия изображений >512KB, Toast с ошибкой от сервера |
 | `activity_sticker_pack_create.xml` | Кнопка "Save" → `@string/save` |
 | `item_sticker_pack.xml` | `coverImageView` для изображений |
 | `item_message.xml` | `ivStickerImage` для изображений |

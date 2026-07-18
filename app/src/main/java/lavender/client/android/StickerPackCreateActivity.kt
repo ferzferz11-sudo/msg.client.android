@@ -180,10 +180,14 @@ class StickerPackCreateActivity : AppCompatActivity() {
                 val mimeType = contentResolver.getType(uri) ?: "application/octet-stream"
                 val isImage = mimeType.startsWith("image/")
 
-                val url = withContext(Dispatchers.IO) {
-                    val inputStream = contentResolver.openInputStream(uri) ?: return@withContext ""
-                    val bytes = inputStream.readBytes()
+                val uploadResult = withContext(Dispatchers.IO) {
+                    val inputStream = contentResolver.openInputStream(uri) ?: return@withContext Pair("", "")
+                    var bytes = inputStream.readBytes()
                     inputStream.close()
+
+                    if (isImage && bytes.size > 512 * 1024) {
+                        bytes = compressImage(uri, bytes)
+                    }
 
                     val fileName = if (isImage) "sticker.png" else "sticker.json"
                     val body = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
@@ -193,10 +197,29 @@ class StickerPackCreateActivity : AppCompatActivity() {
                         .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(part).build())
                         .build()
                     val response = HttpClient.client.newCall(request).execute()
+                    val code = response.code
                     val responseBody = response.body?.string() ?: ""
                     response.close()
-                    try { org.json.JSONObject(responseBody).getString("url") } catch (_: Exception) { "" }
+
+                    if (code == 200) {
+                        try {
+                            val url = org.json.JSONObject(responseBody).getString("url")
+                            Pair(url, "")
+                        } catch (_: Exception) {
+                            Pair("", getString(R.string.sticker_upload_failed))
+                        }
+                    } else {
+                        val errorMsg = try {
+                            org.json.JSONObject(responseBody).optString("error", responseBody)
+                        } catch (_: Exception) {
+                            responseBody.ifEmpty { "HTTP $code" }
+                        }
+                        Pair("", errorMsg)
+                    }
                 }
+
+                val url = uploadResult.first
+                val error = uploadResult.second
 
                 if (url.isNotEmpty()) {
                     val newSticker = Sticker(
@@ -208,10 +231,35 @@ class StickerPackCreateActivity : AppCompatActivity() {
                     currentStickers.add(newSticker)
                     stickerGridAdapter.submitList(currentStickers.toList())
                     Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_added), Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@StickerPackCreateActivity, "${getString(R.string.sticker_upload_failed)}: $error", Toast.LENGTH_LONG).show()
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@StickerPackCreateActivity, "${getString(R.string.sticker_upload_failed)}: ${e.message}", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    private fun compressImage(uri: Uri, bytes: ByteArray): ByteArray {
+        return try {
+            val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return bytes
+            val maxDim = 512
+            val scale = minOf(maxDim.toFloat() / bitmap.width, maxDim.toFloat() / bitmap.height, 1f)
+            val scaledBitmap = if (scale < 1f) {
+                android.graphics.Bitmap.createScaledBitmap(
+                    bitmap,
+                    (bitmap.width * scale).toInt(),
+                    (bitmap.height * scale).toInt(),
+                    true
+                )
+            } else bitmap
+            val outputStream = java.io.ByteArrayOutputStream()
+            scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 90, outputStream)
+            if (scaledBitmap !== bitmap) scaledBitmap.recycle()
+            bitmap.recycle()
+            outputStream.toByteArray()
+        } catch (_: Exception) {
+            bytes
         }
     }
 
