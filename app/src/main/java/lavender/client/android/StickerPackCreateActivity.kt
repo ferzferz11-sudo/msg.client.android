@@ -179,17 +179,39 @@ class StickerPackCreateActivity : AppCompatActivity() {
             try {
                 val mimeType = contentResolver.getType(uri) ?: "application/octet-stream"
                 val isImage = mimeType.startsWith("image/")
+                val maxBytes = 2 * 1024 * 1024
 
-                val uploadResult = withContext(Dispatchers.IO) {
-                    val inputStream = contentResolver.openInputStream(uri) ?: return@withContext Pair("", "")
+                val prepareResult = withContext(Dispatchers.IO) {
+                    val inputStream = contentResolver.openInputStream(uri) ?: return@withContext Triple(null as ByteArray?, "", "")
                     var bytes = inputStream.readBytes()
                     inputStream.close()
 
-                    if (isImage && bytes.size > 512 * 1024) {
+                    if (isImage && bytes.size > maxBytes) {
                         bytes = compressImage(uri, bytes)
                     }
 
-                    val fileName = if (isImage) "sticker.png" else "sticker.json"
+                    if (bytes.size > maxBytes) {
+                        return@withContext Triple(null as ByteArray?, "", getString(R.string.sticker_file_too_large))
+                    }
+
+                    Triple(bytes, if (isImage) "sticker.png" else "sticker.json", "")
+                }
+
+                val bytes = prepareResult.first
+                val fileName = prepareResult.second
+                val preError = prepareResult.third
+
+                if (preError.isNotEmpty()) {
+                    Toast.makeText(this@StickerPackCreateActivity, preError, Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+
+                if (bytes == null || bytes.isEmpty()) {
+                    Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_upload_failed), Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+
+                val uploadResult = withContext(Dispatchers.IO) {
                     val body = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
                     val part = MultipartBody.Part.createFormData("sticker", fileName, body)
                     val request = Request.Builder()
@@ -243,7 +265,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
     private fun compressImage(uri: Uri, bytes: ByteArray): ByteArray {
         return try {
             val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return bytes
-            val maxDim = 512
+            val maxDim = 1024
             val scale = minOf(maxDim.toFloat() / bitmap.width, maxDim.toFloat() / bitmap.height, 1f)
             val scaledBitmap = if (scale < 1f) {
                 android.graphics.Bitmap.createScaledBitmap(

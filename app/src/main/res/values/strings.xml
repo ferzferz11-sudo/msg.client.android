@@ -1041,6 +1041,8 @@
     <string name="sticker_title_required">Title is required</string>
     <string name="sticker_submitted">Submitted for approval</string>
     <string name="sticker_pick_image">Select image</string>
+    <string name="sticker_max_size_hint">Max file size: 2 MB (images are compressed automatically)</string>
+    <string name="sticker_file_too_large">File is too large (max 512 KB)</string>
     <plurals name="sticker_count">
         <item quantity="one">%d sticker</item>
         <item quantity="other">%d stickers</item>

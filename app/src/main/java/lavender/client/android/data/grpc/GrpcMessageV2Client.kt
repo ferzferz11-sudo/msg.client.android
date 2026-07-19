@@ -188,6 +188,7 @@ class GrpcMessageV2Client(
     // ====== Convert domain Message → SendMessageV2RequestProto ======
 
     fun domainToSendRequest(message: Message): SendMessageV2RequestProto {
+        val safeText = message.text.stripInvalidUtf8()
         val media = when {
             message.voiceUrl.isNotEmpty() -> MessageMediaProto(type = "voice", url = message.voiceUrl, duration = message.duration)
             message.imageUrl.isNotEmpty() -> MessageMediaProto(
@@ -201,12 +202,12 @@ class GrpcMessageV2Client(
         val mentions = if (message.mentions.isNotEmpty()) {
             message.mentions
         } else {
-            extractMentions(message.text)
+            extractMentions(safeText)
         }
 
         return SendMessageV2RequestProto(
             roomId = message.roomId,
-            text = message.text,
+            text = safeText,
             media = media,
             replyToId = message.repliedToMessageId,
             isE2EE = message.isE2EE,
@@ -342,6 +343,12 @@ class GrpcMessageV2Client(
             return
         }
 
+        val safeText = message.text.stripInvalidUtf8()
+        val safeMessage = if (safeText != message.text) {
+            Log.w(TAG, "stripped invalid UTF-8 bytes from text before sending")
+            message.copy(text = safeText)
+        } else message
+
         val call = currentChannel.newCall(METHOD_SEND_MESSAGE_V2, CallOptions.DEFAULT)
         call.start(object : ClientCall.Listener<SendMessageV2ResponseProto>() {
             override fun onMessage(response: SendMessageV2ResponseProto) {
@@ -382,9 +389,19 @@ class GrpcMessageV2Client(
                 }
             }
         }, Metadata())
-        call.sendMessage(domainToSendRequest(message))
+        call.sendMessage(domainToSendRequest(safeMessage))
         call.halfClose()
         call.request(1)
+    }
+
+    private fun String.stripInvalidUtf8(): String {
+        return try {
+            val bytes = toByteArray(Charsets.UTF_8)
+            String(bytes, Charsets.UTF_8)
+        } catch (e: Exception) {
+            Log.w(TAG, "stripInvalidUtf8 failed: ${e.message}")
+            this
+        }
     }
 
     // ====== Edit Message V2 ======

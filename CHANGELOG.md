@@ -1,13 +1,91 @@
 # Lava Messenger — Android Changelog
 
-## [1.3.3.4] - 2026-07-18
+## [1.3.3.5] - 2026-07-19
 
 ### Исправлено
+
+**UTF-8 ошибка при отправке сообщений (серверный баг):**
+- Сервер хранил невалидные UTF-8 байты в `reply_preview` — PostgreSQL отклонял INSERT
+- Сервер исправлен: добавлена валидация `utf8.ValidString()` для `orig.Text`, `row.MediaURL`, `row.ReplyPreview`
+- Клиент: добавлена `stripInvalidUtf8()` в `domainToSendRequest()` как safety net
+
+**Система стикеров — полный аудит и исправления:**
+
+**Табы в шторке стикеров не адаптированы к темам:**
+- `MediaPickerSheet` не темизировал `TabLayout` — добавлен `applyTheme()` с программной темизацией
+
+**Кнопка "Создать пакет" ничего не делала:**
+- `onCreateStickerPack` callback не передавался в `MediaPickerSheet` — теперь запускает `StickerPackCreateActivity`
+
+**Создание пакета — текст не виден на тёмной теме:**
+- `StickerPackCreateActivity` не темизировал `TextInputLayout`/`EditText` — добавлен `applyThemeToFields()`
+
+**Кнопка "Добавить стикер" не темизирована:**
+- OutlinedButton стиль не обрабатывался — добавлена ручная темизация `strokeColor`/`textColor`
+
+**Файловый пикер — принимал только JSON:**
+- Теперь принимает `image/jpeg`, `image/png`, `image/webp` наряду с `application/json`
+
+**Тосты не переведены на русский:**
+- Добавлены строковые ресурсы EN/RU: `sticker_added`, `sticker_pack_created`, `sticker_upload_failed`, `sticker_title_required`, `sticker_submitted`, `sticker_pick_image`
+
+**Шторка стикеров — пустые пакеты отображались:**
+- Фильтр `stickers.isNotEmpty()` для всех пакетов
+
+**Шторка стикеров — утверждённые пакеты не отображались:**
+- Фильтр `!= "approved"` заменён на merge всех пакетов + dedup по ID
+
+**Сетка стикеров — изображения не отображались:**
+- `StickerGridAdapter` определяет тип по URL: `.json` → Lottie, иначе → Glide
+- `repeatCount=0` вместо `MAX_VALUE`, `onViewRecycled()` → `cancelAnimation()`
+
+**Сообщение стикера в чате — изображения не отображались:**
+- `MessageAdapter` + `ivStickerImage` ImageView с Glide fallback
+
+**Загрузка стикера — ошибка не показывалась:**
+- Проверка HTTP response code, Toast с ошибкой от сервера
+
+**Размер файла стикера — увеличен лимит:**
+- 512KB → 2MB, компрессия до 1024px вместо 512px
+
+**Библиотека стикеров — хардкод English и цветов:**
+- Plurals для количества, строковые ресурсы для статусов
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `MediaPickerSheet.kt` | `applyTheme()` для TabLayout, фильтр пустых/approved пакетов, `onCreateStickerPack` callback |
+| `StickerPackCreateActivity.kt` | `applyThemeToFields()`, файловый пикер для изображений, i18n, компрессия до 2MB/1024px |
+| `StickerGridAdapter.kt` | Поддержка изображений (Glide), `repeatCount=0`, `onViewRecycled()` |
+| `StickerPackListAdapter.kt` | i18n (plurals, статусы), поддержка изображений в обложке |
+| `MessageAdapter.kt` | `stickerImageView` + Glide fallback для изображений |
+| `ChatInputDelegate.kt` | `onCreateStickerPack` callback → `StickerPackCreateActivity` |
+| `GrpcMessageV2Client.kt` | `stripInvalidUtf8()` в `domainToSendRequest()` |
+| `activity_sticker_pack_create.xml` | Кнопка "Save" → `@string/save`, подсказка maxSize |
+| `item_sticker_pack.xml` | `coverImageView` для изображений |
+| `item_message.xml` | `ivStickerImage` для изображений |
+| `sheet_media_picker.xml` | (без изменений — темы через программный код) |
+| `strings.xml` (EN/RU) | +`sticker_added`, `sticker_pack_created`, `sticker_upload_failed`, `sticker_title_required`, `sticker_submitted`, `sticker_pick_image`, `sticker_max_size_hint`, `sticker_file_too_large`, `sticker_count` (plurals) |
+| `CHANGELOG.md` | v1.3.3.5 |
+| `GOTCHAS.md` | v1.3.3.4 + v1.3.3.5 gotchas |
+| `MEMORY.md` | Обновлена версия + sticker system + UTF-8 |
+
+---
+
+## [1.3.3.4] - 2026-07-19
+
+### Исправлено
+
+**UTF-8 ошибка при отправке сообщений (серверный баг):**
+- Сервер хранил невалидные UTF-8 байты в `reply_preview` — PostgreSQL отклонял INSERT
+- Сервер исправлен: добавлена валидация `utf8.ValidString()` для `orig.Text`, `row.MediaURL`, `row.ReplyPreview`
+- Клиент: добавлена `stripInvalidUtf8()` в `domainToSendRequest()` как safety net
 
 **Загрузка стикера — ошибка не показывалась при файле слишком большом:**
 - Сервер отвечал "file too large", но клиент проглатывал ошибку (пустой catch)
 - Теперь проверяется HTTP response code: 200 = успех, иначе — парсинг ошибки из response body
-- Добавлена автоматическая компрессия изображений >512KB перед загрузкой (масштабирование до 512px + PNG quality 90%)
+- Добавлена автоматическая компрессия изображений >2MB перед загрузкой (масштабирование до 1024px + PNG quality 90%)
 - Пользователь видит Toast с текстом ошибки от сервера
 
 **Система стикеров — полный аудит и исправления:**
@@ -66,7 +144,7 @@
 | `StickerPackListAdapter.kt` | i18n (plurals, статусы), поддержка изображений в обложке |
 | `MessageAdapter.kt` | `stickerImageView` + Glide fallback для изображений |
 | `ChatInputDelegate.kt` | `onCreateStickerPack` callback → `StickerPackCreateActivity` |
-| `StickerPackCreateActivity.kt` | Проверка HTTP response code, компрессия изображений >512KB, Toast с ошибкой от сервера |
+| `StickerPackCreateActivity.kt` | Проверка HTTP response code, компрессия изображений >2MB до 1024px, Toast с ошибкой от сервера |
 | `activity_sticker_pack_create.xml` | Кнопка "Save" → `@string/save` |
 | `item_sticker_pack.xml` | `coverImageView` для изображений |
 | `item_message.xml` | `ivStickerImage` для изображений |
