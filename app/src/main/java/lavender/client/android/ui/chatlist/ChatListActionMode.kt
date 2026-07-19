@@ -97,11 +97,11 @@ internal fun pinSelectedChats(activity: ChatListActivity, chats: List<ChatInfo>)
         for (chat in chats) {
             try {
                 if (chat.isPinned) {
-                    val result = GrpcClient.unpinChat(activity, chat.id)
+                    val result = GrpcClient.unpinChat(chat.id)
                     Log.d("ChatListActionMode", "unpinChat(${chat.id}) = $result")
                     if (result) unpinned++
                 } else {
-                    val result = GrpcClient.pinChat(activity, chat.id)
+                    val result = GrpcClient.pinChat(chat.id)
                     Log.d("ChatListActionMode", "pinChat(${chat.id}) = $result")
                     if (result) pinned++
                 }
@@ -132,9 +132,9 @@ internal fun archiveSelectedChats(activity: ChatListActivity, chats: List<ChatIn
         var unarchived = 0
         for (chat in chats) {
             if (chat.isArchived) {
-                if (GrpcClient.unarchiveChat(activity, chat.id)) unarchived++
+                if (GrpcClient.unarchiveChat(chat.id)) unarchived++
             } else {
-                if (GrpcClient.archiveChat(activity, chat.id)) archived++
+                if (GrpcClient.archiveChat(chat.id)) archived++
             }
         }
         if (archived > 0 || unarchived > 0) {

@@ -141,6 +141,8 @@ class ChatAdapter(
 
     fun isSelectionMode(): Boolean = selectionMode
 
+    fun currentList(): List<FlatItem> = flatItems
+
     // ======= Internal =======
 
     private fun buildFlatList(sections: List<SectionItem>): List<FlatItem> {
@@ -220,12 +222,30 @@ class ChatAdapter(
 
     fun updateOnlineUsers(users: List<String>) {
         onlineUsers = users
-        notifyDataSetChanged()
+        val changedPositions = mutableListOf<Int>()
+        for (i in flatItems.indices) {
+            val item = flatItems[i]
+            if (item is FlatItem.ChatItem && item.chat.type == "direct" && !item.chat.isSecret && !item.chat.id.startsWith("favorites_")) {
+                changedPositions.add(i)
+            }
+        }
+        for (pos in changedPositions) {
+            notifyItemChanged(pos)
+        }
     }
 
     fun updateAllUsers(users: List<lavender.client.android.data.proto.UserInfoProto>) {
         allUsers = users
-        notifyDataSetChanged()
+        val changedPositions = mutableListOf<Int>()
+        for (i in flatItems.indices) {
+            val item = flatItems[i]
+            if (item is FlatItem.ChatItem && item.chat.type == "direct" && !item.chat.isSecret && !item.chat.id.startsWith("favorites_")) {
+                changedPositions.add(i)
+            }
+        }
+        for (pos in changedPositions) {
+            notifyItemChanged(pos)
+        }
     }
 
     fun filter(query: String) {

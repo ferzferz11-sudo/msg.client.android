@@ -72,6 +72,13 @@ class ThemesActivity : AppCompatActivity() {
             }
         }
 
+        val switchSystemDarkMode = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchSystemDarkMode)
+        switchSystemDarkMode.isChecked = ThemeStore.isFollowSystemDarkMode()
+        switchSystemDarkMode.setOnCheckedChangeListener { _, isChecked ->
+            ThemeStore.setFollowSystemDarkMode(this, isChecked)
+            adapter.setCurrentThemeId(ThemeStore.currentTheme().id)
+        }
+
         themesRecyclerView = findViewById(R.id.themesRecyclerView)
         adapter = ThemeAdapter(
             onThemeClick = { _ ->

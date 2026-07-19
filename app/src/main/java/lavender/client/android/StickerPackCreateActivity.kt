@@ -35,16 +35,20 @@ class StickerPackCreateActivity : AppCompatActivity() {
 
     private lateinit var toolbar: MaterialToolbar
     private lateinit var etTitle: EditText
-    private lateinit var etName: EditText
     private lateinit var rvStickers: RecyclerView
     private lateinit var btnAddSticker: MaterialButton
     private lateinit var btnSave: MaterialButton
     private lateinit var btnSubmit: MaterialButton
 
-    private val stickerGridAdapter = StickerGridAdapter(onStickerClick = { })
     private val currentStickers = mutableListOf<Sticker>()
     private var packId: String? = null
     private var isDraft = true
+    private var coverStickerId: String? = null
+
+    private val stickerGridAdapter = StickerGridAdapter(
+        onStickerClick = { },
+        onStickerLongClick = { sticker -> showCoverDialog(sticker) }
+    )
 
     private val pickStickerLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
@@ -82,13 +86,13 @@ class StickerPackCreateActivity : AppCompatActivity() {
 
         toolbar = findViewById(R.id.toolbar)
         etTitle = findViewById(R.id.etTitle)
-        etName = findViewById(R.id.etName)
         rvStickers = findViewById(R.id.rvStickers)
         btnAddSticker = findViewById(R.id.btnAddSticker)
         btnSave = findViewById(R.id.btnSave)
         btnSubmit = findViewById(R.id.btnSubmit)
 
         applyThemeToFields()
+        updateSaveButtonState()
 
         toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
         toolbar.navigationIcon?.setTint(getColor(R.color.white))
@@ -108,6 +112,9 @@ class StickerPackCreateActivity : AppCompatActivity() {
         } else {
             toolbar.title = getString(R.string.sticker_create_pack)
             btnSubmit.visibility = android.view.View.GONE
+            val username = GrpcClient.getCurrentUsername() ?: ""
+            etTitle.setText(getString(R.string.sticker_default_pack_name, username))
+            etTitle.selectAll()
         }
     }
 
@@ -119,11 +126,9 @@ class StickerPackCreateActivity : AppCompatActivity() {
             val surfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
             val onSurfaceColor = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.WHITE)
 
-            listOf(etTitle, etName).forEach { et ->
-                et.setTextColor(textPrimaryColor)
-                et.setHintTextColor(ThemeUtils.adjustAlpha(textPrimaryColor, 0.5f))
-                et.highlightColor = ThemeUtils.adjustAlpha(primaryColor, 0.3f)
-            }
+            etTitle.setTextColor(textPrimaryColor)
+            etTitle.setHintTextColor(ThemeUtils.adjustAlpha(textPrimaryColor, 0.5f))
+            etTitle.highlightColor = ThemeUtils.adjustAlpha(primaryColor, 0.3f)
 
             findViewById<android.view.View>(android.R.id.content)?.let { contentView ->
                 themeInputLayoutsIn(contentView, primaryColor, onSurfaceColor, surfaceColor, textPrimaryColor)
@@ -132,6 +137,10 @@ class StickerPackCreateActivity : AppCompatActivity() {
             btnAddSticker.strokeColor = android.content.res.ColorStateList.valueOf(primaryColor)
             btnAddSticker.setTextColor(primaryColor)
             btnAddSticker.iconTint = android.content.res.ColorStateList.valueOf(primaryColor)
+
+            val onPrimaryColor = ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE)
+            btnSave.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
+            btnSave.setTextColor(onPrimaryColor)
         } catch (_: Exception) {}
     }
 
@@ -161,21 +170,39 @@ class StickerPackCreateActivity : AppCompatActivity() {
         layout.defaultHintTextColor = android.content.res.ColorStateList.valueOf(ThemeUtils.adjustAlpha(onSurfaceColor, 0.7f))
     }
 
+    private fun updateSaveButtonState() {
+        btnSave.isEnabled = currentStickers.isNotEmpty()
+        val alpha = if (currentStickers.isNotEmpty()) 1.0f else 0.5f
+        btnSave.alpha = alpha
+    }
+
+    private fun showCoverDialog(sticker: Sticker) {
+        android.app.AlertDialog.Builder(this)
+            .setTitle(R.string.sticker_set_cover)
+            .setPositiveButton(R.string.save) { _, _ ->
+                coverStickerId = sticker.id
+                Toast.makeText(this, getString(R.string.sticker_cover_set), Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     private fun loadPack() {
         val id = packId ?: return
         lifecycleScope.launch {
             val response = GrpcClient.getStickerPack(id)
             val pack = response?.pack ?: return@launch
             etTitle.setText(pack.title)
-            etName.setText(pack.name)
             isDraft = pack.status == "draft"
             btnSubmit.visibility = if (isDraft) android.view.View.VISIBLE else android.view.View.GONE
+            coverStickerId = pack.coverStickerId.ifEmpty { null }
 
             currentStickers.clear()
             currentStickers.addAll(pack.stickers.map { s ->
                 Sticker(s.id, s.packId, s.lottieUrl, s.thumbnailUrl, s.emoji, s.width, s.height)
             })
             stickerGridAdapter.submitList(currentStickers.toList())
+            updateSaveButtonState()
         }
     }
 
@@ -271,6 +298,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
                     )
                     currentStickers.add(newSticker)
                     stickerGridAdapter.submitList(currentStickers.toList())
+                    updateSaveButtonState()
                     Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_added), Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this@StickerPackCreateActivity, "${getString(R.string.sticker_upload_failed)}: $error", Toast.LENGTH_LONG).show()
@@ -310,12 +338,16 @@ class StickerPackCreateActivity : AppCompatActivity() {
             Toast.makeText(this, getString(R.string.sticker_title_required), Toast.LENGTH_SHORT).show()
             return
         }
-        val name = etName.text.toString().trim().ifEmpty { title.lowercase().replace(" ", "_") }
+        if (currentStickers.isEmpty()) {
+            Toast.makeText(this, getString(R.string.sticker_save_disabled), Toast.LENGTH_SHORT).show()
+            return
+        }
+        val name = title.lowercase().replace(" ", "_")
 
         lifecycleScope.launch {
             try {
                 if (packId != null) {
-                    GrpcClient.updateStickerPack(packId!!, title = title)
+                    GrpcClient.updateStickerPack(packId!!, title = title, coverStickerId = coverStickerId ?: "")
                     Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_pack_updated), Toast.LENGTH_SHORT).show()
                 } else {
                     val result = GrpcClient.createStickerPack(title, name)
@@ -327,6 +359,10 @@ class StickerPackCreateActivity : AppCompatActivity() {
                                 packId!!, sticker.lottieUrl, sticker.thumbnailUrl,
                                 sticker.emoji, sticker.width, sticker.height
                             )
+                        }
+                        val currentCover = coverStickerId
+                        if (currentCover != null) {
+                            GrpcClient.updateStickerPack(packId!!, coverStickerId = currentCover)
                         }
                         Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_pack_created), Toast.LENGTH_SHORT).show()
                         finish()

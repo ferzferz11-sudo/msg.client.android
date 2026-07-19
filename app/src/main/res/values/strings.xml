@@ -1040,6 +1040,11 @@
     <string name="sticker_public_packs">Public</string>
     <string name="sticker_pending_packs">Pending</string>
     <string name="sticker_pack_title">Pack Title</string>
+    <string name="sticker_pack_title_required">Pack Title *</string>
+    <string name="sticker_default_pack_name">Stickers by %s</string>
+    <string name="sticker_set_cover">Set as cover</string>
+    <string name="sticker_cover_set">Cover set</string>
+    <string name="sticker_save_disabled">Add at least one sticker to save</string>
     <string name="sticker_pack_name">Pack Name</string>
     <string name="sticker_submit_for_approval">Submit for Approval</string>
     <string name="sticker_approved">Approved</string>
@@ -1058,7 +1063,7 @@
     <string name="sticker_submitted">Submitted for approval</string>
     <string name="sticker_pick_image">Select image</string>
     <string name="sticker_max_size_hint">Max file size: 2 MB (images are compressed automatically)</string>
-    <string name="sticker_file_too_large">File is too large (max 512 KB)</string>
+    <string name="sticker_file_too_large">File is too large (max 2 MB)</string>
     <plurals name="sticker_count">
         <item quantity="one">%d sticker</item>
         <item quantity="other">%d stickers</item>
@@ -1082,5 +1087,10 @@
     <string name="sticker_search_hint">Search stickers…</string>
     <string name="sticker_added_to_favorites">Added to favorites</string>
     <string name="sticker_removed_from_favorites">Removed from favorites</string>
+    <string name="follow_system_dark_mode">Follow system dark mode</string>
+    <string name="follow_system_dark_mode_desc">Automatically switch between light and dark theme based on system setting</string>
+    <string name="archive">Archive</string>
+    <string name="delete_chat">Delete chat</string>
+    <string name="failed">Failed</string>
 
 </resources>

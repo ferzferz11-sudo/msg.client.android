@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -14,7 +15,7 @@ import org.junit.Ignore
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@Ignore("viewModelScope coroutines outlive test runner — re-enable after migrating to TestScope")
+@Ignore("Dispatchers.resetMain() blocks waiting for testDispatcher drain — viewModelScope coroutines outlive testRunner. Scope injection is in place; re-enable once viewModelScope cancellation is resolved.")
 class CallViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
@@ -33,7 +34,7 @@ class CallViewModelTest {
     }
 
     @Test
-    fun timerText_initialValue() {
+    fun timerText_initialValue() = runTest {
         assertEquals("00:00", viewModel.timerText.value)
     }
 
@@ -41,6 +42,7 @@ class CallViewModelTest {
     fun startTimer_updatesTimerText() = runTest {
         viewModel.startTimer()
         advanceTimeBy(5000)
+        testDispatcher.scheduler.advanceUntilIdle()
         val time = viewModel.timerText.value
         val parts = time.split(":")
         assertEquals(2, parts.size)
@@ -52,9 +54,11 @@ class CallViewModelTest {
     fun startTimer_idempotent() = runTest {
         viewModel.startTimer()
         advanceTimeBy(1000)
+        testDispatcher.scheduler.advanceUntilIdle()
         val time1 = viewModel.timerText.value
         viewModel.startTimer()
         advanceTimeBy(1000)
+        testDispatcher.scheduler.advanceUntilIdle()
         val time2 = viewModel.timerText.value
         val parts1 = time1.split(":").last().toInt()
         val parts2 = time2.split(":").last().toInt()
@@ -65,9 +69,11 @@ class CallViewModelTest {
     fun stopTimer_stopsUpdates() = runTest {
         viewModel.startTimer()
         advanceTimeBy(3000)
+        testDispatcher.scheduler.advanceUntilIdle()
         viewModel.stopTimer()
         val timeAtStop = viewModel.timerText.value
         advanceTimeBy(5000)
+        testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(timeAtStop, viewModel.timerText.value)
     }
 
@@ -75,6 +81,7 @@ class CallViewModelTest {
     fun timerText_formatsHours() = runTest {
         viewModel.startTimer()
         advanceTimeBy(3661000)
+        testDispatcher.scheduler.advanceUntilIdle()
         val time = viewModel.timerText.value
         assertTrue(time.contains(":"))
         val parts = time.split(":")

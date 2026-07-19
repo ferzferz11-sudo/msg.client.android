@@ -1,5 +1,83 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.3.7] - 2026-07-19
+
+### Добавлено
+
+**Dark mode system sync:**
+- Переключатель "Следовать системной тёмной теме" в настройках тем
+- Автоматическое переключение между светлой и тёмной темой при изменении системных настроек
+- `ThemeStore.setFollowSystemDarkMode()` + `ThemeStore.onConfigurationChanged()`
+
+**Chat list swipe actions:**
+- Swipe left на чате → диалог с опциями: Архивировать, Мute/Unmute, Удалить
+- Красный фон с иконкой удаления при свайпе
+- Архивация/мьют через существующие методы ChatListViewModel
+
+**Message reactions picker:**
+- Расширенный пикер реакций: 32 эмодзи в сетке 8x4
+- Было: 9 эмодзи в горизонтальном скролле
+- Эмодзи: 👍👎❤️🔥😮😢😂🎉💯✅❌🙏💪👏🤝🤔😍🥳😎🤯💀👻🤡💩👀🫡🫶🤷💬📎⭐💡
+
+**GrpcClient cleanup:**
+- Удалены неиспользуемые `context` параметры из 9 facade методов (pinChat, unpinChat, archiveChat, unarchiveChat, searchChats, pinMessage, unpinMessage, getPinnedMessages, getServers)
+- Удалён redundant `CoroutineScope` — заменён на `realGrpcClient.scope`
+- Обновлены все вызывающие коды
+
+### Улучшено
+
+**Sticker pack creation UX:**
+- Удалено дублирующее поле "Имя пакета" — достаточно одного "Название"
+- Поле "Название" предзаполняется "Стикеры от @username"
+- Звёздочка в хинте указывает на обязательность заполнения
+- Кнопка "Сохранить" заблокирована пока нет добавленных стикеров
+- Кнопка "Сохранить" темизирована через Material3 стиль
+
+**Sticker pack cover selection:**
+- Long-press на стикере в пакете → диалог "Сделать обложкой"
+- Обложка пакета сохраняется при создании/редактировании
+
+**Sticker editor crop/resize:**
+- Добавлено панорамирование изображения (drag) в режиме обрезки
+- Добавлен зум (pinch-to-zoom) в режиме обрезки
+- Изображение не может быть слишком уменьшено/увеличено (ограничения зума)
+- Выходной файл: JPEG 85% + resize до 512px (вместо PNG 95% полного размера)
+- Размер стикера: 10-50 КБ вместо 200 КБ - 2 МБ
+
+**ChatAdapter stability:**
+- `updateOnlineUsers()`/`updateAllUsers()` обновляют только direct-чаты через `notifyItemChanged()`
+- Убран `notifyDataSetChanged()` — меньше мерцание при обновлении статуса онлайн
+
+**CallViewModelTest:**
+- Добавлена инъекция `CoroutineScope` в `CallViewModel` для тестирования
+- Тесты используют `StandardTestDispatcher` + `Dispatchers.setMain()`
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `ThemeStore.kt` | followSystemDarkMode, resolveSystemTheme(), onConfigurationChanged() |
+| `ThemePreferences.kt` | isFollowSystemDarkMode(), setFollowSystemDarkMode() |
+| `ThemesActivity.kt` | Switch для system dark mode |
+| `activity_themes.xml` | MaterialCardView с Switch |
+| `ThemeUi.kt` | +ThemeStore.init() для system dark mode |
+| `ChatListActivity.kt` | setupSwipeActions() — ItemTouchHelper для archive/mute/delete |
+| `ChatAdapter.kt` | +currentList() для swipe actions |
+| `ChatMessageMenuDelegate.kt` | 32 эмодзи в GridLayout вместо 9 в HorizontalScrollView |
+| `dialog_reactions.xml` | GridLayout вместо HorizontalScrollView |
+| `GrpcClient.kt` | Удалены context параметры из 9 методов, удалён redundant scope |
+| `ChatListActionMode.kt` | Удалены context параметры из вызовов |
+| `ChatListViewModel.kt` | Удалены context параметры из вызовов |
+| `ChatViewModel.kt` | Удалён context параметр из getPinnedMessages |
+| `StickerPackCreateActivity.kt` | Удалено etName, дефолтное название, блокировка сохранения без стикеров, выбор обложки |
+| `activity_sticker_pack_create.xml` | Удалён etName, звёздочка в хинте, стиль btnSave |
+| `StickerEditorView.kt` | Панорамирование + зум в режиме CROP, constrainImage() |
+| `StickerEditorActivity.kt` | JPEG 85% + resize 512px |
+| `ChatAdapter.kt` | Таргетированные notifyItemChanged для online/allUsers |
+| `CallViewModel.kt` | scope injection (scope: CoroutineScope? = null) |
+| `CallViewModelTest.kt` | TestScope + StandardTestDispatcher |
+| `strings.xml` (EN/RU) | +6 строк (cover, default name, save disabled) |
+
 ## [1.3.3.6] - 2026-07-19
 
 ### Добавлено

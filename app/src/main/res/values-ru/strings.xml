@@ -1039,6 +1039,11 @@
     <string name="sticker_public_packs">Публичные</string>
     <string name="sticker_pending_packs">Ожидающие</string>
     <string name="sticker_pack_title">Название пакета</string>
+    <string name="sticker_pack_title_required">Название пакета *</string>
+    <string name="sticker_default_pack_name">Стикеры от %s</string>
+    <string name="sticker_set_cover">Сделать обложкой</string>
+    <string name="sticker_cover_set">Обложка установлена</string>
+    <string name="sticker_save_disabled">Добавьте хотя бы один стикер для сохранения</string>
     <string name="sticker_pack_name">Имя пакета</string>
     <string name="sticker_submit_for_approval">Отправить на согласование</string>
     <string name="sticker_approved">Одобрен</string>
@@ -1057,7 +1062,7 @@
     <string name="sticker_submitted">Отправлено на согласование</string>
     <string name="sticker_pick_image">Выбрать изображение</string>
     <string name="sticker_max_size_hint">Макс. размер файла: 2 МБ (изображения сжимаются автоматически)</string>
-    <string name="sticker_file_too_large">Файл слишком большой (макс. 512 КБ)</string>
+    <string name="sticker_file_too_large">Файл слишком большой (макс. 2 МБ)</string>
     <plurals name="sticker_count">
         <item quantity="one">%d стикер</item>
         <item quantity="few">%d стикера</item>
@@ -1083,5 +1088,10 @@
     <string name="sticker_search_hint">Поиск стикеров…</string>
     <string name="sticker_added_to_favorites">Добавлено в избранное</string>
     <string name="sticker_removed_from_favorites">Удалено из избранного</string>
+    <string name="follow_system_dark_mode">Следовать системной тёмной теме</string>
+    <string name="follow_system_dark_mode_desc">Автоматическое переключение между светлой и тёмной темой в зависимости от системных настроек</string>
+    <string name="archive">Архивировать</string>
+    <string name="delete_chat">Удалить чат</string>
+    <string name="failed">Ошибка</string>
 
 </resources>

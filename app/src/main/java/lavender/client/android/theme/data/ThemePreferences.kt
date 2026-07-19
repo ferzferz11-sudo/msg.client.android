@@ -15,6 +15,12 @@ class ThemePreferences(context: Context) {
     fun getBuiltInChatListBgOverride(themeId: String): String? =
         prefs.getString("bg_url_$themeId", null)
 
+    fun isFollowSystemDarkMode(): Boolean = prefs.getBoolean(KEY_FOLLOW_SYSTEM_DARK_MODE, false)
+
+    fun setFollowSystemDarkMode(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_FOLLOW_SYSTEM_DARK_MODE, enabled).apply()
+    }
+
     fun saveCustomThemeCache(theme: Theme) {
         prefs.edit().apply {
             putString("cached_theme_id", theme.id)
@@ -65,6 +71,7 @@ class ThemePreferences(context: Context) {
     companion object {
         private const val PREFS_NAME = "lavender_prefs"
         private const val KEY_CURRENT_THEME_ID = "current_theme_id"
+        private const val KEY_FOLLOW_SYSTEM_DARK_MODE = "follow_system_dark_mode"
         private const val DEFAULT_THEME_ID = "dark"
     }
 }

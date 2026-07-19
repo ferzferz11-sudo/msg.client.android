@@ -3,6 +3,7 @@ package lavender.client.android.ui.chatlist
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.Canvas
 import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
@@ -33,6 +34,7 @@ import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.data.updates.UpdateManager
 import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.ChatAdapter
@@ -503,6 +505,8 @@ class ChatListActivity : AppCompatActivity() {
             })
         }
 
+        setupSwipeActions()
+
         // Observe sections
         lifecycleScope.launch {
             viewModel.sections.collectLatest { sections ->
@@ -567,6 +571,84 @@ class ChatListActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+
+    private fun setupSwipeActions() {
+        val swipeCallback = object : androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(0, androidx.recyclerview.widget.ItemTouchHelper.LEFT) {
+            override fun onMove(rv: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder) = false
+
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                val position = viewHolder.bindingAdapterPosition
+                val items = chatAdapter.currentList()
+                if (position == RecyclerView.NO_POSITION || position >= items.size) return
+                val item = items[position]
+                if (item !is lavender.client.android.ui.adapter.FlatItem.ChatItem) return
+                val chat = item.chat
+
+                val options = mutableListOf<CharSequence>()
+                val actions = mutableListOf<() -> Unit>()
+
+                options.add(getString(R.string.archive))
+                actions.add { viewModel.archiveChat(chat.id) }
+
+                options.add(if (chat.isMuted) getString(R.string.unmute) else getString(R.string.mute))
+                actions.add { viewModel.toggleMute(chat.id, !chat.isMuted) }
+
+                options.add(getString(R.string.delete))
+                actions.add {
+                    androidx.appcompat.app.AlertDialog.Builder(this@ChatListActivity)
+                        .setTitle(R.string.delete_chat)
+                        .setPositiveButton(R.string.delete) { _, _ ->
+                            GrpcClient.deleteChat(chat.id, GrpcClient.getCurrentUsername() ?: "") { success, _ ->
+                                lifecycleScope.launch {
+                                    if (success) {
+                                        chatAdapter.setSections(viewModel.sections.value)
+                                    } else {
+                                        Toast.makeText(this@ChatListActivity, getString(R.string.failed), Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        }
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show()
+                }
+
+                androidx.appcompat.app.AlertDialog.Builder(this@ChatListActivity)
+                    .setItems(options.toTypedArray()) { _, which ->
+                        actions[which]()
+                    }
+                    .setOnCancelListener {
+                        if (position != RecyclerView.NO_POSITION) {
+                            chatAdapter.notifyItemChanged(position)
+                        }
+                    }
+                    .show()
+            }
+
+            override fun onChildDraw(c: Canvas, recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, dX: Float, dY: Float, actionState: Int, isCurrentlyActive: Boolean) {
+                if (dX < 0) {
+                    val itemView = viewHolder.itemView
+                    val deleteColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().primaryColor, android.graphics.Color.RED)
+                    val bg = android.graphics.drawable.ColorDrawable(deleteColor)
+                    bg.setBounds(itemView.right + dX.toInt(), itemView.top, itemView.right, itemView.bottom)
+                    bg.draw(c)
+
+                    val trashIcon = androidx.core.content.ContextCompat.getDrawable(this@ChatListActivity, android.R.drawable.ic_menu_delete)
+                    trashIcon?.mutate()?.setTint(android.graphics.Color.WHITE)
+                    val iconMargin = (itemView.height - (trashIcon?.intrinsicHeight ?: 0)) / 2
+                    val iconTop = itemView.top + iconMargin
+                    val iconBottom = iconTop + (trashIcon?.intrinsicHeight ?: 0)
+                    val iconLeft = itemView.right - iconMargin - (trashIcon?.intrinsicWidth ?: 0)
+                    val iconRight = itemView.right - iconMargin
+                    trashIcon?.setBounds(iconLeft, iconTop, iconRight, iconBottom)
+                    trashIcon?.draw(c)
+                }
+                if (dX == 0f) {
+                    super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
+                }
+            }
+        }
+        androidx.recyclerview.widget.ItemTouchHelper(swipeCallback).attachToRecyclerView(rvChatList)
     }
 
     private fun setupBackPressHandler() {

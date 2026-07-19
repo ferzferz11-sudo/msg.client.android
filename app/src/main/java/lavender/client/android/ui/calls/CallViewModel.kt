@@ -2,6 +2,7 @@ package lavender.client.android.ui.calls
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -9,7 +10,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class CallViewModel : ViewModel() {
+class CallViewModel(
+    scope: CoroutineScope? = null
+) : ViewModel() {
+
+    private val scope: CoroutineScope = scope ?: viewModelScope
 
     private val _timerText = MutableStateFlow("00:00")
     val timerText: StateFlow<String> = _timerText.asStateFlow()
@@ -19,7 +24,7 @@ class CallViewModel : ViewModel() {
 
     fun startTimer() {
         if (timerJob != null) return
-        timerJob = viewModelScope.launch {
+        timerJob = this.scope.launch {
             while (true) {
                 updateTimerText()
                 delay(1000)

@@ -491,7 +491,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     fun pinChat(chatId: String) {
         viewModelScope.launch {
             try {
-                val success = GrpcClient.pinChat(getApplication(), chatId)
+                val success = GrpcClient.pinChat(chatId)
                 if (success) {
                     // Update local state
                     allChats = allChats.map {
@@ -508,7 +508,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     fun unpinChat(chatId: String) {
         viewModelScope.launch {
             try {
-                val success = GrpcClient.unpinChat(getApplication(), chatId)
+                val success = GrpcClient.unpinChat(chatId)
                 if (success) {
                     allChats = allChats.map {
                         if (it.id == chatId) it.copy(isPinned = false, pinnedAt = 0L) else it
@@ -524,7 +524,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     fun archiveChat(chatId: String) {
         viewModelScope.launch {
             try {
-                val success = GrpcClient.archiveChat(getApplication(), chatId)
+                val success = GrpcClient.archiveChat(chatId)
                 if (success) {
                     allChats = allChats.map {
                         if (it.id == chatId) it.copy(isArchived = true) else it
@@ -540,7 +540,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     fun unarchiveChat(chatId: String) {
         viewModelScope.launch {
             try {
-                val success = GrpcClient.unarchiveChat(getApplication(), chatId)
+                val success = GrpcClient.unarchiveChat(chatId)
                 if (success) {
                     allChats = allChats.map {
                         if (it.id == chatId) it.copy(isArchived = false) else it

@@ -132,7 +132,7 @@ class ChatViewModel : ViewModel() {
     fun loadPinnedMessages(context: Context) {
         viewModelScope.launch {
             try {
-                val pinned = GrpcClient.getPinnedMessages(context, currentRoomId)
+                val pinned = GrpcClient.getPinnedMessages(currentRoomId)
                 _pinnedMessageIds.value = pinned.map { it.id }.toSet()
             } catch (_: Exception) {}
         }

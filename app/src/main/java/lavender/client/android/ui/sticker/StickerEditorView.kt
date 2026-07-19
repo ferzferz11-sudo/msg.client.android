@@ -42,18 +42,12 @@ class StickerEditorView @JvmOverloads constructor(
     }
 
     private var originalBitmap: Bitmap? = null
-    private var displayBitmap: Bitmap? = null
     private var filteredBitmap: Bitmap? = null
 
     private val imagePaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.DITHER_FLAG)
     private val cropOverlayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(120, 0, 0, 0)
         style = Paint.Style.FILL
-    }
-    private val cropBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        style = Paint.Style.STROKE
-        strokeWidth = 2f
     }
     private val textOverlays = mutableListOf<TextOverlay>()
 
@@ -74,11 +68,26 @@ class StickerEditorView @JvmOverloads constructor(
         private set
 
     private var imageMatrix = Matrix()
+    private var savedImageMatrix = Matrix()
     private var imageRect = RectF()
     private var viewRect = RectF()
 
+    private var lastTouchX = 0f
+    private var lastTouchY = 0f
+    private var draggingImage = false
+    private var draggingText = false
+
     private val scaleDetector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
+            if (editorMode == EditorMode.CROP) {
+                val factor = detector.scaleFactor
+                val focusX = detector.focusX
+                val focusY = detector.focusY
+                imageMatrix.postScale(factor, factor, focusX, focusY)
+                constrainImage()
+                invalidate()
+                return true
+            }
             activeTextOverlay?.let { text ->
                 val factor = detector.scaleFactor
                 text.fontSize = max(16f, min(120f, text.fontSize * factor))
@@ -89,10 +98,6 @@ class StickerEditorView @JvmOverloads constructor(
             return false
         }
     })
-
-    private var lastTouchX = 0f
-    private var lastTouchY = 0f
-    private var draggingText = false
 
     fun setImageUri(uri: android.net.Uri) {
         try {
@@ -133,8 +138,41 @@ class StickerEditorView @JvmOverloads constructor(
         imageMatrix.postScale(scale, scale)
         imageMatrix.postTranslate(dx, dy)
 
+        savedImageMatrix.set(imageMatrix)
         imageRect.set(dx, dy, dx + bmpW * scale, dy + bmpH * scale)
         viewRect.set(0f, 0f, viewW, viewH)
+    }
+
+    fun resetImagePosition() {
+        imageMatrix.set(savedImageMatrix)
+        invalidate()
+    }
+
+    private fun constrainImage() {
+        val bmp = filteredBitmap ?: originalBitmap ?: return
+        val values = FloatArray(9)
+        imageMatrix.getValues(values)
+        val scaleX = values[Matrix.MSCALE_X]
+        val scaleY = values[Matrix.MSCALE_Y]
+        val transX = values[Matrix.MTRANS_X]
+        val transY = values[Matrix.MTRANS_Y]
+
+        val bmpW = bmp.width * scaleX
+        val bmpH = bmp.height * scaleY
+        val viewW = width.toFloat()
+        val viewH = height.toFloat()
+
+        val minScale = min(viewW / bmp.width, viewH / bmp.height) * 0.5f
+        val maxScale = max(viewW / bmp.width, viewH / bmp.height) * 2f
+        val currentScale = max(scaleX, scaleY)
+
+        if (currentScale < minScale) {
+            val factor = minScale / currentScale
+            imageMatrix.postScale(factor, factor, viewW / 2f, viewH / 2f)
+        } else if (currentScale > maxScale) {
+            val factor = maxScale / currentScale
+            imageMatrix.postScale(factor, factor, viewW / 2f, viewH / 2f)
+        }
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -189,7 +227,7 @@ class StickerEditorView @JvmOverloads constructor(
         canvas.drawLine(left, bottom, left + cornerLen, bottom, cornerPaint)
 
         canvas.drawLine(right - cornerLen, bottom, right, bottom, cornerPaint)
-        canvas.drawLine(right, bottom - cornerLen, right, bottom, cornerPaint)
+        canvas.drawLine(right, bottom, right, bottom - cornerLen, cornerPaint)
     }
 
     private fun drawTextOverlay(canvas: Canvas, text: TextOverlay) {
@@ -246,6 +284,7 @@ class StickerEditorView @JvmOverloads constructor(
                 lastTouchX = event.x
                 lastTouchY = event.y
                 draggingText = false
+                draggingImage = false
 
                 if (editorMode == EditorMode.TEXT) {
                     for (i in textOverlays.indices.reversed()) {
@@ -261,8 +300,22 @@ class StickerEditorView @JvmOverloads constructor(
                         }
                     }
                 }
+
+                if (editorMode == EditorMode.CROP && !scaleDetector.isInProgress) {
+                    draggingImage = true
+                    return true
+                }
             }
             MotionEvent.ACTION_MOVE -> {
+                if (draggingImage && editorMode == EditorMode.CROP && !scaleDetector.isInProgress) {
+                    val dx = event.x - lastTouchX
+                    val dy = event.y - lastTouchY
+                    imageMatrix.postTranslate(dx, dy)
+                    lastTouchX = event.x
+                    lastTouchY = event.y
+                    invalidate()
+                    return true
+                }
                 if (draggingText && activeTextOverlay != null && !scaleDetector.isInProgress) {
                     val dx = event.x - lastTouchX
                     val dy = event.y - lastTouchY
@@ -275,6 +328,7 @@ class StickerEditorView @JvmOverloads constructor(
                 }
             }
             MotionEvent.ACTION_UP -> {
+                draggingImage = false
                 draggingText = false
             }
         }
@@ -300,11 +354,11 @@ class StickerEditorView @JvmOverloads constructor(
         val right = mappedRect.right.toInt().coerceIn(left + 1, bmp.width)
         val bottom = mappedRect.bottom.toInt().coerceIn(top + 1, bmp.height)
 
-        val width = right - left
-        val height = bottom - top
-        if (width <= 0 || height <= 0) return null
+        val w = right - left
+        val h = bottom - top
+        if (w <= 0 || h <= 0) return null
 
-        val cropped = Bitmap.createBitmap(bmp, left, top, width, height)
+        val cropped = Bitmap.createBitmap(bmp, left, top, w, h)
 
         val outputSize = min(cropped.width, cropped.height)
         val output = Bitmap.createBitmap(outputSize, outputSize, Bitmap.Config.ARGB_8888)
@@ -395,7 +449,6 @@ class StickerEditorView @JvmOverloads constructor(
         originalBitmap = null
         filteredBitmap?.recycle()
         filteredBitmap = null
-        displayBitmap = null
         textOverlays.clear()
     }
 }

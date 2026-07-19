@@ -1,9 +1,7 @@
 package lavender.client.android.data.grpc
 
 import android.content.Context
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import lavender.client.android.data.models.Message
@@ -17,14 +15,13 @@ import lavender.client.android.data.proto.*
  */
 object GrpcClient {
     private val realGrpcClient = RealGrpcClient
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     // ====== Connection State ======
     val connectionStatus: StateFlow<ConnectionStatus> = realGrpcClient.connectionStatus
 
     val connectionState: StateFlow<Boolean> = realGrpcClient.connectionStatus
         .map { it == ConnectionStatus.READY }
-        .stateIn(scope, SharingStarted.Eagerly, realGrpcClient.connectionStatus.value == ConnectionStatus.READY)
+        .stateIn(realGrpcClient.scope, SharingStarted.Eagerly, realGrpcClient.connectionStatus.value == ConnectionStatus.READY)
 
     // ====== Data Flows ======
     val messages: StateFlow<List<Message>> = realGrpcClient.messages
@@ -188,30 +185,30 @@ object GrpcClient {
 
     // ======= ChatList V2 (suspend) =======
 
-    suspend fun pinChat(context: Context, chatId: String): Boolean =
+    suspend fun pinChat(chatId: String): Boolean =
         realGrpcClient.pinChat(chatId)
 
-    suspend fun unpinChat(context: Context, chatId: String): Boolean =
+    suspend fun unpinChat(chatId: String): Boolean =
         realGrpcClient.unpinChat(chatId)
 
-    suspend fun searchChats(context: Context, query: String, limit: Int = 20, offset: Int = 0): List<ChatInfo> =
+    suspend fun searchChats(query: String, limit: Int = 20, offset: Int = 0): List<ChatInfo> =
         realGrpcClient.searchChats(query, limit, offset)
 
-    suspend fun archiveChat(context: Context, chatId: String): Boolean =
+    suspend fun archiveChat(chatId: String): Boolean =
         realGrpcClient.archiveChat(chatId)
 
-    suspend fun unarchiveChat(context: Context, chatId: String): Boolean =
+    suspend fun unarchiveChat(chatId: String): Boolean =
         realGrpcClient.unarchiveChat(chatId)
 
     // ======= Pin Message =======
 
-    suspend fun pinMessage(context: Context, chatId: String, messageId: String): Boolean =
+    suspend fun pinMessage(chatId: String, messageId: String): Boolean =
         realGrpcClient.pinMessage(chatId, messageId)
 
-    suspend fun unpinMessage(context: Context, chatId: String, messageId: String): Boolean =
+    suspend fun unpinMessage(chatId: String, messageId: String): Boolean =
         realGrpcClient.unpinMessage(chatId, messageId)
 
-    suspend fun getPinnedMessages(context: Context, chatId: String): List<Message> =
+    suspend fun getPinnedMessages(chatId: String): List<Message> =
         realGrpcClient.getPinnedMessages(chatId)
 
     // ======= Message Operations V2 =======
@@ -426,7 +423,7 @@ object GrpcClient {
 
     // ======= Server Discovery =======
 
-    fun getServers(context: Context, cb: (List<ServerInfoProto>) -> Unit) =
+    fun getServers(cb: (List<ServerInfoProto>) -> Unit) =
         realGrpcClient.fetchServersList(cb)
 
     // ======= Avatar Cache =======

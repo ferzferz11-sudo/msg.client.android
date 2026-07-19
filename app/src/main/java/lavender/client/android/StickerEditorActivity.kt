@@ -240,12 +240,24 @@ class StickerEditorActivity : AppCompatActivity() {
                 return@launch
             }
 
-            val file = File(cacheDir, "sticker_edited_${System.currentTimeMillis()}.png")
+            val maxSize = 512
+            val scaledBitmap = if (bitmap.width > maxSize || bitmap.height > maxSize) {
+                val scale = maxSize.toFloat() / maxOf(bitmap.width, bitmap.height)
+                android.graphics.Bitmap.createScaledBitmap(
+                    bitmap,
+                    (bitmap.width * scale).toInt(),
+                    (bitmap.height * scale).toInt(),
+                    true
+                )
+            } else bitmap
+
+            val file = File(cacheDir, "sticker_edited_${System.currentTimeMillis()}.jpg")
             withContext(Dispatchers.IO) {
                 FileOutputStream(file).use { out ->
-                    bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 95, out)
+                    scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, out)
                 }
             }
+            if (scaledBitmap !== bitmap) scaledBitmap.recycle()
             bitmap.recycle()
 
             val resultIntent = Intent().apply {
