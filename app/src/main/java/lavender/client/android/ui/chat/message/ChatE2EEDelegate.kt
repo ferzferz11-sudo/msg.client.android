@@ -2,6 +2,7 @@ package lavender.client.android.ui.chat.message
 
 import android.app.Activity
 import android.widget.TextView
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -40,7 +41,7 @@ class ChatE2EEDelegate(
         android.util.Log.d("E2EE", "initE2EE: exchanging keys for chat: $roomId (attempt ${retryCount + 1})")
         onKeyExchangeStart?.invoke()
         grpcClient.exchangeSecretKey(roomId, publicKey) { success, peerKey, peerHasKey ->
-            activity.runOnUiThread {
+            (activity as LifecycleOwner).lifecycleScope.launch {
                 if (success && peerHasKey && peerKey.isNotEmpty()) {
                     E2EEManager.deriveAndStoreSharedSecret(activity, roomId, peerKey)
                     secretKeyExchanged = true

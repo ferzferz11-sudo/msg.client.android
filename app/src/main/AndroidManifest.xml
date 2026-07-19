@@ -124,6 +124,8 @@
 
         <activity android:name=".StickerLibraryActivity" android:exported="false" />
         <activity android:name=".StickerPackCreateActivity" android:exported="false" />
+        <activity android:name=".StickerEditorActivity" android:exported="false" />
+        <activity android:name=".JoinCompanyActivity" android:exported="false" />
 
         <activity
             android:name=".MapPickerActivity"

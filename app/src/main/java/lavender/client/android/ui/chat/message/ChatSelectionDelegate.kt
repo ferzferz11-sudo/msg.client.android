@@ -15,6 +15,8 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.ui.adapter.MessageAdapter
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import lavender.client.android.ui.widget.StandardBottomSheet
 
 /**
@@ -144,7 +146,7 @@ class ChatSelectionDelegate(
         val sm = adapter?.getSelectedMessages() ?: return
         if (sm.isEmpty()) { hideSelectionToolbar(); return }
         grpcClient.getChats(username) { page ->
-            activity.runOnUiThread {
+            activity.lifecycleScope.launch {
                 val oc = page.chats.toMutableList()
                 if (!roomId.startsWith("favorites_")) {
                     oc.add(0, lavender.client.android.data.models.ChatInfo(
@@ -153,8 +155,8 @@ class ChatSelectionDelegate(
                 }
                 val f = oc.filter { it.id != roomId }
                 if (f.isEmpty()) {
-                    Toast.makeText(activity, activity.getString(R.string.no_other_chats), Toast.LENGTH_SHORT).show()
-                    return@runOnUiThread
+                Toast.makeText(activity, activity.getString(R.string.no_other_chats), Toast.LENGTH_SHORT).show()
+                        return@launch
                 }
                 val sheet = lavender.client.android.ui.widget.ListBottomSheet(activity)
                     .setTitle(activity.getString(R.string.forward_to))

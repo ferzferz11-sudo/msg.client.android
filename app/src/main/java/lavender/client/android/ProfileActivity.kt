@@ -128,7 +128,7 @@ class ProfileActivity : AppCompatActivity() {
         viewModel.observeOnlineUsers()
 
         lifecycleScope.launch {
-            grpcClient.users.collect { runOnUiThread { refreshCurrentView() } }
+            grpcClient.users.collect { refreshCurrentView() }
         }
     }
 
@@ -156,10 +156,8 @@ class ProfileActivity : AppCompatActivity() {
     private fun setupProfileObservers() {
         lifecycleScope.launch {
             viewModel.profileData.collect { data ->
-                runOnUiThread {
-                    if (isFinishing || isDestroyed || data.username.isEmpty()) return@runOnUiThread
-                    updateProfileUI(data)
-                }
+                if (isFinishing || isDestroyed || data.username.isEmpty()) return@collect
+                updateProfileUI(data)
             }
         }
     }
@@ -167,10 +165,8 @@ class ProfileActivity : AppCompatActivity() {
     private fun setupGroupObservers() {
         lifecycleScope.launch {
             viewModel.groupData.collect { data ->
-                runOnUiThread {
-                    if (isFinishing || isDestroyed) return@runOnUiThread
-                    updateGroupUI(data)
-                }
+                if (isFinishing || isDestroyed) return@collect
+                updateGroupUI(data)
             }
         }
     }
@@ -235,12 +231,10 @@ class ProfileActivity : AppCompatActivity() {
                     val filtered = allUsersList
                         .map { it.username }
                         .filter { it != grpcClient.getCurrentUsername() && !currentParticipants.contains(it) && currentContacts.contains(it) }
-                    runOnUiThread {
-                        sheet.setLoading(false)
-                        userAdapter.setUsers(filtered)
-                        if (filtered.isEmpty()) {
-                            sheet.setEmptyState(true, getString(R.string.all_contacts_already_in_group))
-                        }
+                    sheet.setLoading(false)
+                    userAdapter.setUsers(filtered)
+                    if (filtered.isEmpty()) {
+                        sheet.setEmptyState(true, getString(R.string.all_contacts_already_in_group))
                     }
                 }
             }
@@ -252,9 +246,9 @@ class ProfileActivity : AppCompatActivity() {
             val selected = userAdapter.getSelectedUsers()
             if (selected.isEmpty()) return@onActionClick
             GrpcClient.addParticipants(roomId, selected) { success, msg ->
-                runOnUiThread {
+                lifecycleScope.launch {
                     sheet.dismiss()
-                    Toast.makeText(this, if (success) getString(R.string.member_added) else msg, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ProfileActivity, if (success) getString(R.string.member_added) else msg, Toast.LENGTH_SHORT).show()
                     if (success) {
                         viewModel.loadGroupData(roomId, intentParticipants, intentCreator, intentAvatarUrl, intentFullAvatarUrl, intentChatName)
                     }
@@ -317,8 +311,8 @@ class ProfileActivity : AppCompatActivity() {
                 val currentUsername = grpcClient.getCurrentUsername() ?: return@setOnClickListener
                 grpcClient.createDirectChat(currentUsername, data.username) { chatId ->
                     if (chatId != null) {
-                        runOnUiThread {
-                            val intent = Intent(this, NewChatActivity::class.java).apply {
+                        lifecycleScope.launch {
+                            val intent = Intent(this@ProfileActivity, NewChatActivity::class.java).apply {
                                 putExtra("USERNAME", currentUsername)
                                 putExtra("ROOM_ID", chatId)
                                 putExtra("CHAT_NAME", data.username)
@@ -377,13 +371,11 @@ class ProfileActivity : AppCompatActivity() {
                 }
                 val logoUrl = companyResp?.company?.avatarUrl
                 if (!logoUrl.isNullOrEmpty()) {
-                    runOnUiThread {
-                        ivProfileCompanyLogo?.isVisible = true
-                        Glide.with(this@ProfileActivity)
-                            .load(logoUrl)
-                            .placeholder(R.drawable.ic_default_avatar)
-                            .into(ivProfileCompanyLogo!!)
-                    }
+                    ivProfileCompanyLogo?.isVisible = true
+                    Glide.with(this@ProfileActivity)
+                        .load(logoUrl)
+                        .placeholder(R.drawable.ic_default_avatar)
+                        .into(ivProfileCompanyLogo!!)
                 }
             }
             companyCard.setOnClickListener {
@@ -457,10 +449,10 @@ class ProfileActivity : AppCompatActivity() {
                     val progressOverlay = findViewById<View>(R.id.progressOverlay)
                     progressOverlay?.isVisible = true
                     viewModel.updateChatSettings(roomId, isChecked) { success, msg ->
-                        runOnUiThread {
+                        lifecycleScope.launch {
                             progressOverlay?.isVisible = false
-                            if (success) Toast.makeText(this, R.string.theme_saved, Toast.LENGTH_SHORT).show()
-                            else { switchAllowAdd.isChecked = !isChecked; Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                            if (success) Toast.makeText(this@ProfileActivity, R.string.theme_saved, Toast.LENGTH_SHORT).show()
+                            else { switchAllowAdd.isChecked = !isChecked; Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show() }
                         }
                     }
                 }
@@ -479,7 +471,7 @@ class ProfileActivity : AppCompatActivity() {
                             val progressOverlay = findViewById<View>(R.id.progressOverlay)
                             progressOverlay.isVisible = true
                             viewModel.updateChatName(roomId, newName) { success, msg ->
-                                runOnUiThread { progressOverlay.isVisible = false; if (!success) Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                                lifecycleScope.launch { progressOverlay.isVisible = false; if (!success) Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show() }
                             }
                         }
                     }.setNegativeButton(R.string.cancel, null).show()
@@ -568,8 +560,8 @@ class ProfileActivity : AppCompatActivity() {
 
         sheet.onActionClick {
             viewModel.getAvailableContacts { available ->
-                runOnUiThread {
-                    if (available.isEmpty()) Toast.makeText(this, R.string.no_users_available, Toast.LENGTH_SHORT).show()
+                lifecycleScope.launch {
+                    if (available.isEmpty()) Toast.makeText(this@ProfileActivity, R.string.no_users_available, Toast.LENGTH_SHORT).show()
                     else showAddParticipantDialog(available)
                 }
             }
@@ -589,7 +581,7 @@ class ProfileActivity : AppCompatActivity() {
                 val progressOverlay = findViewById<View>(R.id.progressOverlay)
                 progressOverlay?.isVisible = true
                 viewModel.removeParticipant(roomId, user) { success, msg ->
-                    runOnUiThread { progressOverlay?.isVisible = false; if (!success) Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                    lifecycleScope.launch { progressOverlay?.isVisible = false; if (!success) Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show() }
                 }
             }.setNegativeButton(R.string.cancel, null).show()
     }
@@ -607,7 +599,7 @@ class ProfileActivity : AppCompatActivity() {
             val progressOverlay = findViewById<View>(R.id.progressOverlay)
             sheet.dismiss(); progressOverlay.isVisible = true
             viewModel.addParticipants(roomId, selected) { success, msg ->
-                runOnUiThread { progressOverlay.isVisible = false; if (!success) Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                lifecycleScope.launch { progressOverlay.isVisible = false; if (!success) Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show() }
             }
         }
         sheet.show()
@@ -621,10 +613,10 @@ class ProfileActivity : AppCompatActivity() {
         val progressOverlay = findViewById<View>(R.id.progressOverlay)
         progressOverlay?.isVisible = true
         viewModel.uploadGroupAvatar(this, roomId, uri) { result ->
-            runOnUiThread {
+            lifecycleScope.launch {
                 progressOverlay?.isVisible = false
-                if (result.thumbUrl.isNotEmpty()) Toast.makeText(this, R.string.theme_saved, Toast.LENGTH_SHORT).show()
-                else if (result.error.isNotEmpty()) Toast.makeText(this, result.error, Toast.LENGTH_SHORT).show()
+                if (result.thumbUrl.isNotEmpty()) Toast.makeText(this@ProfileActivity, R.string.theme_saved, Toast.LENGTH_SHORT).show()
+                else if (result.error.isNotEmpty()) Toast.makeText(this@ProfileActivity, result.error, Toast.LENGTH_SHORT).show()
             }
         }
     }

@@ -198,12 +198,12 @@ class SecurityActivity : AppCompatActivity() {
         val currentDeviceId = SessionManager.getDeviceId(this)
         
         GrpcClient.deleteOtherDevices(userId, currentDeviceId) { success, _ ->
-            runOnUiThread {
+            lifecycleScope.launch {
                 if (success) {
                     loadDevices()
-                    Toast.makeText(this, getString(R.string.sessions_terminated), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@SecurityActivity, getString(R.string.sessions_terminated), Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this, getString(R.string.sessions_terminate_error), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@SecurityActivity, getString(R.string.sessions_terminate_error), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -214,9 +214,9 @@ class SecurityActivity : AppCompatActivity() {
         if (userId.isEmpty()) {
             GrpcClient.fetchUserId(username) { id, success ->
                 if (success && id != null) {
-                    runOnUiThread { 
+                    lifecycleScope.launch {
                         SessionManager.updateSession(userId = id)
-                        loadDevices() 
+                        loadDevices()
                     }
                 }
             }
@@ -224,7 +224,7 @@ class SecurityActivity : AppCompatActivity() {
         }
 
         GrpcClient.getDevices(userId) { devices ->
-            runOnUiThread {
+            lifecycleScope.launch {
                 deviceAdapter.setDevices(devices)
                 btnTerminateAll.visibility = if (devices.size > 1) View.VISIBLE else View.GONE
             }
@@ -261,11 +261,11 @@ class SecurityActivity : AppCompatActivity() {
     private fun terminateSession(deviceId: String) {
         val userId = SessionManager.session.value.userId
         GrpcClient.deleteDevice(userId, deviceId) { success, _ ->
-            runOnUiThread {
+            lifecycleScope.launch {
                 if (success) {
                     loadDevices()
                 } else {
-                    Toast.makeText(this, getString(R.string.failed_to_terminate_session), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@SecurityActivity, getString(R.string.failed_to_terminate_session), Toast.LENGTH_SHORT).show()
                 }
             }
         }

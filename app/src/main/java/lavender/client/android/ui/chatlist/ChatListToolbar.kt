@@ -252,7 +252,7 @@ internal fun confirmDeleteProfile(activity: ChatListActivity) {
         .setMessage(R.string.delete_profile_confirm)
         .setPositiveButton(R.string.delete) { _, _ ->
             GrpcClient.deleteProfile(username) { success, _ ->
-                activity.runOnUiThread {
+                activity.lifecycleScope.launch {
                     if (success) {
                         Toast.makeText(activity, R.string.profile_deleted, Toast.LENGTH_LONG).show()
                         GrpcClient.disconnect()
@@ -340,14 +340,14 @@ private fun openFeedbackChat(activity: ChatListActivity) {
 private fun doOpenFeedbackChat(activity: ChatListActivity, adminUserId: String) {
     val username = lavender.client.android.data.session.SessionManager.session.value.username
     if (adminUserId == lavender.client.android.data.session.SessionManager.session.value.userId) {
-        activity.runOnUiThread {
+        activity.lifecycleScope.launch {
             android.widget.Toast.makeText(activity, R.string.admin_not_found, android.widget.Toast.LENGTH_SHORT).show()
         }
         return
     }
     val adminUsername = GrpcClient.allUsers.value.firstOrNull { it.userId == adminUserId }?.username
     if (adminUsername.isNullOrEmpty()) {
-        activity.runOnUiThread {
+        activity.lifecycleScope.launch {
             android.widget.Toast.makeText(activity, R.string.admin_not_found, android.widget.Toast.LENGTH_SHORT).show()
         }
         return
@@ -358,9 +358,9 @@ private fun doOpenFeedbackChat(activity: ChatListActivity, adminUserId: String) 
                 id = chatId, name = adminUsername, type = "direct",
                 participants = "[\"$username\",\"$adminUsername\"]"
             )
-            activity.runOnUiThread { activity.navigateToChat(chatInfo, username) }
+            activity.lifecycleScope.launch { activity.navigateToChat(chatInfo, username) }
         } else {
-            activity.runOnUiThread {
+            activity.lifecycleScope.launch {
                 android.widget.Toast.makeText(activity, R.string.connection_failed, android.widget.Toast.LENGTH_SHORT).show()
             }
         }

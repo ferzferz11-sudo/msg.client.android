@@ -13,7 +13,8 @@ import lavender.client.android.R
 import lavender.client.android.data.models.Sticker
 
 class StickerGridAdapter(
-    private val onStickerClick: (Sticker) -> Unit
+    private val onStickerClick: (Sticker) -> Unit,
+    private val onStickerLongClick: ((Sticker) -> Unit)? = null
 ) : ListAdapter<Sticker, StickerGridAdapter.StickerViewHolder>(StickerDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StickerViewHolder {
@@ -55,7 +56,10 @@ class StickerGridAdapter(
 
             val clickTarget: View = if (isLottie) lottieView else thumbnailView
             clickTarget.setOnClickListener { onStickerClick(sticker) }
-            clickTarget.setOnLongClickListener { true }
+            clickTarget.setOnLongClickListener {
+                onStickerLongClick?.invoke(sticker)
+                true
+            }
         }
 
         fun unbind() {

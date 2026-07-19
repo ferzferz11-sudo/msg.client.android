@@ -122,13 +122,11 @@ class NotificationActivity : AppCompatActivity() {
         lifecycleScope.launch {
             grpcClient.isSuperAdmin.collect { isAdmin ->
                 if (isAdmin) {
-                    runOnUiThread {
-                        if (menu.findItem(2) == null) {
-                            menu.add(0, 2, 1, "FCM Logs").apply {
-                                setIcon(R.drawable.ic_settings)
-                                setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_ALWAYS)
-                                // Standard tint will be applied below
-                            }
+                    if (menu.findItem(2) == null) {
+                        menu.add(0, 2, 1, "FCM Logs").apply {
+                            setIcon(R.drawable.ic_settings)
+                            setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_ALWAYS)
+                            // Standard tint will be applied below
                         }
                     }
                 }

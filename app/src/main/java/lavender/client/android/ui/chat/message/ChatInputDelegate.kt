@@ -566,21 +566,21 @@ class ChatInputDelegate(
                     .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build()).build()
                 HttpClient.client.newCall(req).enqueue(object : okhttp3.Callback {
                     override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
-                        activity.runOnUiThread { uploadProgressBar.isVisible = false; showToast(activity.getString(R.string.failed_to_upload_file)) }
+                        activity.lifecycleScope.launch { uploadProgressBar.isVisible = false; showToast(activity.getString(R.string.failed_to_upload_file)) }
                     }
                     override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
                         val rb = response.body.string()
                         if (response.code == 400 && rb.contains("too large")) {
-                            activity.runOnUiThread { uploadProgressBar.isVisible = false; showToast(activity.getString(R.string.file_too_large)) }
+                            activity.lifecycleScope.launch { uploadProgressBar.isVisible = false; showToast(activity.getString(R.string.file_too_large)) }
                             return
                         }
                         if (!response.isSuccessful || rb.contains("404")) {
-                            activity.runOnUiThread { uploadProgressBar.isVisible = false; showToast(activity.getString(R.string.failed_to_upload_file)) }
+                            activity.lifecycleScope.launch { uploadProgressBar.isVisible = false; showToast(activity.getString(R.string.failed_to_upload_file)) }
                             return
                         }
                         val url = if (rb.contains("\"url\"")) try { JSONObject(rb).getString("url") } catch (_: Exception) { "" }
                         else if (rb.startsWith("http")) rb else ""
-                        activity.runOnUiThread {
+                        activity.lifecycleScope.launch {
                             uploadProgressBar.isVisible = false
                             if (url.isNotEmpty() && !url.contains("404")) {
                                 if (isImage) sendGalleryMessage("", listOf(url))

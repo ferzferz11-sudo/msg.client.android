@@ -203,9 +203,7 @@ private fun doDeleteChats(activity: ChatListActivity, chats: List<ChatInfo>) {
                 }
             }
             if (errorMessage != null) {
-                activity.runOnUiThread {
-                    android.widget.Toast.makeText(activity, errorMessage, android.widget.Toast.LENGTH_LONG).show()
-                }
+                android.widget.Toast.makeText(activity, errorMessage, android.widget.Toast.LENGTH_LONG).show()
             } else {
                 deleted++
             }

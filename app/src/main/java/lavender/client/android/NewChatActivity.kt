@@ -149,8 +149,8 @@ class NewChatActivity : AppCompatActivity() {
 
         viewModel.fetchChatMetadata(username, roomId, isDirect, participantsJson, chatName) { meta ->
             try {
-                runOnUiThread {
-                    if (isFinishing || isDestroyed) return@runOnUiThread
+                lifecycleScope.launch {
+                    if (isFinishing || isDestroyed) return@launch
                     chatName = meta.chatName; isDirect = meta.isDirect; chatType = meta.chatType
                     participantsJson = meta.participantsJson; creator = meta.creator
                     chatAvatarUrl = meta.avatarUrl; chatFullAvatarUrl = meta.fullAvatarUrl
@@ -176,7 +176,7 @@ class NewChatActivity : AppCompatActivity() {
         viewModel.ensureUserIdSet(this) { loadDraft() }
 
         lifecycleScope.launch {
-            SessionManager.logoutEvent.collect { runOnUiThread { finish() } }
+            SessionManager.logoutEvent.collect { finish() }
         }
 
         lifecycleScope.launch {
@@ -224,7 +224,7 @@ class NewChatActivity : AppCompatActivity() {
         inputDelegate.configure(roomId, username, isDirect, participantsJson, isSecret)
         inputDelegate.onSendMessage = { text, imageUrl -> sendMessage(text, imageUrl) }
         inputDelegate.onTypingSignal = { isTyping -> grpcClient.sendTypingSignal(username, isTyping) }
-        inputDelegate.onAudioRecord = { file, dur -> viewModel.uploadAudio(this, file, dur, username) { msg -> runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() } } }
+        inputDelegate.onAudioRecord = { file, dur -> viewModel.uploadAudio(this, file, dur, username) { msg -> lifecycleScope.launch { Toast.makeText(this@NewChatActivity, msg, Toast.LENGTH_SHORT).show() } } }
         inputDelegate.onReplyChanged = { m ->
             if (m != null) {
                 replyPreview.isVisible = true; replyUser.text = m.user
@@ -258,16 +258,14 @@ class NewChatActivity : AppCompatActivity() {
             toolbarDelegate.refreshSubtitle()
             if (success) {
                 inputDelegate.setSecretState(true)
-                runOnUiThread {
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        try {
-                            val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@NewChatActivity)
-                            db.messageDao().clearRoom(roomId)
-                        } catch (_: Exception) {}
-                        withContext(Dispatchers.Main) {
-                            grpcClient.clearMessages()
-                            viewModel.loadHistory()
-                        }
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@NewChatActivity)
+                        db.messageDao().clearRoom(roomId)
+                    } catch (_: Exception) {}
+                    withContext(Dispatchers.Main) {
+                        grpcClient.clearMessages()
+                        viewModel.loadHistory()
                     }
                 }
             }
@@ -492,7 +490,7 @@ class NewChatActivity : AppCompatActivity() {
     private fun loadDraft() {
         if (roomId.isEmpty() || username.isEmpty() || grpcClient.getUserId() == null) return
         viewModel.getDraft { dt, rmi, ru, rt, hd ->
-            runOnUiThread {
+            lifecycleScope.launch {
                 if (hd && (dt.isNotEmpty() || rmi.isNotEmpty())) {
                     if (dt.isNotEmpty()) inputDelegate.setDraftText(dt)
                     if (rmi.isNotEmpty()) inputDelegate.showReplyPreview(Message(id = rmi, user = ru, text = rt, timestamp = System.currentTimeMillis(), roomId = roomId))
@@ -533,8 +531,8 @@ class NewChatActivity : AppCompatActivity() {
         }
         viewModel.fetchChatMetadata(username, roomId, isDirect, participantsJson, chatName) { meta ->
             try {
-                runOnUiThread {
-                    if (isFinishing || isDestroyed) return@runOnUiThread
+                lifecycleScope.launch {
+                    if (isFinishing || isDestroyed) return@launch
                     chatName = meta.chatName; isDirect = meta.isDirect; chatType = meta.chatType
                     participantsJson = meta.participantsJson; creator = meta.creator
                     chatAvatarUrl = meta.avatarUrl; chatFullAvatarUrl = meta.fullAvatarUrl
@@ -619,7 +617,7 @@ class NewChatActivity : AppCompatActivity() {
         val decrypted = e2eeDelegate.decryptMessage(msg)
         if (decrypted != null) {
             val decryptedMsg = msg.copy(text = decrypted, isE2EE = false)
-            runOnUiThread {
+            lifecycleScope.launch {
                 grpcClient.addLocalMessage(decryptedMsg)
             }
         }

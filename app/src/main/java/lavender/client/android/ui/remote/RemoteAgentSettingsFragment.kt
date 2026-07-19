@@ -15,6 +15,7 @@ import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.tabs.TabLayout
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -202,7 +203,7 @@ class RemoteAgentSettingsFragment : Fragment(), RemoteAgentManager.RemoteAgentSt
             sshPassword = sshPassword, serverHost = serverHost,
             serverPort = serverPort, localPort = localPort
         ) { success, error, _ ->
-            activity?.runOnUiThread {
+            activity?.lifecycleScope?.launch {
                 btnCreateTunnel.isEnabled = true
                 btnCreateTunnel.text = getString(R.string.connect)
                 if (success) {
@@ -540,24 +541,18 @@ class RemoteAgentSettingsFragment : Fragment(), RemoteAgentManager.RemoteAgentSt
             try {
                 if (selectedAgentId.isNotEmpty()) {
                     val status = GrpcClient.getRemoteAgentStatus(selectedAgentId)
-                    activity?.runOnUiThread {
-                        val txtColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().textPrimaryColor, Color.WHITE)
-                        agentStatusText.setTextColor(txtColor)
-                        agentStatusText.text = if (status.status == "connected") {
-                            getString(R.string.status_connected)
-                        } else {
-                            getString(R.string.status_disconnected, status.status)
-                        }
+                    val txtColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().textPrimaryColor, Color.WHITE)
+                    agentStatusText.setTextColor(txtColor)
+                    agentStatusText.text = if (status.status == "connected") {
+                        getString(R.string.status_connected)
+                    } else {
+                        getString(R.string.status_disconnected, status.status)
                     }
                 } else {
-                    activity?.runOnUiThread {
-                        agentStatusText.text = getString(R.string.status_not_running)
-                    }
+                    agentStatusText.text = getString(R.string.status_not_running)
                 }
             } catch (_: Exception) {
-                activity?.runOnUiThread {
-                    agentStatusText.text = getString(R.string.status_check_error)
-                }
+                agentStatusText.text = getString(R.string.status_check_error)
             }
         }
     }
@@ -580,6 +575,6 @@ class RemoteAgentSettingsFragment : Fragment(), RemoteAgentManager.RemoteAgentSt
     }
 
     override fun onStateChanged(state: RemoteAgentManager.AgentConnectionState) {
-        activity?.runOnUiThread { updateTunnelStatusUI() }
+        activity?.lifecycleScope?.launch { updateTunnelStatusUI() }
     }
 }

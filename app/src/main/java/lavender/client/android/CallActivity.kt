@@ -145,10 +145,6 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         connectionTimeoutRunnable = null
     }
 
-    private fun safeRunOnUiThread(block: () -> Unit) {
-        if (!isFinishing && !isDestroyed) runOnUiThread(block)
-    }
-
     private fun setupController() {
         callController?.cancel()
         callController = CallController(callId, receiverId, isIncoming, isConference, roomId, webRtcClient, object : CallController.Listener {
@@ -156,14 +152,14 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
                 soundManager.stop()
                 cancelConnectionTimeout()
                 viewModel.startTimer()
-                safeRunOnUiThread {
+                lifecycleScope.launch {
                     binding.tvCallStatus.text = getString(R.string.call_status_connecting)
                     binding.tvCallDuration.visibility = View.VISIBLE
                 }
             }
 
             override fun onCallTerminated(reason: String) {
-                safeRunOnUiThread {
+                lifecycleScope.launch {
                     cancelConnectionTimeout()
                     Toast.makeText(this@CallActivity, reason, Toast.LENGTH_SHORT).show()
                     finish()
@@ -172,14 +168,14 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
             override fun onConferencePresenceUpdated(participants: List<String>, creatorId: String) {
                 val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername()
-                safeRunOnUiThread {
+                lifecycleScope.launch {
                     binding.tvCallStatus.text = getString(R.string.in_conference_format, participants.joinToString(", "))
                     binding.btnEndForAll.visibility = if (myId == creatorId) View.VISIBLE else View.GONE
                 }
             }
 
             override fun onStatusUpdate(status: String) {
-                safeRunOnUiThread { binding.tvCallStatus.text = status }
+                lifecycleScope.launch { binding.tvCallStatus.text = status }
             }
 
             override fun onIdAssigned(newCallId: String) {
@@ -313,7 +309,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
         // Get TURN credentials from server
         fetchTurnCredentials { iceServers ->
-            safeRunOnUiThread {
+            lifecycleScope.launch {
                 webRtcClient?.initPeerConnection(iceServers)
                 setupWebRtcListeners()
                 onReady?.invoke()
@@ -328,14 +324,14 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             when (state) {
                 PeerConnection.IceConnectionState.CONNECTED, PeerConnection.IceConnectionState.COMPLETED -> {
                     Log.d(TAG, "WebRTC connected")
-                    safeRunOnUiThread {
+                    lifecycleScope.launch {
                         cancelConnectionTimeout()
                         binding.tvCallStatus.text = getString(R.string.call_status_connected)
                     }
                 }
                 PeerConnection.IceConnectionState.FAILED -> {
                     Log.e(TAG, "WebRTC ICE FAILED")
-                    safeRunOnUiThread {
+                    lifecycleScope.launch {
                         Toast.makeText(this@CallActivity, getString(R.string.call_connection_error), Toast.LENGTH_SHORT).show()
                         CallManager.hangup()
                         finish()
@@ -362,7 +358,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     }
 
     override fun onLocalStream(stream: MediaStream) {
-        safeRunOnUiThread {
+        lifecycleScope.launch {
             stream.videoTracks.getOrNull(0)?.addSink(binding.localView)
             if (isConference && !isRemoteViewInitialized) {
                 if (!binding.remoteView.isVisible) {
@@ -376,7 +372,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     }
 
     override fun onRemoteStream(stream: MediaStream) {
-        safeRunOnUiThread {
+        lifecycleScope.launch {
             if (!isRemoteViewInitialized) {
                 binding.remoteView.init(eglBase.eglBaseContext, null)
                 isRemoteViewInitialized = true
@@ -388,7 +384,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
     override fun onRemoteTrack(track: MediaStreamTrack) {
         if (track is VideoTrack) {
-            safeRunOnUiThread {
+            lifecycleScope.launch {
                 if (!isRemoteViewInitialized) {
                     binding.remoteView.init(eglBase.eglBaseContext, null)
                     binding.remoteView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FILL)
@@ -411,12 +407,12 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
     override fun onOfferCreated(description: SessionDescription) {
         CallManager.sendWebRtcSignal(receiverId, CallMessageProto.Type.OFFER, description.description)
-        safeRunOnUiThread { binding.tvCallStatus.text = getString(R.string.call_status_connecting) }
+        lifecycleScope.launch { binding.tvCallStatus.text = getString(R.string.call_status_connecting) }
     }
 
     override fun onAnswerCreated(description: SessionDescription) {
         CallManager.sendWebRtcSignal(receiverId, CallMessageProto.Type.ANSWER, description.description)
-        safeRunOnUiThread { 
+        lifecycleScope.launch { 
             binding.tvCallStatus.text = getString(R.string.call_status_connected) 
             binding.tvCallDuration.visibility = View.VISIBLE
             viewModel.startTimer()
@@ -424,16 +420,16 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     }
 
     override fun onRemoteDescriptionSet() {
-        if (!isConference) safeRunOnUiThread { binding.tvCallStatus.text = getString(R.string.call_status_connecting) }
+        if (!isConference) lifecycleScope.launch { binding.tvCallStatus.text = getString(R.string.call_status_connecting) }
         if (isIncoming && webRtcClient != null) webRtcClient?.createAnswer()
     }
 
     private fun loadOtherParticipantAvatar() {
         if (receiverId.isEmpty()) return
         GrpcClient.getUserAvatar(receiverId) { avatarUrl ->
-            if (avatarUrl.isNotEmpty()) safeRunOnUiThread {
-                Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(binding.imgAvatar)
-                Glide.with(this).load(avatarUrl).centerCrop().into(binding.imgBgBlur)
+            if (avatarUrl.isNotEmpty()) lifecycleScope.launch {
+                Glide.with(this@CallActivity).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(binding.imgAvatar)
+                Glide.with(this@CallActivity).load(avatarUrl).centerCrop().into(binding.imgBgBlur)
             }
         }
     }
@@ -442,7 +438,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         GrpcClient.getUserProfile(userId) { profile ->
             val name = profile?.username?.takeIf { it.isNotEmpty() }
             if (name != null) {
-                safeRunOnUiThread {
+                lifecycleScope.launch {
                     binding.tvCallerName.text = name
                 }
             }
@@ -450,7 +446,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     }
 
     private fun updateVideoVisibility() {
-        safeRunOnUiThread {
+        lifecycleScope.launch {
             binding.localView.isVisible = isCameraEnabled
             binding.remoteView.isVisible = isCameraEnabled
             binding.imgAvatar.isVisible = !isCameraEnabled

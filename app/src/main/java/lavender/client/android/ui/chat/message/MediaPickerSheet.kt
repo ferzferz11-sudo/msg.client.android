@@ -2,8 +2,11 @@ package lavender.client.android.ui.chat.message
 
 import android.app.Activity
 import android.graphics.Color
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.GridLayout
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -14,12 +17,15 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Sticker
 import lavender.client.android.data.models.StickerPack
+import lavender.client.android.data.sticker.StickerPreferencesManager
 import lavender.client.android.theme.Theme
 import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.ui.sticker.StickerGridAdapter
@@ -33,10 +39,27 @@ class MediaPickerSheet(
     private val onCreateStickerPack: (() -> Unit)? = null
 ) : StandardBottomSheet(activity, R.layout.sheet_media_picker) {
 
-    private val stickerGridAdapter = StickerGridAdapter { sticker ->
-        onStickerSelected(sticker)
-        dialog?.dismiss()
+    init {
+        try { StickerPreferencesManager.init(activity) } catch (_: Exception) {}
     }
+
+    private val stickerGridAdapter = StickerGridAdapter(
+        onStickerClick = { sticker ->
+            onStickerSelected(sticker)
+            try { StickerPreferencesManager.addRecent(sticker) } catch (_: Exception) {}
+            dialog?.dismiss()
+        },
+        onStickerLongClick = { sticker ->
+            try {
+                val isFavorite = StickerPreferencesManager.toggleFavorite(sticker)
+                android.widget.Toast.makeText(
+                    activity,
+                    if (isFavorite) R.string.sticker_added_to_favorites else R.string.sticker_removed_from_favorites,
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            } catch (_: Exception) {}
+        }
+    )
 
     private val stickerPackAdapter = StickerPackAdapter { pack ->
         loadPackStickers(pack)
@@ -45,6 +68,8 @@ class MediaPickerSheet(
     private var allPacks = listOf<StickerPack>()
     private var currentPacks = listOf<StickerPack>()
     private var emojiInitialized = false
+    private var searchJob: Job? = null
+    private var isSearchActive = false
 
     override fun applyTheme(theme: Theme) {
         super.applyTheme(theme)
@@ -127,7 +152,28 @@ class MediaPickerSheet(
         }
 
         tabLayout.addTab(tabLayout.newTab().setText("😀"))
-        tabLayout.addTab(tabLayout.newTab().setText("🎨"))
+        tabLayout.addTab(tabLayout.newTab().setText("\u2B50"))
+        tabLayout.addTab(tabLayout.newTab().setText("\uD83C\uDFA8"))
+
+        val etSearch = findViewById<EditText>(R.id.etStickerSearch)
+        etSearch?.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val query = s?.toString()?.trim() ?: ""
+                searchJob?.cancel()
+                if (query.length >= 2) {
+                    searchJob = (activity as? LifecycleOwner)?.lifecycleScope?.launch {
+                        delay(300)
+                        performSearch(query)
+                    }
+                } else if (query.isEmpty()) {
+                    isSearchActive = false
+                    rvPacks?.isVisible = true
+                    stickerGridAdapter.submitList(currentPacks.flatMap { it.stickers })
+                }
+            }
+        })
 
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
@@ -139,7 +185,12 @@ class MediaPickerSheet(
                     1 -> {
                         emojiContainer?.isVisible = false
                         stickerContainer?.isVisible = true
-                        loadStickerPacks()
+                        showFavoritesTab()
+                    }
+                    2 -> {
+                        emojiContainer?.isVisible = false
+                        stickerContainer?.isVisible = true
+                        if (!isSearchActive) loadStickerPacks()
                     }
                 }
             }
@@ -230,5 +281,71 @@ class MediaPickerSheet(
         rvPacks?.isVisible = false
         rvStickers?.isVisible = false
         emptyState?.isVisible = true
+    }
+
+    private fun showFavoritesTab() {
+        val rvPacks = findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvStickerPacks)
+        val rvStickers = findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvStickers) ?: return
+        val emptyState = findViewById<LinearLayout>(R.id.stickerEmptyState) ?: return
+
+        rvPacks?.isVisible = false
+
+        val favorites = try { StickerPreferencesManager.getFavoriteStickers() } catch (_: Exception) { emptyList() }
+        val recent = try { StickerPreferencesManager.getRecentStickers() } catch (_: Exception) { emptyList() }
+
+        val combined = (favorites + recent).distinctBy { it.id }
+
+        if (combined.isNotEmpty()) {
+            rvStickers.isVisible = true
+            emptyState.isVisible = false
+            stickerGridAdapter.submitList(combined)
+        } else {
+            rvStickers.isVisible = false
+            emptyState.isVisible = true
+        }
+    }
+
+    private suspend fun performSearch(query: String) {
+        val rvPacks = findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvStickerPacks)
+        val rvStickers = findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvStickers) ?: return
+        val emptyState = findViewById<LinearLayout>(R.id.stickerEmptyState) ?: return
+
+        try {
+            val response = withContext(Dispatchers.IO) {
+                GrpcClient.searchStickerPacks(query, limit = 20)
+            }
+
+            val results = response?.packs?.map { proto ->
+                StickerPack(
+                    id = proto.id,
+                    title = proto.title,
+                    name = proto.name,
+                    creatorUsername = proto.creatorUsername,
+                    stickers = proto.stickers.map { s ->
+                        Sticker(s.id, s.packId, s.lottieUrl, s.thumbnailUrl, s.emoji, s.width, s.height)
+                    },
+                    coverStickerId = proto.coverStickerId,
+                    status = proto.status,
+                    rejectionReason = proto.rejectionReason,
+                    isFeatured = proto.isFeatured
+                )
+            }?.filter { it.stickers.isNotEmpty() } ?: emptyList()
+
+            isSearchActive = true
+            rvPacks?.isVisible = false
+
+            val allStickers = results.flatMap { it.stickers }
+            if (allStickers.isNotEmpty()) {
+                rvStickers.isVisible = true
+                emptyState.isVisible = false
+                stickerGridAdapter.submitList(allStickers)
+            } else {
+                rvStickers.isVisible = false
+                emptyState.isVisible = true
+            }
+        } catch (_: Exception) {
+            rvStickers.isVisible = false
+            emptyState.isVisible = true
+        }
     }
 }

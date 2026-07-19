@@ -97,10 +97,6 @@ class EditProfileActivity : AppCompatActivity() {
         setupUI()
     }
 
-    private fun safeRunOnUiThread(block: () -> Unit) {
-        if (!isFinishing && !isDestroyed) runOnUiThread(block)
-    }
-
     private fun setupUI() {
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
 
@@ -141,7 +137,7 @@ class EditProfileActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val profile = lavender.client.android.data.grpc.ProfileClient.getProfile(this@EditProfileActivity)
             Log.d("EditProfile", "Profile received: bio='${profile?.bio}', status='${profile?.status}', avatarUrl='${profile?.avatarUrl}'")
-            safeRunOnUiThread {
+            lifecycleScope.launch {
                 if (profile != null) {
                     initialBio = profile.bio
                     editTextBio.setText(profile.bio)
@@ -181,7 +177,7 @@ class EditProfileActivity : AppCompatActivity() {
                             }
                             val logoUrl = companyResp?.company?.avatarUrl
                             if (!logoUrl.isNullOrEmpty()) {
-                                    safeRunOnUiThread {
+                                    lifecycleScope.launch {
                                         ivCompanyLogo.isVisible = true
                                     Glide.with(this@EditProfileActivity)
                                         .load(logoUrl)
@@ -194,7 +190,7 @@ class EditProfileActivity : AppCompatActivity() {
                         lifecycleScope.launch {
                             val companiesResponse = lavender.client.android.data.grpc.GrpcCompanyClient.getUserCompanies()
                             if (companiesResponse != null && companiesResponse.companies.size > 1) {
-                                safeRunOnUiThread {
+                                lifecycleScope.launch {
                                     tvCompanyPosition.text = formatCompanyPosition(profile.positionTitle, profile.positionLevel) +
                                         " (${companiesResponse.companies.size} ${getString(R.string.company_badge).lowercase()})"
                                     // Add long-press to switch company
@@ -224,10 +220,10 @@ class EditProfileActivity : AppCompatActivity() {
 
         // Load current avatar and full avatar URL
         grpcClient.getUserAvatar(username, grpcClient.getUserId() ?: "") { avatarUrl ->
-            safeRunOnUiThread {
+            lifecycleScope.launch {
                 val currentTheme = ThemeStore.currentTheme()
                 if (avatarUrl.isNotEmpty()) {
-                    Glide.with(this)
+                    Glide.with(this@EditProfileActivity)
                         .load(avatarUrl)
                         .placeholder(R.drawable.ic_default_avatar_white)
                         .error(R.drawable.ic_default_avatar_white)
@@ -270,7 +266,7 @@ class EditProfileActivity : AppCompatActivity() {
                     }
                     lifecycleScope.launch {
                         val success = lavender.client.android.data.grpc.ProfileClient.deleteProfile(this@EditProfileActivity, pwd)
-                        safeRunOnUiThread {
+                        lifecycleScope.launch {
                             if (success) {
                                 Toast.makeText(this@EditProfileActivity, getString(R.string.profile_deleted), Toast.LENGTH_SHORT).show()
                                 grpcClient.disconnect()
@@ -314,7 +310,7 @@ class EditProfileActivity : AppCompatActivity() {
                     status = ""
                 )
                 Log.d("EditProfile", "Update bio result: success=$success")
-                safeRunOnUiThread {
+                lifecycleScope.launch {
                     if (success) {
                         Toast.makeText(this@EditProfileActivity, getString(R.string.bio_saved), Toast.LENGTH_SHORT).show()
                         initialBio = newBio
@@ -368,7 +364,7 @@ class EditProfileActivity : AppCompatActivity() {
                         val fullResizedBytes = resizeImageFull(uri)
 
                         if (resizedBytes == null) {
-                            safeRunOnUiThread {
+                            lifecycleScope.launch {
                                 currentAvatarProgressBar?.isVisible = false
                                 Toast.makeText(this@EditProfileActivity, getString(R.string.failed_to_resize_image), Toast.LENGTH_SHORT).show()
                             }
@@ -381,7 +377,7 @@ class EditProfileActivity : AppCompatActivity() {
                     }
 
                     if (thumbBytes.isEmpty()) {
-                        safeRunOnUiThread {
+                        lifecycleScope.launch {
                             currentAvatarProgressBar?.isVisible = false
                             Toast.makeText(this@EditProfileActivity, getString(R.string.failed_to_read_image), Toast.LENGTH_SHORT).show()
                         }
@@ -419,7 +415,7 @@ class EditProfileActivity : AppCompatActivity() {
                                     avatarUrl = url,
                                     fullAvatarUrl = fullUrl
                                 )
-                                safeRunOnUiThread {
+                                lifecycleScope.launch {
                                     currentAvatarProgressBar?.isVisible = false
                                     if (success) {
                                         Toast.makeText(this@EditProfileActivity, getString(R.string.avatar_updated), Toast.LENGTH_SHORT).show()
@@ -439,20 +435,20 @@ class EditProfileActivity : AppCompatActivity() {
                                 }
                             }
                         } else {
-                            safeRunOnUiThread {
+                            lifecycleScope.launch {
                                 currentAvatarProgressBar?.isVisible = false
                                 Toast.makeText(this@EditProfileActivity, getString(R.string.failed_to_parse_response), Toast.LENGTH_SHORT).show()
                             }
                         }
                     } else {
-                        safeRunOnUiThread {
+                        lifecycleScope.launch {
                             currentAvatarProgressBar?.isVisible = false
                             Toast.makeText(this@EditProfileActivity, "Upload failed: ${response.code}", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
             } catch (e: Exception) {
-                safeRunOnUiThread {
+                lifecycleScope.launch {
                     currentAvatarProgressBar?.isVisible = false
                     Toast.makeText(this@EditProfileActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
@@ -548,19 +544,19 @@ class EditProfileActivity : AppCompatActivity() {
             btnSave.isEnabled = false
 
             grpcClient.updateUsername(username, newUsername) { success, message ->
-                safeRunOnUiThread {
+                lifecycleScope.launch {
                     btnSave.isEnabled = true
                     if (success) {
-                        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@EditProfileActivity, message, Toast.LENGTH_SHORT).show()
                         
                         // Update username in secure storage
                         lavender.client.android.data.session.CredentialStore.setCredentials(
-                            context = this,
+                            context = this@EditProfileActivity,
                             username = newUsername,
                             password = SessionManager.session.value.password,
                             userId = SessionManager.session.value.userId,
                             email = SessionManager.session.value.email,
-                            serverAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this)
+                            serverAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this@EditProfileActivity)
                         )
                         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
                         prefs.edit {
@@ -574,7 +570,7 @@ class EditProfileActivity : AppCompatActivity() {
                         setResult(RESULT_OK)
                         finish() 
                     } else {
-                        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@EditProfileActivity, message, Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -601,7 +597,7 @@ class EditProfileActivity : AppCompatActivity() {
             if (oldPass.isNotEmpty() && newPass.isNotEmpty()) {
                 btnSave.isEnabled = false
                 grpcClient.updatePassword(username, oldPass, newPass) { success, message ->
-                    safeRunOnUiThread {
+                    lifecycleScope.launch {
                         btnSave.isEnabled = true
                         if (success) {
                             Toast.makeText(this@EditProfileActivity, message, Toast.LENGTH_SHORT).show()
@@ -647,7 +643,7 @@ class EditProfileActivity : AppCompatActivity() {
 
             lifecycleScope.launch {
                 val response = lavender.client.android.data.grpc.GrpcCompanyClient.createCompany(companyName)
-                safeRunOnUiThread {
+                lifecycleScope.launch {
                     btnSave.isEnabled = true
                     if (response?.success == true) {
                         Toast.makeText(this@EditProfileActivity, getString(R.string.company_created), Toast.LENGTH_SHORT).show()
@@ -698,7 +694,7 @@ class EditProfileActivity : AppCompatActivity() {
     private fun reloadProfile() {
         lifecycleScope.launch {
             val profile = lavender.client.android.data.grpc.ProfileClient.getProfile(this@EditProfileActivity)
-            safeRunOnUiThread {
+            lifecycleScope.launch {
                 if (profile != null) {
                     currentCompanyId = profile.companyId
                     val companyCard = findViewById<android.view.View>(R.id.companyCard)
@@ -723,7 +719,7 @@ class EditProfileActivity : AppCompatActivity() {
                                 lavender.client.android.data.grpc.GrpcCompanyClient.getCompany(profile.companyId)
                             }
                             val logoUrl = companyResp?.company?.avatarUrl
-                            safeRunOnUiThread {
+                            lifecycleScope.launch {
                                 if (!logoUrl.isNullOrEmpty()) {
                                     ivCompanyLogo.isVisible = true
                                     Glide.with(this@EditProfileActivity)
@@ -767,7 +763,7 @@ class EditProfileActivity : AppCompatActivity() {
                 val selected = companies[which]
                 lifecycleScope.launch {
                     val response = lavender.client.android.data.grpc.GrpcCompanyClient.setPrimaryCompany(selected.company?.id ?: "")
-                    safeRunOnUiThread {
+                    lifecycleScope.launch {
                         if (response?.success == true) {
                             Toast.makeText(this@EditProfileActivity, getString(R.string.company_updated), Toast.LENGTH_SHORT).show()
                             setResult(RESULT_OK)

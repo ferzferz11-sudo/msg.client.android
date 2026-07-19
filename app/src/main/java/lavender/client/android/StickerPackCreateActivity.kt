@@ -41,7 +41,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
     private lateinit var btnSave: MaterialButton
     private lateinit var btnSubmit: MaterialButton
 
-    private val stickerGridAdapter = StickerGridAdapter { }
+    private val stickerGridAdapter = StickerGridAdapter(onStickerClick = { })
     private val currentStickers = mutableListOf<Sticker>()
     private var packId: String? = null
     private var isDraft = true
@@ -50,7 +50,26 @@ class StickerPackCreateActivity : AppCompatActivity() {
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.data?.let { uri -> uploadSticker(uri) }
+            result.data?.data?.let { uri ->
+                val mimeType = contentResolver.getType(uri) ?: ""
+                if (mimeType.startsWith("image/")) {
+                    val editorIntent = StickerEditorActivity.createIntent(this, uri)
+                    stickerEditorLauncher.launch(editorIntent)
+                } else {
+                    uploadSticker(uri)
+                }
+            }
+        }
+    }
+
+    private val stickerEditorLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            @Suppress("DEPRECATION")
+            result.data?.getParcelableExtra<android.net.Uri>(StickerEditorActivity.EXTRA_RESULT_URI)?.let { uri ->
+                uploadSticker(uri)
+            }
         }
     }
 

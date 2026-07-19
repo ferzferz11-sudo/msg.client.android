@@ -250,7 +250,7 @@ class ServersActivity : AppCompatActivity() {
             context = this,
             onLogin = { u: String, p: String ->
                 SessionManager.login(this, u, p, serverAddress, register = false, email = "") { result: String? ->
-                    runOnUiThread {
+                    lifecycleScope.launch {
                         when (result) {
                             "SUCCESS" -> {
                                 CredentialStore.setServerAddress(this@ServersActivity, serverAddress)
@@ -310,7 +310,7 @@ class ServersActivity : AppCompatActivity() {
             context = this,
             onRegister = { u: String, p: String, email: String ->
                 SessionManager.login(this, u, p, serverAddress, register = true, email = email) { result: String? ->
-                    runOnUiThread {
+                    lifecycleScope.launch {
                         when (result) {
                             "SUCCESS", "REGISTRATION_SUCCESS" -> {
                                 CredentialStore.setServerAddress(this@ServersActivity, serverAddress)

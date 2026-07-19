@@ -1006,6 +1006,22 @@
     <string name="no_company">No company</string>
     <string name="company_position">Position: %1$s (Level %2$d)</string>
     <string name="company_badge">Company</string>
+
+    <!-- Company Invite -->
+    <string name="share_invite_code">Share Invite Code</string>
+    <string name="join_by_code">Join by Code</string>
+    <string name="invite_code_copied">Invite code copied to clipboard</string>
+    <string name="enter_invite_code">Enter invite code</string>
+    <string name="invite_code_hint">Company ID or invite code</string>
+    <string name="join_company">Join Company</string>
+    <string name="joined_company">Successfully joined company</string>
+    <string name="join_failed">Failed to join company</string>
+
+    <!-- Company Settings -->
+    <string name="company_settings">Company Settings</string>
+    <string name="company_notifications">Notifications</string>
+    <string name="mute_company_chats">Mute company chats</string>
+    <string name="company_settings_saved">Settings saved</string>
     <string name="more_options">More options</string>
     <string name="edit_position">Edit</string>
     <string name="delete_position">Delete Position</string>
@@ -1047,5 +1063,24 @@
         <item quantity="one">%d sticker</item>
         <item quantity="other">%d stickers</item>
     </plurals>
+
+    <!-- Sticker Editor -->
+    <string name="sticker_editor_title">Edit Sticker</string>
+    <string name="sticker_editor_crop">Crop</string>
+    <string name="sticker_editor_text">Text</string>
+    <string name="sticker_editor_filters">Filters</string>
+    <string name="sticker_editor_done">Done</string>
+    <string name="sticker_editor_enter_text">Enter text…</string>
+    <string name="sticker_editor_add">Add</string>
+    <string name="sticker_editor_save_failed">Failed to save sticker</string>
+    <string name="sticker_filter_original">Original</string>
+    <string name="sticker_filter_grayscale">B&amp;W</string>
+    <string name="sticker_filter_sepia">Sepia</string>
+    <string name="sticker_filter_warm">Warm</string>
+    <string name="sticker_filter_cool">Cool</string>
+    <string name="sticker_filter_bright">Bright</string>
+    <string name="sticker_search_hint">Search stickers…</string>
+    <string name="sticker_added_to_favorites">Added to favorites</string>
+    <string name="sticker_removed_from_favorites">Removed from favorites</string>
 
 </resources>

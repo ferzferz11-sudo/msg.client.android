@@ -429,17 +429,17 @@ class ThemePaletteActivity : AppCompatActivity(),
 
         val queryId = GrpcClient.getUserId() ?: username
         GrpcClient.saveTheme(queryId, newTheme) { success, error ->
-            runOnUiThread {
+            lifecycleScope.launch {
                 if (success) {
                     // Switch to the new theme on the server
                     GrpcClient.setCurrentTheme(queryId, finalId) { setSuccess ->
-                        runOnUiThread {
+                        lifecycleScope.launch {
                             uploadProgress.isVisible = false
                             if (setSuccess) {
                                 val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
                                 prefs.edit { putString("current_theme_id", finalId) }
                                 
-                                Toast.makeText(this, R.string.theme_saved, Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this@ThemePaletteActivity, R.string.theme_saved, Toast.LENGTH_SHORT).show()
                                 hasChanges = false
                                 themeId = finalId
                                 originalChatListBackgroundUri = listBgUrl.takeIf { it.isNotEmpty() }?.toUri()
@@ -452,14 +452,14 @@ class ThemePaletteActivity : AppCompatActivity(),
                                 setResult(RESULT_OK)
                             } else {
                                 saveButton.isVisible = true
-                                Toast.makeText(this, getString(R.string.theme_saved_failed_to_set), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this@ThemePaletteActivity, getString(R.string.theme_saved_failed_to_set), Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
                 } else {
                     uploadProgress.isVisible = false
                     saveButton.isVisible = true
-                    Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ThemePaletteActivity, error, Toast.LENGTH_SHORT).show()
                 }
             }
         }

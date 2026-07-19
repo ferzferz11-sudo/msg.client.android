@@ -2,6 +2,8 @@ package lavender.client.android.ui.chatlist
 
 import android.content.Intent
 import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.SplashLoadingActivity
 import lavender.client.android.data.session.CredentialStore
@@ -78,7 +80,7 @@ internal fun showLoginBottomSheet(activity: ChatListActivity, serverAddress: Str
             } catch (_: Exception) {}
 
             SessionManager.login(activity, u, p, serverAddress, register = false, email = "") { result ->
-                activity.runOnUiThread {
+                activity.lifecycleScope.launch {
                     SplashLoadingActivity.finishIfShowing()
                     when (result) {
                         "SUCCESS" -> {
@@ -159,7 +161,7 @@ internal fun showRegisterBottomSheet(activity: ChatListActivity, serverAddress: 
             } catch (_: Exception) {}
 
             SessionManager.login(activity, u, p, serverAddress, register = true, email = email) { result ->
-                activity.runOnUiThread {
+                activity.lifecycleScope.launch {
                     SplashLoadingActivity.finishIfShowing()
                     when (result) {
                         "SUCCESS", "REGISTRATION_SUCCESS" -> {

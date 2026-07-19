@@ -350,7 +350,7 @@ class RemoteAgentActivity : AppCompatActivity(),
     }
 
     override fun onStateChanged(state: RemoteAgentManager.AgentConnectionState) {
-        runOnUiThread {
+        lifecycleScope.launch {
             updateStatus(state.isConnected)
             updateStartStopButtons(state.isConnected)
         }

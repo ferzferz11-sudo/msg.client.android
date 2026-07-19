@@ -14,6 +14,7 @@ import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.content.edit
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -52,7 +53,7 @@ class UpdateCoordinator(
 
     // Listener
     val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
-        activity.runOnUiThread { updateIndicatorVisibility() }
+        activity.lifecycleScope.launch { updateIndicatorVisibility() }
     }
 
     // ======= Silent check (called once on startup) =======
@@ -61,7 +62,7 @@ class UpdateCoordinator(
         // Only check announcements, don't auto-download
         checkAnnouncements()
         updateManager.checkForUpdates { isAvailable, _ ->
-            activity.runOnUiThread {
+            activity.lifecycleScope.launch {
                 updateIndicatorVisibility()
             }
         }
@@ -72,7 +73,7 @@ class UpdateCoordinator(
     fun checkManualUpdate() {
         val currentVersion = BuildConfig.VERSION_NAME
         updateManager.checkForUpdates { isAvailable, latestVersion ->
-            activity.runOnUiThread {
+            activity.lifecycleScope.launch {
                 showUpdateDialog(currentVersion, latestVersion)
             }
         }

@@ -1005,6 +1005,22 @@
     <string name="no_company">Нет компании</string>
     <string name="company_position">Должность: %1$s (Уровень %2$d)</string>
     <string name="company_badge">Компания</string>
+
+    <!-- Company Invite -->
+    <string name="share_invite_code">Поделиться кодом приглашения</string>
+    <string name="join_by_code">Вступить по коду</string>
+    <string name="invite_code_copied">Код приглашения скопирован</string>
+    <string name="enter_invite_code">Введите код приглашения</string>
+    <string name="invite_code_hint">ID компании или код приглашения</string>
+    <string name="join_company">Вступить в компанию</string>
+    <string name="joined_company">Успешно вступили в компанию</string>
+    <string name="join_failed">Не удалось вступить в компанию</string>
+
+    <!-- Company Settings -->
+    <string name="company_settings">Настройки компании</string>
+    <string name="company_notifications">Уведомления</string>
+    <string name="mute_company_chats">Отключить уведомления company чатов</string>
+    <string name="company_settings_saved">Настройки сохранены</string>
     <string name="more_options">Ещё</string>
     <string name="edit_position">Редактировать</string>
     <string name="delete_position">Удалить должность</string>
@@ -1048,5 +1064,24 @@
         <item quantity="many">%d стикеров</item>
         <item quantity="other">%d стикеров</item>
     </plurals>
+
+    <!-- Sticker Editor -->
+    <string name="sticker_editor_title">Редактировать стикер</string>
+    <string name="sticker_editor_crop">Обрезать</string>
+    <string name="sticker_editor_text">Текст</string>
+    <string name="sticker_editor_filters">Фильтры</string>
+    <string name="sticker_editor_done">Готово</string>
+    <string name="sticker_editor_enter_text">Введите текст…</string>
+    <string name="sticker_editor_add">Добавить</string>
+    <string name="sticker_editor_save_failed">Не удалось сохранить стикер</string>
+    <string name="sticker_filter_original">Оригинал</string>
+    <string name="sticker_filter_grayscale">Ч/Б</string>
+    <string name="sticker_filter_sepia">Сепия</string>
+    <string name="sticker_filter_warm">Тёплый</string>
+    <string name="sticker_filter_cool">Холодный</string>
+    <string name="sticker_filter_bright">Яркий</string>
+    <string name="sticker_search_hint">Поиск стикеров…</string>
+    <string name="sticker_added_to_favorites">Добавлено в избранное</string>
+    <string name="sticker_removed_from_favorites">Удалено из избранного</string>
 
 </resources>

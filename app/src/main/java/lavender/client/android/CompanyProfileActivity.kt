@@ -1,5 +1,8 @@
 package lavender.client.android
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -7,6 +10,7 @@ import android.provider.MediaStore
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -20,6 +24,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.tabs.TabLayout
 import androidx.viewpager2.widget.ViewPager2
@@ -214,6 +219,10 @@ class CompanyProfileActivity : AppCompatActivity() {
         menuInflater.inflate(R.menu.menu_company_profile, menu)
         val deleteItem = menu.findItem(R.id.action_delete)
         deleteItem?.isVisible = isOwner
+        val inviteItem = menu.findItem(R.id.action_invite)
+        inviteItem?.isVisible = isOwner
+        val settingsItem = menu.findItem(R.id.action_settings)
+        settingsItem?.isVisible = isOwner
         return true
     }
 
@@ -221,6 +230,14 @@ class CompanyProfileActivity : AppCompatActivity() {
         return when (item.itemId) {
             R.id.action_delete -> {
                 showDeleteCompanyDialog()
+                true
+            }
+            R.id.action_invite -> {
+                shareInviteCode()
+                true
+            }
+            R.id.action_settings -> {
+                showCompanySettings()
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -285,15 +302,13 @@ class CompanyProfileActivity : AppCompatActivity() {
                 val response = withContext(Dispatchers.IO) {
                     GrpcCompanyClient.updateCompany(companyId, name = newName)
                 }
-                runOnUiThread {
-                    btnSave.isEnabled = true
-                    if (response?.success == true) {
-                        tvCompanyName.text = newName
-                        Toast.makeText(this@CompanyProfileActivity, getString(R.string.company_updated), Toast.LENGTH_SHORT).show()
-                        sheet.dismiss()
-                    } else {
-                        Toast.makeText(this@CompanyProfileActivity, getString(R.string.error_colon, "Failed"), Toast.LENGTH_LONG).show()
-                    }
+                btnSave.isEnabled = true
+                if (response?.success == true) {
+                    tvCompanyName.text = newName
+                    Toast.makeText(this@CompanyProfileActivity, getString(R.string.company_updated), Toast.LENGTH_SHORT).show()
+                    sheet.dismiss()
+                } else {
+                    Toast.makeText(this@CompanyProfileActivity, getString(R.string.error_colon, "Failed"), Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -330,21 +345,17 @@ class CompanyProfileActivity : AppCompatActivity() {
                             val updateResponse = GrpcCompanyClient.updateCompany(companyId, avatarUrl = logoUrl)
                             if (updateResponse?.success == true) {
                                 currentCompanyAvatarUrl = logoUrl
-                                runOnUiThread {
-                                    Glide.with(this@CompanyProfileActivity)
-                                        .load(logoUrl)
-                                        .placeholder(R.drawable.ic_default_avatar)
-                                        .into(ivCompanyLogo)
-                                    Toast.makeText(this@CompanyProfileActivity, getString(R.string.company_updated), Toast.LENGTH_SHORT).show()
-                                }
+                                Glide.with(this@CompanyProfileActivity)
+                                    .load(logoUrl)
+                                    .placeholder(R.drawable.ic_default_avatar)
+                                    .into(ivCompanyLogo)
+                                Toast.makeText(this@CompanyProfileActivity, getString(R.string.company_updated), Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
                 }
             } catch (e: Exception) {
-                runOnUiThread {
-                    Toast.makeText(this@CompanyProfileActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+                Toast.makeText(this@CompanyProfileActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -447,5 +458,33 @@ class CompanyProfileActivity : AppCompatActivity() {
             }
             .setNegativeButton(R.string.cancel_dialog, null)
             .show()
+    }
+
+    private fun shareInviteCode() {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("invite_code", companyId)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(this, getString(R.string.invite_code_copied), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun showCompanySettings() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_company_settings, null)
+        val builder = AlertDialog.Builder(this)
+            .setTitle(R.string.company_settings)
+            .setView(dialogView)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val muteSwitch = dialogView.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchMuteChats)
+                val prefs = getSharedPreferences("company_prefs", MODE_PRIVATE)
+                prefs.edit().putBoolean("mute_company_chats_$companyId", muteSwitch.isChecked).apply()
+                Toast.makeText(this, getString(R.string.company_settings_saved), Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(R.string.cancel_dialog, null)
+
+        val dialog = builder.create()
+        dialog.show()
+
+        val prefs = getSharedPreferences("company_prefs", MODE_PRIVATE)
+        val muteSwitch = dialogView.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchMuteChats)
+        muteSwitch.isChecked = prefs.getBoolean("mute_company_chats_$companyId", false)
     }
 }

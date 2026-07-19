@@ -1,5 +1,60 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.3.6] - 2026-07-19
+
+### Добавлено
+
+**Sticker Editor Activity:**
+- Кастомный `StickerEditorView` с crop (квадратный), текстовым оверлеем и 5 фильтрами
+- Фильтры: Original, B&W, Sepia, Warm, Cool, Bright
+- Цветовая палитра (6 цветов) для текста
+- Long-press для перетаскивания текста, pinch-to-scale
+- Интеграция с `StickerPackCreateActivity` — изображения открываются в редакторе перед загрузкой
+- Полная темизация: `ThemeApplier.apply()` + `applyThemeToViews()`
+
+**Sticker search in picker:**
+- Поисковая строка с debounce 300ms в `MediaPickerSheet`
+- Серверный поиск через `searchStickerPacks()` gRPC
+- Результаты отображаются в сетке стикеров
+
+**Sticker recent/favorites:**
+- `StickerPreferencesManager` — хранит последние 20 использованных и избранных стикеров
+- 3 таба в пикере: 😀 (emoji), ⭐ (favorites/recent), 🎨 (stickers)
+- Long-press на стикере — добавить/убрать из избранного
+
+**Company invite code:**
+- Кнопка "Поделиться кодом приглашения" — копирует company ID в буфер обмена
+- `JoinCompanyActivity` — экран для вступления в компанию по коду
+
+**Company settings:**
+- Экран настроек компании с переключателем уведомлений
+- Локальное хранение настроек mute для company чатов
+
+**runOnUiThread migration:**
+- ~150 вызовов `runOnUiThread`/`safeRunOnUiThread` мигрированы на `lifecycleScope.launch` в 27 файлах
+- Удалены определения `safeRunOnUiThread` из CallActivity, ConferenceLobbyActivity, EditProfileActivity
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `StickerEditorActivity.kt` | NEW — редактор стикеров |
+| `StickerEditorView.kt` | NEW — кастомный view для crop/text/filters |
+| `activity_sticker_editor.xml` | NEW — layout редактора |
+| `StickerPreferencesManager.kt` | NEW — recent/favorites хранение |
+| `JoinCompanyActivity.kt` | NEW — вступление в компанию по коду |
+| `activity_join_company.xml` | NEW — layout экрана вступления |
+| `dialog_company_settings.xml` | NEW — layout настроек компании |
+| `MediaPickerSheet.kt` | +search bar, +favorites tab, +recent tracking |
+| `StickerGridAdapter.kt` | +onStickerLongClick callback |
+| `StickerPackCreateActivity.kt` | Интеграция с редактором |
+| `CompanyProfileActivity.kt` | +invite code sharing, +company settings |
+| `menu_company_profile.xml` | +invite, +settings menu items |
+| 27 файлов | runOnUiThread → lifecycleScope.launch |
+| `strings.xml` (EN/RU) | +27 строк (editor, filters, favorites, company) |
+
+---
+
 ## [1.3.3.5] - 2026-07-19
 
 ### Исправлено

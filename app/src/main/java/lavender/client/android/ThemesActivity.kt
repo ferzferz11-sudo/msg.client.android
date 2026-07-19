@@ -8,6 +8,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.core.view.updatePadding
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import lavender.client.android.data.grpc.GrpcClient
@@ -18,6 +19,7 @@ import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.data.ThemeMappers
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.ThemeAdapter
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 class ThemesActivity : AppCompatActivity() {
@@ -184,7 +186,7 @@ class ThemesActivity : AppCompatActivity() {
                 currentThemeId = localThemeId
             }
 
-            runOnUiThread {
+            lifecycleScope.launch {
                 updateUI()
             }
         }
@@ -223,7 +225,7 @@ class ThemesActivity : AppCompatActivity() {
         }
 
         grpcClient.setCurrentTheme(queryId, themeId) { success ->
-            runOnUiThread {
+            lifecycleScope.launch {
                 if (success) {
                     val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
                     prefs.edit {
@@ -231,11 +233,11 @@ class ThemesActivity : AppCompatActivity() {
                         commit()
                     }
 
-                    ThemeUi.bind(this, username)
+                    ThemeUi.bind(this@ThemesActivity, username)
                     adapter.setCurrentThemeId(themeId)
                     adapter.clearSelection()
                     updateToolbarAvatar()
-                    Toast.makeText(this, getString(R.string.theme_applied), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ThemesActivity, getString(R.string.theme_applied), Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this@ThemesActivity, getString(R.string.failed_to_apply_theme), Toast.LENGTH_SHORT).show()
                 }
@@ -256,7 +258,7 @@ class ThemesActivity : AppCompatActivity() {
                         if (success) {
                             deletedCount++
                             if (deletedCount == themeIds.size) {
-                                runOnUiThread {
+                                lifecycleScope.launch {
                                     adapter.clearSelection()
                                     loadThemes()
                                 }

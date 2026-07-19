@@ -15,6 +15,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.tabs.TabLayout
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -227,14 +228,14 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
             serverPort = serverPort,
             localPort = localPort
         ) { success, error, type ->
-            runOnUiThread {
+            lifecycleScope.launch {
                 btnCreateTunnel.isEnabled = true
                 btnCreateTunnel.text = getString(R.string.connect)
                 if (success) {
-                    Toast.makeText(this, R.string.gateway_connected, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@RemoteAgentSettingsActivity, R.string.gateway_connected, Toast.LENGTH_SHORT).show()
                     updateTunnelStatusUI()
                 } else {
-                    Toast.makeText(this, error, Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@RemoteAgentSettingsActivity, error, Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -577,24 +578,18 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
             try {
                 if (selectedAgentId.isNotEmpty()) {
                     val status = GrpcClient.getRemoteAgentStatus(selectedAgentId)
-                    runOnUiThread {
-                        val txtColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().textPrimaryColor, Color.WHITE)
-                        agentStatusText.setTextColor(txtColor)
-                        if (status.status == "connected") {
-                            agentStatusText.text = getString(R.string.status_connected)
-                        } else {
-                            agentStatusText.text = getString(R.string.status_disconnected, status.status)
-                        }
+                    val txtColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().textPrimaryColor, Color.WHITE)
+                    agentStatusText.setTextColor(txtColor)
+                    if (status.status == "connected") {
+                        agentStatusText.text = getString(R.string.status_connected)
+                    } else {
+                        agentStatusText.text = getString(R.string.status_disconnected, status.status)
                     }
                 } else {
-                    runOnUiThread {
-                        agentStatusText.text = getString(R.string.status_not_running)
-                    }
+                    agentStatusText.text = getString(R.string.status_not_running)
                 }
             } catch (e: Exception) {
-                runOnUiThread {
-                    agentStatusText.text = getString(R.string.status_check_error)
-                }
+                agentStatusText.text = getString(R.string.status_check_error)
             }
         }
     }
@@ -621,7 +616,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
     }
 
     override fun onStateChanged(state: RemoteAgentManager.AgentConnectionState) {
-        runOnUiThread {
+        lifecycleScope.launch {
             updateTunnelStatusUI()
         }
     }

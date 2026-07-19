@@ -57,6 +57,24 @@
             android:orientation="vertical"
             android:visibility="gone">
 
+            <EditText
+                android:id="@+id/etStickerSearch"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginHorizontal="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="4dp"
+                android:background="@drawable/bg_edit_text_rounded"
+                android:drawableStart="@drawable/ic_search_custom"
+                android:drawablePadding="8dp"
+                android:hint="@string/sticker_search_hint"
+                android:inputType="text"
+                android:maxLines="1"
+                android:paddingHorizontal="12dp"
+                android:textColor="?attr/colorOnSurface"
+                android:textColorHint="?attr/colorOnSurfaceVariant"
+                android:textSize="14sp" />
+
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvStickerPacks"
                 android:layout_width="match_parent"

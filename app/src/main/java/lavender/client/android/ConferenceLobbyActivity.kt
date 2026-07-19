@@ -110,8 +110,8 @@ class ConferenceLobbyActivity : AppCompatActivity() {
             if (myId.isNotEmpty()) {
                 GrpcClient.removeParticipant(roomId, myId) { success, _ ->
                     if (success) {
-                        safeRunOnUiThread {
-                            Toast.makeText(this, R.string.left_conference, Toast.LENGTH_SHORT).show()
+                        lifecycleScope.launch {
+                            Toast.makeText(this@ConferenceLobbyActivity, R.string.left_conference, Toast.LENGTH_SHORT).show()
                             finish()
                         }
                     }
@@ -274,15 +274,15 @@ class ConferenceLobbyActivity : AppCompatActivity() {
                         GrpcClient.getUserAvatar(username) { /* cached */ }
                     }
                     
-                    safeRunOnUiThread { 
+                    lifecycleScope.launch { 
                         sheet.setLoading(false)
                         adapter.setUsers(usersToInvite) 
                     }
                 } catch (_: Exception) {
-                    safeRunOnUiThread { sheet.setLoading(false) }
+                    lifecycleScope.launch { sheet.setLoading(false) }
                 }
             } else {
-                safeRunOnUiThread { sheet.setLoading(false) }
+                lifecycleScope.launch { sheet.setLoading(false) }
             }
         }
 
@@ -300,10 +300,6 @@ class ConferenceLobbyActivity : AppCompatActivity() {
         sheet.show()
     }
 
-    private fun safeRunOnUiThread(block: () -> Unit) {
-        if (!isFinishing && !isDestroyed) runOnUiThread(block)
-    }
-
     private fun observeConferenceStatus() {
         lifecycleScope.launch {
             CallManager.incomingSignals.collectLatest { signal ->
@@ -311,7 +307,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
                     when (signal.type) {
                         CallMessageProto.Type.JOIN_CONFERENCE -> handlePresence(signal)
                         CallMessageProto.Type.END_CONFERENCE -> {
-                            safeRunOnUiThread {
+                            lifecycleScope.launch {
                                 Toast.makeText(this@ConferenceLobbyActivity, R.string.conference_ended, Toast.LENGTH_SHORT).show()
                                 finish()
                             }
@@ -333,7 +329,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
             // Block entry to ended or deleted conferences
             val isEnded = response.optBoolean("ended", false) || response.optBoolean("is_deleted", false)
             if (isEnded) {
-                safeRunOnUiThread {
+                lifecycleScope.launch {
                     Toast.makeText(this@ConferenceLobbyActivity, R.string.conference_ended, Toast.LENGTH_LONG).show()
                     finish()
                 }
@@ -354,7 +350,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
             val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername()
             isCreator = myId == conferenceCreatorId
 
-            safeRunOnUiThread {
+            lifecycleScope.launch {
                 if (topic.isNotEmpty()) {
                     currentTopic = topic
                     binding.tvTopic.text = currentTopic
@@ -439,7 +435,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
         
         webRtcClient = WebRtcClient(this, eglBase.eglBaseContext, object : WebRtcClient.Observer {
             override fun onLocalStream(stream: MediaStream) {
-                safeRunOnUiThread {
+                lifecycleScope.launch {
                     stream.videoTracks.getOrNull(0)?.addSink(binding.localPreview)
                 }
             }
@@ -458,7 +454,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
         val url = session.fullAvatarUrl
         val theme = ThemeStore.currentTheme()
         
-        safeRunOnUiThread {
+        lifecycleScope.launch {
             if (url.isNotEmpty()) {
                 Glide.with(this@ConferenceLobbyActivity)
                     .load(url)

@@ -290,9 +290,7 @@ class SuperAdminActivity : AppCompatActivity() {
             delay(15000)
             if (swipeRefreshLayout.isRefreshing) {
                 Log.w("SuperAdminActivity", "Load data timeout, stopping refresh")
-                runOnUiThread {
-                    swipeRefreshLayout.isRefreshing = false
-                }
+                swipeRefreshLayout.isRefreshing = false
             }
         }
 
@@ -301,14 +299,14 @@ class SuperAdminActivity : AppCompatActivity() {
             currentCursor = response.nextCursor
             hasMore = response.hasMore
             Log.d("SuperAdminActivity", "Loaded ${response.users.size} admin users, hasMore=$hasMore")
-            runOnUiThread {
+            lifecycleScope.launch {
                 swipeRefreshLayout.isRefreshing = false
                 updateAdminUI(adminUsers, allChats)
             }
             grpcClient.getAllChats { chats ->
                 allChats = chats
                 Log.d("SuperAdminActivity", "Loaded ${chats.size} chats")
-                runOnUiThread {
+                lifecycleScope.launch {
                     updateAdminUI(adminUsers, allChats)
                 }
             }
@@ -319,7 +317,7 @@ class SuperAdminActivity : AppCompatActivity() {
     private fun loadUserSessions(user: AdminUserInfoProto) {
         grpcClient.getAdminUserSessions(user.userId) { response ->
             Log.d("SuperAdminActivity", "Loaded ${response.sessions.size} sessions for ${user.username}")
-            runOnUiThread {
+            lifecycleScope.launch {
                 adapter.setSessions(user.username, response.sessions)
             }
         }
@@ -412,7 +410,7 @@ class SuperAdminActivity : AppCompatActivity() {
             currentCursor = response.nextCursor
             hasMore = response.hasMore
             Log.d("SuperAdminActivity", "Loaded ${response.users.size} more admin users, total=${adminUsers.size}")
-            runOnUiThread {
+            lifecycleScope.launch {
                 updateAdminUI(adminUsers, allChats)
             }
         }
@@ -500,7 +498,7 @@ class SuperAdminActivity : AppCompatActivity() {
             var deletedCount = 0
             usernames.forEach { targetUser ->
                 grpcClient.deleteProfile(targetUser) { _, _ ->
-                    runOnUiThread {
+                    lifecycleScope.launch {
                         deletedCount++
                         if (deletedCount == usernames.size) {
                             loadData()
@@ -529,7 +527,7 @@ class SuperAdminActivity : AppCompatActivity() {
             var deletedCount = 0
             chatIds.forEach { targetId ->
                 grpcClient.deleteChat(targetId, username) { _, _ ->
-                    runOnUiThread {
+                    lifecycleScope.launch {
                         deletedCount++
                         if (deletedCount == chatIds.size) {
                             loadData()
@@ -561,9 +559,9 @@ class SuperAdminActivity : AppCompatActivity() {
             }
             
             grpcClient.adminUpdatePassword(targetUser, newPw, username) { success, message ->
-                runOnUiThread {
+                lifecycleScope.launch {
                     if (success) {
-                        Toast.makeText(this, R.string.password_updated, Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@SuperAdminActivity, R.string.password_updated, Toast.LENGTH_SHORT).show()
                         clearSelection()
                         if (currentMode == Mode.USERS) {
                             updateAdminUI(adminUsers, allChats)
@@ -572,7 +570,7 @@ class SuperAdminActivity : AppCompatActivity() {
                         }
                         sheet.dismiss()
                     } else {
-                        Toast.makeText(this, "Error: $message", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@SuperAdminActivity, "Error: $message", Toast.LENGTH_LONG).show()
                     }
                 }
             }
