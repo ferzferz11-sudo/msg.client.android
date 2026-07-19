@@ -76,7 +76,7 @@ class StickerPackListAdapter(
                     coverView.visibility = View.GONE
                     coverImageView?.let { iv ->
                         iv.visibility = View.VISIBLE
-                        Glide.with(itemView.context).load(url).centerCrop().into(iv)
+                        Glide.with(itemView.context).load(url).placeholder(R.drawable.ic_image_placeholder).error(R.drawable.ic_image_placeholder).centerCrop().into(iv)
                     }
                 }
             } else {

@@ -574,8 +574,17 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun setupSwipeActions() {
-        val swipeCallback = object : androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(0, androidx.recyclerview.widget.ItemTouchHelper.LEFT) {
+        val swipeCallback = object : androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(0, androidx.recyclerview.widget.ItemTouchHelper.LEFT or androidx.recyclerview.widget.ItemTouchHelper.RIGHT) {
             override fun onMove(rv: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder) = false
+
+            override fun getSwipeDirs(rv: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
+                val position = viewHolder.bindingAdapterPosition
+                val items = chatAdapter.currentList()
+                if (position == RecyclerView.NO_POSITION || position >= items.size) return 0
+                val item = items[position]
+                if (item !is lavender.client.android.ui.adapter.FlatItem.ChatItem) return 0
+                return super.getSwipeDirs(rv, viewHolder)
+            }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val position = viewHolder.bindingAdapterPosition
@@ -584,6 +593,18 @@ class ChatListActivity : AppCompatActivity() {
                 val item = items[position]
                 if (item !is lavender.client.android.ui.adapter.FlatItem.ChatItem) return
                 val chat = item.chat
+
+                if (direction == androidx.recyclerview.widget.ItemTouchHelper.RIGHT) {
+                    lifecycleScope.launch {
+                        if (chat.isPinned) {
+                            viewModel.unpinChat(chat.id)
+                        } else {
+                            viewModel.pinChat(chat.id)
+                        }
+                        chatAdapter.notifyItemChanged(position)
+                    }
+                    return
+                }
 
                 val options = mutableListOf<CharSequence>()
                 val actions = mutableListOf<() -> Unit>()
@@ -626,8 +647,9 @@ class ChatListActivity : AppCompatActivity() {
             }
 
             override fun onChildDraw(c: Canvas, recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, dX: Float, dY: Float, actionState: Int, isCurrentlyActive: Boolean) {
+                val itemView = viewHolder.itemView
+
                 if (dX < 0) {
-                    val itemView = viewHolder.itemView
                     val deleteColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().primaryColor, android.graphics.Color.RED)
                     val bg = android.graphics.drawable.ColorDrawable(deleteColor)
                     bg.setBounds(itemView.right + dX.toInt(), itemView.top, itemView.right, itemView.bottom)
@@ -642,7 +664,23 @@ class ChatListActivity : AppCompatActivity() {
                     val iconRight = itemView.right - iconMargin
                     trashIcon?.setBounds(iconLeft, iconTop, iconRight, iconBottom)
                     trashIcon?.draw(c)
+                } else if (dX > 0) {
+                    val pinColor = android.graphics.Color.parseColor("#4CAF50")
+                    val bg = android.graphics.drawable.ColorDrawable(pinColor)
+                    bg.setBounds(itemView.left, itemView.top, itemView.left + dX.toInt(), itemView.bottom)
+                    bg.draw(c)
+
+                    val pinIcon = androidx.core.content.ContextCompat.getDrawable(this@ChatListActivity, R.drawable.ic_pin)
+                    pinIcon?.mutate()?.setTint(android.graphics.Color.WHITE)
+                    val iconMargin = (itemView.height - (pinIcon?.intrinsicHeight ?: 0)) / 2
+                    val iconTop = itemView.top + iconMargin
+                    val iconBottom = iconTop + (pinIcon?.intrinsicHeight ?: 0)
+                    val iconLeft = itemView.left + iconMargin
+                    val iconRight = iconLeft + (pinIcon?.intrinsicWidth ?: 0)
+                    pinIcon?.setBounds(iconLeft, iconTop, iconRight, iconBottom)
+                    pinIcon?.draw(c)
                 }
+
                 if (dX == 0f) {
                     super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
                 }

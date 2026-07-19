@@ -355,7 +355,7 @@ class MessageAdapter(
                 lottieStickerView.setOnLongClickListener { if (isSelectionMode) onLongClick(pos) else { onLongClick(pos) }; true }
             } else {
                 stickerImageView.isVisible = true
-                Glide.with(ctx).load(stickerUrl).centerCrop().into(stickerImageView)
+                Glide.with(ctx).load(stickerUrl).placeholder(R.drawable.ic_image_placeholder).error(R.drawable.ic_image_placeholder).centerCrop().into(stickerImageView)
                 stickerImageView.setOnClickListener { if (isSelectionMode) onClick(pos) else onMessageClick(message) }
                 stickerImageView.setOnLongClickListener { if (isSelectionMode) onLongClick(pos) else { onLongClick(pos) }; true }
             }

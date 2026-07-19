@@ -28,7 +28,7 @@ data class MessageEntity(
     val voiceUrl: String,
     val duration: Int,
     val userId: String = "",
-    val isSent: Boolean = true,
+    @ColumnInfo(index = true) val isSent: Boolean = true,
     val reactionsJson: String // Serialized List<Reaction>
 )
 
@@ -36,7 +36,7 @@ data class MessageEntity(
 data class ChatEntity(
     @PrimaryKey val id: String,
     val name: String,
-    val type: String,
+    @ColumnInfo(index = true) val type: String,
     val participants: String,
     val createdAt: Long,
     val unreadCount: Int,

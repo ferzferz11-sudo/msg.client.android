@@ -939,6 +939,8 @@
     <string name="pin_message">Pin message</string>
     <string name="unpin_message">Unpin message</string>
     <string name="pinned_message_format">📌 %s</string>
+    <string name="pinned_messages">Pinned messages</string>
+    <string name="no_pinned_messages">No pinned messages</string>
 
     <!-- i18n: English hardcoded strings -->
     <string name="failed_to_resize_image">Failed to resize image</string>

@@ -27,6 +27,7 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -586,9 +587,11 @@ class NewChatActivity : AppCompatActivity() {
         val callItem = menu.findItem(R.id.action_video_call)
         val searchItem = menu.findItem(R.id.action_search)
         val conferenceItem = menu.findItem(R.id.action_conference)
+        val pinnedItem = menu.findItem(R.id.action_pinned_messages)
         callItem?.isVisible = !inSelection && isDirect && !roomId.startsWith("favorites_") && !isSecret
         conferenceItem?.isVisible = false
         searchItem?.isVisible = !inSelection
+        pinnedItem?.isVisible = !inSelection && viewModel.pinnedMessageIds.value.isNotEmpty()
         return true
     }
 
@@ -602,6 +605,10 @@ class NewChatActivity : AppCompatActivity() {
                     lavender.client.android.data.calls.CallManager.initiateCall(other)
                     lavender.client.android.data.calls.CallNavigator.startCall(this, otherUserId, other)
                 }
+                true
+            }
+            R.id.action_pinned_messages -> {
+                showPinnedMessagesSheet()
                 true
             }
             R.id.action_search -> {
@@ -620,6 +627,36 @@ class NewChatActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 grpcClient.addLocalMessage(decryptedMsg)
             }
+        }
+    }
+
+    private fun showPinnedMessagesSheet() {
+        lifecycleScope.launch {
+            val pinnedMessages = withContext(Dispatchers.IO) {
+                try {
+                    lavender.client.android.data.grpc.GrpcClient.getPinnedMessages(roomId)
+                } catch (e: Exception) {
+                    emptyList()
+                }
+            }
+            if (pinnedMessages.isEmpty()) {
+                Toast.makeText(this@NewChatActivity, getString(R.string.no_pinned_messages), Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            val sheet = lavender.client.android.ui.widget.StandardBottomSheet(this@NewChatActivity, R.layout.dialog_pinned_messages)
+            sheet.setTitle(getString(R.string.pinned_messages))
+            val rv = sheet.dialog?.findViewById<RecyclerView>(R.id.recyclerView)
+            rv?.layoutManager = LinearLayoutManager(this@NewChatActivity)
+            val adapter = lavender.client.android.ui.adapter.PinnedMessageAdapter { msg ->
+                sheet.dismiss()
+                val pos = adapter.currentList.indexOfFirst { it.id == msg.id }
+                if (pos != -1) {
+                    messagesRecyclerView.scrollToPosition(pos)
+                }
+            }
+            adapter.submitList(pinnedMessages)
+            rv?.adapter = adapter
+            sheet.show()
         }
     }
 

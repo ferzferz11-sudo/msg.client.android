@@ -50,6 +50,8 @@ class StickerGridAdapter(
                 thumbnailView.visibility = View.VISIBLE
                 Glide.with(itemView.context)
                     .load(url)
+                    .placeholder(R.drawable.ic_image_placeholder)
+                    .error(R.drawable.ic_image_placeholder)
                     .centerCrop()
                     .into(thumbnailView)
             }

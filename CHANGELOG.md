@@ -1,5 +1,66 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.3.8] - 2026-07-19
+
+### Добавлено
+
+**Chat list swipe right for pin/unpin:**
+- Swipe right на чате → мгновенный toggle pin/unpin (без диалога)
+- Зелёный фон с иконкой `ic_pin` при свайпе вправо
+- Используется `viewModel.pinChat()`/`unpinChat()` из существующего API
+
+**Pinned messages bottom sheet:**
+- Иконка 📌 в toolbar чата — показывает bottom sheet со списком закреплённых сообщений
+- Тап на сообщение → скролл к нему в чате
+- `PinnedMessageAdapter` с `DiffUtil` для анимированных обновлений
+- Пустое состояние: "Нет закреплённых сообщений"
+
+### Улучшено
+
+**CallViewModelTest — полный TestScope:**
+- Удалён `@Ignore` — все 5 тестов снова работают
+- `TestScope`注入 вместо `viewModelScope` — нет deadlock при `Dispatchers.resetMain()`
+- Таймер уже count-based (elapsedSeconds), тесты корректно проверяют формат времени
+- `viewModel.stopTimer()` в каждом тесте предотвращает infinite drain
+
+**GrpcConnectionManager — reconnect logic extraction:**
+- Новый класс `GrpcReconnectStrategy` — exponential backoff + auth failure guard
+- `GrpcConnectionManager` делегирует через `reconnectStrategy` property
+- `isAuthFailure` forwarded через getter/setter — обратная совместимость
+- Существующие тесты `GrpcConnectionManagerTest` проходят без изменений
+
+**Room DB indexes:**
+- `messages.isSent` — индекс для `getPendingMessages()` (WHERE isSent = 0)
+- `chats.type` — индекс для фильтрации по типу чата (direct/group/secret/AI)
+- Миграция 14→15 с `CREATE INDEX IF NOT EXISTS`
+
+**Glide placeholder + error:**
+- `StickerGridAdapter` — `ic_image_placeholder` дляthumbnail стикеров
+- `MessageAdapter` — `ic_image_placeholder` для изображений стикеров в чате
+- `StickerPackListAdapter` — `ic_image_placeholder` для обложек пакетов
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `CallViewModelTest.kt` | Удалён @Ignore, TestScope injection, stopTimer в каждом тесте |
+| `GrpcReconnectStrategy.kt` | NEW — backoff scheduling + auth failure guard |
+| `GrpcConnectionManager.kt` | Delegate to GrpcReconnectStrategy, isAuthFailure forwarded |
+| `ChatListActivity.kt` | Swipe right для pin/unpin, green pin icon background |
+| `chat_menu.xml` | +action_pinned_messages (ic_pin) |
+| `NewChatActivity.kt` | showPinnedMessagesSheet(), onPrepareOptionsMenu для pinned |
+| `PinnedMessageAdapter.kt` | NEW —ListAdapter<Message> с DiffUtil |
+| `dialog_pinned_messages.xml` | NEW — layout bottom sheet |
+| `item_pinned_message.xml` | NEW — layout элемента pinned message |
+| `Entities.kt` | @ColumnInfo(index=true) для messages.isSent, chats.type |
+| `AppDatabase.kt` | version 15, MIGRATION_14_15 (indexes) |
+| `StickerGridAdapter.kt` | +placeholder +error для Glide |
+| `MessageAdapter.kt` | +placeholder +error для sticker Glide |
+| `StickerPackListAdapter.kt` | +placeholder +error для cover Glide |
+| `strings.xml` (EN/RU) | +2 строки (pinned_messages, no_pinned_messages) |
+
+---
+
 ## [1.3.3.7] - 2026-07-19
 
 ### Добавлено

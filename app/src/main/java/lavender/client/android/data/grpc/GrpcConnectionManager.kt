@@ -37,13 +37,13 @@ class GrpcConnectionManager(
     @Volatile var currentServerPort: Int = 50051
         private set
 
-    private var reconnectJob: Job? = null
-    @Volatile private var reconnectDelayMs = 5000L
     @Volatile private var appContext: Context? = null
 
-    /** Guard: skip reconnect on auth failures. Set by GrpcAuthClient. */
-    @Volatile
-    var isAuthFailure: Boolean = false
+    val reconnectStrategy = GrpcReconnectStrategy(scope)
+
+    var isAuthFailure: Boolean
+        get() = reconnectStrategy.isAuthFailure
+        set(value) { reconnectStrategy.isAuthFailure = value }
 
     fun isConnectedTo(host: String, port: Int): Boolean {
         val ch = channel
@@ -131,7 +131,10 @@ class GrpcConnectionManager(
         } catch (e: Exception) {
             Log.e(TAG, "Connection failed", e)
             connectionStatus.value = ConnectionStatus.RECONNECTING
-            scheduleReconnect(serverAddress, useTls, port, context)
+            reconnectStrategy.schedule {
+                val appCtx = appContext
+                connect(serverAddress, useTls, port, appCtx)
+            }
         }
     }
 
@@ -144,32 +147,14 @@ class GrpcConnectionManager(
     }
 
     fun disconnect() {
-        reconnectJob?.cancel()
-        reconnectJob = null
-        resetReconnectBackoff()
+        reconnectStrategy.cancel()
+        reconnectStrategy.resetBackoff()
         channel?.shutdown()
         channel = null
         connectionStatus.value = ConnectionStatus.DISCONNECTED
     }
 
-    private fun scheduleReconnect(serverAddress: String, useTls: Boolean, port: Int, context: Context?) {
-        if (isAuthFailure) {
-            Log.w(TAG, "Skipping reconnect: auth failure")
-            return
-        }
-        val appCtx = context?.applicationContext
-        reconnectJob?.cancel()
-        reconnectJob = scope.launch {
-            val delayMs = reconnectDelayMs.coerceAtMost(30000L)
-            Log.d(TAG, "Scheduling reconnect in ${delayMs}ms...")
-            delay(delayMs)
-            reconnectDelayMs = (reconnectDelayMs * 2).coerceAtMost(60000L)
-            Log.d(TAG, "Retrying connection to $serverAddress...")
-            connect(serverAddress, useTls, port, appCtx)
-        }
-    }
-
     fun resetReconnectBackoff() {
-        reconnectDelayMs = 5000L
+        reconnectStrategy.resetBackoff()
     }
 }
