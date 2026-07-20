@@ -295,6 +295,7 @@ class ChatAdapter(
         private val tvCompanyBadge: TextView = itemView.findViewById(R.id.tvCompanyBadge)
         private val tvConferenceBadge: TextView = itemView.findViewById(R.id.tvConferenceBadge)
         private val btnEnterLobby: ImageView = itemView.findViewById(R.id.btnEnterLobby)
+        private val ivChatAvatar: de.hdodenhof.circleimageview.CircleImageView = itemView.findViewById(R.id.ivChatAvatar)
         private val cardView: com.google.android.material.card.MaterialCardView =
             itemView as com.google.android.material.card.MaterialCardView
 
@@ -304,6 +305,21 @@ class ChatAdapter(
             tvChatName.text = chat.getDisplayName(currentUsername)
             tvChatName.setTextColor(if (hasUnread) primaryColor else textPrimary)
             tvChatName.setTypeface(null, if (hasUnread) Typeface.BOLD else Typeface.NORMAL)
+
+            // Avatar — direct chats: other user's avatar; group: first participant; fallback: default
+            val avatarUrl = if (chat.type == "direct" || chat.isSecret) {
+                val otherUser = getOtherParticipant(chat, currentUsername)
+                allUsers.firstOrNull { it.username == otherUser }?.avatarUrl ?: ""
+            } else chat.avatarUrl
+            try {
+                if (avatarUrl.isNotEmpty()) {
+                    com.bumptech.glide.Glide.with(itemView.context).load(avatarUrl)
+                        .placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar)
+                        .circleCrop().into(ivChatAvatar)
+                } else {
+                    ivChatAvatar.setImageResource(R.drawable.ic_default_avatar)
+                }
+            } catch (_: Exception) { ivChatAvatar.setImageResource(R.drawable.ic_default_avatar) }
 
             // Company badge
             tvCompanyBadge.isVisible = chat.companyId.isNotEmpty()

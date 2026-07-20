@@ -13,9 +13,10 @@ import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.grpc.*
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ui.ThemeUi
-import lavender.client.android.data.grpc.*
+import com.google.android.material.tabs.TabLayout
 
 /**
  * NotificationActivity — экран просмотра серверных уведомлений.
@@ -29,16 +30,22 @@ class NotificationActivity : AppCompatActivity() {
     private lateinit var adapter: NotificationAdapter
     private lateinit var recyclerView: RecyclerView
     private lateinit var emptyState: LinearLayout
+    private lateinit var tabLayout: com.google.android.material.tabs.TabLayout
 
     private var userId: String = ""
+    private var companyId: String = ""
+    private var allNotifications: List<lavender.client.android.data.proto.ServerNotificationProto> = emptyList()
+    private var selectedTab: Int = 0 // 0=All, 1=Company
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_notification)
 
         userId = SessionManager.session.value.userId
+        companyId = SessionManager.session.value.companyId
 
         setupToolbar()
+        setupTabs()
         setupRecyclerView()
         observeNotifications()
         ThemeUi.bind(this, userId)
@@ -55,6 +62,32 @@ class NotificationActivity : AppCompatActivity() {
     private fun setupToolbar() {
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         toolbar.setNavigationOnClickListener { finish() }
+    }
+
+    private fun setupTabs() {
+        tabLayout = findViewById(R.id.tabLayout)
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.notifications_all))
+        if (companyId.isNotEmpty()) {
+            tabLayout.addTab(tabLayout.newTab().setText(R.string.notifications_company))
+        }
+        tabLayout.addOnTabSelectedListener(object : com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: com.google.android.material.tabs.TabLayout.Tab) {
+                selectedTab = tab.position
+                filterNotifications()
+            }
+            override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
+            override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
+        })
+    }
+
+    private fun filterNotifications() {
+        val filtered = if (selectedTab == 1 && companyId.isNotEmpty()) {
+            allNotifications.filter { it.metadata["company_id"] == companyId }
+        } else {
+            allNotifications
+        }
+        adapter.submitList(filtered)
+        updateEmptyState(filtered.isEmpty())
     }
 
     private fun setupRecyclerView() {
@@ -81,8 +114,8 @@ class NotificationActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val history = GrpcClient.getNotificationHistory(userId)
-                adapter.submitList(history)
-                updateEmptyState(history.isEmpty())
+                allNotifications = history
+                filterNotifications()
 
                 // Mark all loaded notifications as read
                 val unreadIds = history.filter { !it.isRead }.map { it.id }
@@ -109,13 +142,9 @@ class NotificationActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 GrpcClient.serverNotifications.collect { notif ->
                     Log.d("NotificationActivity", "New notification: ${notif.type} - ${notif.title}")
-                    // Prepend new notification to the list
-                    val currentList = adapter.currentList.toMutableList()
-                    // Avoid duplicates
-                    if (currentList.none { it.id == notif.id }) {
-                        currentList.add(0, notif)
-                        adapter.submitList(currentList)
-                        updateEmptyState(false)
+                    if (allNotifications.none { it.id == notif.id }) {
+                        allNotifications = listOf(notif) + allNotifications
+                        filterNotifications()
                     }
                 }
             }

@@ -245,6 +245,8 @@
     <string name="failed_to_get_token">Не удалось получить токен</string>
     <string name="test_notification_added">Тестовое уведомление добавлено</string>
     <string name="notifications">Нотификации</string>
+    <string name="notifications_all">Все</string>
+    <string name="notifications_company">Компания</string>
     <string name="clear">Очистить</string>
     <string name="history_cleared">История очищена</string>
     <string name="loading">Загрузка…</string>
@@ -1053,7 +1055,8 @@
     <string name="sticker_rejected">Отклонён</string>
     <string name="sticker_draft">Черновик</string>
     <string name="sticker_add_sticker">Добавить стикер</string>
-    <string name="sticker_remove_sticker">Удалить</string>
+    <string name="sticker_remove">Удалить</string>
+    <string name="sticker_removed">Стикер удалён</string>
     <string name="sticker_delete_pack">Удалить пакет</string>
     <string name="sticker_edit_pack">Редактировать пакет</string>
     <string name="sticker_added">Стикер добавлен</string>

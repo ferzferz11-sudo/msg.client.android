@@ -47,7 +47,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
 
     private val stickerGridAdapter = StickerGridAdapter(
         onStickerClick = { },
-        onStickerLongClick = { sticker -> showCoverDialog(sticker) }
+        onStickerLongClick = { sticker -> showStickerOptions(sticker) }
     )
 
     private val pickStickerLauncher = registerForActivityResult(
@@ -176,6 +176,29 @@ class StickerPackCreateActivity : AppCompatActivity() {
         btnSave.alpha = alpha
     }
 
+    private fun showStickerOptions(sticker: Sticker) {
+        val options = arrayOf(
+            getString(R.string.sticker_set_cover),
+            getString(R.string.sticker_remove)
+        )
+        android.app.AlertDialog.Builder(this)
+            .setTitle(sticker.emoji)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> showCoverDialog(sticker)
+                    1 -> removeSticker(sticker)
+                }
+            }
+            .show()
+    }
+
+    private fun removeSticker(sticker: Sticker) {
+        currentStickers.removeAll { it.id == sticker.id }
+        stickerGridAdapter.submitList(currentStickers.toList())
+        updateSaveButtonState()
+        Toast.makeText(this, getString(R.string.sticker_removed), Toast.LENGTH_SHORT).show()
+    }
+
     private fun showCoverDialog(sticker: Sticker) {
         android.app.AlertDialog.Builder(this)
             .setTitle(R.string.sticker_set_cover)
@@ -240,7 +263,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
                         return@withContext Triple(null as ByteArray?, "", getString(R.string.sticker_file_too_large))
                     }
 
-                    Triple(bytes, if (isImage) "sticker.png" else "sticker.json", "")
+                    Triple(bytes, if (isImage) "sticker.jpg" else "sticker.json", "")
                 }
 
                 val bytes = prepareResult.first
@@ -312,7 +335,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
     private fun compressImage(uri: Uri, bytes: ByteArray): ByteArray {
         return try {
             val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return bytes
-            val maxDim = 1024
+            val maxDim = 512
             val scale = minOf(maxDim.toFloat() / bitmap.width, maxDim.toFloat() / bitmap.height, 1f)
             val scaledBitmap = if (scale < 1f) {
                 android.graphics.Bitmap.createScaledBitmap(
@@ -323,7 +346,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
                 )
             } else bitmap
             val outputStream = java.io.ByteArrayOutputStream()
-            scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 90, outputStream)
+            scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, outputStream)
             if (scaledBitmap !== bitmap) scaledBitmap.recycle()
             bitmap.recycle()
             outputStream.toByteArray()

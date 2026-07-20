@@ -301,8 +301,15 @@ class MessageAdapter(
         private fun bindPlainContent(message: Message, theme: lavender.client.android.theme.Theme, ctx: android.content.Context, isSelectionMode: Boolean, onClick: (Int) -> Unit, onLongClick: (Int) -> Unit, pos: Int) {
             val text = message.text; val highlight = searchHighlight
             if (!highlight.isNullOrEmpty() && text.contains(highlight, ignoreCase = true)) {
-                val spannable = android.text.SpannableString(text); val start = text.lowercase().indexOf(highlight.lowercase())
-                if (start != -1) { val hlColor = try { ThemeUtils.adjustAlpha(theme.primaryColor.toColorInt(), 0.5f) } catch (_: Exception) { ContextCompat.getColor(ctx, R.color.lavender_mist_alpha) }; spannable.setSpan(android.text.style.BackgroundColorSpan(hlColor), start, start + highlight.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) }
+                val spannable = android.text.SpannableString(text)
+                val hlColor = try { ThemeUtils.adjustAlpha(theme.primaryColor.toColorInt(), 0.5f) } catch (_: Exception) { ContextCompat.getColor(ctx, R.color.lavender_mist_alpha) }
+                val lowerText = text.lowercase(); val lowerHighlight = highlight.lowercase(); var idx = 0
+                while (idx <= lowerText.length - lowerHighlight.length) {
+                    val start = lowerText.indexOf(lowerHighlight, idx)
+                    if (start == -1) break
+                    spannable.setSpan(android.text.style.BackgroundColorSpan(hlColor), start, start + highlight.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    idx = start + highlight.length
+                }
                 applyMentionSpans(spannable, message, ctx)
                 messageText.text = spannable
             } else {

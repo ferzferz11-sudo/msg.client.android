@@ -69,28 +69,39 @@ class ShareReceiverActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         try {
             SessionManager.initFromPrefs(this)
             username = SessionManager.session.value.username
 
             val currentTheme = try { ThemeStore.currentTheme() } catch (_: Exception) { lavender.client.android.theme.BuiltInThemes.dark }
-            ThemeUtils.applyThemeToActivity(this, currentTheme)
-            
+            try { ThemeUtils.applyThemeToActivity(this, currentTheme) } catch (_: Exception) {}
+
             binding = ActivityShareReceiverBinding.inflate(layoutInflater)
             setContentView(binding.root)
 
             handleSharedIntent()
             setupUI()
-            
+
             lifecycleScope.launch {
                 ensureConnection()
                 loadChats()
             }
         } catch (e: Exception) {
             android.util.Log.e("ShareReceiver", "Fatal error in onCreate", e)
-            Toast.makeText(this, getString(R.string.error) + ": ${e.message}", Toast.LENGTH_LONG).show()
-            finish()
+            try {
+                binding = ActivityShareReceiverBinding.inflate(layoutInflater)
+                setContentView(binding.root)
+                handleSharedIntent()
+                setupUI()
+                lifecycleScope.launch {
+                    ensureConnection()
+                    loadChats()
+                }
+            } catch (_: Exception) {
+                Toast.makeText(this, getString(R.string.error) + ": ${e.message}", Toast.LENGTH_LONG).show()
+                finish()
+            }
         }
     }
 

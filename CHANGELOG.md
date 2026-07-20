@@ -1,5 +1,66 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.3.9] - 2026-07-19
+
+### Добавлено
+
+**Message search — подсветка всех совпадений:**
+- `bindPlainContent()` — while loop для подсветки ВСЕХ совпадений запроса (было только первое)
+- `BackgroundColorSpan` для каждого найденного совпадения
+- Case-insensitive поиск
+
+**Chat list avatars:**
+- `CircleImageView` 40dp в `item_chat.xml`
+- Glide загрузка аватаров для direct/group чатов
+- Fallback на `ic_default_avatar`
+
+**Real audio waveform:**
+- `WaveformExtractor` — `MediaExtractor` + `MediaCodec` → PCM → RMS per bar
+- 40 баров, нормализация 0.1-1.0
+- `ConcurrentHashMap` кэш по URL
+- Fallback на random waveform если извлечение не удалось
+
+**Company notifications UI:**
+- TabLayout: "All" | "Company" в NotificationActivity
+- Фильтрация уведомлений по `metadata["company_id"]`
+- Доступно только если пользователь состоит в компании
+
+### Улучшено
+
+**Sticker system:**
+- Фикс прыжков при переключении вкладок в picker (фиксированная высота 350dp)
+- Темизация списка стикеров (surfaceColor для карточек)
+- Long-press на стикере → диалог "Сделать обложкой" + "Удалить"
+- Сжатие изображений: JPEG 85% + maxDim 512px (было PNG 90% + 1024px)
+- Имя файла: `sticker.jpg` вместо `sticker.png`
+
+**Share (поделиться):**
+- Исправлен чёрный экран при шеринге из Telegram (ошибка темы теперь не крашит)
+- Lavender теперь появляется в списке приложений для шеринга фото/видео
+- Раздельные intent-filter для text/plain, image/*, video/* (было AND-условие)
+- `launchMode="singleTop"` для предотвращения дублирования Activity
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `MessageAdapter.kt` | while loop для highlight всех совпадений |
+| `item_chat.xml` | +ivChatAvatar (CircleImageView 40dp) |
+| `ChatAdapter.kt` | +avatar loading via Glide |
+| `WaveformExtractor.kt` | NEW — audio waveform extraction |
+| `AudioMessageView.kt` | Использует WaveformExtractor вместо random |
+| `SplashActivity.kt` | +WaveformExtractor.init() |
+| `NotificationActivity.kt` | +TabLayout + company filtering |
+| `activity_notification.xml` | +TabLayout |
+| `sheet_media_picker.xml` | Fixed height 350dp (was weight+minHeight) |
+| `StickerPackListAdapter.kt` | +theme colors for card background |
+| `StickerPackCreateActivity.kt` | +remove sticker, JPEG compression, 512px max |
+| `AndroidManifest.xml` | Раздельные intent-filter для share, launchMode=singleTop |
+| `ShareReceiverActivity.kt` | Safety catch для темы, fallback при ошибке |
+| `strings.xml` (EN/RU) | +6 строк (search highlight, avatars, company tabs, sticker remove) |
+
+---
+
 ## [1.3.3.8] - 2026-07-19
 
 ### Добавлено

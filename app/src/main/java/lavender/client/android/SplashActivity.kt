@@ -46,6 +46,7 @@ class SplashActivity : AppCompatActivity() {
         lavender.client.android.network.HttpClient.init(this)
         lavender.client.android.theme.ThemeStore.init(this)
         lavender.client.android.data.calls.CallManager.init(this)
+        lavender.client.android.ui.audio.WaveformExtractor.init(this)
 
         // Sync language from server if logged in
         val session = SessionManager.session.value

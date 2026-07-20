@@ -13,6 +13,8 @@ import com.airbnb.lottie.LottieAnimationView
 import com.bumptech.glide.Glide
 import lavender.client.android.R
 import lavender.client.android.data.models.StickerPack
+import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 
 class StickerPackListAdapter(
     private val onPackClick: (StickerPack) -> Unit,
@@ -44,6 +46,14 @@ class StickerPackListAdapter(
             val ctx = itemView.context
             titleText.text = pack.title
             countText.text = ctx.resources.getQuantityString(R.plurals.sticker_count, pack.stickers.size, pack.stickers.size)
+
+            // Apply theme to card background
+            try {
+                val theme = ThemeStore.currentTheme()
+                val surfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
+                val cardView = itemView as? com.google.android.material.card.MaterialCardView
+                cardView?.setCardBackgroundColor(surfaceColor)
+            } catch (_: Exception) {}
 
             val statusRes = when (pack.status) {
                 "approved" -> R.string.sticker_approved
