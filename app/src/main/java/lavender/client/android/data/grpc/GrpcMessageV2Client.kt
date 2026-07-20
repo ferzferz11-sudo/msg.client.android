@@ -41,6 +41,7 @@ class GrpcMessageV2Client(
     companion object {
         private const val TAG = "GrpcMsgV2"
         private const val MAX_HISTORY_LIMIT = 100
+        private const val DELETED_HASHES_MAX_SIZE = 10000
 
         private val METHOD_GET_HISTORY_V2 = MethodDescriptor.newBuilder<GetHistoryV2RequestProto, GetHistoryV2ResponseProto>()
             .setType(MethodDescriptor.MethodType.UNARY)
@@ -83,6 +84,14 @@ class GrpcMessageV2Client(
             .setRequestMarshaller(SearchMessagesRequestMarshaller())
             .setResponseMarshaller(SearchMessagesResponseMarshaller())
             .build()
+    }
+
+    private fun addDeletedHash(hash: String) {
+        deletedMessageHashes.add(hash)
+        if (deletedMessageHashes.size > DELETED_HASHES_MAX_SIZE) {
+            val toRemove = deletedMessageHashes.take(DELETED_HASHES_MAX_SIZE / 2)
+            deletedMessageHashes.removeAll(toRemove.toSet())
+        }
     }
 
     @Volatile private var database: AppDatabase? = null
@@ -428,7 +437,7 @@ class GrpcMessageV2Client(
     fun deleteMessageV2(messageIds: List<String>, cb: (Boolean) -> Unit = {}) {
         // Optimistic UI: remove from local list before server confirms
         messageIds.forEach { id ->
-            deletedMessageHashes.add("id:$id")
+            addDeletedHash("id:$id")
         }
         messages.update { current -> current.filterNot { it.id in messageIds } }
         scope.launch(Dispatchers.IO) {

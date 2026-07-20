@@ -187,7 +187,7 @@ class ChatListActivity : AppCompatActivity() {
         // Set title
         tvToolbarTitle?.text = getString(R.string.chats)
 
-        // Toolbar styling: 30% transparency + bottom shadow
+        // Toolbar styling: solid background with bottom rounded corners
         // Applied after ThemeApplier to layer on top of theme colors
         toolbar?.let { tb ->
             val bg = tb.background?.mutate()
@@ -196,16 +196,12 @@ class ChatListActivity : AppCompatActivity() {
                     is android.graphics.drawable.GradientDrawable -> bg.color?.defaultColor ?: 0
                     else -> 0
                 }
-                val alpha = (0.8f * 255).toInt() // 80% opacity = 30% transparent
                 if (color != 0) {
                     val shape = android.graphics.drawable.GradientDrawable().apply {
                         shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                        setColor(Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color)))
+                        setColor(color)
                     }
                     tb.background = shape
-                } else {
-                    bg.alpha = alpha
-                    tb.background = bg
                 }
             }
             tb.elevation = 6f

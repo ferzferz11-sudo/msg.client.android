@@ -27,6 +27,8 @@ import lavender.client.android.data.proto.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import androidx.core.content.edit
 
+private const val DELETED_HASHES_MAX_SIZE = 10000
+
 enum class ConnectionStatus {
     DISCONNECTED,
     CONNECTING,
@@ -114,6 +116,14 @@ object RealGrpcClient {
 
     private val deletedMessageHashes: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     private val pendingReads: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    private fun addDeletedHash(hash: String) {
+        deletedMessageHashes.add(hash)
+        if (deletedMessageHashes.size > DELETED_HASHES_MAX_SIZE) {
+            val toRemove = deletedMessageHashes.take(DELETED_HASHES_MAX_SIZE / 2)
+            deletedMessageHashes.removeAll(toRemove.toSet())
+        }
+    }
 
     // ====== Module: Connection Manager ======
     private val connectionManager = GrpcConnectionManager(
@@ -456,7 +466,7 @@ object RealGrpcClient {
 
                     when (sysType) {
                         "DELETE_MESSAGE" -> {
-                            deletedMessageHashes.add("id:$sysMessage")
+                            addDeletedHash("id:$sysMessage")
                             scope.launch(Dispatchers.IO) { db()?.messageDao()?.deleteMessage(sysMessage) }
                             if (sysMessage.isNotEmpty()) {
                                 _messages.update { current -> current.filterNot { it.id == sysMessage } }

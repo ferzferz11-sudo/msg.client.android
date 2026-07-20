@@ -1,5 +1,44 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.3.10] - 2026-07-19
+
+### Исправлено
+
+**Sticker system:**
+- Фикс прыжков при переключении вкладок (фиксированная высота 350dp)
+- Темизация списка стикеров (surfaceColor для карточек)
+- Long-press на стикере → "Сделать обложкой" + "Удалить"
+- JPEG 85% + maxDim 512px (было PNG 90% + 1024px)
+
+**Share (поделиться):**
+- Исправлен чёрный экран при шеринге из Telegram
+- Lavender появляется в списке приложений для шеринга фото/видео
+- Раздельные intent-filter для text/plain, image/*, video/*
+- `launchMode="singleTop"`
+
+**Performance:**
+- Chat list: кэш аватаров (Map username→url) для O(1) lookup
+- Chat list: Glide skip load если URL уже установлен
+- Chat list: непрозрачный toolbar (было 20% прозрачный)
+- deletedMessageHashes: LRU cap 10000 entries
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `sheet_media_picker.xml` | Fixed height 350dp |
+| `StickerPackListAdapter.kt` | +theme colors |
+| `StickerPackCreateActivity.kt` | +remove sticker, JPEG compression |
+| `AndroidManifest.xml` | Раздельные intent-filter, launchMode=singleTop |
+| `ShareReceiverActivity.kt` | Safety catch для темы |
+| `ChatAdapter.kt` | +avatar cache, Glide skip duplicate load |
+| `ChatListActivity.kt` | Непрозрачный toolbar |
+| `RealGrpcClient.kt` | deletedMessageHashes LRU cap |
+| `GrpcMessageV2Client.kt` | deletedMessageHashes LRU cap |
+| `strings.xml` (EN/RU) | +2 строки (sticker remove) |
+
+---
+
 ## [1.3.3.9] - 2026-07-19
 
 ### Добавлено
@@ -25,21 +64,6 @@
 - Фильтрация уведомлений по `metadata["company_id"]`
 - Доступно только если пользователь состоит в компании
 
-### Улучшено
-
-**Sticker system:**
-- Фикс прыжков при переключении вкладок в picker (фиксированная высота 350dp)
-- Темизация списка стикеров (surfaceColor для карточек)
-- Long-press на стикере → диалог "Сделать обложкой" + "Удалить"
-- Сжатие изображений: JPEG 85% + maxDim 512px (было PNG 90% + 1024px)
-- Имя файла: `sticker.jpg` вместо `sticker.png`
-
-**Share (поделиться):**
-- Исправлен чёрный экран при шеринге из Telegram (ошибка темы теперь не крашит)
-- Lavender теперь появляется в списке приложений для шеринга фото/видео
-- Раздельные intent-filter для text/plain, image/*, video/* (было AND-условие)
-- `launchMode="singleTop"` для предотвращения дублирования Activity
-
 ### Изменения в файлах
 
 | Файл | Изменение |
@@ -48,16 +72,11 @@
 | `item_chat.xml` | +ivChatAvatar (CircleImageView 40dp) |
 | `ChatAdapter.kt` | +avatar loading via Glide |
 | `WaveformExtractor.kt` | NEW — audio waveform extraction |
-| `AudioMessageView.kt` | Использует WaveformExtractor вместо random |
+| `AudioMessageView.kt` | Использует WaveformExtractor |
 | `SplashActivity.kt` | +WaveformExtractor.init() |
 | `NotificationActivity.kt` | +TabLayout + company filtering |
 | `activity_notification.xml` | +TabLayout |
-| `sheet_media_picker.xml` | Fixed height 350dp (was weight+minHeight) |
-| `StickerPackListAdapter.kt` | +theme colors for card background |
-| `StickerPackCreateActivity.kt` | +remove sticker, JPEG compression, 512px max |
-| `AndroidManifest.xml` | Раздельные intent-filter для share, launchMode=singleTop |
-| `ShareReceiverActivity.kt` | Safety catch для темы, fallback при ошибке |
-| `strings.xml` (EN/RU) | +6 строк (search highlight, avatars, company tabs, sticker remove) |
+| `strings.xml` (EN/RU) | +2 строки (notifications_all, notifications_company) |
 
 ---
 

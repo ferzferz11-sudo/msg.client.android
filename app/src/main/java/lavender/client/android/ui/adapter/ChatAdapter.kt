@@ -69,6 +69,9 @@ class ChatAdapter(
     private var cachedUnreadColor: Int = 0
     private var colorsInitialized = false
 
+    // Avatar cache: username -> avatarUrl (rebuilt when allUsers changes)
+    private var avatarUrlCache: Map<String, String> = emptyMap()
+
     private fun initColors(view: View) {
         if (colorsInitialized) return
         val theme = ThemeStore.currentTheme()
@@ -212,7 +215,7 @@ class ChatAdapter(
         when (val item = flatItems.getOrNull(position)) {
             is FlatItem.SectionHeader -> (holder as SectionHeaderViewHolder).bind(item)
             is FlatItem.ChatItem -> (holder as ChatViewHolder).bind(
-                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedUnreadColor, cachedPrimaryColor, selectionMode, selectedIds.contains(item.chat.id), currentUsername, onlineUsers.toSet(), allUsers
+                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedUnreadColor, cachedPrimaryColor, selectionMode, selectedIds.contains(item.chat.id), currentUsername, onlineUsers.toSet(), allUsers, avatarUrlCache
             )
             null -> {}
         }
@@ -236,6 +239,7 @@ class ChatAdapter(
 
     fun updateAllUsers(users: List<lavender.client.android.data.proto.UserInfoProto>) {
         allUsers = users
+        avatarUrlCache = users.associate { it.username to it.avatarUrl }
         val changedPositions = mutableListOf<Int>()
         for (i in flatItems.indices) {
             val item = flatItems[i]
@@ -299,24 +303,26 @@ class ChatAdapter(
         private val cardView: com.google.android.material.card.MaterialCardView =
             itemView as com.google.android.material.card.MaterialCardView
 
-        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, unreadColor: Int, primaryColor: Int, selectionMode: Boolean, isSelected: Boolean, currentUsername: String, onlineUsers: Set<String>, allUsers: List<lavender.client.android.data.proto.UserInfoProto>) {
+        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, unreadColor: Int, primaryColor: Int, selectionMode: Boolean, isSelected: Boolean, currentUsername: String, onlineUsers: Set<String>, allUsers: List<lavender.client.android.data.proto.UserInfoProto>, avatarCache: Map<String, String>) {
             val hasUnread = chat.unreadCount > 0
-            if (hasUnread) android.util.Log.d("ChatAdapter", "BIND UNREAD: ${chat.name} unreadCount=${chat.unreadCount}")
             tvChatName.text = chat.getDisplayName(currentUsername)
             tvChatName.setTextColor(if (hasUnread) primaryColor else textPrimary)
             tvChatName.setTypeface(null, if (hasUnread) Typeface.BOLD else Typeface.NORMAL)
 
-            // Avatar — direct chats: other user's avatar; group: first participant; fallback: default
+            // Avatar — use cached map for O(1) lookup
             val avatarUrl = if (chat.type == "direct" || chat.isSecret) {
                 val otherUser = getOtherParticipant(chat, currentUsername)
-                allUsers.firstOrNull { it.username == otherUser }?.avatarUrl ?: ""
+                avatarCache[otherUser] ?: ""
             } else chat.avatarUrl
             try {
-                if (avatarUrl.isNotEmpty()) {
+                val currentTag = ivChatAvatar.tag as? String
+                if (avatarUrl.isNotEmpty() && avatarUrl != currentTag) {
+                    ivChatAvatar.tag = avatarUrl
                     com.bumptech.glide.Glide.with(itemView.context).load(avatarUrl)
                         .placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar)
-                        .circleCrop().into(ivChatAvatar)
-                } else {
+                        .override(48, 48).circleCrop().into(ivChatAvatar)
+                } else if (avatarUrl.isEmpty() && currentTag != null) {
+                    ivChatAvatar.tag = null
                     ivChatAvatar.setImageResource(R.drawable.ic_default_avatar)
                 }
             } catch (_: Exception) { ivChatAvatar.setImageResource(R.drawable.ic_default_avatar) }
