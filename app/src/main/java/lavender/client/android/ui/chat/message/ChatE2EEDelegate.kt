@@ -24,7 +24,7 @@ class ChatE2EEDelegate(
     private var roomId: String = ""
     private var toolbarSubtitle: TextView? = null
     private var retryCount = 0
-    private val maxRetries = 10
+    private val maxRetries = 20
 
     var onKeyExchangeComplete: ((Boolean) -> Unit)? = null
     var onKeyExchangeStart: (() -> Unit)? = null
@@ -35,10 +35,21 @@ class ChatE2EEDelegate(
         this.toolbarSubtitle = toolbarSubtitle
     }
 
+    private fun getRetryDelayMs(): Long {
+        val base = when {
+            retryCount <= 2 -> 2000L
+            retryCount <= 5 -> 3000L
+            retryCount <= 10 -> 5000L
+            retryCount <= 15 -> 10000L
+            else -> 15000L
+        }
+        return base
+    }
+
     fun initE2EE() {
         if (!isSecret) return
         val publicKey = E2EEManager.getPublicKeyBase64(activity)
-        android.util.Log.d("E2EE", "initE2EE: exchanging keys for chat: $roomId (attempt ${retryCount + 1})")
+        android.util.Log.d("E2EE", "initE2EE: exchanging keys for chat: $roomId (attempt ${retryCount + 1}/$maxRetries)")
         onKeyExchangeStart?.invoke()
         grpcClient.exchangeSecretKey(roomId, publicKey) { success, peerKey, peerHasKey ->
             (activity as LifecycleOwner).lifecycleScope.launch {
@@ -51,17 +62,18 @@ class ChatE2EEDelegate(
                     retryCount++
                     android.util.Log.d("E2EE", "Key exchange pending (attempt $retryCount/$maxRetries): success=$success, peerHasKey=$peerHasKey")
                     if (retryCount < maxRetries) {
-                        onKeyExchangeStart?.invoke()
+                        val delayMs = getRetryDelayMs()
+                        android.util.Log.d("E2EE", "Retrying in ${delayMs}ms")
                         (activity as? androidx.appcompat.app.AppCompatActivity)?.lifecycleScope?.launch {
-                            delay(3000)
+                            delay(delayMs)
                             if (!activity.isFinishing && !activity.isDestroyed) {
                                 initE2EE()
                             }
                         }
                     } else {
                         android.util.Log.w("E2EE", "Key exchange failed after $maxRetries attempts for chat: $roomId")
+                        onKeyExchangeComplete?.invoke(false)
                     }
-                    onKeyExchangeComplete?.invoke(false)
                 }
             }
         }

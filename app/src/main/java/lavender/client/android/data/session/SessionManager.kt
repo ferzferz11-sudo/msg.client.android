@@ -5,6 +5,8 @@ import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import android.annotation.SuppressLint
+import android.os.Looper
+import androidx.annotation.WorkerThread
 import lavender.client.android.data.models.ErrorHandler
 import androidx.core.content.edit
 import com.google.firebase.messaging.FirebaseMessaging
@@ -138,10 +140,15 @@ object SessionManager {
 
     /**
      * Synchronous token refresh — called before chat stream and gRPC calls to ensure fresh JWT.
-     * Blocks up to 10 seconds. Safe to call from Dispatchers.IO (never Main).
+     * Blocks up to 10 seconds. MUST be called from Dispatchers.IO (never Main).
      * Uses refreshGuard to prevent concurrent refresh token rotation.
      */
+    @WorkerThread
     fun ensureFreshToken(context: Context) {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            Log.e("SessionManager", "ensureFreshToken() called on Main thread — will cause ANR. Use Dispatchers.IO.")
+            return
+        }
         if (!AuthManager.isTokenExpiredOrExpiring(context)) return
 
         // Wait for any in-progress refresh to complete
@@ -218,8 +225,14 @@ object SessionManager {
      * Force token refresh — ignores expiration check.
      * Used by pull-to-refresh to guarantee fresh JWT.
      * Waits for any in-progress refresh, then proceeds only if tokens are still stale.
+     * MUST be called from Dispatchers.IO (never Main).
      */
+    @WorkerThread
     fun forceTokenRefresh(context: Context) {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            Log.e("SessionManager", "forceTokenRefresh() called on Main thread — will cause ANR. Use Dispatchers.IO.")
+            return
+        }
         // Wait for any in-progress refresh
         if (waitForRefreshComplete()) {
             Log.d("SessionManager", "Force refresh: waited for in-progress refresh")

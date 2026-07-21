@@ -79,11 +79,9 @@ class MessageV2ProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageV2Pr
         if (value.id.isNotEmpty()) cos.writeString(1, value.id)
         if (value.roomId.isNotEmpty()) cos.writeString(2, value.roomId)
         if (value.senderId.isNotEmpty()) cos.writeString(3, value.senderId)
-        when {
-            value.text.isNotEmpty() -> cos.writeString(10, value.text)
-            value.media != null -> MessageMediaProtoMarshaller.serialize(value.media, cos, 11)
-            value.reply != null -> MessageReplyProtoMarshaller.serialize(value.reply, cos, 12)
-        }
+        if (value.text.isNotEmpty()) cos.writeString(10, value.text)
+        if (value.media != null) MessageMediaProtoMarshaller.serialize(value.media, cos, 11)
+        if (value.reply != null) MessageReplyProtoMarshaller.serialize(value.reply, cos, 12)
         if (value.edited) cos.writeBool(20, value.edited)
         if (value.isRead) cos.writeBool(21, value.isRead)
         value.createdAt?.let {
@@ -257,10 +255,8 @@ class SendMessageV2RequestMarshaller : io.grpc.MethodDescriptor.Marshaller<SendM
     override fun stream(v: SendMessageV2RequestProto): java.io.InputStream {
         val baos = ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.roomId.isNotEmpty()) cos.writeString(1, v.roomId)
-        when {
-            v.text.isNotEmpty() -> cos.writeString(2, v.text)
-            v.media != null -> MessageMediaProtoMarshaller.serialize(v.media, cos, 3)
-        }
+        if (v.text.isNotEmpty()) cos.writeString(2, v.text)
+        if (v.media != null) MessageMediaProtoMarshaller.serialize(v.media, cos, 3)
         if (v.replyToId.isNotEmpty()) cos.writeString(4, v.replyToId)
         if (v.isE2EE) cos.writeBool(5, v.isE2EE)
         if (v.e2eePayload.isNotEmpty()) cos.writeString(6, v.e2eePayload)

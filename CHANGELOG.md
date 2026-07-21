@@ -1,5 +1,41 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.3.11] - 2026-07-21
+
+### Исправлено
+
+**MessageV2Proto serialization — потеря данных при ответах:**
+- `MessageV2ProtoMarshaller.stream()` использовал `when {}` для text/media/reply — поля были взаимно исключающими
+- Reply-данные молча терялись когда текст непустой, media терялось при наличии текста
+- Исправлено на независимые `if` проверки — все три поля сериализуются независимо
+- Аналогичный баг исправлен в `SendMessageV2RequestMarshaller.stream()` (media + text)
+
+**E2EE key exchange — ненадёжный retry:**
+- Лимит 10 попыток (30с) — увеличен до 20 попыток (~120с)
+- Добавлен exponential backoff: 2s → 3s → 5s → 10s → 15s
+- Исправлен преждевременный вызов `onKeyExchangeComplete(false)` — теперь вызывается только при финальной неудаче
+
+**SessionManager — ANR risk при блокировке Main thread:**
+- `ensureFreshToken()` и `forceTokenRefresh()` — добавлена `@WorkerThread` аннотация
+- Runtime guard: `Looper.myLooper() == Looper.getMainLooper()` — логирует ошибку и пропускает вызов с Main thread
+
+### Добавлено
+
+**Тесты:**
+- 5 новых тестов для `MessageV2ProtoMarshaller`: textAndReply, textAndMedia, allContentFields, replyOnly, sendMessageV2 textAndMedia
+- Итого: 24 тестовых класса, все проходят
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `MessagesV2Marshallers.kt` | `when {}` → независимые `if` в MessageV2ProtoMarshaller + SendMessageV2RequestMarshaller |
+| `SessionManager.kt` | `@WorkerThread` + Looper guard в ensureFreshToken/forceTokenRefresh |
+| `ChatE2EEDelegate.kt` | maxRetries 10→20, exponential backoff, fix premature callback |
+| `MessagesV2MarshallersTest.kt` | +5 tests for when-bug fix |
+
+---
+
 ## [1.3.3.10] - 2026-07-19
 
 ### Исправлено
