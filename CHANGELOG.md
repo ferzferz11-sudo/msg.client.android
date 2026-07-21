@@ -1,5 +1,42 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.3.12] - 2026-07-21
+
+### Исправлено
+
+**Редактор стикеров — кнопки не адаптированы к темам:**
+- Нижняя панель (Crop/Text/Filters) и filter strip не получали цвет фона из темы
+- Добавлена `android:id="@+id/bottomBar"` на нижнюю панель
+- `applyThemeToViews()` теперь устанавливает `surfaceColor` фон на bottomBar и filterStrip
+
+**Редактор стикеров — обрезка фото не работала:**
+- `getCroppedBitmap()` всегда обрезал изображение по 85% прямоугольнику даже в режимах TEXT/FILTER
+- Теперь обрезка применяется только в режиме CROP
+- В режимах TEXT/FILTER возвращается полное изображение с текстовыми оверлеями
+
+**Библиотека стикеров — превью не видно на тёмной теме:**
+- `item_sticker_grid.xml` FrameLayout не имел фона — тёмные стикеры сливались с фоном
+- Заменён на `MaterialCardView` с `cardCornerRadius=8dp` и `strokeColor=?attr/colorOutline`
+
+**Создание пакета стикеров — фатал при сохранении:**
+- `savePack()` не проверял null у `result` и `result.pack` — NPE при `packId!!`
+- Добавлена null-проверка `result`, `result.success`, `result.pack?.id`
+- `btnSave` блокируется на время запроса, восстанавливается при ошибке
+- Ранний `return@launch` при каждой ошибке вместо вложенности
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `StickerEditorActivity.kt` | +темизация bottomBar и filterStrip в `applyThemeToViews()` |
+| `activity_sticker_editor.xml` | +`android:id="@+id/bottomBar"` на нижнюю панель |
+| `StickerEditorView.kt` | `getCroppedBitmap()` — обрезка только в CROP режиме |
+| `item_sticker_grid.xml` | FrameLayout → MaterialCardView с border |
+| `StickerPackCreateActivity.kt` | Null-safe `savePack()`, блокировка кнопки |
+| `version.txt` | 1.3.3.11 → 1.3.3.12 |
+
+---
+
 ## [1.3.3.11] - 2026-07-21
 
 ### Исправлено

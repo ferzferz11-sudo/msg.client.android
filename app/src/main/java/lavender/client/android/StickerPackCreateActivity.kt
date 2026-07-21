@@ -367,6 +367,8 @@ class StickerPackCreateActivity : AppCompatActivity() {
         }
         val name = title.lowercase().replace(" ", "_")
 
+        btnSave.isEnabled = false
+
         lifecycleScope.launch {
             try {
                 if (packId != null) {
@@ -374,27 +376,40 @@ class StickerPackCreateActivity : AppCompatActivity() {
                     Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_pack_updated), Toast.LENGTH_SHORT).show()
                 } else {
                     val result = GrpcClient.createStickerPack(title, name)
-                    if (result?.success == true) {
-                        packId = result.pack?.id
-                        toolbar.title = getString(R.string.sticker_edit_pack)
-                        for (sticker in currentStickers) {
-                            GrpcClient.addSticker(
-                                packId!!, sticker.lottieUrl, sticker.thumbnailUrl,
-                                sticker.emoji, sticker.width, sticker.height
-                            )
-                        }
-                        val currentCover = coverStickerId
-                        if (currentCover != null) {
-                            GrpcClient.updateStickerPack(packId!!, coverStickerId = currentCover)
-                        }
-                        Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_pack_created), Toast.LENGTH_SHORT).show()
-                        finish()
-                    } else {
-                        Toast.makeText(this@StickerPackCreateActivity, result?.error ?: "Failed", Toast.LENGTH_SHORT).show()
+                    if (result == null) {
+                        Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_upload_failed), Toast.LENGTH_SHORT).show()
+                        btnSave.isEnabled = true
+                        return@launch
                     }
+                    if (!result.success) {
+                        Toast.makeText(this@StickerPackCreateActivity, result.error.ifEmpty { "Failed" }, Toast.LENGTH_SHORT).show()
+                        btnSave.isEnabled = true
+                        return@launch
+                    }
+                    val newPackId = result.pack?.id
+                    if (newPackId.isNullOrEmpty()) {
+                        Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_upload_failed), Toast.LENGTH_SHORT).show()
+                        btnSave.isEnabled = true
+                        return@launch
+                    }
+                    packId = newPackId
+                    toolbar.title = getString(R.string.sticker_edit_pack)
+                    for (sticker in currentStickers) {
+                        GrpcClient.addSticker(
+                            packId!!, sticker.lottieUrl, sticker.thumbnailUrl,
+                            sticker.emoji, sticker.width, sticker.height
+                        )
+                    }
+                    val currentCover = coverStickerId
+                    if (currentCover != null) {
+                        GrpcClient.updateStickerPack(packId!!, coverStickerId = currentCover)
+                    }
+                    Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_pack_created), Toast.LENGTH_SHORT).show()
+                    finish()
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@StickerPackCreateActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                btnSave.isEnabled = true
             }
         }
     }

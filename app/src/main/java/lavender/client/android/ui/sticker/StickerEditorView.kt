@@ -337,41 +337,51 @@ class StickerEditorView @JvmOverloads constructor(
 
     fun getCroppedBitmap(): Bitmap? {
         val bmp = filteredBitmap ?: originalBitmap ?: return null
-        val cx = width / 2f
-        val cy = height / 2f
-        val cropSize = min(width, height) * 0.85f
-        val half = cropSize / 2f
 
-        val cropRect = RectF(cx - half, cy - half, cx + half, cy + half)
+        if (editorMode == EditorMode.CROP) {
+            val cx = width / 2f
+            val cy = height / 2f
+            val cropSize = min(width, height) * 0.85f
+            val half = cropSize / 2f
 
-        val invMatrix = Matrix()
-        imageMatrix.invert(invMatrix)
-        val mappedRect = RectF()
-        invMatrix.mapRect(mappedRect, cropRect)
+            val cropRect = RectF(cx - half, cy - half, cx + half, cy + half)
 
-        val left = mappedRect.left.toInt().coerceIn(0, bmp.width - 1)
-        val top = mappedRect.top.toInt().coerceIn(0, bmp.height - 1)
-        val right = mappedRect.right.toInt().coerceIn(left + 1, bmp.width)
-        val bottom = mappedRect.bottom.toInt().coerceIn(top + 1, bmp.height)
+            val invMatrix = Matrix()
+            imageMatrix.invert(invMatrix)
+            val mappedRect = RectF()
+            invMatrix.mapRect(mappedRect, cropRect)
 
-        val w = right - left
-        val h = bottom - top
-        if (w <= 0 || h <= 0) return null
+            val left = mappedRect.left.toInt().coerceIn(0, bmp.width - 1)
+            val top = mappedRect.top.toInt().coerceIn(0, bmp.height - 1)
+            val right = mappedRect.right.toInt().coerceIn(left + 1, bmp.width)
+            val bottom = mappedRect.bottom.toInt().coerceIn(top + 1, bmp.height)
 
-        val cropped = Bitmap.createBitmap(bmp, left, top, w, h)
+            val w = right - left
+            val h = bottom - top
+            if (w <= 0 || h <= 0) return null
 
-        val outputSize = min(cropped.width, cropped.height)
-        val output = Bitmap.createBitmap(outputSize, outputSize, Bitmap.Config.ARGB_8888)
+            val cropped = Bitmap.createBitmap(bmp, left, top, w, h)
+
+            val outputSize = min(cropped.width, cropped.height)
+            val output = Bitmap.createBitmap(outputSize, outputSize, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(output)
+            val srcLeft = (cropped.width - outputSize) / 2
+            val srcTop = (cropped.height - outputSize) / 2
+            val srcRect = Rect(srcLeft, srcTop, srcLeft + outputSize, srcTop + outputSize)
+            canvas.drawBitmap(cropped, srcRect, RectF(0f, 0f, outputSize.toFloat(), outputSize.toFloat()), imagePaint)
+
+            if (cropped !== bmp) cropped.recycle()
+
+            drawTextOverlaysOnBitmap(output)
+
+            return output
+        }
+
+        // In TEXT/FILTER mode: return full bitmap with text overlays
+        val output = Bitmap.createBitmap(bmp.width, bmp.height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(output)
-        val srcLeft = (cropped.width - outputSize) / 2
-        val srcTop = (cropped.height - outputSize) / 2
-        val srcRect = Rect(srcLeft, srcTop, srcLeft + outputSize, srcTop + outputSize)
-        canvas.drawBitmap(cropped, srcRect, RectF(0f, 0f, outputSize.toFloat(), outputSize.toFloat()), imagePaint)
-
-        if (cropped !== bmp) cropped.recycle()
-
+        canvas.drawBitmap(bmp, 0f, 0f, imagePaint)
         drawTextOverlaysOnBitmap(output)
-
         return output
     }
 

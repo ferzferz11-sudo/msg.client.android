@@ -118,6 +118,12 @@ class StickerEditorActivity : AppCompatActivity() {
                 btn.iconTint = android.content.res.ColorStateList.valueOf(onSurface)
             }
 
+            // Theme the bottom bar background
+            findViewById<View>(R.id.bottomBar)?.setBackgroundColor(surfaceColor)
+
+            // Theme the filter strip background
+            filterStrip.setBackgroundColor(surfaceColor)
+
             etTextInput.setTextColor(textPrimary)
             etTextInput.setHintTextColor(ThemeUtils.adjustAlpha(textPrimary, 0.5f))
             btnAddText.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
