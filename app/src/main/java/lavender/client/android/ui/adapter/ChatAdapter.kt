@@ -309,7 +309,7 @@ class ChatAdapter(
             tvChatName.setTextColor(if (hasUnread) primaryColor else textPrimary)
             tvChatName.setTypeface(null, if (hasUnread) Typeface.BOLD else Typeface.NORMAL)
 
-            // Avatar — use cached map for O(1) lookup
+            // Avatar — deferred to avoid layout jank during bind
             val avatarUrl = if (chat.type == "direct" || chat.isSecret) {
                 val otherUser = getOtherParticipant(chat, currentUsername)
                 avatarCache[otherUser] ?: ""
@@ -318,9 +318,11 @@ class ChatAdapter(
                 val currentTag = ivChatAvatar.tag as? String
                 if (avatarUrl.isNotEmpty() && avatarUrl != currentTag) {
                     ivChatAvatar.tag = avatarUrl
-                    com.bumptech.glide.Glide.with(itemView.context).load(avatarUrl)
-                        .placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar)
-                        .override(48, 48).circleCrop().into(ivChatAvatar)
+                    ivChatAvatar.post {
+                        com.bumptech.glide.Glide.with(itemView.context).load(avatarUrl)
+                            .placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar)
+                            .override(48, 48).circleCrop().into(ivChatAvatar)
+                    }
                 } else if (avatarUrl.isEmpty() && currentTag != null) {
                     ivChatAvatar.tag = null
                     ivChatAvatar.setImageResource(R.drawable.ic_default_avatar)
