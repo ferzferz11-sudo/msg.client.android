@@ -64,11 +64,11 @@ internal fun showSettingsSheet(activity: ChatListActivity, onBack: (() -> Unit)?
 
     // Fetch admin status if not yet known (fallback for old version upgrades)
     if (!SessionManager.session.value.isSuperAdmin) {
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        activity.lifecycleScope.launch {
             try {
                 val profile = lavender.client.android.data.grpc.ProfileClient.getProfile(activity)
                 if (profile != null && profile.isSuperAdmin) {
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    withContext(Dispatchers.Main) {
                         lavender.client.android.data.grpc.GrpcClient.setSuperAdmin(true)
                         activity.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
                             .edit { putBoolean("is_super_admin", true) }
@@ -183,7 +183,7 @@ internal fun showAdditionalSettingsSheet(activity: ChatListActivity, onBack: (()
         activity.isNavigatingDeeper = true
         sheet.dismiss()
         activity.settingsActivityLauncher.launch(
-            Intent(activity, lavender.client.android.NotificationActivity::class.java)
+            Intent(activity, lavender.client.android.ui.notification.NotificationActivity::class.java)
         )
     }
 

@@ -15,7 +15,6 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.edit
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -187,8 +186,10 @@ class UpdateCoordinator(
     // ======= Announcements (changelog.txt from server) =======
 
     private fun checkAnnouncements() {
-        CoroutineScope(Dispatchers.IO).launch {
-            checkAnnouncementsInternal()
+        activity.lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                checkAnnouncementsInternal()
+            }
         }
     }
 

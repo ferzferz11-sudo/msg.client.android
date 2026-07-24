@@ -1,5 +1,42 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.3.14] - 2026-07-24
+
+### Исправлено
+
+**Критическое: Proto marshallers — перепутаны field numbers (6 штук):**
+- PinChatRequest, UnPinChatRequest, ArchiveChatRequest, UnarchiveChatRequest — `chatId` и `userId` были в обратном порядке
+- PinMessageRequest, UnPinMessageRequest — все 3 поля (userId, chatId, messageId) были в неправильном порядке
+- Сервер получал颠倒 данные → pin/archive/message operations могли работать некорректно
+
+**Критическое: Дублирующийся NotificationActivity:**
+- Два класса `NotificationActivity` в разных пакетах (корневой + `ui/notification/`)
+- Удалён дубликат из корневого пакета, обновлена ссылка в `ChatListToolbar.kt`
+- Удалена запись из `AndroidManifest.xml`
+
+**CoroutineScope leaks:**
+- `ChatListToolbar.kt:67` — `CoroutineScope(Dispatchers.IO)` заменён на `activity.lifecycleScope`
+- `UpdateCoordinator.kt:190` — аналогично, привязан к lifecycle Activity
+
+### Полный аудит (найдено и исправлено критическое)
+
+**Аудит сервера:** 33 неimplemented метода (большинство deprecated v1)
+**Аудит клиента:** 108 находок (8 critical, 58 medium, 42 low)
+**Аудит proto:** 6 field number mismatches, 42 неиспользуемых серверных методов
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `GrpcMarshallers.kt` | Исправлены field numbers в 6 marshallers |
+| `ChatListToolbar.kt` | CoroutineScope → lifecycleScope, обновлена ссылка на NotificationActivity |
+| `UpdateCoordinator.kt` | CoroutineScope → lifecycleScope |
+| `AndroidManifest.xml` | Удалён дубликат NotificationActivity |
+| `NotificationActivity.kt` (root) | Удалён |
+| `version.txt` | 1.3.3.13 → 1.3.3.14 |
+
+---
+
 ## [1.3.3.13] - 2026-07-21
 
 ### Исправлено
