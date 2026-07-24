@@ -1,4 +1,5 @@
 package lavender.client.android
+import android.util.Log
 
 import android.content.Context
 import android.content.Intent
@@ -290,7 +291,7 @@ class ContactsActivity : AppCompatActivity() {
                                     if (selected.size == 1) {
                                         try {
                                             startActivity(Intent(this@ContactsActivity, SplashLoadingActivity::class.java))
-                                        } catch (_: Exception) {}
+                                        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
                                         val targetUser = selected.first()
                                         grpcClient.createDirectChat(username, targetUser) { chatId ->
                                             lifecycleScope.launch {

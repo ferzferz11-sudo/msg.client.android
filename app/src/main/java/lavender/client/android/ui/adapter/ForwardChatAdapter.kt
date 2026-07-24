@@ -1,4 +1,5 @@
 package lavender.client.android.ui.adapter
+import android.util.Log
 
 import android.view.LayoutInflater
 import android.view.View
@@ -60,7 +61,7 @@ class ForwardChatAdapter(
                 )
                 chatName.setTextColor(theme.textPrimaryColor.toColorInt())
                 chatType.setTextColor(theme.textSecondaryColor.toColorInt())
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
 
             loadAvatars(chat)
 

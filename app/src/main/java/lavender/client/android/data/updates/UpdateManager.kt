@@ -22,6 +22,7 @@ import java.net.URL
 class UpdateManager(private val context: Context) {
     private val TAG = "UpdateManager"
     private val prefs = context.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     companion object {
         @Volatile
@@ -117,7 +118,7 @@ class UpdateManager(private val context: Context) {
             putBoolean("update_downloaded", false)
         }
 
-        downloadJob = CoroutineScope(Dispatchers.IO).launch {
+        downloadJob = scope.launch {
             Log.d(TAG, "Starting download, isAuto=$isAuto")
             val file = File(context.getExternalFilesDir(null), "lavender_update.apk")
 

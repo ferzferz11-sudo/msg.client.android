@@ -1,4 +1,5 @@
 package lavender.client.android.ui.chat.message
+import android.util.Log
 
 import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
@@ -94,7 +95,7 @@ class ChatSearchDelegate(
             val tint = ColorStateList.valueOf(onPrim)
             activity.findViewById<ImageButton>(R.id.searchPrev)?.imageTintList = tint
             activity.findViewById<ImageButton>(R.id.searchNext)?.imageTintList = tint
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
         searchInput.requestFocus()
         (activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager)
             .showSoftInput(searchInput, 0)

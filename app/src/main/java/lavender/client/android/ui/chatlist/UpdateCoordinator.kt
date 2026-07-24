@@ -1,4 +1,5 @@
 package lavender.client.android.ui.chatlist
+import android.util.Log
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -219,7 +220,7 @@ class UpdateCoordinator(
                 }
             }
             connection.disconnect()
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
     }
 
     // ======= Notification for downloaded update =======

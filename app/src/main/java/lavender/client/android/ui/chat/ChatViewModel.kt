@@ -1,4 +1,5 @@
 package lavender.client.android.ui.chat
+import android.util.Log
 
 import android.content.Context
 import androidx.core.content.edit
@@ -134,7 +135,7 @@ class ChatViewModel : ViewModel() {
             try {
                 val pinned = GrpcClient.getPinnedMessages(currentRoomId)
                 _pinnedMessageIds.value = pinned.map { it.id }.toSet()
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
         }
     }
 
@@ -245,7 +246,7 @@ class ChatViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 AppDatabase.getDatabase(context).messageDao().clearRoom(currentRoomId)
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
         }
     }
 }

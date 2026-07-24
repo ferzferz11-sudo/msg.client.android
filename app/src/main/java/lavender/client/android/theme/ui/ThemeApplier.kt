@@ -268,7 +268,7 @@ object ThemeApplier {
                 }
             }
 
-            listOf(R.id.btnChangeAvatar, R.id.btnChangeUsername, R.id.btnChangePassword).forEach { id ->
+            listOf(R.id.btnChangeAvatar, R.id.btnChangePassword).forEach { id ->
                 (activity.findViewById<View>(id) as? com.google.android.material.button.MaterialButton)?.apply {
                     setTextColor(customPrimary)
                     iconTint = ColorStateList.valueOf(customPrimary)

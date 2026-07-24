@@ -33,7 +33,7 @@ class SplashActivity : AppCompatActivity() {
                     putString("last_crash", "${throwable.javaClass.simpleName}: ${throwable.message}\n${throwable.stackTraceToString().take(2000)}")
                     putLong("last_crash_time", System.currentTimeMillis())
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
             Thread.getDefaultUncaughtExceptionHandler()?.uncaughtException(thread, throwable)
         }
 

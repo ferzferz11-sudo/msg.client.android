@@ -1,4 +1,5 @@
 package lavender.client.android.data.grpc
+import android.util.Log
 
 import io.grpc.CallOptions
 import io.grpc.ClientCall
@@ -60,7 +61,7 @@ class GrpcServerDiscoveryClient(
             call.start(object : ClientCall.Listener<com.google.protobuf.ByteString>() {
                 override fun onMessage(message: com.google.protobuf.ByteString) { responseHolder.add(message) }
                 override fun onClose(status: Status, trailers: Metadata) {
-                    try { tempChannel.shutdownNow() } catch (_: Exception) {}
+                    try { tempChannel.shutdownNow() } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
                     if (!status.isOk || responseHolder.isEmpty()) { cb(emptyList()); return }
                     try { cb(parseServerList(responseHolder[0])) } catch (_: Exception) { cb(emptyList()) }
                 }
@@ -69,7 +70,7 @@ class GrpcServerDiscoveryClient(
             call.halfClose()
             call.request(1)
         } catch (_: Exception) {
-            try { tempChannel.shutdownNow() } catch (_: Exception) {}
+            try { tempChannel.shutdownNow() } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
             cb(emptyList())
         }
     }

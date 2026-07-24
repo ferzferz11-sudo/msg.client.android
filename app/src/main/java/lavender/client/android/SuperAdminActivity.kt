@@ -475,7 +475,7 @@ class SuperAdminActivity : AppCompatActivity() {
             tabLayout.setTabTextColors(pColor.withAlpha(150), pColor)
             tabLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
             tabLayout.backgroundTintList = null
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
     }
 
     private fun Int.withAlpha(alpha: Int): Int {
@@ -570,7 +570,7 @@ class SuperAdminActivity : AppCompatActivity() {
                         }
                         sheet.dismiss()
                     } else {
-                        Toast.makeText(this@SuperAdminActivity, "Error: $message", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@SuperAdminActivity, getString(R.string.error_colon, message), Toast.LENGTH_LONG).show()
                     }
                 }
             }

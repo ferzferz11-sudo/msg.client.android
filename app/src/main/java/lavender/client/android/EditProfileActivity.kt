@@ -443,14 +443,14 @@ class EditProfileActivity : AppCompatActivity() {
                     } else {
                         lifecycleScope.launch {
                             currentAvatarProgressBar?.isVisible = false
-                            Toast.makeText(this@EditProfileActivity, "Upload failed: ${response.code}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@EditProfileActivity, getString(R.string.upload_failed_code, response.code), Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
             } catch (e: Exception) {
                 lifecycleScope.launch {
                     currentAvatarProgressBar?.isVisible = false
-                    Toast.makeText(this@EditProfileActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@EditProfileActivity, getString(R.string.error_colon, e.message), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -667,12 +667,6 @@ class EditProfileActivity : AppCompatActivity() {
     }
 
     private fun formatCompanyPosition(positionTitle: String, positionLevel: Int): String {
-        val englishNames = mapOf(
-            0 to "Employee",
-            1 to "Manager",
-            2 to "Top Manager",
-            3 to "Owner"
-        )
         val levelName = when (positionLevel) {
             0 -> getString(R.string.employee)
             1 -> getString(R.string.manager)
@@ -681,6 +675,7 @@ class EditProfileActivity : AppCompatActivity() {
             else -> positionTitle
         }
         if (positionTitle.isEmpty()) return levelName
+        val englishNames = mapOf(0 to "Employee", 1 to "Manager", 2 to "Top Manager", 3 to "Owner")
         val englishName = englishNames[positionLevel]
         return if (englishName != null && positionTitle.equals(englishName, ignoreCase = true)) {
             levelName

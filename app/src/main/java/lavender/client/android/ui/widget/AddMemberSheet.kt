@@ -57,6 +57,7 @@ class AddMemberSheet(
             }
         }
 
+        sheet?.setOnDismissListener { scope.coroutineContext[kotlinx.coroutines.Job]?.cancel() }
         sheet?.show()
     }
 

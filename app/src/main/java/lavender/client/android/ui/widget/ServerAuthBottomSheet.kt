@@ -1,4 +1,5 @@
 package lavender.client.android.ui.widget
+import android.util.Log
 
 import android.content.Context
 import android.content.Intent
@@ -60,7 +61,7 @@ class ServerAuthBottomSheet(
             try {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("http://$serverHost/"))
                 context.startActivity(intent)
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
         }
 
         findViewById<TextView>(R.id.serverAuthName)?.text = serverName
@@ -72,7 +73,7 @@ class ServerAuthBottomSheet(
         try {
             val versionName = context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: ""
             findViewById<TextView>(R.id.serverAuthAppVersion)?.text = context.getString(R.string.app_version_format, versionName)
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
 
         findViewById<MaterialButton>(R.id.btnServerLogin)?.setOnClickListener {
             dismiss()

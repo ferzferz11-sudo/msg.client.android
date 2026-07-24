@@ -1,4 +1,5 @@
 package lavender.client.android.ui.chat.message
+import android.util.Log
 
 import android.content.Intent
 import android.content.res.ColorStateList
@@ -269,7 +270,7 @@ class ChatToolbarDelegate(
                 }
                 groupParticipantsContainer.addView(iv)
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
     }
 
     private fun setupLobbyButton() {

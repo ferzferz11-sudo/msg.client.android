@@ -77,7 +77,7 @@ fun subscribeNotifications(
                                                     }
                                                 }
                                                 if (key.isNotEmpty()) metadata[key] = value
-                                            } catch (_: Exception) {}
+                                            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
                                         }
                                     }
                                     7 -> isRead = cis.readBool()
@@ -196,7 +196,7 @@ suspend fun getNotificationHistory(
                                                             }
                                                         }
                                                         if (key.isNotEmpty()) metadata[key] = value
-                                                    } catch (_: Exception) {}
+                                                    } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
                                                 }
                                             }
                                             7 -> isRead = inner.readBool()
@@ -204,7 +204,7 @@ suspend fun getNotificationHistory(
                                         }
                                     }
                                     notifications.add(ServerNotificationProto(id, type, title, message, timestamp, metadata, isRead))
-                                } catch (_: Exception) {}
+                                } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
                             }
                         }
                         else -> cis.skipField(tag)

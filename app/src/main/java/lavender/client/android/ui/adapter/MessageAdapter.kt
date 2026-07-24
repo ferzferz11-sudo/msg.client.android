@@ -1,4 +1,5 @@
 package lavender.client.android.ui.adapter
+import android.util.Log
 
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -25,6 +26,7 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import lavender.client.android.R
 import android.graphics.Typeface
+import lavender.client.android.data.calls.CallMessageHelper
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.theme.ThemeStore
@@ -164,10 +166,10 @@ class MessageAdapter(
             if (canShowSenderInfo) {
                 avatarImageView.isVisible = true
                 if (message.avatarUrl.isNotEmpty()) {
-                    try { Glide.with(ctx).load(message.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(avatarImageView) } catch (_: Exception) {}
+                    try { Glide.with(ctx).load(message.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(avatarImageView) } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
                     avatarImageView.imageTintList = null
                 } else {
-                    try { ThemeUtils.applyDefaultAvatar(avatarImageView, theme, theme.incomingBubbleColor) } catch (_: Exception) {}
+                    try { ThemeUtils.applyDefaultAvatar(avatarImageView, theme, theme.incomingBubbleColor) } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
                 }
             }
             else { avatarImageView.visibility = if (isOutgoing) View.GONE else View.INVISIBLE }
@@ -178,7 +180,7 @@ class MessageAdapter(
             val finalSurface = if (surfaceColor != 0) surfaceColor else { if (isOutgoing) "#3D6B6C".toColorInt() else "#363636".toColorInt() }
             val secColor = (pTextColor and 0x00FFFFFF) or (0xCC shl 24)
 
-            val isCallMessage = message.text.contains("📹") || message.text.contains("📞") || message.text.contains("Видеозвонок") || message.text.contains("вызов") || message.text.contains("Звонок")
+            val isCallMessage = CallMessageHelper.isCallOrConference(message.text)
             val isSystem = message.user == "SYSTEM" && !isCallMessage
 
             bindBubbleStyle(isOutgoing, isSystem, finalSurface, pTextColor, secColor, canShowSenderInfo, theme)
@@ -212,13 +214,13 @@ class MessageAdapter(
                     audioMessageView.isVisible = false
                     messageImageView.isVisible = false
                     galleryThumbnailsRecyclerView.isVisible = false
-                } catch (_: Exception) {}
+                } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
             }
         }
 
         private fun bindAlignment(message: Message, isOutgoing: Boolean, isConsecutive: Boolean, isSelectionMode: Boolean, isGroup: Boolean) {
             val lp = messageContainer.layoutParams
-            val isCallMessage = message.text.contains("📹") || message.text.contains("📞") || message.text.contains("Видеозвонок") || message.text.contains("вызов") || message.text.contains("Звонок")
+            val isCallMessage = CallMessageHelper.isCallOrConference(message.text)
             val isSystem = message.user == "SYSTEM" && !isCallMessage
             if (lp is RelativeLayout.LayoutParams) {
                 lp.removeRule(RelativeLayout.ALIGN_PARENT_START); lp.removeRule(RelativeLayout.ALIGN_PARENT_END); lp.removeRule(RelativeLayout.ALIGN_PARENT_LEFT); lp.removeRule(RelativeLayout.ALIGN_PARENT_RIGHT); lp.removeRule(RelativeLayout.END_OF); lp.removeRule(RelativeLayout.RIGHT_OF); lp.removeRule(RelativeLayout.CENTER_HORIZONTAL)
@@ -239,8 +241,8 @@ class MessageAdapter(
         }
 
         private fun bindCallMessage(message: Message, isOutgoing: Boolean, textColor: Int, ctx: android.content.Context) {
-            val raw = message.text; val isMissed = raw.contains("Пропущенный") || raw.contains("не принят") || raw.contains("отклонен")
-            val isCompleted = raw.contains("завершен")
+            val raw = message.text; val isMissed = CallMessageHelper.isCallMissed(raw)
+            val isCompleted = CallMessageHelper.isCallEnded(raw)
             val icon = when { isMissed -> if (isOutgoing) "🚫" else "📞↙️"; isCompleted -> if (isOutgoing) "📞↗️" else "📞↙️"; else -> if (isOutgoing) "📞↗️" else "📹" }
             val statusText = when { isMissed -> if (isOutgoing) ctx.getString(R.string.call_not_accepted) else ctx.getString(R.string.call_missed)
                 isCompleted -> { val dur = raw.substringAfter("(").substringBefore(")"); if (isOutgoing) ctx.getString(R.string.call_outgoing_with_duration, dur) else ctx.getString(R.string.call_incoming_with_duration, dur) }
@@ -412,12 +414,12 @@ class MessageAdapter(
             if (message.repliedToUser.isNotEmpty()) { replyQuoteUser.text = message.repliedToUser; replyQuoteText.text = message.repliedToText
                 try { val onPrim = theme.onPrimaryColor.toColorInt(); val onSurf = theme.onSurfaceColor.toColorInt(); val txtPrim = theme.textPrimaryColor.toColorInt()
                     if (isOutgoing) { replyQuoteUser.setTextColor(onPrim); replyQuoteText.setTextColor(withAlpha(onPrim, 200)); replyQuoteContainer.setBackgroundColor(withAlpha(onPrim, 30)); replyQuoteBar.setBackgroundColor(onPrim) }
-                    else { replyQuoteUser.setTextColor(onSurf); replyQuoteText.setTextColor(withAlpha(txtPrim, 200)); replyQuoteContainer.setBackgroundColor(withAlpha(onSurf, 30)); replyQuoteBar.setBackgroundColor(onSurf) } } catch (_: Exception) {} }
+                    else { replyQuoteUser.setTextColor(onSurf); replyQuoteText.setTextColor(withAlpha(txtPrim, 200)); replyQuoteContainer.setBackgroundColor(withAlpha(onSurf, 30)); replyQuoteBar.setBackgroundColor(onSurf) } } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) } }
         }
 
         private fun bindSelectionIndicator(isSelected: Boolean, isSelectionMode: Boolean, theme: lavender.client.android.theme.Theme, ctx: android.content.Context) {
             selectionIndicator.isVisible = isSelectionMode; selectionIndicator.setImageResource(if (isSelected) R.drawable.ic_checked else R.drawable.ic_unchecked)
-            try { val pColor = theme.primaryColor.toColorInt(); val sColor = theme.textSecondaryColor.toColorInt(); selectionIndicator.imageTintList = ColorStateList.valueOf(if (isSelected) pColor else sColor) } catch (_: Exception) {}
+            try { val pColor = theme.primaryColor.toColorInt(); val sColor = theme.textSecondaryColor.toColorInt(); selectionIndicator.imageTintList = ColorStateList.valueOf(if (isSelected) pColor else sColor) } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
             messageBubble.alpha = if (isSelected) 0.6f else 1.0f
             val selColor = try { ThemeUtils.adjustAlpha(theme.primaryColor.toColorInt(), 0.25f) } catch (_: Exception) { ContextCompat.getColor(ctx, R.color.lavender_mist_alpha) }
             itemView.setBackgroundColor(if (isSelected) selColor else Color.TRANSPARENT)
@@ -431,7 +433,7 @@ class MessageAdapter(
 
         private fun bindPinnedBadge(message: Message, theme: lavender.client.android.theme.Theme, ctx: android.content.Context) {
             val llPinned: LinearLayout? = itemView.findViewById(R.id.llPinnedBadge); val ivPinned: ImageView? = itemView.findViewById(R.id.ivPinnedIcon); val tvPinned: TextView? = itemView.findViewById(R.id.tvPinnedText)
-            if (llPinned != null && ivPinned != null && tvPinned != null) { val isPinned = pinnedMessageIds.contains(message.id); llPinned.isVisible = isPinned; if (isPinned) { tvPinned.text = message.text.ifEmpty { ctx.getString(R.string.pinned_message) }; try { llPinned.backgroundTintList = ColorStateList.valueOf(ThemeUtils.parseSafeColor(theme.surfaceColor, Color.LTGRAY)) } catch (_: Exception) {} } }
+            if (llPinned != null && ivPinned != null && tvPinned != null) { val isPinned = pinnedMessageIds.contains(message.id); llPinned.isVisible = isPinned; if (isPinned) { tvPinned.text = message.text.ifEmpty { ctx.getString(R.string.pinned_message) }; try { llPinned.backgroundTintList = ColorStateList.valueOf(ThemeUtils.parseSafeColor(theme.surfaceColor, Color.LTGRAY)) } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) } } }
         }
 
         private fun withAlpha(color: Int, alpha: Int): Int = (color and 0x00FFFFFF) or (alpha shl 24)

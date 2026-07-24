@@ -331,7 +331,7 @@ class ThemePaletteActivity : AppCompatActivity(),
                 withContext(Dispatchers.Main) {
                     uploadProgress.isVisible = false
                     saveButton.isVisible = true
-                    Toast.makeText(this@ThemePaletteActivity, "Error uploading backgrounds: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ThemePaletteActivity, getString(R.string.error_uploading_backgrounds, e.message), Toast.LENGTH_SHORT).show()
                 }
             }
         }

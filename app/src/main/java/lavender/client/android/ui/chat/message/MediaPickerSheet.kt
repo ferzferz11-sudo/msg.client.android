@@ -1,4 +1,5 @@
 package lavender.client.android.ui.chat.message
+import android.util.Log
 
 import android.app.Activity
 import android.graphics.Color
@@ -40,13 +41,13 @@ class MediaPickerSheet(
 ) : StandardBottomSheet(activity, R.layout.sheet_media_picker) {
 
     init {
-        try { StickerPreferencesManager.init(activity) } catch (_: Exception) {}
+        try { StickerPreferencesManager.init(activity) } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
     }
 
     private val stickerGridAdapter = StickerGridAdapter(
         onStickerClick = { sticker ->
             onStickerSelected(sticker)
-            try { StickerPreferencesManager.addRecent(sticker) } catch (_: Exception) {}
+            try { StickerPreferencesManager.addRecent(sticker) } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
             dialog?.dismiss()
         },
         onStickerLongClick = { sticker ->
@@ -57,7 +58,7 @@ class MediaPickerSheet(
                     if (isFavorite) R.string.sticker_added_to_favorites else R.string.sticker_removed_from_favorites,
                     android.widget.Toast.LENGTH_SHORT
                 ).show()
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
         }
     )
 
@@ -83,7 +84,7 @@ class MediaPickerSheet(
                 setTabTextColors(ThemeUtils.adjustAlpha(textPrimaryColor, 0.6f), textPrimaryColor)
                 setSelectedTabIndicatorColor(primaryColor)
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
     }
 
     fun showPicker() {
@@ -94,7 +95,7 @@ class MediaPickerSheet(
             root?.post { setupEmojiTab() }
         } catch (e: Exception) {
             android.util.Log.e("MediaPickerSheet", "showPicker failed", e)
-            try { android.widget.Toast.makeText(activity, android.R.string.cancel, android.widget.Toast.LENGTH_SHORT).show() } catch (_: Exception) {}
+            try { android.widget.Toast.makeText(activity, android.R.string.cancel, android.widget.Toast.LENGTH_SHORT).show() } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
         }
     }
 

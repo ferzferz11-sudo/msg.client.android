@@ -1,4 +1,5 @@
 package lavender.client.android
+import android.util.Log
 
 import android.content.Intent
 import android.os.Bundle
@@ -39,7 +40,7 @@ class StickerLibraryActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sticker_library)
         @Suppress("DEPRECATION")
-        try { window.decorView.systemUiVisibility = 0 } catch (_: Exception) {}
+        try { window.decorView.systemUiVisibility = 0 } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
         ThemeApplier.apply(this, ThemeStore.currentTheme())
 
         toolbar = findViewById(R.id.toolbar)
@@ -115,7 +116,7 @@ class StickerLibraryActivity : AppCompatActivity() {
 
                 updateList()
             } catch (e: Exception) {
-                Toast.makeText(this@StickerLibraryActivity, "Failed to load packs", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@StickerLibraryActivity, getString(R.string.failed_to_load_packs), Toast.LENGTH_SHORT).show()
             } finally {
                 swipeRefresh.isRefreshing = false
             }
@@ -156,10 +157,10 @@ class StickerLibraryActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val result = GrpcClient.submitStickerPackForApproval(pack.id)
             if (result?.success == true) {
-                Toast.makeText(this@StickerLibraryActivity, "Submitted for approval", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@StickerLibraryActivity, getString(R.string.submitted_for_approval), Toast.LENGTH_SHORT).show()
                 loadPacks()
             } else {
-                Toast.makeText(this@StickerLibraryActivity, result?.error ?: "Failed", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@StickerLibraryActivity, result?.error ?: getString(R.string.failed), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -167,17 +168,17 @@ class StickerLibraryActivity : AppCompatActivity() {
     private fun deletePack(pack: StickerPack) {
         android.app.AlertDialog.Builder(this)
             .setTitle(R.string.sticker_delete_pack)
-            .setPositiveButton("Delete") { _, _ ->
+            .setPositiveButton(getString(R.string.delete)) { _, _ ->
                 lifecycleScope.launch {
                     val result = GrpcClient.deleteStickerPack(pack.id)
                     if (result?.success == true) {
                         loadPacks()
                     } else {
-                        Toast.makeText(this@StickerLibraryActivity, "Failed to delete", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@StickerLibraryActivity, getString(R.string.failed_to_delete), Toast.LENGTH_SHORT).show()
                     }
                 }
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(getString(R.string.cancel_dialog), null)
             .show()
     }
 }

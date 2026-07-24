@@ -1099,4 +1099,17 @@
     <string name="delete_chat">Удалить чат</string>
     <string name="failed">Ошибка</string>
 
+    <!-- Hardcoded string extraction -->
+    <string name="photo">Фото</string>
+    <string name="user">Пользователь</string>
+    <string name="chat_init_error">Ошибка инициализации чата</string>
+    <string name="e2ee_encryption_failed">Ошибка E2EE шифрования</string>
+    <string name="failed_to_load_packs">Не удалось загрузить пакеты</string>
+    <string name="submitted_for_approval">Отправлено на одобрение</string>
+    <string name="failed_to_delete">Не удалось удалить</string>
+    <string name="please_enter_share_code">Введите код дляshared</string>
+    <string name="unknown_error">Неизвестная ошибка</string>
+    <string name="error_uploading_backgrounds">Ошибка загрузки фонов: %s</string>
+    <string name="upload_failed_code">Ошибка загрузки: %d</string>
+
 </resources>

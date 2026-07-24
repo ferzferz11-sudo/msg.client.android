@@ -1,4 +1,5 @@
 package lavender.client.android.ui.chat.message
+import android.util.Log
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -94,7 +95,7 @@ class ChatSelectionDelegate(
         forwardMessages.isVisible = count > 0
         try {
             selectionToolbar.setBackgroundColor(ThemeStore.currentTheme().primaryColor.toColorInt())
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
     }
 
     fun hideSelectionToolbar() {

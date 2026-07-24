@@ -12,10 +12,13 @@ import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.data.models.Message
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.util.UUID
 
 class NotificationReplyReceiver : BroadcastReceiver() {
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onReceive(context: Context, intent: Intent) {
         val roomId = intent.getStringExtra(EXTRA_ROOM_ID) ?: return
@@ -26,6 +29,7 @@ class NotificationReplyReceiver : BroadcastReceiver() {
 
         Log.d("FCM", "Reply from notification: room=$roomId, text=$replyText")
 
+        val pendingResult = goAsync()
         val session = SessionManager.session.value
         val username = session.username
         val serverAddress = CredentialStore.getServerAddress(context) ?: return
@@ -35,7 +39,7 @@ class NotificationReplyReceiver : BroadcastReceiver() {
             return
         }
 
-        CoroutineScope(Dispatchers.IO).launch {
+        scope.launch {
             try {
                 if (GrpcClient.connectionStatus.value != lavender.client.android.data.grpc.ConnectionStatus.READY) {
                     GrpcClient.connect(serverAddress, context = context)
@@ -62,6 +66,8 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                 }
             } catch (e: Exception) {
                 Log.e("FCM", "Reply error: ${e.message}")
+            } finally {
+                pendingResult.finish()
             }
         }
     }

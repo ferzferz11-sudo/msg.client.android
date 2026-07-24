@@ -1,4 +1,5 @@
 package lavender.client.android.ui.audio
+import android.util.Log
 
 import android.animation.ObjectAnimator
 import android.content.Context

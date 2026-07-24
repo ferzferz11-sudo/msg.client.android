@@ -1,4 +1,5 @@
 package lavender.client.android.ui.chatlist
+import android.util.Log
 
 import android.content.Context
 import android.content.Intent
@@ -76,7 +77,7 @@ internal fun showSettingsSheet(activity: ChatListActivity, onBack: (() -> Unit)?
                         sheet.findViewById<View>(R.id.actionAdmin)?.isVisible = true
                     }
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
         }
     }
 

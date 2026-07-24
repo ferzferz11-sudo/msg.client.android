@@ -48,7 +48,7 @@ class CallSoundManager(context: Context) {
                         toneGenerator?.startTone(ToneGenerator.TONE_SUP_RINGTONE, 1000)
                         delay(3000)
                     }
-                } catch (_: Exception) {}
+                } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start dial tone", e)
@@ -62,7 +62,7 @@ class CallSoundManager(context: Context) {
             mediaPlayer = MediaPlayer.create(appContext, notification)
             mediaPlayer?.isLooping = true
             mediaPlayer?.start()
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
     }
 
     fun stop() {

@@ -1,4 +1,5 @@
 package lavender.client.android.ui.sticker
+import android.util.Log
 
 import android.graphics.Color
 import android.view.LayoutInflater
@@ -53,7 +54,7 @@ class StickerPackListAdapter(
                 val surfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
                 val cardView = itemView as? com.google.android.material.card.MaterialCardView
                 cardView?.setCardBackgroundColor(surfaceColor)
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
 
             val statusRes = when (pack.status) {
                 "approved" -> R.string.sticker_approved

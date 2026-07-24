@@ -1,4 +1,5 @@
 package lavender.client.android.ui.ai
+import android.util.Log
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -49,7 +50,7 @@ class AiV2AgentCreateEditViewModel(application: Application) : AndroidViewModel(
                                     }.toString()
                                     agent = agent.copy(providerConfig = config)
                                 }
-                            } catch (_: Exception) {}
+                            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
                         }
                     }
                 }

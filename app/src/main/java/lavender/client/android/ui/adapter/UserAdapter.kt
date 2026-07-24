@@ -1,4 +1,5 @@
 package lavender.client.android.ui.adapter
+import android.util.Log
 
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -126,7 +127,7 @@ class UserAdapter(
                 if (wasOnline != isOnline) {
                     try {
                         notifyItemChanged(index, "status")
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
                 }
             }
         }

@@ -1,4 +1,5 @@
 package lavender.client.android
+import android.util.Log
 
 import android.content.Intent
 import android.net.Uri
@@ -75,7 +76,7 @@ class ShareReceiverActivity : AppCompatActivity() {
             username = SessionManager.session.value.username
 
             val currentTheme = try { ThemeStore.currentTheme() } catch (_: Exception) { lavender.client.android.theme.BuiltInThemes.dark }
-            try { ThemeUtils.applyThemeToActivity(this, currentTheme) } catch (_: Exception) {}
+            try { ThemeUtils.applyThemeToActivity(this, currentTheme) } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
 
             binding = ActivityShareReceiverBinding.inflate(layoutInflater)
             setContentView(binding.root)
@@ -115,7 +116,7 @@ class ShareReceiverActivity : AppCompatActivity() {
                 val host = parts.firstOrNull() ?: serverAddress
                 val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
                 GrpcClient.connect(host, false, port, this@ShareReceiverActivity)
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
         }
     }
 
@@ -374,7 +375,7 @@ class ShareReceiverActivity : AppCompatActivity() {
             downloadManager.enqueue(request)
             Toast.makeText(this, getString(R.string.loading), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(this, "Failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.failed) + ": ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 

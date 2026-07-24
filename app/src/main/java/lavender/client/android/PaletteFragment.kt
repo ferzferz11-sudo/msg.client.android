@@ -1,4 +1,5 @@
 package lavender.client.android
+import android.util.Log
 
 import android.graphics.Color
 import android.os.Bundle
@@ -132,7 +133,7 @@ class PaletteFragment : Fragment() {
                     if (transparencySlider?.value?.toInt() != alpha) {
                         transparencySlider?.value = alpha.toFloat()
                     }
-                } catch (_: Exception) {}
+                } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
             }
         }
 

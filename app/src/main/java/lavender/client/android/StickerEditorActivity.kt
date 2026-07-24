@@ -1,4 +1,5 @@
 package lavender.client.android
+import android.util.Log
 
 import android.content.Context
 import android.content.Intent
@@ -44,7 +45,7 @@ class StickerEditorActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sticker_editor)
         @Suppress("DEPRECATION")
-        try { window.decorView.systemUiVisibility = 0 } catch (_: Exception) {}
+        try { window.decorView.systemUiVisibility = 0 } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
         ThemeApplier.apply(this, ThemeStore.currentTheme())
 
         toolbar = findViewById(R.id.toolbar)
@@ -128,7 +129,7 @@ class StickerEditorActivity : AppCompatActivity() {
             etTextInput.setHintTextColor(ThemeUtils.adjustAlpha(textPrimary, 0.5f))
             btnAddText.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
             btnAddText.setTextColor(ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE))
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
     }
 
     private var pickedColor = Color.WHITE

@@ -1,4 +1,5 @@
 package lavender.client.android
+import android.util.Log
 
 import android.content.Context
 import android.content.Intent
@@ -32,6 +33,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import lavender.client.android.data.calls.CallMessageHelper
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
@@ -132,7 +134,7 @@ class NewChatActivity : AppCompatActivity() {
             initSharedViews()
         } catch (e: Exception) {
             android.util.Log.e("NewChatActivity", "initDelegates/initSharedViews failed: ${e.message}", e)
-            Toast.makeText(this, "Chat init error", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.chat_init_error), Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -229,7 +231,7 @@ class NewChatActivity : AppCompatActivity() {
         inputDelegate.onReplyChanged = { m ->
             if (m != null) {
                 replyPreview.isVisible = true; replyUser.text = m.user
-                replyText.text = if (m.imageUrl.isNotEmpty()) "Photo" else m.text
+                replyText.text = if (m.imageUrl.isNotEmpty()) getString(R.string.photo) else m.text
                 inputDelegate.messageInput.requestFocus()
             } else { replyPreview.isVisible = false }
         }
@@ -263,7 +265,7 @@ class NewChatActivity : AppCompatActivity() {
                     try {
                         val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@NewChatActivity)
                         db.messageDao().clearRoom(roomId)
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
                     withContext(Dispatchers.Main) {
                         grpcClient.clearMessages()
                         viewModel.loadHistory()
@@ -283,7 +285,7 @@ class NewChatActivity : AppCompatActivity() {
                 val pColor = customTheme.primaryColor.toColorInt()
                 historyLoadingProgress.indeterminateTintList = ColorStateList.valueOf(pColor)
                 swipeRefreshLayout.setColorSchemeColors(pColor)
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
         } catch (e: Exception) {
             android.util.Log.e("NewChatActivity", "setupTheme failed: ${e.message}")
         }
@@ -299,8 +301,8 @@ class NewChatActivity : AppCompatActivity() {
             currentUsername = username, isGroupChat = !isDirect, adminUsername = creator,
             onMessageClick = { message ->
                 val text = message.text.trim().lowercase()
-                val isCall = text.contains("📹") || text.contains("конференция") || text.contains("conference")
-                val isEnded = text.contains("завершена") || text.contains("завершен") || text.contains("удалена") || text.contains("удален") || text.contains("ended") || text.contains("deleted")
+                val isCall = CallMessageHelper.isCallOrConference(text)
+                val isEnded = CallMessageHelper.isCallEnded(text)
                 if (isCall && !isEnded) joinConference()
                 else messageMenuDelegate.showReactionsDialog(message) { m -> inputDelegate.showReplyPreview(m) }
             },
@@ -452,7 +454,7 @@ class NewChatActivity : AppCompatActivity() {
         if (isSecret && e2eeDelegate.isKeyExchanged()) {
             viewModel.sendMessageWithE2EE(text, { t, cb -> e2eeDelegate.encryptAndSend(t, cb) },
                 onSuccess = { inputDelegate.resetInput() },
-                onError = { Toast.makeText(this, "E2EE encryption failed", Toast.LENGTH_SHORT).show() }
+                onError = { Toast.makeText(this, getString(R.string.e2ee_encryption_failed), Toast.LENGTH_SHORT).show() }
             )
             return
         }

@@ -1,5 +1,58 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.0] - 2026-07-24
+
+### Очищено
+
+**Dead code:**
+- Удалены 31 неиспользуемых layout XML файлов (verified via grep + build)
+- Удалены layout-land дубликаты (dialog_join_chat, dialog_profile)
+- Удалена мёртвая ссылка `btnChangeUsername` из ThemeApplier
+- Удалён неиспользуемый `englishNames` map из EditProfileActivity
+
+**Empty catch blocks:**
+- 66 пустых catch blocks в 30+ файлах получили `Log.w()` для логирования ошибок
+- 21 catch block в AppDatabase.kt оставлен intentionally (ALTER TABLE миграции)
+
+**Hardcoded strings:**
+- 12 hardcoded строк извлечено в string resources (EN + RU)
+- Обновлены 12 Kotlin файлов для использования `getString()`
+
+### Исправлено
+
+**Hardcoded Russian в определении звонков:**
+- Создан `CallMessageHelper.kt` — language-agnostic детекция звонков через emoji (📹📞) + ключевые слова (RU/EN)
+- Обновлены `MessageAdapter.kt` (3 места) и `NewChatActivity.kt` (1 место)
+- Никогда не парсите русский текст для определения звонков — используйте CallMessageHelper
+
+**CoroutineScope leaks:**
+- `LavenderMessagingService` — добавлен `serviceScope` + `onDestroy()` cancel
+- `NotificationReplyReceiver` — добавлен `scope` + `goAsync()` + `pendingResult.finish()`
+- `UpdateManager` — анонимный scope заменён на class property
+- `AudioPlayerManager` — анонимный scope заменён на class property
+- `AddMemberSheet` — добавлен `setOnDismissListener` для отмены scope
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `CallMessageHelper.kt` | NEW — language-agnostic call detection |
+| `MessageAdapter.kt` | CallMessageHelper, Log import, getString() |
+| `NewChatActivity.kt` | CallMessageHelper, getString() |
+| `LavenderMessagingService.kt` | serviceScope + onDestroy |
+| `NotificationReplyReceiver.kt` | scope + goAsync + pendingResult.finish |
+| `UpdateManager.kt` | scope property |
+| `AudioPlayerManager.kt` | scope property + SupervisorJob import |
+| `AddMemberSheet.kt` | dismiss listener |
+| `WidgetSystem.kt` | removed dead btnLogin/forgotPasswordButton refs |
+| `ThemeApplier.kt` | removed dead btnChangeUsername ref |
+| `EditProfileActivity.kt` | getString(), dead code removal |
+| 30+ файлов | Log.w() в empty catch blocks |
+| 31 layout XML | deleted (unused) |
+| `strings.xml` (EN/RU) | +12 строк |
+
+---
+
 ## [1.3.3.14] - 2026-07-24
 
 ### Исправлено

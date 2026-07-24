@@ -355,7 +355,7 @@ class CompanyProfileActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@CompanyProfileActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@CompanyProfileActivity, getString(R.string.error_colon, e.message), Toast.LENGTH_SHORT).show()
             }
         }
     }

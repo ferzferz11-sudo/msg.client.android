@@ -37,7 +37,7 @@ class InstallAgentBottomSheet : BottomSheetDialogFragment() {
         installButton.setOnClickListener {
             val shareCode = shareCodeInput.text.toString().trim()
             if (shareCode.isEmpty()) {
-                Toast.makeText(context, "Please enter share code", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, getString(R.string.please_enter_share_code), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             onInstall?.invoke(shareCode)

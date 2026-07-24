@@ -425,7 +425,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
             
             binding.btnDelete.setTextColor(Color.WHITE)
             binding.btnLeave.setTextColor(Color.WHITE)
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
     }
 
     private fun initPreview() {
@@ -566,7 +566,7 @@ class InvitedUserAdapter(
                     lp.setMargins(0, 0, 0, (8 * itemView.resources.displayMetrics.density).toInt())
                     itemView.layoutParams = lp
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
 
             if (!avatarUrl.isNullOrEmpty()) {
                 Glide.with(itemView.context).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(avatarImg)

@@ -1,4 +1,5 @@
 package lavender.client.android.ui.sticker
+import android.util.Log
 
 import android.content.Context
 import android.graphics.*
@@ -111,7 +112,7 @@ class StickerEditorView @JvmOverloads constructor(
                 fitImageToView()
                 invalidate()
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
     }
 
     fun setImageBitmap(bitmap: Bitmap) {

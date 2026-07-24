@@ -1,4 +1,5 @@
 package lavender.client.android.ui.widget
+import android.util.Log
 
 import android.content.Context
 import android.content.res.ColorStateList
@@ -133,7 +134,7 @@ open class StandardBottomSheet(
     override fun applyTheme(theme: Theme) {
         try {
             dialog?.let { ThemeApplier.applyToDialog(it, theme) }
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
 
         try {
             val bgColor = ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK)
@@ -147,7 +148,7 @@ open class StandardBottomSheet(
 
             // Theme any InputLayouts and EditTexts
             root?.let { findAndThemeInputs(it, theme, primaryColor, onSurfaceColor, textPrimaryColor) }
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
     }
 
     protected fun findAndThemeInputs(view: View, theme: Theme, primaryColor: Int, onSurfaceColor: Int, textPrimaryColor: Int) {
@@ -192,8 +193,8 @@ open class StandardBottomSheet(
                              view.id == R.id.btnReset || view.id == android.R.id.button2 ||
                              view.id == R.id.deleteGroupButton
             
-            val isActionType = view.id == R.id.btnJoin || view.id == R.id.btnRegister || 
-                              view.id == R.id.btnLogin || view.id == R.id.btnSave ||
+            val isActionType = view.id == R.id.btnJoin || view.id == R.id.btnRegister ||
+                              view.id == R.id.btnSave ||
                               view.id == R.id.actionButton || view.id == R.id.btnUpdate ||
                               view.id == R.id.btnSend || view.id == R.id.changeAvatarButton
             
@@ -235,7 +236,7 @@ open class StandardBottomSheet(
         } else if (view is ImageView && view !is de.hdodenhof.circleimageview.CircleImageView) {
             view.imageTintList = ColorStateList.valueOf(primaryColor)
         } else if (view is TextView) {
-            if (view.id == R.id.forgotPasswordButton || view.id == R.id.actionShareHeader) {
+            if (view.id == R.id.actionShareHeader) {
                 view.setTextColor(primaryColor)
             } else if (view.id != R.id.titleText) {
                 view.setTextColor(textPrimaryColor)
@@ -292,7 +293,7 @@ open class StandardBottomSheet(
         dialog?.show()
         try {
             dialog?.behavior?.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
     }
 
     fun showWithNavigation() {

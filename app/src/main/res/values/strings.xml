@@ -1098,4 +1098,17 @@
     <string name="delete_chat">Delete chat</string>
     <string name="failed">Failed</string>
 
+    <!-- Hardcoded string extraction -->
+    <string name="photo">Photo</string>
+    <string name="user">User</string>
+    <string name="chat_init_error">Chat init error</string>
+    <string name="e2ee_encryption_failed">E2EE encryption failed</string>
+    <string name="failed_to_load_packs">Failed to load packs</string>
+    <string name="submitted_for_approval">Submitted for approval</string>
+    <string name="failed_to_delete">Failed to delete</string>
+    <string name="please_enter_share_code">Please enter share code</string>
+    <string name="unknown_error">Unknown error</string>
+    <string name="error_uploading_backgrounds">Error uploading backgrounds: %s</string>
+    <string name="upload_failed_code">Upload failed: %d</string>
+
 </resources>

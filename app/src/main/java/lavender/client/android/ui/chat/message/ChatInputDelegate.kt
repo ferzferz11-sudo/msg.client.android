@@ -1,4 +1,5 @@
 package lavender.client.android.ui.chat.message
+import android.util.Log
 
 import android.Manifest
 import android.content.Intent

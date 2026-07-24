@@ -1,4 +1,5 @@
 package lavender.client.android
+import android.util.Log
 
 import android.app.Activity
 import android.content.Intent
@@ -82,7 +83,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sticker_pack_create)
         @Suppress("DEPRECATION")
-        try { window.decorView.systemUiVisibility = 0 } catch (_: Exception) {}
+        try { window.decorView.systemUiVisibility = 0 } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
         ThemeApplier.apply(this, ThemeStore.currentTheme())
 
         toolbar = findViewById(R.id.toolbar)
@@ -142,7 +143,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
             val onPrimaryColor = ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE)
             btnSave.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
             btnSave.setTextColor(onPrimaryColor)
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
     }
 
     private fun themeInputLayoutsIn(view: android.view.View, primaryColor: Int, onSurfaceColor: Int, surfaceColor: Int, textPrimaryColor: Int) {
@@ -390,14 +391,14 @@ class StickerPackCreateActivity : AppCompatActivity() {
                     android.util.Log.d("StickerPack", "Create result: success=${result?.success}, error=${result?.error}, packId=${result?.pack?.id}")
                     if (result == null) {
                         android.util.Log.e("StickerPack", "createStickerPack returned null — channel issue or auth failure")
-                        Toast.makeText(this@StickerPackCreateActivity, "Ошибка: сервер недоступен", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@StickerPackCreateActivity, getString(R.string.unknown_error), Toast.LENGTH_SHORT).show()
                         btnSave.isEnabled = true
                         isSaving = false
                         return@launch
                     }
                     if (!result.success) {
                         android.util.Log.e("StickerPack", "createStickerPack failed: ${result.error}")
-                        Toast.makeText(this@StickerPackCreateActivity, result.error.ifEmpty { "Failed" }, Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@StickerPackCreateActivity, result.error.ifEmpty { getString(R.string.failed) }, Toast.LENGTH_SHORT).show()
                         btnSave.isEnabled = true
                         isSaving = false
                         return@launch
@@ -452,7 +453,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
                 Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_submitted), Toast.LENGTH_SHORT).show()
                 finish()
             } else {
-                Toast.makeText(this@StickerPackCreateActivity, result?.error ?: "Failed", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@StickerPackCreateActivity, result?.error ?: getString(R.string.failed), Toast.LENGTH_SHORT).show()
             }
         }
     }

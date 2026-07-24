@@ -1,4 +1,5 @@
 package lavender.client.android.data.db
+import android.util.Log
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
@@ -105,7 +106,7 @@ fun MessageEntity.toDomain(): Message {
             val obj = arr.getJSONObject(i)
             reactions.add(Reaction(obj.getString("user"), obj.getString("emoji")))
         }
-    } catch (_: Exception) {}
+    } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
 
     val imageUrls = mutableListOf<String>()
     try {
@@ -113,7 +114,7 @@ fun MessageEntity.toDomain(): Message {
         for (i in 0 until arr.length()) {
             imageUrls.add(arr.getString(i))
         }
-    } catch (_: Exception) {}
+    } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
 
     return Message(
         id = id,

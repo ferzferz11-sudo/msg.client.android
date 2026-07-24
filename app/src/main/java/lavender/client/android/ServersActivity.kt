@@ -281,7 +281,7 @@ class ServersActivity : AppCompatActivity() {
                             }
                             else -> {
                                 loginSheet.setLoading(false)
-                                Toast.makeText(this@ServersActivity, result ?: "Unknown error", Toast.LENGTH_LONG).show()
+                                Toast.makeText(this@ServersActivity, result ?: getString(R.string.unknown_error), Toast.LENGTH_LONG).show()
                             }
                         }
                     }
@@ -325,7 +325,7 @@ class ServersActivity : AppCompatActivity() {
                             }
                             else -> {
                                 registerSheet.setLoading(false)
-                                Toast.makeText(this@ServersActivity, result ?: "Unknown error", Toast.LENGTH_LONG).show()
+                                Toast.makeText(this@ServersActivity, result ?: getString(R.string.unknown_error), Toast.LENGTH_LONG).show()
                             }
                         }
                     }

@@ -20,6 +20,13 @@ import lavender.client.android.data.calls.CallManager
 
 class LavenderMessagingService : FirebaseMessagingService() {
 
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    override fun onDestroy() {
+        super.onDestroy()
+        serviceScope.cancel()
+    }
+
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
 
@@ -82,7 +89,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
 
         GrpcClient.connect(serverAddress, context = applicationContext)
 
-        CoroutineScope(Dispatchers.IO).launch {
+        serviceScope.launch {
             for (i in 1..10) {
                 if (GrpcClient.connectionStatus.value == lavender.client.android.data.grpc.ConnectionStatus.READY) {
                     GrpcClient.startCallSession()

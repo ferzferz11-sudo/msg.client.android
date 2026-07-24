@@ -1,4 +1,5 @@
 package lavender.client.android.ui.chatlist
+import android.util.Log
 
 import android.content.Intent
 import android.widget.Toast
@@ -77,7 +78,7 @@ internal fun showLoginBottomSheet(activity: ChatListActivity, serverAddress: Str
         onLogin = { u: String, p: String ->
             try {
                 activity.startActivity(Intent(activity, SplashLoadingActivity::class.java))
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
 
             SessionManager.login(activity, u, p, serverAddress, register = false, email = "") { result ->
                 activity.lifecycleScope.launch {
@@ -158,7 +159,7 @@ internal fun showRegisterBottomSheet(activity: ChatListActivity, serverAddress: 
         onRegister = { u: String, p: String, email: String ->
             try {
                 activity.startActivity(Intent(activity, SplashLoadingActivity::class.java))
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
 
             SessionManager.login(activity, u, p, serverAddress, register = true, email = email) { result ->
                 activity.lifecycleScope.launch {

@@ -1,4 +1,5 @@
 package lavender.client.android.ui.adapter
+import android.util.Log
 
 import android.content.Context
 import android.graphics.Color
