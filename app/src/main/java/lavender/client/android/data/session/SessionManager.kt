@@ -618,7 +618,7 @@ object SessionManager {
 
                     CredentialStore.setJwtServerAddress(context, serverAddress)
 
-                    try { syncFcmToken(context, username) } catch (e: Exception) { }
+                    try { syncFcmToken(context, username) } catch (e: Exception) { Log.e("SessionManager", "FCM token sync failed", e) }
 
                     GrpcClient.getUserAvatar(username) { _ -> }
 

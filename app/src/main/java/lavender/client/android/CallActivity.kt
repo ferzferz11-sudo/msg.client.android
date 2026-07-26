@@ -8,7 +8,6 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
@@ -44,6 +43,17 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     private var isRemoteViewInitialized = false
     private var isLocalViewInitialized = false
 
+    private val permissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions.values.all { it }) {
+            if (!isIncoming || isConference) initWebRtc()
+        } else {
+            Toast.makeText(this, getString(R.string.camera_mic_permissions_required), Toast.LENGTH_LONG).show()
+            finish()
+        }
+    }
+
     // WebRTC connection timeout
     private var connectionTimeoutRunnable: Runnable? = null
     private val connectionTimeoutHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -51,7 +61,6 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
     companion object {
         private const val TAG = "CallActivity"
-        private const val PERMISSION_CODE = 101
         private val PERMISSIONS = arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
     }
 
@@ -111,7 +120,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         if (hasPermissions()) {
             if (!isIncoming || isConference) initWebRtc()
         } else {
-            ActivityCompat.requestPermissions(this, PERMISSIONS, PERMISSION_CODE)
+            permissionLauncher.launch(PERMISSIONS)
         }
 
         setupButtons()
@@ -475,14 +484,4 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     }
 
     private fun hasPermissions() = PERMISSIONS.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
-    
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_CODE && hasPermissions()) {
-            if (!isIncoming || isConference) initWebRtc()
-        } else if (requestCode == PERMISSION_CODE) {
-            Toast.makeText(this, getString(R.string.camera_mic_permissions_required), Toast.LENGTH_LONG).show()
-            finish()
-        }
-    }
 }

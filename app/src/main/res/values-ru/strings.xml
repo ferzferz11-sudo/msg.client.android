@@ -302,7 +302,13 @@
     <string name="theme_template_mint">Кибер Мята</string>
     <string name="theme_dark_graphite">Графит темный</string>
     <string name="admin_label">(Админ)</string>
+    <string name="admin_indicator">Админ</string>
     <string name="muted_label">Без звука</string>
+    <string name="uploading_images_label">Загрузка изображений…</string>
+    <string name="select_message">Выбрать сообщение</string>
+    <string name="cancel_reply">Отменить ответ</string>
+    <string name="search_previous">Предыдущее</string>
+    <string name="search_next">Следующее</string>
     <string name="super_admin">Админ панель</string>
     <string name="about">О программе</string>
     <string name="about_program">О программе</string>

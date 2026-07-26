@@ -312,7 +312,13 @@
     <string name="theme_template_mint">Cyber Mint</string>
     <string name="theme_dark_graphite">Graphite Dark</string>
     <string name="admin_label">(Admin)</string>
+    <string name="admin_indicator">Admin</string>
     <string name="muted_label">Muted</string>
+    <string name="uploading_images_label">Uploading images…</string>
+    <string name="select_message">Select message</string>
+    <string name="cancel_reply">Cancel reply</string>
+    <string name="search_previous">Previous</string>
+    <string name="search_next">Next</string>
     <string name="super_admin">Admin Panel</string>
     <string name="about">About</string>
     <string name="about_program">About Program</string>

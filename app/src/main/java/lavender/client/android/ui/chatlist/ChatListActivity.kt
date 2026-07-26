@@ -110,6 +110,24 @@ class ChatListActivity : AppCompatActivity() {
             showAdditionalSettingsSheet(this)
         }
     }
+
+    private val notificationPermissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (!isGranted && !shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS)) {
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.notifications)
+                .setMessage(R.string.notification_permission_denied)
+                .setPositiveButton(R.string.open_settings) { _, _ ->
+                    val intent = Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                        putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, packageName)
+                    }
+                    startActivity(intent)
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
+        }
+    }
     internal val editProfileLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) {
@@ -155,8 +173,7 @@ class ChatListActivity : AppCompatActivity() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
                 != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                androidx.core.app.ActivityCompat.requestPermissions(this,
-                    arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 2001)
+                notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
             }
         }
 
@@ -383,26 +400,6 @@ class ChatListActivity : AppCompatActivity() {
         updateCoordinator?.let { coord ->
             getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
                 .unregisterOnSharedPreferenceChangeListener(coord.prefsListener)
-        }
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 2001 && grantResults.isNotEmpty() && grantResults[0] != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            if (!shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS)) {
-                androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle(R.string.notifications)
-                    .setMessage(R.string.notification_permission_denied)
-                    .setPositiveButton(R.string.open_settings) { _, _ ->
-                        val intent = Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                            putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, packageName)
-                        }
-                        startActivity(intent)
-                    }
-                    .setNegativeButton(R.string.cancel, null)
-                    .show()
-            }
         }
     }
 
@@ -701,12 +698,6 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun applyTheme() {
         ThemeStore.init(this)
-        val prefs = getSharedPreferences("ThemePrefs", MODE_PRIVATE)
-        val isDarkMode = prefs.getBoolean("dark_mode", false)
-        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
-            if (isDarkMode) androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
-            else androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
-        )
         ThemeApplier.apply(this, ThemeStore.currentTheme())
     }
 }

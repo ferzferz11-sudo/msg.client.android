@@ -2,6 +2,7 @@ package lavender.client.android.theme
 
 import android.content.Context
 import android.content.res.Configuration
+import androidx.appcompat.app.AppCompatDelegate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -25,12 +26,15 @@ object ThemeStore {
     fun currentTheme(): Theme = _theme.value
 
     /**
-     * Quickly load theme from local cache to avoid flickering on startup
+     * Quickly load theme from local cache to avoid flickering on startup.
+     * Also syncs AppCompatDelegate night mode with the stored preference.
      */
     fun init(context: Context) {
         val prefs = lavender.client.android.theme.data.ThemePreferences(context)
         val themeId = prefs.getCurrentThemeId()
         followSystemDarkMode = prefs.isFollowSystemDarkMode()
+
+        syncNightMode(context)
 
         if (followSystemDarkMode) {
             _theme.value = resolveSystemTheme(context)
@@ -75,6 +79,7 @@ object ThemeStore {
         followSystemDarkMode = enabled
         val prefs = lavender.client.android.theme.data.ThemePreferences(context)
         prefs.setFollowSystemDarkMode(enabled)
+        syncNightMode(context)
         if (enabled) {
             _theme.value = resolveSystemTheme(context)
         } else {
@@ -87,6 +92,32 @@ object ThemeStore {
     fun onConfigurationChanged(context: Context) {
         if (followSystemDarkMode) {
             _theme.value = resolveSystemTheme(context)
+        }
+    }
+
+    /**
+     * Sync AppCompatDelegate night mode with the current follow-system preference.
+     * Called on init and when the preference changes.
+     */
+    private fun syncNightMode(context: Context) {
+        val mode = if (followSystemDarkMode) {
+            AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        } else {
+            val isDark = isThemeDark(_theme.value)
+            if (isDark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
+        }
+        AppCompatDelegate.setDefaultNightMode(mode)
+    }
+
+    private fun isThemeDark(theme: Theme): Boolean {
+        return try {
+            val bgColor = android.graphics.Color.parseColor(theme.backgroundColor)
+            val luminance = (0.299 * android.graphics.Color.red(bgColor) +
+                    0.587 * android.graphics.Color.green(bgColor) +
+                    0.114 * android.graphics.Color.blue(bgColor)) / 255
+            luminance < 0.5
+        } catch (e: Exception) {
+            true
         }
     }
 

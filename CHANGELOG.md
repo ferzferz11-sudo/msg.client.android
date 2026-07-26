@@ -1,5 +1,54 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.3] - 2026-07-26
+
+### Исправлено
+
+**Proto marshaller field mismatches (CRITICAL):**
+- `AddContactRequestMarshaller` — `userId` и `username` были местами (field 1 ↔ 3)
+- `RemoveContactRequestMarshaller` — `userId` и `username` были местами (field 1 ↔ 3)
+- `GetContactsRequestMarshaller` — `userId` и `username` были местами (field 1 ↔ 2)
+- `SignInRequestV2Marshaller` — DeviceInfo не содержал `client_version` (field 3)
+- `SignUpRequestV2Marshaller` — DeviceInfo не содержал `client_version` (field 3)
+
+**Error handling:**
+- `SessionManager` — FCM token sync failure теперь логируется (был пустой catch)
+- `NotificationsGrpc` — notification stream errors теперь логируются с stack trace (3 места)
+- `RealGrpcClient` — room switch failure теперь логируется с proper TAG
+
+**CoroutineScope leaks:**
+- `NotificationReplyReceiver` — scope перенесён в `onReceive()` (был class-level, leak)
+- `ServerAuthBottomSheet` — добавлен `SupervisorJob` в scope
+
+**Deprecated API migration:**
+- `ChatListActivity` — `onRequestPermissionsResult` → `ActivityResultContracts.RequestPermission`
+- `ConferenceLobbyActivity` — `onRequestPermissionsResult` → `ActivityResultContracts.RequestMultiplePermissions`
+- `CallActivity` — `onRequestPermissionsResult` → `ActivityResultContracts.RequestMultiplePermissions`
+
+### Улучшено
+
+**ViewModel migration:**
+- `ContactsActivity` (359 строк) → `ContactsViewModel` — загрузка контактов, добавление/удаление, создание чатов
+- `ThemesActivity` (337 строк) → `ThemesViewModel` — загрузка тем, применение, удаление, системный dark mode
+- `NewChatActivity` — добавлен `NewChatViewModel` для управления intent data, connection state, metadata
+
+**Dark mode improvements:**
+- `ThemeStore` теперь синхронизирует `AppCompatDelegate` night mode при init и смене настройки
+- Удалён дублирующийся `dark_mode` pref в `ChatListActivity.applyTheme()`
+
+**Accessibility:**
+- Исправлен hardcoded русский текст `"Загрузка изображений..."` → `@string/uploading_images_label`
+- Исправлен неправильный `contentDescription` у `ivAdminIndicator` (был `muted_label` → `admin_indicator`)
+- Добавлены `contentDescription` к 3 `ImageButton` (searchPrev, searchNext, cancelReply)
+- Добавлены 8 строковых ресурсов (EN + RU): `admin_indicator`, `uploading_images_label`, `select_message`, `cancel_reply`, `search_previous`, `search_next`
+
+**Unit tests:**
+- `ContactsViewModelTest` — 8 тестов (data class defaults, copy, ChatCreatedEvent)
+- `ThemesViewModelTest` — 4 теста (ThemesUiState defaults, copy, error/success states)
+- `NewChatViewModelTest` — 6 тестов (ChatIntentData, ChatMetadataState defaults, copy, secret chat)
+
+---
+
 ## [1.3.4.2] - 2026-07-24
 
 ### Очищено

@@ -233,6 +233,7 @@
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/search_previous"
                     android:src="@android:drawable/arrow_up_float"
                     app:tint="?attr/colorOnPrimary" />
 
@@ -241,6 +242,7 @@
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/search_next"
                     android:src="@android:drawable/arrow_down_float"
                     app:tint="?attr/colorOnPrimary" />
 
@@ -361,6 +363,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cancel_reply"
                 android:src="@drawable/ic_close"
                 app:tint="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
@@ -490,7 +493,7 @@
                 android:id="@+id/uploadProgressText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Загрузка изображений..."
+                android:text="@string/uploading_images_label"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp"
                 android:layout_marginBottom="8dp" />

@@ -17,6 +17,7 @@ import lavender.client.android.theme.ThemeStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -42,7 +43,7 @@ class ServerAuthBottomSheet(
 
     private var statusIndicator: View? = null
     private val updateManager = UpdateManager(context)
-    private val scope = CoroutineScope(Dispatchers.Main)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var healthCheckJob: Job? = null
 
     init {

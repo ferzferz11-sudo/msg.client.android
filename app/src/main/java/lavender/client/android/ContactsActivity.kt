@@ -1,5 +1,4 @@
 package lavender.client.android
-import android.util.Log
 
 import android.content.Context
 import android.content.Intent
@@ -15,25 +14,29 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.launch
-import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.grpc.RealGrpcClient
 import lavender.client.android.databinding.ActivityContactsBinding
+import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
+import lavender.client.android.ui.contacts.ContactsViewModel
 import lavender.client.android.ui.widget.SearchableListBottomSheet
 import lavender.client.android.ui.adapter.UserAdapter
-import org.json.JSONArray
 import java.util.Locale
 
 class ContactsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityContactsBinding
-    private val grpcClient = GrpcClient
+    private lateinit var viewModel: ContactsViewModel
     private lateinit var adapter: UserAdapter
     private var username: String = ""
     private var password: String = ""
-    private var contacts = mutableListOf<String>()
 
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
@@ -50,6 +53,8 @@ class ContactsActivity : AppCompatActivity() {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
 
+        viewModel = ViewModelProvider(this)[ContactsViewModel::class.java]
+
         username = intent.getStringExtra("USERNAME") ?: ""
         password = intent.getStringExtra("PASSWORD") ?: ""
 
@@ -57,7 +62,7 @@ class ContactsActivity : AppCompatActivity() {
         setContentView(binding.root)
         ThemeUi.bind(this, username)
         setupUI()
-        updateToolbarAvatar()
+        setupObservers()
     }
 
     private fun setupUI() {
@@ -69,7 +74,7 @@ class ContactsActivity : AppCompatActivity() {
 
         binding.toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
         binding.toolbar.navigationIcon?.setTint(getColorOnPrimary())
-        
+
         binding.toolbar.setNavigationOnClickListener {
             if (binding.searchCard.isVisible) {
                 hideSearchBar()
@@ -92,10 +97,7 @@ class ContactsActivity : AppCompatActivity() {
             }
         })
 
-        binding.addContactFab.setOnClickListener {
-            showAddContactDialog()
-        }
-
+        binding.addContactFab.setOnClickListener { showAddContactDialog() }
         binding.actionSearch.setOnClickListener { showSearchBar() }
         binding.actionCreateChat.setOnClickListener { createChatFromSelection() }
         binding.actionDelete.setOnClickListener { confirmRemoveSelectedContacts() }
@@ -109,12 +111,31 @@ class ContactsActivity : AppCompatActivity() {
         })
     }
 
-    private fun updateToolbarAvatar() {
+    private fun setupObservers() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state ->
+                    binding.emptyStateContainer.isVisible = state.contacts.isEmpty() && !state.isLoading
+                    state.chatCreated?.let { event ->
+                        viewModel.consumeChatCreatedEvent()
+                        navigateToChat(event)
+                    }
+                }
+            }
+        }
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.onlineUsers.collect { onlineUsers ->
+                    adapter.setOnlineUsers(onlineUsers)
+                }
+            }
+        }
     }
 
     private fun getColorOnPrimary(): Int {
-        val theme = lavender.client.android.theme.ThemeStore.currentTheme()
-        return lavender.client.android.theme.ThemeUtils.parseSafeColor(theme.onPrimaryColor, android.graphics.Color.WHITE)
+        val theme = ThemeStore.currentTheme()
+        return ThemeUtils.parseSafeColor(theme.onPrimaryColor, android.graphics.Color.WHITE)
     }
 
     private fun setBackIcon(isClose: Boolean) {
@@ -130,7 +151,6 @@ class ContactsActivity : AppCompatActivity() {
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.showSoftInput(binding.searchEditText, 0)
         setBackIcon(true)
-        
         binding.actionSearch.isVisible = false
     }
 
@@ -140,7 +160,7 @@ class ContactsActivity : AppCompatActivity() {
         adapter.filter("")
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(binding.searchEditText.windowToken, 0)
-        
+
         val hasSelection = adapter.getSelectedUsers().isNotEmpty()
         setBackIcon(hasSelection)
         binding.actionSearch.isVisible = !hasSelection
@@ -148,72 +168,49 @@ class ContactsActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
-        loadContacts()
+        RealGrpcClient.isAppInBackground = false
+        viewModel.loadContacts(username)
     }
 
     override fun onPause() {
         super.onPause()
-        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = true
+        RealGrpcClient.isAppInBackground = true
     }
 
     private fun setupRecyclerView() {
         adapter = UserAdapter(
             lifecycleScope,
-            onUserClick = { selectedUser ->
-                openProfile(selectedUser)
-            },
-            onUserLongClick = { selectedUser ->
-                adapter.toggleSelection(selectedUser)
-            },
+            onUserClick = { openProfile(it) },
+            onUserLongClick = { adapter.toggleSelection(it) },
             onSelectionChanged = { count ->
                 val hasSelection = count > 0
                 binding.toolbarTitle.text = if (hasSelection) getString(R.string.selected_count, count) else getString(R.string.contacts)
                 setBackIcon(hasSelection || binding.searchCard.isVisible)
-                
                 binding.actionCreateChat.isVisible = hasSelection
                 binding.actionDelete.isVisible = hasSelection
                 binding.actionSearch.isVisible = !hasSelection && !binding.searchCard.isVisible
             },
-            avatarCache = grpcClient.getAvatarCache(),
-            onlineUsers = grpcClient.users.value
+            avatarCache = viewModel.getAvatarCache(),
+            onlineUsers = viewModel.onlineUsers.value
         )
         binding.contactsRecyclerView.adapter = adapter
         binding.contactsRecyclerView.layoutManager = LinearLayoutManager(this)
-
-        lifecycleScope.launch {
-            grpcClient.users.collect { onlineUsers ->
-                adapter.setOnlineUsers(onlineUsers)
-            }
-        }
-    }
-
-    private fun loadContacts() {
-        grpcClient.getContacts(username) { list ->
-            contacts = list.toMutableList()
-            lifecycleScope.launch {
-                adapter.setUsers(contacts)
-                binding.emptyStateContainer.isVisible = contacts.isEmpty()
-            }
-        }
     }
 
     private fun openProfile(targetUser: String) {
-        val intent = Intent(this, ProfileActivity::class.java).apply {
+        startActivity(Intent(this, ProfileActivity::class.java).apply {
             putExtra("username", targetUser)
             putExtra("is_group", false)
-        }
-        startActivity(intent)
+        })
     }
 
     private fun createChatFromSelection() {
         val selected = adapter.getSelectedUsers()
         if (selected.isEmpty()) return
-
         if (selected.size == 1) {
-            startDirectChat(selected.first())
+            viewModel.createDirectChat(username, selected.first())
         } else {
-            createGroupChat(getString(R.string.default_group_name), selected + username)
+            viewModel.createGroupChat(getString(R.string.default_group_name), selected + username, username)
         }
         adapter.clearSelection()
     }
@@ -226,10 +223,9 @@ class ContactsActivity : AppCompatActivity() {
             .setTitle(R.string.remove_contact)
             .setMessage(getString(R.string.remove_multiple_contacts_confirm, selected.size))
             .setPositiveButton(R.string.delete) { _, _ ->
-                selected.forEach { contact ->
-                    grpcClient.removeContact(username, contact) { _, _ -> }
+                viewModel.removeContacts(username, selected) {
+                    lifecycleScope.launch { viewModel.loadContacts(username) }
                 }
-                loadContacts()
                 adapter.clearSelection()
             }
             .setNegativeButton(R.string.cancel_dialog, null)
@@ -253,26 +249,26 @@ class ContactsActivity : AppCompatActivity() {
                 sheet.setActionButtonEnabled(count > 0)
                 sheet.setActionButtonText(if (count > 0) "${getString(R.string.add)} ($count)" else getString(R.string.add))
             },
-            avatarCache = grpcClient.getAvatarCache(),
-            onlineUsers = grpcClient.users.value
+            avatarCache = viewModel.getAvatarCache(),
+            onlineUsers = viewModel.onlineUsers.value
         )
 
         sheet.setAdapter(userAdapter)
+        viewModel.loadAllUsers()
 
-        grpcClient.loadAllUsers()
+        val contacts = viewModel.uiState.value.contacts
         val usersJob = lifecycleScope.launch {
-            grpcClient.allUsers.collect { allUsers ->
-                val filteredUsersNames = allUsers.filter { it.username != username && !contacts.contains(it.username) }.map { it.username }
+            viewModel.observeAllUsers { allUsers ->
+                val filtered = allUsers
+                    .filter { it.username != username && !contacts.contains(it.username) }
+                    .map { it.username }
                 sheet.setLoading(false)
-                userAdapter.setUsers(filteredUsersNames)
+                userAdapter.setUsers(filtered)
             }
         }
 
         sheet.setOnDismissListener { usersJob.cancel() }
-
-        sheet.onSearchTextChanged { query ->
-            userAdapter.filter(query)
-        }
+        sheet.onSearchTextChanged { query -> userAdapter.filter(query) }
 
         sheet.onActionClick {
             val selected = userAdapter.getSelectedUsers()
@@ -281,7 +277,7 @@ class ContactsActivity : AppCompatActivity() {
                 var completed = 0
                 val total = selected.size
                 selected.forEach { contact ->
-                    grpcClient.addContact(username, contact) { _, _ ->
+                    viewModel.addContact(username, contact) { success ->
                         completed++
                         if (completed == total) {
                             lifecycleScope.launch {
@@ -289,31 +285,12 @@ class ContactsActivity : AppCompatActivity() {
                                 sheet.dismiss()
                                 if (createChat) {
                                     if (selected.size == 1) {
-                                        try {
-                                            startActivity(Intent(this@ContactsActivity, SplashLoadingActivity::class.java))
-                                        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
-                                        val targetUser = selected.first()
-                                        grpcClient.createDirectChat(username, targetUser) { chatId ->
-                                            lifecycleScope.launch {
-                                                SplashLoadingActivity.finishIfShowing()
-                                                if (chatId != null && chatId.isNotEmpty()) {
-                                                    Toast.makeText(this@ContactsActivity, getString(R.string.chat_created_with, targetUser), Toast.LENGTH_SHORT).show()
-                                                    val intent = Intent(this@ContactsActivity, NewChatActivity::class.java).apply {
-                                                        putExtra("USERNAME", username)
-                                                        putExtra("ROOM_ID", chatId)
-                                                    }
-                                                    startActivity(intent)
-                                                } else {
-                                                    Toast.makeText(this@ContactsActivity, R.string.failed_to_create_chat, Toast.LENGTH_SHORT).show()
-                                                    loadContacts()
-                                                }
-                                            }
-                                        }
+                                        viewModel.createDirectChat(username, selected.first())
                                     } else {
-                                        createGroupChat(getString(R.string.default_group_name), selected + username)
+                                        viewModel.createGroupChat(getString(R.string.default_group_name), selected + username, username)
                                     }
                                 } else {
-                                    loadContacts()
+                                    viewModel.loadContacts(username)
                                 }
                             }
                         }
@@ -324,36 +301,15 @@ class ContactsActivity : AppCompatActivity() {
         sheet.show()
     }
 
-    private fun startDirectChat(targetUser: String) {
-        grpcClient.createDirectChat(username, targetUser) { chatId ->
-            if (chatId != null) {
-                lifecycleScope.launch {
-                    val intent = Intent(this@ContactsActivity, NewChatActivity::class.java)
-                        .putExtra("USERNAME", username)
-                        .putExtra("ROOM_ID", chatId)
-                        .putExtra("CHAT_NAME", getString(R.string.private_chat_with, targetUser))
-                        .putExtra("IS_DIRECT", true)
-                        .putExtra("PARTICIPANTS", "[\"$username\", \"$targetUser\"]")
-                    startActivity(intent)
-                }
-            }
+    private fun navigateToChat(event: lavender.client.android.ui.contacts.ChatCreatedEvent) {
+        val intent = Intent(this, NewChatActivity::class.java).apply {
+            putExtra("USERNAME", username)
+            putExtra("ROOM_ID", event.chatId)
+            putExtra("CHAT_NAME", event.chatName)
+            putExtra("IS_DIRECT", event.isDirect)
+            putExtra("PARTICIPANTS", event.participants)
+            if (event.creator.isNotEmpty()) putExtra("CREATOR", event.creator)
         }
-    }
-
-    private fun createGroupChat(name: String, participants: List<String>) {
-        grpcClient.createGroupChat(name, participants, username) { chatId ->
-            if (chatId != null) {
-                lifecycleScope.launch {
-                    val intent = Intent(this@ContactsActivity, NewChatActivity::class.java)
-                        .putExtra("USERNAME", username)
-                        .putExtra("ROOM_ID", chatId)
-                        .putExtra("CHAT_NAME", name)
-                        .putExtra("IS_DIRECT", false)
-                        .putExtra("PARTICIPANTS", JSONArray(participants).toString())
-                        .putExtra("CREATOR", username)
-                    startActivity(intent)
-                }
-            }
-        }
+        startActivity(intent)
     }
 }

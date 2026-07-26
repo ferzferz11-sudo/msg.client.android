@@ -1,11 +1,7 @@
 package lavender.client.android.data.grpc
 
 import com.google.protobuf.Timestamp
-import io.grpc.MethodDescriptor
 import lavender.client.android.data.proto.*
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.InputStream
 
 // ======= MARSHALLERS =======
 // Extracted from RealGrpcClient v1.1.3.27 — all gRPC MethodDescriptor.Marshaller implementations.
@@ -659,7 +655,7 @@ class RemoveParticipantResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<
 class AddContactRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<AddContactRequestProto> {
     override fun stream(v: AddContactRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.contactUsername.isNotEmpty()) cos.writeString(2, v.contactUsername); if (v.username.isNotEmpty()) cos.writeString(3, v.username)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.contactUsername.isNotEmpty()) cos.writeString(2, v.contactUsername); if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): AddContactRequestProto = AddContactRequestProto()
@@ -677,7 +673,7 @@ class AddContactResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<AddCont
 class RemoveContactRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<RemoveContactRequestProto> {
     override fun stream(v: RemoveContactRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.contactUsername.isNotEmpty()) cos.writeString(2, v.contactUsername); if (v.username.isNotEmpty()) cos.writeString(3, v.username)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.contactUsername.isNotEmpty()) cos.writeString(2, v.contactUsername); if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): RemoveContactRequestProto = RemoveContactRequestProto()
@@ -695,7 +691,7 @@ class RemoveContactResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Remo
 class GetContactsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetContactsRequestProto> {
     override fun stream(v: GetContactsRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.username.isNotEmpty()) cos.writeString(2, v.username)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): GetContactsRequestProto = GetContactsRequestProto()
@@ -1073,6 +1069,7 @@ class SignInRequestV2Marshaller : io.grpc.MethodDescriptor.Marshaller<SignInRequ
             val deviceCos = com.google.protobuf.CodedOutputStream.newInstance(deviceBytes)
             if (v.deviceId.isNotEmpty()) deviceCos.writeString(1, v.deviceId)
             if (v.deviceName.isNotEmpty()) deviceCos.writeString(2, v.deviceName)
+            if (v.clientVersion.isNotEmpty()) deviceCos.writeString(3, v.clientVersion)
             deviceCos.flush()
             cos.writeByteArray(3, deviceBytes.toByteArray())
         }
@@ -1152,6 +1149,7 @@ class SignUpRequestV2Marshaller : io.grpc.MethodDescriptor.Marshaller<SignUpRequ
             val deviceCos = com.google.protobuf.CodedOutputStream.newInstance(deviceBytes)
             if (v.deviceId.isNotEmpty()) deviceCos.writeString(1, v.deviceId)
             if (v.deviceName.isNotEmpty()) deviceCos.writeString(2, v.deviceName)
+            if (v.clientVersion.isNotEmpty()) deviceCos.writeString(3, v.clientVersion)
             deviceCos.flush()
             cos.writeByteArray(4, deviceBytes.toByteArray())
         }

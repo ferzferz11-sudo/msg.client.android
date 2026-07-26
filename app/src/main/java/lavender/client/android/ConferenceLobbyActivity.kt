@@ -15,7 +15,6 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
@@ -25,7 +24,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.google.android.material.shape.RelativeCornerSize
 import com.google.android.material.shape.ShapeAppearanceModel
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import lavender.client.android.data.calls.CallManager
 import lavender.client.android.data.calls.CallNavigator
@@ -38,9 +36,7 @@ import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.ui.adapter.SelectableUserAdapter
 import lavender.client.android.ui.conference.ConferenceLobbyViewModel
 import org.json.JSONArray
-import org.json.JSONObject
 import org.webrtc.*
-import java.text.SimpleDateFormat
 import java.util.*
 
 import lavender.client.android.ui.widget.SearchableListBottomSheet
@@ -49,12 +45,19 @@ class ConferenceLobbyActivity : AppCompatActivity() {
     private lateinit var binding: ActivityConferenceLobbyBinding
     private lateinit var viewModel: ConferenceLobbyViewModel
     private var webRtcClient: WebRtcClient? = null
+
+    private val permissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions.values.all { it }) {
+            initPreview()
+        }
+    }
     private val eglBase = EglBase.create()
 
     private lateinit var invitedAdapter: InvitedUserAdapter
 
     companion object {
-        private const val PERMISSION_CODE = 101
         private val PERMISSIONS = arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
     }
 
@@ -139,7 +142,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
         if (hasPermissions()) {
             initPreview()
         } else {
-            ActivityCompat.requestPermissions(this, PERMISSIONS, PERMISSION_CODE)
+            permissionLauncher.launch(PERMISSIONS)
         }
 
         observeViewModel()
@@ -379,13 +382,6 @@ class ConferenceLobbyActivity : AppCompatActivity() {
 
     private fun hasPermissions() = PERMISSIONS.all {
         ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_CODE && hasPermissions()) {
-            initPreview()
-        }
     }
 
     override fun onDestroy() {

@@ -18,8 +18,6 @@ import java.util.UUID
 
 class NotificationReplyReceiver : BroadcastReceiver() {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
     override fun onReceive(context: Context, intent: Intent) {
         val roomId = intent.getStringExtra(EXTRA_ROOM_ID) ?: return
         val results = getResultsFromIntent(intent)
@@ -36,9 +34,11 @@ class NotificationReplyReceiver : BroadcastReceiver() {
 
         if (username.isEmpty()) {
             Log.w("FCM", "Reply failed: no username")
+            pendingResult.finish()
             return
         }
 
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         scope.launch {
             try {
                 if (GrpcClient.connectionStatus.value != lavender.client.android.data.grpc.ConnectionStatus.READY) {
@@ -65,7 +65,7 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                     }
                 }
             } catch (e: Exception) {
-                Log.e("FCM", "Reply error: ${e.message}")
+                Log.e("FCM", "Reply error: ${e.message}", e)
             } finally {
                 pendingResult.finish()
             }

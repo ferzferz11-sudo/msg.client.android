@@ -413,7 +413,7 @@ object RealGrpcClient {
         val currentChannel = getChannel() ?: return
         if (chatV2RequestObserver != null) {
             val switchMsg = ChatV2MessageProto(roomId = roomId)
-            try { chatV2RequestObserver?.onNext(switchMsg) } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+            try { chatV2RequestObserver?.onNext(switchMsg) } catch (e: Exception) { Log.e("RealGrpcClient", "Failed to send room switch message for $roomId", e) }
             return
         }
 
