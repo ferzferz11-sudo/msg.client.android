@@ -1,5 +1,115 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.2] - 2026-07-24
+
+### Очищено
+
+**Code cleanup:**
+- Удалены unused imports из 15+ файлов
+- Исправлены redundant qualifier names
+- Заменены `Color.parseColor()` на `toColorInt()`
+- Исправлены Legacy Long → Duration в `delay()` и `withTimeoutOrNull()`
+- Исправлены string concatenation → string resources
+- Добавлены `@Suppress("UNUSED_PARAMETER")` для неиспользуемых параметров API
+- Удалены unused functions: `openChat()`, `loadParticipants()`
+- Исправлен `adapterPosition` → `bindingAdapterPosition` (deprecated API)
+
+**String resources:**
+- Добавлены `username_at`, `company_position_with_count`, `delete_confirmation_users`, `delete_confirmation_chats` (EN + RU)
+
+**GrpcConnectionManager:**
+- Добавлены `TAG` константы в `RemoteAgentGrpc.kt`
+- Исправлены BuildConfig ссылки
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| 15+ файлов | Unused imports удалены |
+| `RemoteAgentGrpc.kt` | BuildConfig → DEBUG константа |
+| `GrpcCallClient.kt` | delay() → Duration |
+| `GrpcTypingClient.kt` | delay() → Duration |
+| `ForwardMessageSheet.kt` | adapterPosition → bindingAdapterPosition |
+| `strings.xml` (EN/RU) | +4 строковых ресурса |
+
+---
+
+## [1.3.4.1] - 2026-07-24
+
+### Улучшено
+
+**Refactoring (ViewModel):**
+- `EditProfileActivity` (775 строк) → `EditProfileViewModel` — вынесена бизнес-логика (загрузка профиля, аватара, компании, обновление био/пароля/имени)
+- `ShareReceiverActivity` (686 строк) → `ShareReceiverViewModel` — загрузка чатов, отправка сообщений, загрузка файлов, превью ссылок
+- `SuperAdminActivity` (580 строк) → `SuperAdminViewModel` — загрузка пользователей/чатов, пагинация, удаление, смена пароля
+- `ConferenceLobbyActivity` (581 строк) → `ConferenceLobbyViewModel` — управление конференцией, участники, метаданные, время
+- `RemoteAgentSettingsActivity` (623 строки) → `RemoteAgentSettingsViewModel` — токены, агенты, шлюз/туннель
+
+**gRPC hardcoded English:**
+- 8 gRPC клиентов обновлены: `GrpcProfileClient`, `GrpcFavoritesClient`, `GrpcChatClient`, `GrpcMessageV2Client`, `GrpcDraftClient`, `GrpcCallClient`, `GrpcTypingClient`, `RemoteAgentGrpc`
+- Добавлены константы `DEFAULT_ERROR`, `CHANNEL_DEAD`, `STREAM_FAILED`, `STREAM_ERROR`
+- Добавлены 6 строковых ресурсов (EN + RU): `grpc_error`, `favorite_removed`, `favorite_remove_failed`, `channel_dead`, `stream_failed`, `stream_error`
+
+**GrpcConnectionManager рефакторинг:**
+- Разделение `connect()` на 6 приватных методов: `shouldConnect()`, `isCallInProgress()`, `updateServerAddress()`, `updateConnectionStatus()`, `buildChannel()`, `activateChannel()`
+- Константы для магических чисел: `KEEP_ALIVE_TIME_SECONDS`, `KEEP_ALIVE_TIMEOUT_SECONDS`, `MAX_INBOUND_MESSAGE_SIZE`, `IDLE_TIMEOUT_MINUTES`
+- HTTP порты вынесены в константы: `DEV_GRPC_PORT`, `DEV_HTTP_PORT`, `PROD_HTTP_PORT`
+
+**ChatAdapter → ListAdapter:**
+- Миграция на `ListAdapter<FlatItem, RecyclerView.ViewHolder>` с `DiffUtil.ItemCallback`
+- Добавлен интерфейс `ChatListAdapter` для доступа к элементам извне
+- Автоматические анимированные обновления через DiffUtil
+
+**Forward message UX:**
+- Создан `ForwardMessageSheet` с улучшенным UX
+- Добавлен поиск по чатам
+- Множественный выбор чатов для пересылки
+- Превью сообщений перед пересылкой
+- Кнопка отправки с подсчётом выбранных чатов
+- Новые layout файлы: `sheet_forward_message.xml`, `item_forward_preview.xml`, `item_forward_chat.xml`
+- Новые drawable: `bg_message_preview.xml`, `ic_search.xml`, `ic_check_circle.xml`
+
+**Chat list prefetch:**
+- Создан `AvatarPrefetcher` для предзагрузки аватаров при скролле
+- Использует Glide `preload()` для аватаров видимых + следующих 10 элементов
+- Интерфейс `ChatListAdapter` для доступа к элементам из AvatarPrefetcher
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `EditProfileViewModel.kt` | NEW — бизнес-логика EditProfileActivity |
+| `ShareReceiverViewModel.kt` | NEW — бизнес-логика ShareReceiverActivity |
+| `SuperAdminViewModel.kt` | NEW — бизнес-логика SuperAdminActivity |
+| `ConferenceLobbyViewModel.kt` | NEW — бизнес-логика ConferenceLobbyActivity |
+| `RemoteAgentSettingsViewModel.kt` | NEW — бизнес-логика RemoteAgentSettingsActivity |
+| `EditProfileActivity.kt` | Использует EditProfileViewModel |
+| `ShareReceiverActivity.kt` | Использует ShareReceiverViewModel |
+| `SuperAdminActivity.kt` | Использует SuperAdminViewModel |
+| `ConferenceLobbyActivity.kt` | Использует ConferenceLobbyViewModel |
+| `RemoteAgentSettingsActivity.kt` | Использует RemoteAgentSettingsViewModel |
+| `GrpcConnectionManager.kt` | Рефакторинг: разделение connect(), константы |
+| `ChatAdapter.kt` | Миграция на ListAdapter + ChatListAdapter interface |
+| `AvatarPrefetcher.kt` | NEW — предзагрузка аватаров |
+| `ForwardMessageSheet.kt` | NEW — улучшенный UX пересылки |
+| `GrpcProfileClient.kt` | DEFAULT_ERROR константа |
+| `GrpcFavoritesClient.kt` | REMOVED/FAILED константы |
+| `GrpcChatClient.kt` | DEFAULT_ERROR константа |
+| `GrpcMessageV2Client.kt` | DEFAULT_ERROR константа |
+| `GrpcDraftClient.kt` | DEFAULT_ERROR константа |
+| `GrpcCallClient.kt` | CANCEL_REASON константа |
+| `GrpcTypingClient.kt` | CANCEL_REASON константа |
+| `RemoteAgentGrpc.kt` | CHANNEL_DEAD/STREAM_FAILED/STREAM_ERROR константы |
+| `strings.xml` (EN/RU) | +12 строк |
+| `sheet_forward_message.xml` | NEW — layout для ForwardMessageSheet |
+| `item_forward_preview.xml` | NEW — превью сообщения |
+| `item_forward_chat.xml` | NEW — элемент чата для пересылки |
+| `bg_message_preview.xml` | NEW — фон превью |
+| `ic_search.xml` | NEW — иконка поиска |
+| `ic_check_circle.xml` | NEW — иконка выбора |
+
+---
+
 ## [1.3.4.0] - 2026-07-24
 
 ### Очищено

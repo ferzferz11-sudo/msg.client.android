@@ -10,6 +10,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.CoroutineScope
 import lavender.client.android.R
@@ -20,32 +21,30 @@ import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 
 /**
- * ChatAdapter — адаптер с поддержкой секций (Pinned/Favorites/All Chats) и режима выбора.
+ * ChatAdapter — ListAdapter with DiffUtil for animated updates.
  *
  * ViewType:
- * - SECTION_HEADER — заголовок секции
- * - CHAT_ITEM — обычный чат
- * - FAVORITES — избранное
+ * - SECTION_HEADER — section header
+ * - CHAT_ITEM — chat item
  *
  * Selection Mode:
- * - При включении показывает CheckBox на каждом элементе
- * - Множественный выбор через тап (toggle)
- * - Визуальная подсветка выбранных элементов
- *
- * DiffUtil:
- * - setSections() использует DiffUtil для анимированных обновлений
- * - Секции идентифицируются по Section enum
- * - Чаты идентифицируются по chat.id
+ * - CheckBox on each item when enabled
+ * - Multiple selection via tap (toggle)
+ * - Visual highlight for selected items
  */
+interface ChatListAdapter {
+    fun getItemAtPosition(position: Int): FlatItem?
+}
+
 class ChatAdapter(
-    private val scope: CoroutineScope,
+    @Suppress("UNUSED_PARAMETER") private val scope: CoroutineScope,
     private val currentUsername: String,
     private val onChatClick: (ChatInfo) -> Unit,
     private val onChatLongClick: (ChatInfo, View) -> Unit,
     private val onSelectionChanged: (Int) -> Unit = {},
     private var onlineUsers: List<String> = emptyList(),
     private var allUsers: List<lavender.client.android.data.proto.UserInfoProto> = emptyList()
-) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+) : ListAdapter<FlatItem, RecyclerView.ViewHolder>(FlatItemDiffCallback()), ChatListAdapter {
 
     companion object {
         private const val TYPE_SECTION_HEADER = 0
@@ -53,7 +52,6 @@ class ChatAdapter(
     }
 
     private var sections: List<SectionItem> = emptyList()
-    private var flatItems: List<FlatItem> = emptyList()
     private var currentFilter: String = ""
 
     // Selection state
@@ -79,36 +77,31 @@ class ChatAdapter(
         cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
         cachedTextSecondary = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.LTGRAY)
         cachedSurfaceColor = ThemeUtils.parseSafeColor(theme.incomingBubbleColor, Color.DKGRAY)
-        // Selection highlight: primary color with alpha
         cachedSelectedColor = Color.argb(48, Color.red(cachedPrimaryColor), Color.green(cachedPrimaryColor), Color.blue(cachedPrimaryColor))
-        // Unread highlight: primary color with subtle alpha
         cachedUnreadColor = Color.argb(40, Color.red(cachedPrimaryColor), Color.green(cachedPrimaryColor), Color.blue(cachedPrimaryColor))
         colorsInitialized = true
     }
 
     fun updateTheme() {
         colorsInitialized = false
-        notifyItemRangeChanged(0, itemCount)
+        notifyDataSetChanged()
     }
 
     // ======= Public API =======
 
     /**
      * Update sections with DiffUtil for animated changes.
-     * Calculates minimal diff and dispatches insert/remove/move/update operations.
      */
     fun setSections(newSections: List<SectionItem>) {
         sections = newSections
         val newFlat = buildFlatList(newSections)
-        val diff = DiffUtil.calculateDiff(ChatListDiffCallback(flatItems, newFlat))
-        flatItems = newFlat
-        diff.dispatchUpdatesTo(this)
+        submitList(newFlat)
     }
 
     fun getSelectedIds(): Set<String> = selectedIds.toSet()
 
     fun getSelectedChats(): List<ChatInfo> {
-        return flatItems.mapNotNull { item ->
+        return currentList.mapNotNull { item ->
             when (item) {
                 is FlatItem.ChatItem -> if (selectedIds.contains(item.chat.id)) item.chat else null
                 else -> null
@@ -144,9 +137,13 @@ class ChatAdapter(
 
     fun isSelectionMode(): Boolean = selectionMode
 
-    fun currentList(): List<FlatItem> = flatItems
+    fun currentList(): List<FlatItem> = currentList
 
     // ======= Internal =======
+
+    override fun getItemAtPosition(position: Int): FlatItem? {
+        return getItem(position)
+    }
 
     private fun buildFlatList(sections: List<SectionItem>): List<FlatItem> {
         val result = mutableListOf<FlatItem>()
@@ -158,37 +155,10 @@ class ChatAdapter(
         return result
     }
 
-    // ======= DiffUtil =======
-
-    class ChatListDiffCallback(
-        private val oldList: List<FlatItem>,
-        private val newList: List<FlatItem>
-    ) : DiffUtil.Callback() {
-
-        override fun getOldListSize(): Int = oldList.size
-        override fun getNewListSize(): Int = newList.size
-
-        override fun areItemsTheSame(oldPos: Int, newPos: Int): Boolean {
-            val old = oldList[oldPos]
-            val new = newList[newPos]
-            return when {
-                old is FlatItem.SectionHeader && new is FlatItem.SectionHeader ->
-                    old.section == new.section
-                old is FlatItem.ChatItem && new is FlatItem.ChatItem ->
-                    old.chat.id == new.chat.id
-                else -> false
-            }
-        }
-
-        override fun areContentsTheSame(oldPos: Int, newPos: Int): Boolean {
-            return oldList[oldPos] == newList[newPos]
-        }
-    }
-
-    // ======= RecyclerView.Adapter =======
+    // ======= ListAdapter overrides =======
 
     override fun getItemViewType(position: Int): Int {
-        return when (flatItems.getOrNull(position)) {
+        return when (getItem(position)) {
             is FlatItem.SectionHeader -> TYPE_SECTION_HEADER
             is FlatItem.ChatItem -> TYPE_CHAT_ITEM
             null -> TYPE_CHAT_ITEM
@@ -212,7 +182,7 @@ class ChatAdapter(
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         initColors(holder.itemView)
-        when (val item = flatItems.getOrNull(position)) {
+        when (val item = getItem(position)) {
             is FlatItem.SectionHeader -> (holder as SectionHeaderViewHolder).bind(item)
             is FlatItem.ChatItem -> (holder as ChatViewHolder).bind(
                 item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedUnreadColor, cachedPrimaryColor, selectionMode, selectedIds.contains(item.chat.id), currentUsername, onlineUsers.toSet(), allUsers, avatarUrlCache
@@ -221,13 +191,12 @@ class ChatAdapter(
         }
     }
 
-    override fun getItemCount(): Int = flatItems.size
-
     fun updateOnlineUsers(users: List<String>) {
         onlineUsers = users
+        val currentItems = currentList
         val changedPositions = mutableListOf<Int>()
-        for (i in flatItems.indices) {
-            val item = flatItems[i]
+        for (i in currentItems.indices) {
+            val item = currentItems[i]
             if (item is FlatItem.ChatItem && item.chat.type == "direct" && !item.chat.isSecret && !item.chat.id.startsWith("favorites_")) {
                 changedPositions.add(i)
             }
@@ -240,9 +209,10 @@ class ChatAdapter(
     fun updateAllUsers(users: List<lavender.client.android.data.proto.UserInfoProto>) {
         allUsers = users
         avatarUrlCache = users.associate { it.username to it.avatarUrl }
+        val currentItems = currentList
         val changedPositions = mutableListOf<Int>()
-        for (i in flatItems.indices) {
-            val item = flatItems[i]
+        for (i in currentItems.indices) {
+            val item = currentItems[i]
             if (item is FlatItem.ChatItem && item.chat.type == "direct" && !item.chat.isSecret && !item.chat.id.startsWith("favorites_")) {
                 changedPositions.add(i)
             }
@@ -266,6 +236,24 @@ class ChatAdapter(
             section.copy(chats = filteredChats)
         }
         setSections(filteredSections)
+    }
+
+    // ======= DiffUtil callback =======
+
+    class FlatItemDiffCallback : DiffUtil.ItemCallback<FlatItem>() {
+        override fun areItemsTheSame(oldItem: FlatItem, newItem: FlatItem): Boolean {
+            return when {
+                oldItem is FlatItem.SectionHeader && newItem is FlatItem.SectionHeader ->
+                    oldItem.section == newItem.section
+                oldItem is FlatItem.ChatItem && newItem is FlatItem.ChatItem ->
+                    oldItem.chat.id == newItem.chat.id
+                else -> false
+            }
+        }
+
+        override fun areContentsTheSame(oldItem: FlatItem, newItem: FlatItem): Boolean {
+            return oldItem == newItem
+        }
     }
 
     // ======= ViewHolders =======
@@ -309,7 +297,7 @@ class ChatAdapter(
             tvChatName.setTextColor(if (hasUnread) primaryColor else textPrimary)
             tvChatName.setTypeface(null, if (hasUnread) Typeface.BOLD else Typeface.NORMAL)
 
-            // Avatar — deferred to avoid layout jank during bind
+            // Avatar
             val avatarUrl = if (chat.type == "direct" || chat.isSecret) {
                 val otherUser = getOtherParticipant(chat, currentUsername)
                 avatarCache[otherUser] ?: ""
@@ -346,25 +334,23 @@ class ChatAdapter(
             } else if (chat.lastMessageText.isNotEmpty()) {
                 tvChatType.text = translateMediaPreview(chat.lastMessageText)
                 tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
-                tvChatType.setTypeface(null, if (hasUnread) Typeface.NORMAL else Typeface.NORMAL)
+                tvChatType.setTypeface(null, Typeface.NORMAL)
             } else {
                 tvChatType.text = itemView.context.getString(R.string.no_messages)
                 tvChatType.setTextColor(textSecondary)
             }
 
-            // Unread badge — styled by theme
+            // Unread badge
             if (chat.unreadCount > 0 && !selectionMode) {
                 tvUnreadCount.isVisible = true
                 tvUnreadCount.text = if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString()
-                // Badge background uses primary color
                 tvUnreadCount.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
-                // Text color: white for dark primary, black for light primary
                 tvUnreadCount.setTextColor(if (ThemeUtils.isLight(primaryColor)) Color.BLACK else Color.WHITE)
             } else {
                 tvUnreadCount.isVisible = false
             }
 
-            // Conference lobby button — visible for conference chats, hidden in selection mode
+            // Conference lobby button
             btnEnterLobby.isVisible = chat.type == "conference" && !selectionMode
             btnEnterLobby.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
             btnEnterLobby.setOnClickListener { v ->
@@ -380,12 +366,12 @@ class ChatAdapter(
 
             ivMuteIndicator.isVisible = chat.isMuted && !selectionMode
 
-            // Selection mode — themed checkbox
+            // Selection mode
             cbChatSelect.isVisible = selectionMode
             cbChatSelect.isChecked = isSelected
             cbChatSelect.buttonTintList = android.content.res.ColorStateList.valueOf(primaryColor)
 
-            // Background: highlight if selected, unread tint if it has unread messages
+            // Background
             val bgColor = when {
                 isSelected -> selectedColor
                 chat.unreadCount > 0 -> unreadColor
@@ -394,7 +380,7 @@ class ChatAdapter(
             cbChatSelect.backgroundTintList = android.content.res.ColorStateList.valueOf(bgColor)
             cardView.setCardBackgroundColor(bgColor)
 
-            // Online status + last seen — direct chats only
+            // Online status + last seen
             if (chat.type == "direct" && !chat.isSecret && !chat.id.startsWith("favorites_")) {
                 val otherUser = getOtherParticipant(chat, currentUsername)
                 if (otherUser.isNotEmpty()) {

@@ -13,16 +13,16 @@ import lavender.client.android.data.proto.*
 class GrpcProfileClient(
     private val getChannel: () -> io.grpc.ManagedChannel?,
     private val getUserId: () -> String?,
-    private val getUsername: () -> String?,
+    @Suppress("UNUSED_PARAMETER") private val getUsername: () -> String?,
     private val avatarCache: MutableMap<String, String>,
     private val fullAvatarCache: MutableMap<String, String>,
     private val avatarCacheFlow: kotlinx.coroutines.flow.MutableStateFlow<Map<String, String>>,
-    private val scope: kotlinx.coroutines.CoroutineScope,
+    @Suppress("UNUSED_PARAMETER") private val scope: kotlinx.coroutines.CoroutineScope,
     private val fetchUserId: ((String, (String?, Boolean) -> Unit) -> Unit)? = null,
     private val setUserId: ((String) -> Unit)? = null
 ) {
     companion object {
-        private const val TAG = "GrpcProfileClient"
+        private const val DEFAULT_ERROR = "gRPC error"
     }
 
     // ======= Profile =======
@@ -41,7 +41,7 @@ class GrpcProfileClient(
         call.start(object : io.grpc.ClientCall.Listener<UpdateProfileResponseProto>() {
             override fun onMessage(message: UpdateProfileResponseProto) { callback(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) callback(false, status.description ?: "Error")
+                if (!status.isOk) callback(false, status.description ?: DEFAULT_ERROR)
             }
         }, io.grpc.Metadata())
         call.sendMessage(UpdateProfileRequestProto(username = username, bio = bio, status = status, userId = getUserId() ?: ""))
@@ -85,7 +85,7 @@ class GrpcProfileClient(
         call.start(object : io.grpc.ClientCall.Listener<DeleteProfileResponseProto>() {
             override fun onMessage(message: DeleteProfileResponseProto) { callback(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) callback(false, status.description ?: "Error")
+                if (!status.isOk) callback(false, status.description ?: DEFAULT_ERROR)
             }
         }, io.grpc.Metadata())
         call.sendMessage(DeleteProfileRequestProto(username = username, userId = getUserId() ?: ""))
@@ -114,7 +114,7 @@ class GrpcProfileClient(
                 callback(message.success, message.message)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) callback(false, status.description ?: "Error")
+                if (!status.isOk) callback(false, status.description ?: DEFAULT_ERROR)
             }
         }, io.grpc.Metadata())
         call.sendMessage(UpdateAvatarRequestProto(username = username, avatarUrl = avatarUrl, fullAvatarUrl = fullAvatarUrl, userId = getUserId() ?: ""))
@@ -167,7 +167,7 @@ class GrpcProfileClient(
         call.start(object : io.grpc.ClientCall.Listener<UpdateUsernameResponseProto>() {
             override fun onMessage(message: UpdateUsernameResponseProto) { callback(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) callback(false, status.description ?: "Error")
+                if (!status.isOk) callback(false, status.description ?: DEFAULT_ERROR)
             }
         }, io.grpc.Metadata())
         call.sendMessage(UpdateUsernameRequestProto(oldUsername, newUsername, getUserId() ?: ""))
@@ -189,7 +189,7 @@ class GrpcProfileClient(
         call.start(object : io.grpc.ClientCall.Listener<UpdatePasswordResponseProto>() {
             override fun onMessage(message: UpdatePasswordResponseProto) { callback(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) callback(false, status.description ?: "Error")
+                if (!status.isOk) callback(false, status.description ?: DEFAULT_ERROR)
             }
         }, io.grpc.Metadata())
         call.sendMessage(UpdatePasswordRequestProto(username, oldPassword, newPassword, getUserId() ?: ""))
@@ -211,7 +211,7 @@ class GrpcProfileClient(
         call.start(object : io.grpc.ClientCall.Listener<AdminUpdatePasswordResponseProto>() {
             override fun onMessage(message: AdminUpdatePasswordResponseProto) { callback(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) callback(false, status.description ?: "Error")
+                if (!status.isOk) callback(false, status.description ?: DEFAULT_ERROR)
             }
         }, io.grpc.Metadata())
         call.sendMessage(AdminUpdatePasswordRequestProto(targetUsername, newPassword, adminUsername, getUserId() ?: ""))
@@ -233,7 +233,7 @@ class GrpcProfileClient(
         call.start(object : io.grpc.ClientCall.Listener<RequestPasswordResetResponseProto>() {
             override fun onMessage(message: RequestPasswordResetResponseProto) { callback(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) callback(false, status.description ?: "Error")
+                if (!status.isOk) callback(false, status.description ?: DEFAULT_ERROR)
             }
         }, io.grpc.Metadata())
         call.sendMessage(RequestPasswordResetRequestProto(email))
@@ -255,7 +255,7 @@ class GrpcProfileClient(
         call.start(object : io.grpc.ClientCall.Listener<ResetPasswordResponseProto>() {
             override fun onMessage(message: ResetPasswordResponseProto) { callback(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) callback(false, status.description ?: "Error")
+                if (!status.isOk) callback(false, status.description ?: DEFAULT_ERROR)
             }
         }, io.grpc.Metadata())
         call.sendMessage(ResetPasswordRequestProto(token, newPassword))
@@ -279,7 +279,7 @@ class GrpcProfileClient(
         call.start(object : io.grpc.ClientCall.Listener<AddContactResponseProto>() {
             override fun onMessage(message: AddContactResponseProto) { callback(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) callback(false, status.description ?: "Error")
+                if (!status.isOk) callback(false, status.description ?: DEFAULT_ERROR)
             }
         }, io.grpc.Metadata())
         call.sendMessage(AddContactRequestProto(username = username, contactUsername = contactUsername, userId = getUserId() ?: ""))
@@ -301,7 +301,7 @@ class GrpcProfileClient(
         call.start(object : io.grpc.ClientCall.Listener<RemoveContactResponseProto>() {
             override fun onMessage(message: RemoveContactResponseProto) { callback(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) callback(false, status.description ?: "Error")
+                if (!status.isOk) callback(false, status.description ?: DEFAULT_ERROR)
             }
         }, io.grpc.Metadata())
         call.sendMessage(RemoveContactRequestProto(username = username, contactUsername = contactUsername, userId = getUserId() ?: ""))
@@ -379,7 +379,7 @@ class GrpcProfileClient(
         call.start(object : io.grpc.ClientCall.Listener<SaveThemeResponseProto>() {
             override fun onMessage(message: SaveThemeResponseProto) { callback(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) callback(false, status.description ?: "Error")
+                if (!status.isOk) callback(false, status.description ?: DEFAULT_ERROR)
             }
         }, io.grpc.Metadata())
         call.sendMessage(SaveThemeRequestProto(username = username, theme = theme, userId = getUserId() ?: ""))
@@ -487,7 +487,7 @@ class GrpcProfileClient(
         call.start(object : io.grpc.ClientCall.Listener<DeleteDeviceResponseProto>() {
             override fun onMessage(message: DeleteDeviceResponseProto) { callback(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) callback(false, status.description ?: "Error")
+                if (!status.isOk) callback(false, status.description ?: DEFAULT_ERROR)
             }
         }, io.grpc.Metadata())
         call.sendMessage(DeleteDeviceRequestProto(uid, deviceId))
@@ -509,7 +509,7 @@ class GrpcProfileClient(
         call.start(object : io.grpc.ClientCall.Listener<DeleteDeviceResponseProto>() {
             override fun onMessage(message: DeleteDeviceResponseProto) { callback(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) callback(false, status.description ?: "Error")
+                if (!status.isOk) callback(false, status.description ?: DEFAULT_ERROR)
             }
         }, io.grpc.Metadata())
         call.sendMessage(DeleteDeviceRequestProto(uid, currentDeviceId))

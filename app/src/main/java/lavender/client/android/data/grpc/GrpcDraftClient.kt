@@ -11,6 +11,9 @@ class GrpcDraftClient(
     private val getChannel: () -> io.grpc.ManagedChannel?,
     private val getUserId: () -> String?
 ) {
+    companion object {
+        private const val DEFAULT_ERROR = "gRPC error"
+    }
 
     fun saveDraft(
         roomId: String, text: String,
@@ -30,7 +33,7 @@ class GrpcDraftClient(
         call.start(object : io.grpc.ClientCall.Listener<SaveDraftResponseProto>() {
             override fun onMessage(message: SaveDraftResponseProto) { callback(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) callback(false, status.description ?: "Error")
+                if (!status.isOk) callback(false, status.description ?: DEFAULT_ERROR)
             }
         }, io.grpc.Metadata())
         call.sendMessage(SaveDraftRequestProto(getUserId() ?: "", roomId, text, replyId, replyUser, replyText))

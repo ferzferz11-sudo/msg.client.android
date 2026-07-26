@@ -30,18 +30,19 @@ import org.json.JSONObject
 class GrpcMessageV2Client(
     private val getChannel: () -> io.grpc.ManagedChannel?,
     private val getUserId: () -> String?,
-    private val getUsername: () -> String?,
+    @Suppress("UNUSED_PARAMETER") private val getUsername: () -> String?,
     private val messages: MutableStateFlow<List<Message>>,
     private val allUsers: () -> List<UserInfoProto>,
     private val deletedMessageHashes: MutableSet<String>,
     private val scope: CoroutineScope,
     private val appContext: () -> Context?,
-    private val onReadReceipt: ((String, String) -> Unit)? = null
+    @Suppress("UNUSED_PARAMETER") private val onReadReceipt: ((String, String) -> Unit)? = null
 ) {
     companion object {
         private const val TAG = "GrpcMsgV2"
         private const val MAX_HISTORY_LIMIT = 100
         private const val DELETED_HASHES_MAX_SIZE = 10000
+        private const val DEFAULT_ERROR = "gRPC error"
 
         private val METHOD_GET_HISTORY_V2 = MethodDescriptor.newBuilder<GetHistoryV2RequestProto, GetHistoryV2ResponseProto>()
             .setType(MethodDescriptor.MethodType.UNARY)
@@ -423,7 +424,7 @@ class GrpcMessageV2Client(
             override fun onClose(status: Status, trailers: Metadata) {
                 if (!status.isOk) {
                     ErrorHandler.handle("$TAG.editMessageV2", StatusRuntimeException(status))
-                    cb(false, status.description ?: "Error")
+                    cb(false, status.description ?: DEFAULT_ERROR)
                 }
             }
         }, Metadata())

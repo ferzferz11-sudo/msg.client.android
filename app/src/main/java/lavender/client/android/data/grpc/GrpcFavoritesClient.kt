@@ -1,8 +1,5 @@
 package lavender.client.android.data.grpc
 
-import android.util.Log
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import lavender.client.android.data.models.ErrorHandler
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.Reaction
@@ -15,11 +12,15 @@ import lavender.client.android.data.proto.*
  */
 class GrpcFavoritesClient(
     private val getChannel: () -> io.grpc.ManagedChannel?,
-    private val getUserId: () -> String?,
-    private val getUsername: () -> String?,
-    private val scope: kotlinx.coroutines.CoroutineScope,
-    private val allUsers: () -> List<lavender.client.android.data.proto.UserInfoProto> = { emptyList() }
+    @Suppress("UNUSED_PARAMETER") private val getUserId: () -> String?,
+    @Suppress("UNUSED_PARAMETER") private val getUsername: () -> String?,
+    @Suppress("UNUSED_PARAMETER") private val scope: kotlinx.coroutines.CoroutineScope,
+    private val allUsers: () -> List<UserInfoProto> = { emptyList() }
 ) {
+    companion object {
+        private const val REMOVED = "Removed"
+        private const val FAILED = "Failed"
+    }
 
     fun addFavorite(userId: String, messageId: String, callback: (Boolean, String) -> Unit) {
         val currentChannel = getChannel() ?: return
@@ -53,7 +54,7 @@ class GrpcFavoritesClient(
             io.grpc.CallOptions.DEFAULT
         )
         call.start(object : io.grpc.ClientCall.Listener<RemoveFavoriteResponseProto>() {
-            override fun onMessage(message: RemoveFavoriteResponseProto) { callback(message.success, if (message.success) "Removed" else "Failed") }
+            override fun onMessage(message: RemoveFavoriteResponseProto) { callback(message.success, if (message.success) REMOVED else FAILED) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
         call.sendMessage(RemoveFavoriteRequestProto(userId, messageId))
