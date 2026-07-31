@@ -74,6 +74,13 @@ android {
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
+
+    packaging {
+        jniLibs {
+            keepDebugSymbols.add("**/libdatastore_shared_counter.so")
+            keepDebugSymbols.add("**/libjingle_peerconnection_so.so")
+        }
+    }
 }
 
 

@@ -32,7 +32,6 @@ import org.json.JSONArray
  * - Confirmation before sending
  * - Message preview
  */
-@Suppress("Unused")
 class ForwardMessageSheet(
     private val activity: android.app.Activity,
     private val messages: List<Message>,

@@ -102,9 +102,16 @@ class StickerEditorView @JvmOverloads constructor(
 
     fun setImageUri(uri: android.net.Uri) {
         try {
-            val inputStream = context.contentResolver.openInputStream(uri) ?: return
-            val bitmap = BitmapFactory.decodeStream(inputStream)
-            inputStream.close()
+            // Subsample large images to avoid OOM
+            val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) }
+            val maxDim = 2048
+            var sampleSize = 1
+            while (opts.outWidth / sampleSize > maxDim || opts.outHeight / sampleSize > maxDim) {
+                sampleSize *= 2
+            }
+            val decodeOpts = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+            val bitmap = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, decodeOpts) }
             if (bitmap != null) {
                 originalBitmap?.recycle()
                 originalBitmap = bitmap
@@ -155,14 +162,11 @@ class StickerEditorView @JvmOverloads constructor(
         imageMatrix.getValues(values)
         val scaleX = values[Matrix.MSCALE_X]
         val scaleY = values[Matrix.MSCALE_Y]
-        val transX = values[Matrix.MTRANS_X]
-        val transY = values[Matrix.MTRANS_Y]
 
-        val bmpW = bmp.width * scaleX
-        val bmpH = bmp.height * scaleY
         val viewW = width.toFloat()
         val viewH = height.toFloat()
 
+        // Constrain scale
         val minScale = min(viewW / bmp.width, viewH / bmp.height) * 0.5f
         val maxScale = max(viewW / bmp.width, viewH / bmp.height) * 2f
         val currentScale = max(scaleX, scaleY)
@@ -173,6 +177,38 @@ class StickerEditorView @JvmOverloads constructor(
         } else if (currentScale > maxScale) {
             val factor = maxScale / currentScale
             imageMatrix.postScale(factor, factor, viewW / 2f, viewH / 2f)
+        }
+
+        // Constrain translation — image must cover the crop rectangle
+        imageMatrix.getValues(values)
+        val transX = values[Matrix.MTRANS_X]
+        val transY = values[Matrix.MTRANS_Y]
+        val bmpW = bmp.width * values[Matrix.MSCALE_X]
+        val bmpH = bmp.height * values[Matrix.MSCALE_Y]
+
+        val cx = viewW / 2f
+        val cy = viewH / 2f
+        val cropSize = min(viewW, viewH) * 0.85f
+        val half = cropSize / 2f
+        val cropLeft = cx - half
+        val cropTop = cy - half
+        val cropRight = cx + half
+        val cropBottom = cy + half
+
+        var dx = 0f
+        var dy = 0f
+
+        // Image left edge must be <= crop left
+        if (transX > cropLeft) dx = cropLeft - transX
+        // Image right edge must be >= crop right
+        if (transX + bmpW < cropRight) dx = cropRight - (transX + bmpW)
+        // Image top edge must be <= crop top
+        if (transY > cropTop) dy = cropTop - transY
+        // Image bottom edge must be >= crop bottom
+        if (transY + bmpH < cropBottom) dy = cropBottom - (transY + bmpH)
+
+        if (dx != 0f || dy != 0f) {
+            imageMatrix.postTranslate(dx, dy)
         }
     }
 
@@ -312,6 +348,7 @@ class StickerEditorView @JvmOverloads constructor(
                     val dx = event.x - lastTouchX
                     val dy = event.y - lastTouchY
                     imageMatrix.postTranslate(dx, dy)
+                    constrainImage()
                     lastTouchX = event.x
                     lastTouchY = event.y
                     invalidate()

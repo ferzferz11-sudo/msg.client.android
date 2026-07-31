@@ -96,6 +96,17 @@ class NewChatViewModel(application: Application) : AndroidViewModel(application)
             isSecret = isSecret,
             serverAddress = serverAddress ?: ""
         )
+
+        // Initialize metadata from intent so toolbar has correct data even if fetchChatMetadata skips
+        _metadata.value = ChatMetadataState(
+            chatName = chatName,
+            isDirect = isDirect,
+            chatType = if (isSecret) "secret" else chatType,
+            participantsJson = participantsJson,
+            creator = creator,
+            avatarUrl = chatAvatarUrl,
+            fullAvatarUrl = chatFullAvatarUrl
+        )
     }
 
     fun ensureConnection() {

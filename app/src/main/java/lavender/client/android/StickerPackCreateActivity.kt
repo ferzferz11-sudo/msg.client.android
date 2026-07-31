@@ -284,8 +284,9 @@ class StickerPackCreateActivity : AppCompatActivity() {
                 val uploadResult = withContext(Dispatchers.IO) {
                     val body = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
                     val part = MultipartBody.Part.createFormData("sticker", fileName, body)
+                    val endpoint = if (isImage) "/upload-sticker-thumbnail" else "/upload-sticker"
                     val request = Request.Builder()
-                        .url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(this@StickerPackCreateActivity)}/upload-sticker")
+                        .url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(this@StickerPackCreateActivity)}$endpoint")
                         .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(part).build())
                         .build()
                     val response = HttpClient.client.newCall(request).execute()
@@ -319,6 +320,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
                         id = UUID.randomUUID().toString(),
                         packId = packId ?: "",
                         lottieUrl = url,
+                        thumbnailUrl = if (isImage) url else "",
                         emoji = "\uD83C\uDFB5"
                     )
                     currentStickers.add(newSticker)
@@ -414,6 +416,11 @@ class StickerPackCreateActivity : AppCompatActivity() {
                     toolbar.title = getString(R.string.sticker_edit_pack)
                     var addFailed = 0
                     for ((idx, sticker) in currentStickers.withIndex()) {
+                        if (sticker.lottieUrl.isEmpty()) {
+                            android.util.Log.w("StickerPack", "Skipping sticker ${idx+1}: empty lottieUrl")
+                            addFailed++
+                            continue
+                        }
                         android.util.Log.d("StickerPack", "Adding sticker ${idx+1}/${currentStickers.size}: url=${sticker.lottieUrl}")
                         val addResult = GrpcClient.addSticker(
                             packId!!, sticker.lottieUrl, sticker.thumbnailUrl,

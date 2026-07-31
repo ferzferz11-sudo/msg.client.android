@@ -1,5 +1,26 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.5] - 2026-07-31
+
+### Исправлено
+
+**Direct chat detected as group:**
+- `NewChatViewModel` — `ChatMetadataState` инициализировался дефолтом (`isDirect=false`). Для личных чатов metadata оставался дефолтным → toolbar показывал "0 участников 0 онлайн". Фикс: инициализация из intent данных в `parseIntent()`.
+
+**Sticker image upload:**
+- `StickerPackCreateActivity` — изображения загружались на эндпоинт для Lottie JSON. Фикс: маршрутизация на `/upload-sticker-thumbnail` для изображений.
+- `savePack()` — защита от crash при пустом URL стикера.
+- `Sticker.thumbnailUrl` заполняется для изображений.
+
+### Улучшено
+
+**Sticker editor — crop UX:**
+- `StickerEditorView` — изображение можно было утащить за пределы crop-области. Фикс: `constrainImage()` теперь ограничивает трансляцию — изображение всегда поккрывает crop-прямоугольник.
+- `setImageUri()` — добавлен subsampling для больших изображений (>2048px) для предотвращения OOM.
+
+**Forward message — улучшенный UX:**
+- `ChatSelectionDelegate` — заменён простой `ListBottomSheet` на `ForwardMessageSheet` с поиском по чатам, мульти-выбором и превью пересылаемых сообщений.
+
 ## [1.3.4.4] - 2026-07-31
 
 ### Исправлено

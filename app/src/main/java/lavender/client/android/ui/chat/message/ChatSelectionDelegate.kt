@@ -156,27 +156,29 @@ class ChatSelectionDelegate(
                 }
                 val f = oc.filter { it.id != roomId }
                 if (f.isEmpty()) {
-                Toast.makeText(activity, activity.getString(R.string.no_other_chats), Toast.LENGTH_SHORT).show()
-                        return@launch
+                    Toast.makeText(activity, activity.getString(R.string.no_other_chats), Toast.LENGTH_SHORT).show()
+                    return@launch
                 }
-                val sheet = lavender.client.android.ui.widget.ListBottomSheet(activity)
-                    .setTitle(activity.getString(R.string.forward_to))
-                val forwardAdapter = lavender.client.android.ui.adapter.ForwardChatAdapter(
-                    chats = f, currentUsername = username, avatarCache = grpcClient.getAvatarCache(),
-                    onChatSelected = { target ->
-                        sheet.dismiss()
-                        sm.forEach { m ->
-                            grpcClient.sendMessageV2(Message(
-                                user = username, text = m.text, timestamp = System.currentTimeMillis(),
-                                roomId = target.id, imageUrl = m.imageUrl, voiceUrl = m.voiceUrl,
-                                duration = m.duration, userId = grpcClient.getUserId() ?: ""
-                            ))
+                val sheet = ForwardMessageSheet(
+                    activity = activity,
+                    messages = sm,
+                    currentUsername = username,
+                    avatarCache = grpcClient.getAvatarCache(),
+                    onForward = { targetChats, messages ->
+                        targetChats.forEach { target ->
+                            messages.forEach { m ->
+                                grpcClient.sendMessageV2(Message(
+                                    user = username, text = m.text, timestamp = System.currentTimeMillis(),
+                                    roomId = target.id, imageUrl = m.imageUrl, voiceUrl = m.voiceUrl,
+                                    duration = m.duration, userId = grpcClient.getUserId() ?: ""
+                                ))
+                            }
                         }
                         Toast.makeText(activity, activity.getString(R.string.messages_forwarded), Toast.LENGTH_SHORT).show()
                         hideSelectionToolbar()
                     }
                 )
-                sheet.setAdapter(forwardAdapter)
+                sheet.loadChats(f)
                 sheet.show()
             }
         }
