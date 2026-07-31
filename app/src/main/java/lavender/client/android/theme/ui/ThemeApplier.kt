@@ -305,9 +305,7 @@ object ThemeApplier {
         val bgColor = parseSafeColor(theme.backgroundColor, Color.BLACK)
         val isLightMode = ThemeUtils.isLight(bgColor)
 
-        // Ensure the navigation bar matches the theme
-        @Suppress("DEPRECATION")
-        window.navigationBarColor = bgColor
+        lavender.client.android.data.CompatUtils.setNavigationBarColor(window, bgColor)
         WindowInsetsControllerCompat(window, window.decorView).apply {
             isAppearanceLightNavigationBars = isLightMode
         }

@@ -72,8 +72,8 @@ class StickerPackCreateActivity : AppCompatActivity() {
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            @Suppress("DEPRECATION")
-            result.data?.getParcelableExtra<android.net.Uri>(StickerEditorActivity.EXTRA_RESULT_URI)?.let { uri ->
+            val uri = result.data?.let { lavender.client.android.data.CompatUtils.getParcelableExtra(it, StickerEditorActivity.EXTRA_RESULT_URI, android.net.Uri::class.java) }
+            uri?.let { uri ->
                 uploadSticker(uri)
             }
         }
@@ -82,8 +82,6 @@ class StickerPackCreateActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sticker_pack_create)
-        @Suppress("DEPRECATION")
-        try { window.decorView.systemUiVisibility = 0 } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
         ThemeApplier.apply(this, ThemeStore.currentTheme())
 
         toolbar = findViewById(R.id.toolbar)

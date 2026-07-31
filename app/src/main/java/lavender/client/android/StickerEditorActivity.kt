@@ -44,8 +44,6 @@ class StickerEditorActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sticker_editor)
-        @Suppress("DEPRECATION")
-        try { window.decorView.systemUiVisibility = 0 } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
         ThemeApplier.apply(this, ThemeStore.currentTheme())
 
         toolbar = findViewById(R.id.toolbar)
@@ -69,8 +67,7 @@ class StickerEditorActivity : AppCompatActivity() {
         toolbar.menu?.clear()
         toolbar.inflateMenu(R.menu.sticker_editor_menu)
 
-        @Suppress("DEPRECATION")
-        imageUri = intent.getParcelableExtra(EXTRA_IMAGE_URI)
+        imageUri = lavender.client.android.data.CompatUtils.getParcelableExtra(intent, EXTRA_IMAGE_URI, Uri::class.java)
         if (imageUri != null) {
             editorView.setImageUri(imageUri!!)
         }

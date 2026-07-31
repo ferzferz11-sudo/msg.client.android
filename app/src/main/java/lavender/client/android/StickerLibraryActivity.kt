@@ -39,8 +39,6 @@ class StickerLibraryActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sticker_library)
-        @Suppress("DEPRECATION")
-        try { window.decorView.systemUiVisibility = 0 } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
         ThemeApplier.apply(this, ThemeStore.currentTheme())
 
         toolbar = findViewById(R.id.toolbar)

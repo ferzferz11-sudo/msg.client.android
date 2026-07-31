@@ -1,5 +1,27 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.4] - 2026-07-31
+
+### Исправлено
+
+**Chat list 0 participants/0 online (CRITICAL):**
+- `NewChatActivity` — race condition: `fetchChatMetadata` callback обновлял toolbar metadata, но субтитул не пересчитывался до следующего эмита combine flow. Добавлен `toolbarDelegate.refreshSubtitle()` в оба callback'а (onCreate + onResume).
+
+### Улучшено
+
+**Deprecated API migration (8 sites):**
+- `JoinCompanyActivity`, `StickerLibraryActivity`, `StickerEditorActivity`, `StickerPackCreateActivity` — удалён избыточный `systemUiVisibility = 0` (ThemeApplier уже управляет через WindowInsetsControllerCompat)
+- `StickerEditorActivity` — `getParcelableExtra(String)` → API 33+ branch с `getParcelableExtra(String, Class)`
+- `StickerPackCreateActivity` — аналогично, getParcelableExtra в ActivityResult callback
+- `ThemeApplier` — `window.navigationBarColor` обёрнут в API 35 guard (на 35+ система игнорирует)
+- `AiV2AgentListActivity` — `onBackPressed()` → `OnBackPressedCallback` через `onBackPressedDispatcher`
+
+**CompatUtils — централизация deprecated API:**
+- Создан `data/CompatUtils.kt` — все backward-compat обёртки в одном файле
+- `getParcelableExtra` (Intent + Bundle), `createMediaRecorder`, `setNavigationBarColor`, `setSpeakerphoneOn` — перенесены из 5 файлов
+- 5 файлов очищено от `@Suppress("DEPRECATION")`: StickerEditorActivity, StickerPackCreateActivity, AudioRecorder, AudioModeManager, ThemeApplier
+- Один `@Suppress` остаётся в SessionManager (FCM getToken — нет альтернативы в Firebase SDK)
+
 ## [1.3.4.3] - 2026-07-26
 
 ### Исправлено

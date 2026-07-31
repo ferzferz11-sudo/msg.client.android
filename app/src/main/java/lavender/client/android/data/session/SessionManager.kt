@@ -476,7 +476,7 @@ object SessionManager {
         val sendEnabled = prefs.getBoolean("push_send_enabled", true)
         val receiveEnabled = prefs.getBoolean("push_receive_enabled", true)
 
-        @Suppress("DEPRECATION") // No non-deprecated alternative for FCM token retrieval
+        @Suppress("DEPRECATION") // getToken()/token deprecated in Firebase but no alternative exists
         FirebaseMessaging.getInstance().getToken().addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 val token = if (receiveEnabled) task.result else "DISABLED"

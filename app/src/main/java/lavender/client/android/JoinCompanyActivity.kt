@@ -26,8 +26,6 @@ class JoinCompanyActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_join_company)
-        @Suppress("DEPRECATION")
-        try { window.decorView.systemUiVisibility = 0 } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
         ThemeApplier.apply(this, ThemeStore.currentTheme())
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)

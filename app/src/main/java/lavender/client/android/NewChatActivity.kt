@@ -144,6 +144,7 @@ class NewChatActivity : AppCompatActivity() {
                     val m = newChatViewModel.metadata.value
                     toolbarDelegate.configure(data.roomId, data.username, m.chatName, m.isDirect, m.chatType, m.participantsJson, m.creator, m.avatarUrl, m.fullAvatarUrl, data.isSecret)
                     toolbarDelegate.setup()
+                    toolbarDelegate.refreshSubtitle()
                     adapter.isGroupChat = !m.isDirect; adapter.adminUsername = m.creator
                 }
             } catch (e: Exception) {
@@ -498,6 +499,7 @@ class NewChatActivity : AppCompatActivity() {
                     val m = newChatViewModel.metadata.value
                     toolbarDelegate.configure(data.roomId, data.username, m.chatName, m.isDirect, m.chatType, m.participantsJson, m.creator, m.avatarUrl, m.fullAvatarUrl, data.isSecret)
                     toolbarDelegate.setup()
+                    toolbarDelegate.refreshSubtitle()
                     adapter.isGroupChat = !m.isDirect; adapter.adminUsername = m.creator
                 }
             } catch (e: Exception) {
