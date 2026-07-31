@@ -30,7 +30,9 @@ data class Message(
     val isPinned: Boolean = false, // Pin Message: message is pinned in chat
     val mentions: List<String> = emptyList(), // @usernames mentioned in this message
     val stickerUrl: String = "", // Sticker Lottie URL
-    val stickerThumbnailUrl: String = "" // Sticker static preview URL
+    val stickerThumbnailUrl: String = "", // Sticker static preview URL
+    val isForwarded: Boolean = false, // Message was forwarded from another chat
+    val forwardedFrom: String = "" // Original sender username (for display)
 )
 
 data class ChatInfo(

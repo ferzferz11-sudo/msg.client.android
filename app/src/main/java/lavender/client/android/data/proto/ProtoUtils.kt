@@ -136,7 +136,8 @@ object ProtoUtils {
             createdAt = timestamp,
             reactions = reactionsBytes,
             isE2EE = message.isE2EE,
-            e2eePayload = message.e2eePayload
+            e2eePayload = message.e2eePayload,
+            forwardedFrom = message.forwardedFrom
         )
     }
 
@@ -146,6 +147,22 @@ object ProtoUtils {
         } ?: System.currentTimeMillis()
 
         val username = resolveUsername(proto.senderId)
+
+        // Forward attribution from proto field (with fallback to text prefix for old messages)
+        var isForwarded = proto.forwardedFrom.isNotEmpty()
+        var forwardedFrom = proto.forwardedFrom
+        var messageText = proto.text
+        // Legacy fallback: parse text prefix for messages sent before proto field support
+        val forwardPrefix = "\u200B\u2709"
+        if (!isForwarded && messageText.startsWith(forwardPrefix)) {
+            val endIdx = messageText.indexOf('\u200B', forwardPrefix.length)
+            if (endIdx > forwardPrefix.length) {
+                forwardedFrom = messageText.substring(forwardPrefix.length, endIdx)
+                val afterPrefix = messageText.substring(endIdx + 1)
+                messageText = if (afterPrefix.startsWith("\n")) afterPrefix.substring(1) else afterPrefix
+                isForwarded = true
+            }
+        }
 
         var imageUrl = ""; var imageUrls = emptyList<String>()
         var voiceUrl = ""; var duration = 0
@@ -190,7 +207,7 @@ object ProtoUtils {
         return Message(
             id = proto.id,
             user = username,
-            text = proto.text,
+            text = messageText,
             timestamp = timestamp,
             reactions = reactions,
             repliedToMessageId = repliedToMessageId,
@@ -206,7 +223,9 @@ object ProtoUtils {
             isE2EE = proto.isE2EE,
             e2eePayload = proto.e2eePayload,
             stickerUrl = stickerUrl,
-            stickerThumbnailUrl = stickerThumbnailUrl
+            stickerThumbnailUrl = stickerThumbnailUrl,
+            isForwarded = isForwarded,
+            forwardedFrom = forwardedFrom
         )
     }
 

@@ -107,6 +107,7 @@ class MessageV2ProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageV2Pr
             cos.writeUInt32NoTag(bytes.size)
             cos.writeRawBytes(bytes)
         }
+        if (value.forwardedFrom.isNotEmpty()) cos.writeString(50, value.forwardedFrom)
         cos.flush()
         return ByteArrayInputStream(baos.toByteArray())
     }
@@ -118,6 +119,7 @@ class MessageV2ProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageV2Pr
         var edited = false; var isRead = false; var createdAt: com.google.protobuf.Timestamp? = null
         var reactions = byteArrayOf(); var isE2EE = false; var e2eePayload = ""
         val mentions = mutableListOf<String>()
+        var forwardedFrom = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag(); if (tag == 0) break
             when (WireFormat.getTagFieldNumber(tag)) {
@@ -144,10 +146,11 @@ class MessageV2ProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageV2Pr
                         }
                     }
                 }
+                50 -> forwardedFrom = cis.readString()
                 else -> cis.skipField(tag)
             }
         }
-        return MessageV2Proto(id, roomId, senderId, text, media, reply, edited, isRead, createdAt, reactions, isE2EE, e2eePayload, mentions)
+        return MessageV2Proto(id, roomId, senderId, text, media, reply, edited, isRead, createdAt, reactions, isE2EE, e2eePayload, mentions, forwardedFrom)
     }
 }
 
@@ -270,6 +273,7 @@ class SendMessageV2RequestMarshaller : io.grpc.MethodDescriptor.Marshaller<SendM
             cos.writeUInt32NoTag(bytes.size)
             cos.writeRawBytes(bytes)
         }
+        if (v.forwardedFrom.isNotEmpty()) cos.writeString(8, v.forwardedFrom)
         cos.flush(); return ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): SendMessageV2RequestProto = SendMessageV2RequestProto()

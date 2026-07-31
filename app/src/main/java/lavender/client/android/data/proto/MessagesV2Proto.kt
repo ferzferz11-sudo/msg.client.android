@@ -28,7 +28,8 @@ data class MessageV2Proto(
     val reactions: ByteArray = byteArrayOf(),
     val isE2EE: Boolean = false,
     val e2eePayload: String = "",
-    val mentions: List<String> = emptyList()
+    val mentions: List<String> = emptyList(),
+    val forwardedFrom: String = ""
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -87,7 +88,8 @@ data class SendMessageV2RequestProto(
     val replyToId: String = "",
     val isE2EE: Boolean = false,
     val e2eePayload: String = "",
-    val mentions: List<String> = emptyList()
+    val mentions: List<String> = emptyList(),
+    val forwardedFrom: String = ""
 )
 
 data class SendMessageV2ResponseProto(

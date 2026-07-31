@@ -210,10 +210,10 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
 
     fun loadChats(silent: Boolean = false) {
         if (loadChatsMutex.isLocked) return
-        if (!silent) _isLoading.value = true
 
         viewModelScope.launch {
             if (!loadChatsMutex.tryLock()) return@launch
+            if (!silent) _isLoading.value = true
             try {
                 val startTime = System.currentTimeMillis()
                 nextCursor = ""

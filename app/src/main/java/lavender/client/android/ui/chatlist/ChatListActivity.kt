@@ -517,12 +517,7 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
-        // Observe loading — no preloader, just auto-dismiss swipe
-        lifecycleScope.launch {
-            viewModel.isLoading.collectLatest { loading ->
-                if (!loading) swipeRefresh?.isRefreshing = false
-            }
-        }
+        // Loading state — no preloader needed (SwipeRefreshLayout disabled)
 
         // Observe online users for chat list status dots
         lifecycleScope.launch {
@@ -540,6 +535,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun setupSwipeRefresh() {
+        swipeRefresh?.isEnabled = false
         swipeRefresh?.setOnRefreshListener {
             viewModel.refreshChats()
             if (GrpcClient.connectionStatus.value == ConnectionStatus.READY) {

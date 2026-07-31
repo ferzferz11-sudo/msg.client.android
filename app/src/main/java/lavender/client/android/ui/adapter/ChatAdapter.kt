@@ -332,7 +332,7 @@ class ChatAdapter(
                 tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
                 tvChatType.setTypeface(null, if (hasUnread) Typeface.BOLD else Typeface.NORMAL)
             } else if (chat.lastMessageText.isNotEmpty()) {
-                tvChatType.text = translateMediaPreview(chat.lastMessageText)
+                tvChatType.text = translateMediaPreview(stripForwardPrefix(chat.lastMessageText))
                 tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
                 tvChatType.setTypeface(null, Typeface.NORMAL)
             } else {
@@ -427,6 +427,15 @@ class ChatAdapter(
                 "Voice message" -> ctx.getString(R.string.chat_preview_voice)
                 else -> text
             }
+        }
+
+        private fun stripForwardPrefix(text: String): String {
+            val prefix = "\u200B\u2709"
+            if (!text.startsWith(prefix)) return text
+            val endIdx = text.indexOf('\u200B', prefix.length)
+            if (endIdx <= prefix.length) return text
+            val after = text.substring(endIdx + 1)
+            return if (after.startsWith("\n")) after.substring(1) else after
         }
 
         private fun getOtherParticipant(chat: ChatInfo, currentUsername: String): String {

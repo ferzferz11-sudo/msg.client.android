@@ -410,7 +410,7 @@ class StickerEditorView @JvmOverloads constructor(
 
             if (cropped !== bmp) cropped.recycle()
 
-            drawTextOverlaysOnBitmap(output)
+            drawTextOverlaysOnBitmap(output, cropOffsetX = left.toFloat(), cropOffsetY = top.toFloat())
 
             return output
         }
@@ -423,18 +423,29 @@ class StickerEditorView @JvmOverloads constructor(
         return output
     }
 
-    private fun drawTextOverlaysOnBitmap(bitmap: Bitmap) {
+    private fun drawTextOverlaysOnBitmap(bitmap: Bitmap, cropOffsetX: Float = 0f, cropOffsetY: Float = 0f) {
         if (textOverlays.isEmpty()) return
         val canvas = Canvas(bitmap)
-        val scale = bitmap.width.toFloat() / width.toFloat()
+        val invMatrix = Matrix()
+        if (!imageMatrix.invert(invMatrix)) return
 
         textOverlays.forEach { text ->
             if (text.text.isEmpty()) return@forEach
             text.textPaint.color = text.color
+
+            val pts = floatArrayOf(text.x, text.y)
+            invMatrix.mapPoints(pts)
+            val px = pts[0] - cropOffsetX
+            val py = pts[1] - cropOffsetY
+
+            val scale = bitmap.width.toFloat() / (filteredBitmap ?: originalBitmap ?: return@forEach).width.toFloat()
             text.textPaint.textSize = text.fontSize * scale
-            val px = text.x * scale
-            val py = text.y * scale
-            canvas.drawText(text.text, px, py, text.textPaint)
+
+            canvas.save()
+            canvas.translate(px, py)
+            canvas.scale(text.scaleX, text.scaleY)
+            canvas.drawText(text.text, 0f, 0f, text.textPaint)
+            canvas.restore()
         }
     }
 

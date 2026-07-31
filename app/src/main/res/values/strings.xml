@@ -1133,6 +1133,7 @@
     <string name="forward_more_messages">and %d more…</string>
     <string name="forward_send">Forward</string>
     <string name="forward_send_count">Forward to %d</string>
+    <string name="forwarded_from">Forwarded from %s</string>
     <string name="selected">Selected</string>
 
     <!-- Delete confirmation -->

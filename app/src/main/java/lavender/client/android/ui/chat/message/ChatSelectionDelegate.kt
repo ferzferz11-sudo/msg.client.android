@@ -167,10 +167,12 @@ class ChatSelectionDelegate(
                     onForward = { targetChats, messages ->
                         targetChats.forEach { target ->
                             messages.forEach { m ->
+                                val forwardFrom = if (m.user.isNotEmpty() && m.user != username) m.user else ""
                                 grpcClient.sendMessageV2(Message(
                                     user = username, text = m.text, timestamp = System.currentTimeMillis(),
                                     roomId = target.id, imageUrl = m.imageUrl, voiceUrl = m.voiceUrl,
-                                    duration = m.duration, userId = grpcClient.getUserId() ?: ""
+                                    duration = m.duration, userId = grpcClient.getUserId() ?: "",
+                                    isForwarded = forwardFrom.isNotEmpty(), forwardedFrom = forwardFrom
                                 ))
                             }
                         }

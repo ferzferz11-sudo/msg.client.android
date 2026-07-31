@@ -42,8 +42,12 @@ class StickerGridAdapter(
             if (isLottie) {
                 lottieView.visibility = View.VISIBLE
                 thumbnailView.visibility = View.GONE
-                lottieView.setAnimation(url)
                 lottieView.repeatCount = 0
+                if (url.startsWith("http://") || url.startsWith("https://")) {
+                    lottieView.setAnimationFromUrl(url)
+                } else {
+                    lottieView.setAnimation(url)
+                }
                 lottieView.playAnimation()
             } else {
                 lottieView.visibility = View.GONE

@@ -191,7 +191,9 @@ class GrpcMessageV2Client(
             userId = proto.senderId,
             isE2EE = proto.isE2EE,
             e2eePayload = proto.e2eePayload,
-            mentions = proto.mentions
+            mentions = proto.mentions,
+            isForwarded = proto.forwardedFrom.isNotEmpty(),
+            forwardedFrom = proto.forwardedFrom
         )
     }
 
@@ -222,7 +224,8 @@ class GrpcMessageV2Client(
             replyToId = message.repliedToMessageId,
             isE2EE = message.isE2EE,
             e2eePayload = message.e2eePayload,
-            mentions = mentions
+            mentions = mentions,
+            forwardedFrom = message.forwardedFrom
         )
     }
 

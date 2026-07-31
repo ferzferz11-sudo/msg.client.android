@@ -1136,6 +1136,7 @@
     <string name="forward_more_messages">и ещё %d…</string>
     <string name="forward_send">Переслать</string>
     <string name="forward_send_count">Переслать в %d</string>
+    <string name="forwarded_from">Переслано от %s</string>
     <string name="selected">Выбрано</string>
 
     <!-- Delete confirmation -->

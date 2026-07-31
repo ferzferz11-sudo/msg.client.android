@@ -296,7 +296,14 @@ class StickerPackCreateActivity : AppCompatActivity() {
 
                     if (code == 200) {
                         try {
-                            val url = org.json.JSONObject(responseBody).getString("url")
+                            val serverUrl = lavender.client.android.data.session.CredentialStore.getHttpServerUrl(this@StickerPackCreateActivity)
+                            val rawUrl = org.json.JSONObject(responseBody).getString("url")
+                            // Rewrite host:port to match client's configured server (PUBLIC_IP may differ from device's route)
+                            val url = try {
+                                val uri = java.net.URI(rawUrl)
+                                val serverUri = java.net.URI(serverUrl)
+                                java.net.URI(uri.scheme, null, serverUri.host, serverUri.port, uri.path, uri.query, uri.fragment).toString()
+                            } catch (_: Exception) { rawUrl }
                             Pair(url, "")
                         } catch (_: Exception) {
                             Pair("", getString(R.string.sticker_upload_failed))

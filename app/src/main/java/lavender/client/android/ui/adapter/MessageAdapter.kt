@@ -134,6 +134,7 @@ class MessageAdapter(
         private val replyQuoteUser: TextView = itemView.findViewById(R.id.tvReplyUser)
         private val replyQuoteText: TextView = itemView.findViewById(R.id.tvReplyText)
         private val replyQuoteBar: View = itemView.findViewById(R.id.vReplyBar)
+        private val forwardedFromText: TextView = itemView.findViewById(R.id.tvForwardedFrom)
         val messageImageView: ImageView = itemView.findViewById<ImageView>(R.id.ivMessageImage).apply {
             clipToOutline = true
             outlineProvider = object : android.view.ViewOutlineProvider() {
@@ -199,6 +200,7 @@ class MessageAdapter(
             bindImageContent(message, isOutgoing, isSelectionMode, onClick, onLongClick, adapterPosition, ctx)
             bindReactions(message, theme, isOutgoing, onClick)
             bindReplyQuote(message, isOutgoing, theme)
+            bindForwardAttribution(message, ctx)
             bindSelectionIndicator(isSelected, isSelectionMode, theme, ctx)
             bindContainerClicks(isSelectionMode, onClick, onLongClick, adapterPosition)
             bindPinnedBadge(message, theme, ctx)
@@ -357,8 +359,12 @@ class MessageAdapter(
             val isLottie = stickerUrl.endsWith(".json", ignoreCase = true)
             if (isLottie) {
                 lottieStickerView.isVisible = true
-                lottieStickerView.setAnimation(stickerUrl)
                 lottieStickerView.repeatCount = 0
+                if (stickerUrl.startsWith("http://") || stickerUrl.startsWith("https://")) {
+                    lottieStickerView.setAnimationFromUrl(stickerUrl)
+                } else {
+                    lottieStickerView.setAnimation(stickerUrl)
+                }
                 lottieStickerView.playAnimation()
                 lottieStickerView.setOnClickListener { if (isSelectionMode) onClick(pos) else onMessageClick(message) }
                 lottieStickerView.setOnLongClickListener { if (isSelectionMode) onLongClick(pos) else { onLongClick(pos) }; true }
@@ -415,6 +421,15 @@ class MessageAdapter(
                 try { val onPrim = theme.onPrimaryColor.toColorInt(); val onSurf = theme.onSurfaceColor.toColorInt(); val txtPrim = theme.textPrimaryColor.toColorInt()
                     if (isOutgoing) { replyQuoteUser.setTextColor(onPrim); replyQuoteText.setTextColor(withAlpha(onPrim, 200)); replyQuoteContainer.setBackgroundColor(withAlpha(onPrim, 30)); replyQuoteBar.setBackgroundColor(onPrim) }
                     else { replyQuoteUser.setTextColor(onSurf); replyQuoteText.setTextColor(withAlpha(txtPrim, 200)); replyQuoteContainer.setBackgroundColor(withAlpha(onSurf, 30)); replyQuoteBar.setBackgroundColor(onSurf) } } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) } }
+        }
+
+        private fun bindForwardAttribution(message: Message, ctx: android.content.Context) {
+            if (message.isForwarded && message.forwardedFrom.isNotEmpty()) {
+                forwardedFromText.isVisible = true
+                forwardedFromText.text = ctx.getString(R.string.forwarded_from, message.forwardedFrom)
+            } else {
+                forwardedFromText.isVisible = false
+            }
         }
 
         private fun bindSelectionIndicator(isSelected: Boolean, isSelectionMode: Boolean, theme: lavender.client.android.theme.Theme, ctx: android.content.Context) {

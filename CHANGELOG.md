@@ -1,5 +1,36 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.6] - 2026-07-31
+
+### Добавлено
+
+**Forward message — "forwarded from" attribution:**
+- `Message` модель — поля `isForwarded` и `forwardedFrom`.
+- `MessageV2Proto` — поле `forwardedFrom` (proto field 50).
+- `SendMessageV2RequestProto` — поле `forwardedFrom` (proto field 8).
+- `MessageV2ProtoMarshaller` — сериализация/десериализация field 50.
+- `item_message.xml` — `tvForwardedFrom` TextView для отображения "Переслано от: Username".
+- `MessageAdapter` — `bindForwardAttribution()` отображает attribution.
+- `ChatSelectionDelegate` — передаёт `forwardedFrom` через proto поле (без текстового префикса).
+- `ProtoUtils` — чтение из proto поля + legacy fallback для старых сообщений с текстовым префиксом.
+- `ChatAdapter` — `stripForwardPrefix()` для legacy превью в списке чатов.
+- `GrpcMessageV2Client` — `domainToSendRequest()` и `messageV2ToDomain()` поддерживают `forwardedFrom`.
+- Строковые ресурсы: `forwarded_from` (EN + RU).
+- Серверный промпт: `LavenderMessenger-server/doc/PROMPT_FORWARD_ATTRIBUTION.md`.
+
+### Исправлено
+
+**Sticker upload preview не работал:**
+- `StickerGridAdapter` + `MessageAdapter` — `setAnimation(url)` молча проваливался для HTTP URL. Фикс: `setAnimationFromUrl(url)` для удалённых URL.
+- `StickerPackCreateActivity` — сервер возвращал URL с `PUBLIC_IP`, недоступным с устройства. Фикс: перезапись host:port через `CredentialStore.getHttpServerUrl()`.
+
+**Sticker editor — text overlay координаты:**
+- `StickerEditorView.drawTextOverlaysOnBitmap()` — использовался naive scale `bitmap.width/view.width`, игнорируя `imageMatrix`. Фикс: inverse `imageMatrix` для преобразования view→bitmap координат + учёт crop offset.
+
+**ChatList прелоадер зависал:**
+- `ChatListViewModel` — `_isLoading.value = true` ставился ДО `viewModelScope.launch`, а `false` — в `finally` внутри корутины. При mutex guard корутина не доходила до `try` → loading застревал. Фикс: `_isLoading` перенесён внутрь корутины, после `tryLock()`.
+- `ChatListActivity` — `SwipeRefreshLayout` отключён (`isEnabled = false`) — убран бесконечно крутящийся спиннер.
+
 ## [1.3.4.5] - 2026-07-31
 
 ### Исправлено
