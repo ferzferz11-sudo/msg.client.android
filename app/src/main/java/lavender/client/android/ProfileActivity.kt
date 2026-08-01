@@ -191,7 +191,7 @@ class ProfileActivity : AppCompatActivity() {
                     1, android.R.drawable.ic_menu_add, getString(R.string.add_participants)
                 ) { showAddParticipantSheet() },
                 lavender.client.android.ui.widget.SheetAction(
-                    2, R.drawable.ic_groups_2, getString(R.string.open_lobby)
+                    2, R.drawable.ic_conference_lobby, getString(R.string.open_lobby)
                 ) {
                     val intent = Intent(this, ConferenceLobbyActivity::class.java).apply {
                         putExtra("ROOM_ID", roomId)
