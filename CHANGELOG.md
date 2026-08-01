@@ -1,5 +1,42 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.7] - 2026-08-01
+
+### Исправлено
+
+**Sticker editor — обрезка не по квадрату:**
+- `StickerEditorView.applyCrop()` — принудительное квадратное кропание через `min(w, h)` + центрирование
+- `StickerEditorActivity.saveAndReturn()` — убран промежуточный `applyCrop()` + переключение режима. `getCroppedBitmap()` в CROP-режиме корректно обрезает и делает квадрат за один проход
+
+**MediaPickerSheet — дублирование табов при повторном открытии:**
+- `setupStickerTab()` — добавлен guard `stickerTabInitialized` (как у `setupEmojiTab()`). Без него каждое открытие шторки добавляло 3 дубликата таба + listener, вызывая глитчинг
+
+**Adapter memory leaks (CRITICAL):**
+- `MessageAdapter` — добавлен `onViewRecycled()`: `lottieStickerView.cancelAnimation()` + `Glide.clear()` для avatar/image/sticker
+- `ChatMessageAdapter` — добавлен `onViewRecycled()`: `TypingHolder.stopAnimation()` + `Glide.clear()` для agent message image/avatar
+- `StickerPackAdapter` — добавлен `onViewRecycled()`: `coverView.cancelAnimation()`
+
+**ChatAdapter — selection performance:**
+- `setSelectionMode()`, `toggleSelection()`, `clearSelection()` — `notifyDataSetChanged()` → `notifyItemChanged()` для затронутых позиций
+
+**StickerPackListAdapter — hardcoded colors:**
+- Статус-бейджи (approved/pending/rejected) — `Color.parseColor("#4CAF50")` → theme `colorPrimary`/`colorTertiary`/`colorError`
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `StickerEditorView.kt` | `applyCrop()` — square enforcement |
+| `StickerEditorActivity.kt` | `saveAndReturn()` — removed applyCrop + mode switch |
+| `MediaPickerSheet.kt` | `stickerTabInitialized` guard |
+| `MessageAdapter.kt` | `onViewRecycled()` + `unbind()` |
+| `ChatMessageAdapter.kt` | `onViewRecycled()` + `AgentMessageHolder.unbind()` |
+| `StickerPackAdapter.kt` | `onViewRecycled()` + `unbind()` |
+| `ChatAdapter.kt` | Selection methods → targeted `notifyItemChanged()` |
+| `StickerPackListAdapter.kt` | Theme-based status colors |
+
+---
+
 ## [1.3.4.6] - 2026-07-31
 
 ### Добавлено
