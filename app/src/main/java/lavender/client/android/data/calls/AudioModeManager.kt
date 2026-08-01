@@ -11,6 +11,8 @@ import android.os.Build
 class AudioModeManager(context: Context) {
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private var originalMode: Int = audioManager.mode
+    var isSpeakerphoneOn: Boolean = false
+        private set
 
     fun setCallMode() {
         originalMode = audioManager.mode
@@ -23,7 +25,14 @@ class AudioModeManager(context: Context) {
         setSpeakerphoneOn(false)
     }
 
+    fun toggleSpeakerphone(): Boolean {
+        isSpeakerphoneOn = !isSpeakerphoneOn
+        setSpeakerphoneOn(isSpeakerphoneOn)
+        return isSpeakerphoneOn
+    }
+
     fun setSpeakerphoneOn(enabled: Boolean) {
+        isSpeakerphoneOn = enabled
         lavender.client.android.data.CompatUtils.setSpeakerphoneOn(audioManager, enabled)
     }
 }

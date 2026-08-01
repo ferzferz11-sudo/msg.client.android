@@ -258,6 +258,11 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             updateVideoVisibility()
         }
 
+        binding.btnSpeakerphone.setOnClickListener {
+            val isOn = audioModeManager.toggleSpeakerphone()
+            binding.btnSpeakerphone.setImageResource(if (isOn) R.drawable.ic_speakerphone else R.drawable.ic_earpiece)
+        }
+
         binding.btnEndForAll.setOnClickListener {
             CallManager.endConference()
             finish()
@@ -375,14 +380,8 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     override fun onLocalStream(stream: MediaStream) {
         lifecycleScope.launch {
             stream.videoTracks.getOrNull(0)?.addSink(binding.localView)
-            if (isConference && !isRemoteViewInitialized) {
-                if (!binding.remoteView.isVisible) {
-                     binding.remoteView.isVisible = true
-                     binding.remoteView.init(eglBase.eglBaseContext, null)
-                     isRemoteViewInitialized = true
-                }
-                stream.videoTracks.getOrNull(0)?.addSink(binding.remoteView)
-            }
+            // Don't show local stream in remote view — confusing in conference mode
+            // Remote view will be initialized when actual remote streams arrive
         }
     }
 

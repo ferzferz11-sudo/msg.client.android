@@ -39,6 +39,11 @@ class ConferenceLobbyViewModel(application: Application) : AndroidViewModel(appl
     private val _uiState = MutableStateFlow(ConferenceLobbyUiState())
     val uiState: StateFlow<ConferenceLobbyUiState> = _uiState.asStateFlow()
 
+    companion object {
+        // Guard against duplicate INITIATE_CONFERENCE signals per room
+        private val initiatedRooms = mutableSetOf<String>()
+    }
+
     private val sdf = SimpleDateFormat("dd.MM HH:mm", Locale.getDefault())
 
     fun init(roomId: String) {
@@ -46,7 +51,10 @@ class ConferenceLobbyViewModel(application: Application) : AndroidViewModel(appl
         updateDefaultTopic()
         observeConferenceStatus()
         observeAvatarCache()
-        CallManager.initiateConference(roomId)
+        // Only send INITIATE_CONFERENCE once per room per app session
+        if (initiatedRooms.add(roomId)) {
+            CallManager.initiateConference(roomId)
+        }
     }
 
     private fun updateDefaultTopic() {

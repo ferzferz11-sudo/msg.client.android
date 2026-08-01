@@ -68,7 +68,7 @@ internal fun showChatActionSheet(activity: ChatListActivity) {
             SheetAction(R.id.actionCreateSecretChat, R.drawable.ic_lock, activity.getString(R.string.secret_chat)) {
                 showCreateSecretChatDialog(activity)
             },
-            SheetAction(R.id.actionCreateConference, R.drawable.ic_videocam_on, activity.getString(R.string.conference_in_development)) {
+            SheetAction(R.id.actionCreateConference, R.drawable.ic_conference_lobby, activity.getString(R.string.group_conference)) {
                 showCreateConferenceDialog(activity)
             }
         )).showWithNavigation()

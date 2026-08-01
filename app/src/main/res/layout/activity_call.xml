@@ -98,9 +98,19 @@
             android:id="@+id/btn_mic"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="24dp"
-            app:fabSize="normal"
+            android:layout_marginHorizontal="12dp"
+            app:fabSize="mini"
             android:src="@drawable/ic_mic_on"
+            app:backgroundTint="@color/white"
+            app:tint="@color/black" />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/btn_speakerphone"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="12dp"
+            app:fabSize="mini"
+            android:src="@drawable/ic_speakerphone"
             app:backgroundTint="@color/white"
             app:tint="@color/black" />
 
@@ -130,8 +140,8 @@
             android:id="@+id/btn_camera"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="24dp"
-            app:fabSize="normal"
+            android:layout_marginHorizontal="12dp"
+            app:fabSize="mini"
             android:src="@drawable/ic_videocam_off"
             app:backgroundTint="@color/white"
             app:tint="@color/black" />
