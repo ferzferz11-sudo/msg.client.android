@@ -115,7 +115,7 @@ class ChatAdapter(
         if (!enabled) {
             selectedIds.clear()
         }
-        notifyDataSetChanged()
+        notifyChatItemsChanged()
     }
 
     fun toggleSelection(chatId: String) {
@@ -125,14 +125,26 @@ class ChatAdapter(
             selectedIds.add(chatId)
         }
         onSelectionChanged(selectedIds.size)
-        notifyDataSetChanged()
+        val pos = currentList.indexOfFirst { it is FlatItem.ChatItem && it.chat.id == chatId }
+        if (pos >= 0) notifyItemChanged(pos)
     }
 
     fun clearSelection() {
+        val previousSelected = selectedIds.toSet()
         selectedIds.clear()
         selectionMode = false
         onSelectionChanged(0)
-        notifyDataSetChanged()
+        currentList.forEachIndexed { i, item ->
+            if (item is FlatItem.ChatItem && previousSelected.contains(item.chat.id)) {
+                notifyItemChanged(i)
+            }
+        }
+    }
+
+    private fun notifyChatItemsChanged() {
+        currentList.forEachIndexed { i, item ->
+            if (item is FlatItem.ChatItem) notifyItemChanged(i)
+        }
     }
 
     fun isSelectionMode(): Boolean = selectionMode

@@ -97,6 +97,11 @@ class MessageAdapter(
         return MessageViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_message, parent, false))
     }
 
+    override fun onViewRecycled(holder: MessageViewHolder) {
+        super.onViewRecycled(holder)
+        holder.unbind()
+    }
+
     override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
         val msg = getItem(position)
         val prev = if (position > 0) getItem(position - 1) else null
@@ -147,6 +152,14 @@ class MessageAdapter(
         private val btnDownloadFile: ImageButton = itemView.findViewById(R.id.btnDownloadFile)
         val lottieStickerView: com.airbnb.lottie.LottieAnimationView = itemView.findViewById(R.id.lottieStickerView)
         val stickerImageView: ImageView = itemView.findViewById(R.id.ivStickerImage)
+
+        fun unbind() {
+            lottieStickerView.cancelAnimation()
+            lottieStickerView.clearAnimation()
+            Glide.with(itemView.context).clear(messageImageView)
+            Glide.with(itemView.context).clear(avatarImageView)
+            Glide.with(itemView.context).clear(stickerImageView)
+        }
 
         fun bind(message: Message, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean,
                  isConsecutive: Boolean, isSelectionMode: Boolean, adapterPosition: Int, showDateSeparator: Boolean,

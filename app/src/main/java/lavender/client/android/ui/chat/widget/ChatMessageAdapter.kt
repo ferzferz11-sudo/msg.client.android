@@ -76,6 +76,12 @@ class ChatMessageAdapter(
         }
     }
 
+    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+        super.onViewRecycled(holder)
+        if (holder is TypingHolder) holder.stopAnimation()
+        if (holder is AgentMessageHolder) holder.unbind()
+    }
+
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val item = getItem(position)
         when (holder) {
@@ -201,6 +207,11 @@ class ChatMessageAdapter(
         private val replyContainer: LinearLayout = itemView.findViewById(R.id.agentReplyContainer)
         private val replyUser: TextView = itemView.findViewById(R.id.agentReplyUser)
         private val replyText: TextView = itemView.findViewById(R.id.agentReplyText)
+
+        fun unbind() {
+            com.bumptech.glide.Glide.with(itemView.context).clear(messageImage)
+            com.bumptech.glide.Glide.with(itemView.context).clear(avatar)
+        }
 
         fun bind(item: ChatMessageItem) {
             container.isVisible = true

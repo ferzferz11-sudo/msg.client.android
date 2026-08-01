@@ -22,6 +22,11 @@ class StickerPackAdapter(
         return PackViewHolder(view)
     }
 
+    override fun onViewRecycled(holder: PackViewHolder) {
+        super.onViewRecycled(holder)
+        holder.unbind()
+    }
+
     override fun onBindViewHolder(holder: PackViewHolder, position: Int) {
         val pack = getItem(position)
         holder.bind(pack, position == selectedPosition)
@@ -46,6 +51,11 @@ class StickerPackAdapter(
     inner class PackViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val coverView: LottieAnimationView = itemView.findViewById(R.id.lottieCover)
         private val selectedIndicator: View = itemView.findViewById(R.id.selectedIndicator)
+
+        fun unbind() {
+            coverView.cancelAnimation()
+            coverView.clearAnimation()
+        }
 
         fun bind(pack: StickerPack, isSelected: Boolean) {
             selectedIndicator.visibility = if (isSelected) View.VISIBLE else View.INVISIBLE

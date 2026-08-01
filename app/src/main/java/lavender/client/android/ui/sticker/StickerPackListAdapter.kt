@@ -62,11 +62,13 @@ class StickerPackListAdapter(
                 "rejected" -> R.string.sticker_rejected
                 else -> R.string.sticker_draft
             }
+            val theme = ThemeStore.currentTheme()
+            val primaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
             val statusColor = when (pack.status) {
-                "approved" -> Color.parseColor("#4CAF50")
-                "pending" -> Color.parseColor("#FFC107")
-                "rejected" -> Color.parseColor("#F44336")
-                else -> Color.GRAY
+                "approved" -> ThemeUtils.adjustAlpha(primaryColor, 1f)
+                "pending" -> ThemeUtils.adjustAlpha(primaryColor, 0.6f)
+                "rejected" -> ThemeUtils.adjustAlpha(ThemeUtils.parseSafeColor(theme.outgoingBubbleColor, Color.RED), 0.9f)
+                else -> ThemeUtils.parseSafeColor(theme.textSecondaryColor, Color.GRAY)
             }
             statusText.setText(statusRes)
             statusText.setTextColor(statusColor)
@@ -108,5 +110,14 @@ class StickerPackListAdapter(
     class PackDiffCallback : DiffUtil.ItemCallback<StickerPack>() {
         override fun areItemsTheSame(oldItem: StickerPack, newItem: StickerPack): Boolean = oldItem.id == newItem.id
         override fun areContentsTheSame(oldItem: StickerPack, newItem: StickerPack): Boolean = oldItem == newItem
+    }
+
+    companion object {
+        private fun resolveAttr(context: android.content.Context, attr: Int, fallback: Int): Int {
+            val tv = android.util.TypedValue()
+            return if (context.theme.resolveAttribute(attr, tv, true) && tv.resourceId != 0) {
+                androidx.core.content.ContextCompat.getColor(context, tv.resourceId)
+            } else fallback
+        }
     }
 }
