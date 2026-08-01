@@ -1,5 +1,79 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.8] - 2026-08-01
+
+### Исправлено
+
+**Adapter memory leaks — onViewRecycled (5 адаптеров):**
+- `ChatAdapter` — `onViewRecycled()` + `clearAvatar()`: очистка Glide загрузки при рециклировании
+- `UserAdapter` — `onViewRecycled()` + `clearAvatar()`: очистка аватара пользователя
+- `SuperAdminAdapter` — `onViewRecycled()` + `clearAvatar()`/`clearIcon()`: очистка аватаров и иконок устройств
+- `ParticipantAdapter` — `onViewRecycled()` + `clearAvatar()`: очистка аватара участника
+- `MentionAdapter` — `onViewRecycled()` + `clearAvatar()`: очистка аватара упоминания
+
+**notifyDataSetChanged() → DiffUtil (4 адаптера):**
+- `ThemeAdapter` — миграция на `ListAdapter<CustomThemeProto>` с `DiffUtil.ItemCallback`
+- `DeviceAdapter` — миграция на `ListAdapter<DeviceInfoProto>` с `DiffUtil.ItemCallback`
+- `ParticipantAdapter` — миграция на `ListAdapter<String>` с `DiffUtil.ItemCallback`
+- `MentionAdapter` — миграция на `ListAdapter<String>` с `DiffUtil.ItemCallback`
+
+**Sticker Preferences — fatal crash при нажатии звёздочки:**
+- `StickerPreferencesManager.loadStickerList()` — `getPrefs()` был вне try-catch → `IllegalStateException` при неинициализированном `prefs`
+- `saveStickerList()` — аналогично, обёрнут в try-catch
+- `clearRecent()` — аналогично, обёрнут в try-catch
+- `loadStickerList()` — заменён `getString()` на `optString()` для защиты от потери всего списка при битом JSON
+
+**Sticker Lottie — crash при HTTP URL:**
+- `StickerPackListAdapter.bind()` — `setAnimation(url)` на HTTP URL вызывал `FileNotFoundException`. Исправлено на `setAnimationFromUrl()` для HTTP
+- `StickerPackAdapter.bind()` — аналогичный фикс
+- Добавлена проверка `url.isNotEmpty()` перед вызовом Lottie
+
+**Sticker favorites — неконтролируемый рост:**
+- Добавлен `MAX_FAVORITES = 100` — при превышении удаляется последний элемент
+
+**StickerPackListAdapter — Glide leak:**
+- `unbind()` — добавлена очистка `coverImageView` через `Glide.clear()`
+
+**E2EE key exchange — утечка корутин:**
+- `ChatE2EEDelegate` — добавлен `exchangeInProgress` guard от параллельных попыток
+- Добавлен `retryJob` для отмены pending retry при уходе с экрана
+- Добавлен `cancelPendingRetries()` + вызов в `NewChatActivity.onDestroy()`
+- Проверка `activity.isFinishing || activity.isDestroyed` перед retry
+
+**SessionManager — ANR risk:**
+- `waitForRefreshComplete()` — добавлен timeout 10s с принудительным сбросом guard
+
+**Chat list performance — O(n) в bind():**
+- `onlineUsers` — кэширован как `Set<String>` (был `List<String>` → `.toSet()` на каждый bind)
+- `allUsers` — кэширован как `Map<String, UserInfoProto>` (был `List` → `.firstOrNull()` O(n) на каждый bind)
+- `getOtherParticipant()` — кэширован в `MutableMap<String, String>` (был JSON parse на каждый bind)
+
+### Добавлено
+
+**Unit тесты:**
+- `ThemeUtilsTest` — 5 тестов: `parseSafeColor` (null, empty), `adjustAlpha` (factor 1.0, RGB preservation), `isLight`
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `ChatAdapter.kt` | `onViewRecycled()`, performance caches (Set/Map), `getOrComputeOtherParticipant()` |
+| `UserAdapter.kt` | `onViewRecycled()` + `clearAvatar()` |
+| `SuperAdminAdapter.kt` | `onViewRecycled()` + `clearAvatar()`/`clearIcon()` |
+| `ParticipantAdapter.kt` | `onViewRecycled()` + `clearAvatar()`, миграция на ListAdapter |
+| `MentionAdapter.kt` | `onViewRecycled()` + `clearAvatar()`, миграция на ListAdapter |
+| `ThemeAdapter.kt` | Миграция на ListAdapter + DiffUtil |
+| `DeviceAdapter.kt` | Миграция на ListAdapter + DiffUtil |
+| `StickerPreferencesManager.kt` | try-catch обёртки, optString, MAX_FAVORITES=100 |
+| `StickerPackListAdapter.kt` | `setAnimationFromUrl()` для HTTP, Glide cleanup в unbind |
+| `StickerPackAdapter.kt` | `setAnimationFromUrl()` для HTTP |
+| `ChatE2EEDelegate.kt` | exchangeInProgress guard, retryJob, cancelPendingRetries() |
+| `NewChatActivity.kt` | `onDestroy()` → `cancelPendingRetries()` |
+| `SessionManager.kt` | waitForRefreshComplete timeout 10s |
+| `ThemeUtilsTest.kt` | NEW — 5 unit тестов |
+
+---
+
 ## [1.3.4.7] - 2026-08-01
 
 ### Исправлено

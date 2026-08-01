@@ -5,6 +5,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import lavender.client.android.R
 import lavender.client.android.data.proto.DeviceInfoProto
@@ -16,13 +18,10 @@ class DeviceAdapter(
     private val currentDeviceId: String,
     private val onItemClick: (DeviceInfoProto) -> Unit,
     private val onDeleteClick: (DeviceInfoProto) -> Unit
-) : RecyclerView.Adapter<DeviceAdapter.ViewHolder>() {
-
-    private var devices = listOf<DeviceInfoProto>()
+) : ListAdapter<DeviceInfoProto, DeviceAdapter.ViewHolder>(DeviceDiffCallback()) {
 
     fun setDevices(newDevices: List<DeviceInfoProto>) {
-        devices = newDevices
-        notifyDataSetChanged()
+        submitList(newDevices)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -31,10 +30,15 @@ class DeviceAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(devices[position])
+        holder.bind(getItem(position))
     }
 
-    override fun getItemCount() = devices.size
+    class DeviceDiffCallback : DiffUtil.ItemCallback<DeviceInfoProto>() {
+        override fun areItemsTheSame(oldItem: DeviceInfoProto, newItem: DeviceInfoProto): Boolean =
+            oldItem.deviceId == newItem.deviceId
+        override fun areContentsTheSame(oldItem: DeviceInfoProto, newItem: DeviceInfoProto): Boolean =
+            oldItem == newItem
+    }
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val icon: ImageView = view.findViewById(R.id.deviceIcon)

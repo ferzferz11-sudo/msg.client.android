@@ -11,6 +11,7 @@ object StickerPreferencesManager {
     private const val KEY_RECENT = "recent_stickers"
     private const val KEY_FAVORITES = "favorite_stickers"
     private const val MAX_RECENT = 20
+    private const val MAX_FAVORITES = 100
 
     private var prefs: SharedPreferences? = null
 
@@ -40,7 +41,7 @@ object StickerPreferencesManager {
     }
 
     fun clearRecent() {
-        getPrefs().edit().remove(KEY_RECENT).apply()
+        try { getPrefs().edit().remove(KEY_RECENT).apply() } catch (_: Exception) {}
     }
 
     fun toggleFavorite(sticker: Sticker): Boolean {
@@ -49,7 +50,10 @@ object StickerPreferencesManager {
         if (isFavorite) {
             favorites.removeAll { it.id == sticker.id }
         } else {
-            favorites.add(sticker)
+            if (favorites.size >= MAX_FAVORITES) {
+                favorites.removeAt(favorites.lastIndex)
+            }
+            favorites.add(0, sticker)
         }
         saveStickerList(KEY_FAVORITES, favorites)
         return !isFavorite
@@ -70,37 +74,45 @@ object StickerPreferencesManager {
     }
 
     private fun saveStickerList(key: String, stickers: List<Sticker>) {
-        val jsonArray = JSONArray()
-        stickers.forEach { sticker ->
-            val obj = org.json.JSONObject().apply {
-                put("id", sticker.id)
-                put("packId", sticker.packId)
-                put("lottieUrl", sticker.lottieUrl)
-                put("thumbnailUrl", sticker.thumbnailUrl)
-                put("emoji", sticker.emoji)
-                put("width", sticker.width)
-                put("height", sticker.height)
+        try {
+            val jsonArray = JSONArray()
+            stickers.forEach { sticker ->
+                val obj = org.json.JSONObject().apply {
+                    put("id", sticker.id)
+                    put("packId", sticker.packId)
+                    put("lottieUrl", sticker.lottieUrl)
+                    put("thumbnailUrl", sticker.thumbnailUrl)
+                    put("emoji", sticker.emoji)
+                    put("width", sticker.width)
+                    put("height", sticker.height)
+                }
+                jsonArray.put(obj)
             }
-            jsonArray.put(obj)
+            getPrefs().edit().putString(key, jsonArray.toString()).apply()
+        } catch (e: Exception) {
+            android.util.Log.e("StickerPrefs", "saveStickerList failed", e)
         }
-        getPrefs().edit().putString(key, jsonArray.toString()).apply()
     }
 
     private fun loadStickerList(key: String): List<Sticker> {
-        val json = getPrefs().getString(key, null) ?: return emptyList()
         return try {
+            val json = getPrefs().getString(key, null) ?: return emptyList()
             val jsonArray = JSONArray(json)
             (0 until jsonArray.length()).mapNotNull { i ->
-                val obj = jsonArray.getJSONObject(i)
-                Sticker(
-                    id = obj.getString("id"),
-                    packId = obj.optString("packId", ""),
-                    lottieUrl = obj.getString("lottieUrl"),
-                    thumbnailUrl = obj.optString("thumbnailUrl", ""),
-                    emoji = obj.optString("emoji", ""),
-                    width = obj.optInt("width", 512),
-                    height = obj.optInt("height", 512)
-                )
+                try {
+                    val obj = jsonArray.getJSONObject(i)
+                    Sticker(
+                        id = obj.optString("id", ""),
+                        packId = obj.optString("packId", ""),
+                        lottieUrl = obj.optString("lottieUrl", ""),
+                        thumbnailUrl = obj.optString("thumbnailUrl", ""),
+                        emoji = obj.optString("emoji", ""),
+                        width = obj.optInt("width", 512),
+                        height = obj.optInt("height", 512)
+                    ).takeIf { it.id.isNotEmpty() }
+                } catch (_: Exception) {
+                    null
+                }
             }
         } catch (_: Exception) {
             emptyList()

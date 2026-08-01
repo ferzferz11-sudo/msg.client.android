@@ -4,6 +4,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import de.hdodenhof.circleimageview.CircleImageView
@@ -13,15 +15,13 @@ import lavender.client.android.theme.ThemeUtils
 
 class MentionAdapter(
     private val onUserClick: (String) -> Unit
-) : RecyclerView.Adapter<MentionAdapter.MentionViewHolder>() {
+) : ListAdapter<String, MentionAdapter.MentionViewHolder>(MentionDiffCallback()) {
 
-    private var users = listOf<String>()
     private var avatarCache = mapOf<String, String>()
 
     fun setUsers(newUsers: List<String>, cache: Map<String, String>) {
-        users = newUsers
         avatarCache = cache
-        notifyDataSetChanged()
+        submitList(newUsers)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MentionViewHolder {
@@ -30,11 +30,19 @@ class MentionAdapter(
     }
 
     override fun onBindViewHolder(holder: MentionViewHolder, position: Int) {
-        val user = users[position]
+        val user = getItem(position)
         holder.bind(user, avatarCache[user])
     }
 
-    override fun getItemCount(): Int = users.size
+    override fun onViewRecycled(holder: MentionViewHolder) {
+        super.onViewRecycled(holder)
+        holder.clearAvatar()
+    }
+
+    class MentionDiffCallback : DiffUtil.ItemCallback<String>() {
+        override fun areItemsTheSame(oldItem: String, newItem: String): Boolean = oldItem == newItem
+        override fun areContentsTheSame(oldItem: String, newItem: String): Boolean = oldItem == newItem
+    }
 
     inner class MentionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val avatarView: CircleImageView = itemView.findViewById(R.id.mentionAvatar)
@@ -53,6 +61,10 @@ class MentionAdapter(
                 ThemeUtils.applyDefaultAvatar(avatarView, ThemeStore.currentTheme())
             }
             itemView.setOnClickListener { onUserClick(username) }
+        }
+
+        fun clearAvatar() {
+            avatarView.setImageDrawable(null)
         }
     }
 }

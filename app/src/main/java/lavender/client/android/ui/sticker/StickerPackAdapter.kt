@@ -64,10 +64,19 @@ class StickerPackAdapter(
                 ?: pack.stickers.firstOrNull()
 
             if (coverSticker != null) {
-                coverView.setAnimation(coverSticker.lottieUrl)
-                coverView.repeatCount = 0
-                coverView.playAnimation()
-                coverView.visibility = View.VISIBLE
+                val url = coverSticker.lottieUrl
+                if (url.isNotEmpty()) {
+                    if (url.startsWith("http://") || url.startsWith("https://")) {
+                        coverView.setAnimationFromUrl(url)
+                    } else {
+                        coverView.setAnimation(url)
+                    }
+                    coverView.repeatCount = 0
+                    coverView.playAnimation()
+                    coverView.visibility = View.VISIBLE
+                } else {
+                    coverView.visibility = View.GONE
+                }
             } else {
                 coverView.visibility = View.GONE
             }

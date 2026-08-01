@@ -42,13 +42,28 @@ class ChatAdapter(
     private val onChatClick: (ChatInfo) -> Unit,
     private val onChatLongClick: (ChatInfo, View) -> Unit,
     private val onSelectionChanged: (Int) -> Unit = {},
-    private var onlineUsers: List<String> = emptyList(),
-    private var allUsers: List<lavender.client.android.data.proto.UserInfoProto> = emptyList()
+    onlineUsersList: List<String> = emptyList(),
+    allUsersList: List<lavender.client.android.data.proto.UserInfoProto> = emptyList()
 ) : ListAdapter<FlatItem, RecyclerView.ViewHolder>(FlatItemDiffCallback()), ChatListAdapter {
 
     companion object {
         private const val TYPE_SECTION_HEADER = 0
         private const val TYPE_CHAT_ITEM = 1
+
+        fun getOrComputeOtherParticipant(chat: ChatInfo, currentUsername: String, cache: MutableMap<String, String>): String {
+            cache[chat.id]?.let { return it }
+            val result = try {
+                val arr = org.json.JSONArray(chat.participants)
+                var other = ""
+                for (i in 0 until arr.length()) {
+                    val p = arr.getString(i)
+                    if (p != currentUsername) { other = p; break }
+                }
+                other
+            } catch (_: Exception) { "" }
+            cache[chat.id] = result
+            return result
+        }
     }
 
     private var sections: List<SectionItem> = emptyList()
@@ -58,6 +73,13 @@ class ChatAdapter(
     private var selectionMode = false
     private val selectedIds = mutableSetOf<String>()
 
+    // Performance caches
+    private var onlineUsersSet: Set<String> = onlineUsersList.toSet()
+    private var allUsersMap: Map<String, lavender.client.android.data.proto.UserInfoProto> =
+        allUsersList.associateBy { it.username }
+    private var avatarUrlCache: Map<String, String> = allUsersList.associate { it.username to it.avatarUrl }
+    private var otherParticipantCache: MutableMap<String, String> = mutableMapOf()
+
     // Theme colors — single cache for entire adapter
     private var cachedPrimaryColor: Int = 0
     private var cachedTextPrimary: Int = 0
@@ -66,9 +88,6 @@ class ChatAdapter(
     private var cachedSelectedColor: Int = 0
     private var cachedUnreadColor: Int = 0
     private var colorsInitialized = false
-
-    // Avatar cache: username -> avatarUrl (rebuilt when allUsers changes)
-    private var avatarUrlCache: Map<String, String> = emptyMap()
 
     private fun initColors(view: View) {
         if (colorsInitialized) return
@@ -197,14 +216,21 @@ class ChatAdapter(
         when (val item = getItem(position)) {
             is FlatItem.SectionHeader -> (holder as SectionHeaderViewHolder).bind(item)
             is FlatItem.ChatItem -> (holder as ChatViewHolder).bind(
-                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedUnreadColor, cachedPrimaryColor, selectionMode, selectedIds.contains(item.chat.id), currentUsername, onlineUsers.toSet(), allUsers, avatarUrlCache
+                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedUnreadColor, cachedPrimaryColor, selectionMode, selectedIds.contains(item.chat.id), currentUsername, onlineUsersSet, allUsersMap, avatarUrlCache, otherParticipantCache
             )
             null -> {}
         }
     }
 
+    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+        super.onViewRecycled(holder)
+        if (holder is ChatViewHolder) {
+            holder.clearAvatar()
+        }
+    }
+
     fun updateOnlineUsers(users: List<String>) {
-        onlineUsers = users
+        onlineUsersSet = users.toSet()
         val currentItems = currentList
         val changedPositions = mutableListOf<Int>()
         for (i in currentItems.indices) {
@@ -219,8 +245,9 @@ class ChatAdapter(
     }
 
     fun updateAllUsers(users: List<lavender.client.android.data.proto.UserInfoProto>) {
-        allUsers = users
+        allUsersMap = users.associateBy { it.username }
         avatarUrlCache = users.associate { it.username to it.avatarUrl }
+        otherParticipantCache.clear()
         val currentItems = currentList
         val changedPositions = mutableListOf<Int>()
         for (i in currentItems.indices) {
@@ -302,7 +329,7 @@ class ChatAdapter(
         private val cardView: com.google.android.material.card.MaterialCardView =
             itemView as com.google.android.material.card.MaterialCardView
 
-        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, unreadColor: Int, primaryColor: Int, selectionMode: Boolean, isSelected: Boolean, currentUsername: String, onlineUsers: Set<String>, allUsers: List<lavender.client.android.data.proto.UserInfoProto>, avatarCache: Map<String, String>) {
+        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, unreadColor: Int, primaryColor: Int, selectionMode: Boolean, isSelected: Boolean, currentUsername: String, onlineUsers: Set<String>, allUsersMap: Map<String, lavender.client.android.data.proto.UserInfoProto>, avatarCache: Map<String, String>, otherParticipantCache: MutableMap<String, String>) {
             val hasUnread = chat.unreadCount > 0
             tvChatName.text = chat.getDisplayName(currentUsername)
             tvChatName.setTextColor(if (hasUnread) primaryColor else textPrimary)
@@ -310,7 +337,7 @@ class ChatAdapter(
 
             // Avatar
             val avatarUrl = if (chat.type == "direct" || chat.isSecret) {
-                val otherUser = getOtherParticipant(chat, currentUsername)
+                val otherUser = getOrComputeOtherParticipant(chat, currentUsername, otherParticipantCache)
                 avatarCache[otherUser] ?: ""
             } else chat.avatarUrl
             try {
@@ -390,14 +417,14 @@ class ChatAdapter(
 
             // Online status + last seen
             if (chat.type == "direct" && !chat.isSecret && !chat.id.startsWith("favorites_")) {
-                val otherUser = getOtherParticipant(chat, currentUsername)
+                val otherUser = getOrComputeOtherParticipant(chat, currentUsername, otherParticipantCache)
                 if (otherUser.isNotEmpty()) {
                     val isOnline = onlineUsers.contains(otherUser)
                     statusIndicator.isVisible = true
                     statusIndicator.setBackgroundResource(if (isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot)
 
                     if (!isOnline) {
-                        val userInfo = allUsers.firstOrNull { it.username == otherUser }
+                        val userInfo = allUsersMap[otherUser]
                         val lastSeenStr = userInfo?.lastSeenAt?.let { getTimeAgo(it.seconds * 1000, itemView.context) }
                         if (lastSeenStr != null) {
                             tvLastSeen.isVisible = true
@@ -446,19 +473,6 @@ class ChatAdapter(
             return if (after.startsWith("\n")) after.substring(1) else after
         }
 
-        private fun getOtherParticipant(chat: ChatInfo, currentUsername: String): String {
-            return try {
-                val arr = org.json.JSONArray(chat.participants)
-                for (i in 0 until arr.length()) {
-                    val p = arr.getString(i)
-                    if (p != currentUsername) return p
-                }
-                ""
-            } catch (e: Exception) {
-                ""
-            }
-        }
-
         private fun getTimeAgo(timestampMillis: Long, context: android.content.Context): String {
             val now = System.currentTimeMillis()
             val diff = now - timestampMillis
@@ -476,6 +490,11 @@ class ChatAdapter(
                     format.format(java.util.Date(timestampMillis))
                 }
             }
+        }
+
+        fun clearAvatar() {
+            ivChatAvatar.tag = null
+            ivChatAvatar.setImageDrawable(null)
         }
     }
 }

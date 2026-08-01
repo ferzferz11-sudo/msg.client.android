@@ -79,10 +79,14 @@ class StickerPackListAdapter(
             if (coverSticker != null) {
                 val url = coverSticker.lottieUrl
                 val isLottie = url.endsWith(".json", ignoreCase = true)
-                if (isLottie) {
+                if (isLottie && url.isNotEmpty()) {
                     coverView.visibility = View.VISIBLE
                     coverImageView?.visibility = View.GONE
-                    coverView.setAnimation(url)
+                    if (url.startsWith("http://") || url.startsWith("https://")) {
+                        coverView.setAnimationFromUrl(url)
+                    } else {
+                        coverView.setAnimation(url)
+                    }
                     coverView.repeatCount = 0
                     coverView.playAnimation()
                 } else {
@@ -104,6 +108,7 @@ class StickerPackListAdapter(
         fun unbind() {
             coverView.cancelAnimation()
             coverView.clearAnimation()
+            coverImageView?.let { Glide.with(itemView.context).clear(it) }
         }
     }
 

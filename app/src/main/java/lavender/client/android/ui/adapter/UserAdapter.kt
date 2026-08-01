@@ -165,6 +165,11 @@ class UserAdapter(
         holder.bind(users[position], selectedUsers.contains(users[position]))
     }
 
+    override fun onViewRecycled(holder: UserViewHolder) {
+        super.onViewRecycled(holder)
+        holder.clearAvatar()
+    }
+
     override fun onBindViewHolder(holder: UserViewHolder, position: Int, payloads: MutableList<Any>) {
         if (payloads.isEmpty()) {
             super.onBindViewHolder(holder, position, payloads)
@@ -237,6 +242,10 @@ class UserAdapter(
                 onUserLongClick?.invoke(username)
                 true
             }
+        }
+
+        fun clearAvatar() {
+            userAvatar.setImageDrawable(null)
         }
     }
 

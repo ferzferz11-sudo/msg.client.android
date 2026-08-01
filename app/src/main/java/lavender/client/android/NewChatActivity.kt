@@ -624,5 +624,10 @@ class NewChatActivity : AppCompatActivity() {
         }
     }
 
+    override fun onDestroy() {
+        e2eeDelegate.cancelPendingRetries()
+        super.onDestroy()
+    }
+
     private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
 }

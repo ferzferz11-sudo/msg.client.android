@@ -103,14 +103,19 @@ object SessionManager {
     private val refreshGuard = AtomicBoolean(false)
 
     /**
-     * Blocks until any in-progress refresh completes.
+     * Blocks until any in-progress refresh completes (max 10 seconds).
      * Returns true if we waited, false if nothing was in progress.
      */
     private fun waitForRefreshComplete(): Boolean {
         var waited = false
-        while (refreshGuard.get()) {
+        val deadline = System.currentTimeMillis() + 10_000
+        while (refreshGuard.get() && System.currentTimeMillis() < deadline) {
             waited = true
             Thread.sleep(100)
+        }
+        if (refreshGuard.get()) {
+            Log.w("SessionManager", "waitForRefreshComplete: timed out after 10s, forcing guard release")
+            refreshGuard.set(false)
         }
         return waited
     }

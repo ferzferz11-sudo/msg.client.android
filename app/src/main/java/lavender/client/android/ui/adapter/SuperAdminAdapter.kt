@@ -197,6 +197,14 @@ class SuperAdminAdapter(
         }
     }
 
+    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+        super.onViewRecycled(holder)
+        when (holder) {
+            is UserViewHolder -> holder.clearAvatar()
+            is SessionViewHolder -> holder.clearIcon()
+        }
+    }
+
     override fun getItemCount() = items.size
 
     inner class UserViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -302,6 +310,10 @@ class SuperAdminAdapter(
                 else -> text
             }
         }
+
+        fun clearAvatar() {
+            avatarView.setImageDrawable(null)
+        }
     }
 
     inner class SessionViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -335,6 +347,10 @@ class SuperAdminAdapter(
             lastSeenText.setTextColor(textSecondary)
 
             onlineDot.setBackgroundResource(if (session.isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot)
+        }
+
+        fun clearIcon() {
+            deviceTypeIcon.setImageDrawable(null)
         }
     }
 

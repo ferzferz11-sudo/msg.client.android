@@ -7,6 +7,8 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.view.isVisible
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import lavender.client.android.R
@@ -20,22 +22,20 @@ class ParticipantAdapter(
     private val onRemoveClick: (String) -> Unit,
     private val onAvatarClick: (String, String) -> Unit,
     private val onLongClick: (String) -> Unit
-) : RecyclerView.Adapter<ParticipantAdapter.ViewHolder>() {
+) : ListAdapter<String, ParticipantAdapter.ViewHolder>(ParticipantDiffCallback()) {
 
-    private var participants = listOf<String>()
     private var avatarCache = mapOf<String, String>()
     private var onlineUsers = setOf<String>()
 
     fun updateData(newParticipants: List<String>, newOnlineUsers: Set<String>, newAvatarCache: Map<String, String>) {
-        this.participants = newParticipants
         this.onlineUsers = newOnlineUsers
         this.avatarCache = newAvatarCache
-        notifyDataSetChanged()
+        submitList(newParticipants)
     }
 
     fun updateTheme(newTheme: Theme) {
         this.theme = newTheme
-        notifyDataSetChanged()
+        notifyItemRangeChanged(0, itemCount)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -44,11 +44,19 @@ class ParticipantAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val user = participants[position]
+        val user = getItem(position)
         holder.bind(user, theme, isAdmin, creator, onlineUsers.contains(user), avatarCache[user])
     }
 
-    override fun getItemCount() = participants.size
+    override fun onViewRecycled(holder: ViewHolder) {
+        super.onViewRecycled(holder)
+        holder.clearAvatar()
+    }
+
+    class ParticipantDiffCallback : DiffUtil.ItemCallback<String>() {
+        override fun areItemsTheSame(oldItem: String, newItem: String): Boolean = oldItem == newItem
+        override fun areContentsTheSame(oldItem: String, newItem: String): Boolean = oldItem == newItem
+    }
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val nameText: TextView = view.findViewById(R.id.participantName)
@@ -89,6 +97,10 @@ class ParticipantAdapter(
                 onLongClick(username)
                 true
             }
+        }
+
+        fun clearAvatar() {
+            avatarView.setImageDrawable(null)
         }
     }
 }
