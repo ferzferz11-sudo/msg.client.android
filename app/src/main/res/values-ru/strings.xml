@@ -674,6 +674,10 @@
     <string name="join_conference_action">Присоединиться к конференции</string>
     <string name="lobby_title">Лобби конференции</string>
     <string name="open_lobby">Открыть лобби</string>
+    <string name="lobby">Лобби</string>
+    <string name="delete_conference">Удалить конференцию</string>
+    <string name="leave_conference">Покинуть конференцию</string>
+    <string name="invited_participants">Приглашённые участники</string>
     <string name="new_conference_format">Конференция %s</string>
     <string name="edit_topic">Редактировать тему</string>
     <string name="plus_5_min">+5 мин</string>

@@ -38,7 +38,7 @@ class ChatToolbarDelegate(
     lateinit var toolbarAvatar: CircleImageView
     lateinit var groupParticipantsContainer: LinearLayout
     lateinit var toolbarContent: View
-    lateinit var btnLobby: ImageView
+    lateinit var btnLobby: View
 
     private var roomId: String = ""
     private var username: String = ""

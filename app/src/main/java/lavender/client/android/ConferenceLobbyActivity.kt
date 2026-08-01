@@ -79,7 +79,8 @@ class ConferenceLobbyActivity : AppCompatActivity() {
 
         binding.btnJoin.setOnClickListener {
             viewModel.joinConference()
-            CallNavigator.navigateToCall(this, "", "", false, isConference = true, roomId = roomId)
+            val creatorId = viewModel.uiState.value.conferenceCreatorId
+            CallNavigator.navigateToCall(this, "", "", false, isConference = true, roomId = roomId, creatorId = creatorId)
             finish()
         }
 

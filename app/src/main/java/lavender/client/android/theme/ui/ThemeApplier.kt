@@ -294,7 +294,6 @@ object ThemeApplier {
                 }
             }
 
-            activity.findViewById<TextView>(R.id.tvConferenceBadge)?.backgroundTintList = ColorStateList.valueOf(customPrimary)
         } catch (e: Exception) {
             android.util.Log.e("ThemeApplier", "Form/input theming failed: ${e.message}")
         }

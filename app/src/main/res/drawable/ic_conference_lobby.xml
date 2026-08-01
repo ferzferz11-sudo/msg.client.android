@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Video camera -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M15,8v8H5V8H15M16,6H4c-0.55,0 -1,0.45 -1,1v10c0,0.55 0.45,1 1,1h12c0.55,0 1,-0.45 1,-1v-3.5l4,4v-11l-4,4V7c0,-0.55 -0.45,-1 -1,-1z" />
+    <!-- Small person indicator (bottom-right) -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M18.5,5.5c0.83,0 1.5,-0.67 1.5,-1.5s-0.67,-1.5 -1.5,-1.5S17,3.17 17,4s0.67,1.5 1.5,1.5z" />
+    <!-- Small person body indicator -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M18.5,6.5c-1,0 -2.5,0.5 -2.5,1.5v0.5h5v-0.5C21,7 19.5,6.5 18.5,6.5z" />
+</vector>

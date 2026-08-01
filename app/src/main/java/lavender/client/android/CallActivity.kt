@@ -91,6 +91,12 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
              binding.btnCamera.visibility = View.VISIBLE
              binding.btnCamera.setImageResource(R.drawable.ic_videocam_on)
              viewModel.startTimer()
+             // Show "End for All" immediately for the conference creator
+             val creatorId = intent.getStringExtra("CREATOR") ?: ""
+             val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername()
+             if (creatorId.isNotEmpty() && myId == creatorId) {
+                 binding.btnEndForAll.visibility = View.VISIBLE
+             }
         } else {
              CallManager.syncCallState(callId, receiverId, isIncoming)
              binding.tvCallStatus.text = if (isIncoming) getString(R.string.call_status_incoming) else getString(R.string.call_status_calling)

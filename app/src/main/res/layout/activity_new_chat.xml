@@ -115,23 +115,41 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <ImageView
+            <LinearLayout
                 android:id="@+id/btnLobby"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:layout_marginEnd="8dp"
-                android:padding="8dp"
-                android:src="@drawable/ic_groups_2"
-                android:background="@drawable/circle_button"
-                android:backgroundTint="?attr/colorPrimary"
-                app:tint="?attr/colorOnPrimary"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="4dp"
                 android:visibility="gone"
                 tools:visibility="visible"
                 android:clickable="true"
                 android:focusable="true"
-                android:contentDescription="@string/conference" />
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/open_lobby">
+
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_conference_lobby"
+                    android:background="@drawable/circle_button"
+                    android:backgroundTint="?attr/colorPrimary"
+                    app:tint="?attr/colorOnPrimary"
+                    android:padding="4dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/lobby"
+                    android:textSize="9sp"
+                    android:textColor="?attr/colorOnSurface"
+                    android:layout_marginTop="1dp" />
+
+            </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/selectionToolbar"

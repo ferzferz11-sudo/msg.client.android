@@ -107,17 +107,17 @@ class CallController(
     }
 
     private fun handleConferencePresence(signal: CallMessageProto) {
-        if (signal.type == CallMessageProto.Type.JOIN_CONFERENCE) {
+        if (signal.type == CallMessageProto.Type.JOIN_CONFERENCE || signal.type == CallMessageProto.Type.LEAVE_CONFERENCE) {
             try {
                 val response = JSONObject(signal.payload)
-                val participantsJson = response.getJSONObject("participants")
+                val participantsJson = response.optJSONObject("participants") ?: return
                 val creatorId = response.optString("creator_id", "")
                 val names = mutableListOf<String>()
                 val keys = participantsJson.keys()
                 while (keys.hasNext()) names.add(participantsJson.getString(keys.next()))
                 listener.onConferencePresenceUpdated(names, creatorId)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to parse participants", e)
+                Log.e(TAG, "Failed to parse conference presence", e)
             }
         }
     }

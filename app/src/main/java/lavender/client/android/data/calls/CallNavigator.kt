@@ -36,13 +36,14 @@ object CallNavigator {
         context.startActivity(intent)
     }
 
-    fun navigateToCall(context: Context, callId: String, receiverId: String, isIncoming: Boolean, isConference: Boolean = false, roomId: String = "") {
+    fun navigateToCall(context: Context, callId: String, receiverId: String, isIncoming: Boolean, isConference: Boolean = false, roomId: String = "", creatorId: String = "") {
         val intent = Intent(context, CallActivity::class.java).apply {
             putExtra("CALL_ID", callId)
             putExtra("RECEIVER_ID", receiverId)
             putExtra("IS_INCOMING", isIncoming)
             putExtra("IS_CONFERENCE", isConference)
             putExtra("ROOM_ID", roomId)
+            if (creatorId.isNotEmpty()) putExtra("CREATOR", creatorId)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
         context.startActivity(intent)

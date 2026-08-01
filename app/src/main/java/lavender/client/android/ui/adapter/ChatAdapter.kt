@@ -297,7 +297,6 @@ class ChatAdapter(
         private val statusIndicator: View = itemView.findViewById(R.id.statusIndicator)
         private val tvLastSeen: TextView = itemView.findViewById(R.id.tvLastSeen)
         private val tvCompanyBadge: TextView = itemView.findViewById(R.id.tvCompanyBadge)
-        private val tvConferenceBadge: TextView = itemView.findViewById(R.id.tvConferenceBadge)
         private val btnEnterLobby: ImageView = itemView.findViewById(R.id.btnEnterLobby)
         private val ivChatAvatar: de.hdodenhof.circleimageview.CircleImageView = itemView.findViewById(R.id.ivChatAvatar)
         private val cardView: com.google.android.material.card.MaterialCardView =
@@ -331,9 +330,6 @@ class ChatAdapter(
 
             // Company badge
             tvCompanyBadge.isVisible = chat.companyId.isNotEmpty()
-
-            // Conference badge
-            tvConferenceBadge.isVisible = chat.type == "conference"
 
             if (chat.isSecret) {
                 tvChatType.text = itemView.context.getString(R.string.e2ee_verified)

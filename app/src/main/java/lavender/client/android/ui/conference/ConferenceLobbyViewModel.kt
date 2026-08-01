@@ -120,16 +120,8 @@ class ConferenceLobbyViewModel(application: Application) : AndroidViewModel(appl
     }
 
     fun leaveConference() {
-        val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: ""
-        if (myId.isNotEmpty()) {
-            GrpcClient.removeParticipant(_uiState.value.roomId, myId) { success, _ ->
-                viewModelScope.launch {
-                    if (success) {
-                        _uiState.value = _uiState.value.copy(successMessage = "Left conference")
-                    }
-                }
-            }
-        }
+        CallManager.leaveConference(_uiState.value.roomId)
+        _uiState.value = _uiState.value.copy(successMessage = "Left conference")
     }
 
     fun inviteToConference(userId: String) {

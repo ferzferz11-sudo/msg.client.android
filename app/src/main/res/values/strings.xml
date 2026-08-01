@@ -747,6 +747,10 @@
     <string name="join_conference_action">Join Conference</string>
     <string name="lobby_title">Conference Lobby</string>
     <string name="open_lobby">Open Lobby</string>
+    <string name="lobby">Lobby</string>
+    <string name="delete_conference">Delete Conference</string>
+    <string name="leave_conference">Leave Conference</string>
+    <string name="invited_participants">Invited Participants</string>
     <string name="new_conference_format">Conference %s</string>
     <string name="edit_topic">Edit Topic</string>
     <string name="plus_5_min">+5 min</string>

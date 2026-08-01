@@ -277,16 +277,18 @@ object CallManager {
         _currentCall.value = signal
     }
 
-    fun leaveConference() {
-        val call = _currentCall.value ?: return
+    fun leaveConference(roomId: String = "") {
+        val effectiveRoomId = roomId.ifEmpty { _currentCall.value?.roomId ?: return }
         val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
         val signal = CallMessageProto(
             senderId = senderId,
-            roomId = call.roomId,
+            roomId = effectiveRoomId,
             type = CallMessageProto.Type.LEAVE_CONFERENCE
         )
         GrpcClient.sendCallSignal(signal)
-        _currentCall.value = null
+        if (_currentCall.value?.roomId == effectiveRoomId) {
+            _currentCall.value = null
+        }
     }
 
     fun inviteToConference(roomId: String, targetUserId: String, targetUserName: String) {
