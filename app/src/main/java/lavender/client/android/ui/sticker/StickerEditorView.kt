@@ -156,6 +156,47 @@ class StickerEditorView @JvmOverloads constructor(
         invalidate()
     }
 
+    fun applyCrop(): Boolean {
+        val bmp = filteredBitmap ?: originalBitmap ?: return false
+        if (width <= 0 || height <= 0) return false
+
+        val cx = width / 2f
+        val cy = height / 2f
+        val cropSize = min(width, height) * 0.85f
+        val half = cropSize / 2f
+        val cropRect = RectF(cx - half, cy - half, cx + half, cy + half)
+
+        val invMatrix = Matrix()
+        if (!imageMatrix.invert(invMatrix)) return false
+        val mappedRect = RectF()
+        invMatrix.mapRect(mappedRect, cropRect)
+
+        val left = mappedRect.left.toInt().coerceIn(0, bmp.width - 1)
+        val top = mappedRect.top.toInt().coerceIn(0, bmp.height - 1)
+        val right = mappedRect.right.toInt().coerceIn(left + 1, bmp.width)
+        val bottom = mappedRect.bottom.toInt().coerceIn(top + 1, bmp.height)
+
+        val w = right - left
+        val h = bottom - top
+        if (w <= 0 || h <= 0) return false
+
+        val cropped = Bitmap.createBitmap(bmp, left, top, w, h)
+
+        // Preserve filter state: crop both filtered and original bitmaps
+        val hasFilter = filteredBitmap != null && filteredBitmap !== originalBitmap
+        if (hasFilter) {
+            filteredBitmap?.recycle()
+            filteredBitmap = cropped
+        }
+        originalBitmap?.recycle()
+        originalBitmap = cropped
+
+        imageMatrix.reset()
+        fitImageToView()
+        invalidate()
+        return true
+    }
+
     private fun constrainImage() {
         val bmp = filteredBitmap ?: originalBitmap ?: return
         val values = FloatArray(9)

@@ -71,6 +71,7 @@ class StickerGridAdapter(
         fun unbind() {
             lottieView.cancelAnimation()
             lottieView.clearAnimation()
+            Glide.with(itemView.context).clear(thumbnailView)
         }
     }
 

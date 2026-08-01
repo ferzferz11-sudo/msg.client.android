@@ -246,7 +246,18 @@ class StickerPackCreateActivity : AppCompatActivity() {
     private fun uploadSticker(uri: Uri) {
         lifecycleScope.launch {
             try {
-                val mimeType = contentResolver.getType(uri) ?: "application/octet-stream"
+                var mimeType = contentResolver.getType(uri) ?: "application/octet-stream"
+                // Fallback: detect by extension if contentResolver returns generic type
+                if (mimeType == "application/octet-stream") {
+                    val path = uri.path ?: ""
+                    mimeType = when {
+                        path.endsWith(".jpg", true) || path.endsWith(".jpeg", true) -> "image/jpeg"
+                        path.endsWith(".png", true) -> "image/png"
+                        path.endsWith(".webp", true) -> "image/webp"
+                        path.endsWith(".json", true) -> "application/json"
+                        else -> mimeType
+                    }
+                }
                 val isImage = mimeType.startsWith("image/")
                 val maxBytes = 2 * 1024 * 1024
                 android.util.Log.d("StickerPack", "uploadSticker: uri=$uri, mimeType=$mimeType, isImage=$isImage")

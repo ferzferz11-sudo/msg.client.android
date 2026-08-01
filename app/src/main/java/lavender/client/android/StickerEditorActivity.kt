@@ -209,6 +209,10 @@ class StickerEditorActivity : AppCompatActivity() {
     }
 
     private fun setMode(mode: StickerEditorView.EditorMode) {
+        // Apply crop when leaving crop mode or pressing crop again
+        if (currentMode == StickerEditorView.EditorMode.CROP) {
+            editorView.applyCrop()
+        }
         currentMode = mode
         editorView.editorMode = mode
 
@@ -236,6 +240,12 @@ class StickerEditorActivity : AppCompatActivity() {
 
     private fun saveAndReturn() {
         lifecycleScope.launch {
+            // Apply crop if still in crop mode, then switch to TEXT so getCroppedBitmap doesn't re-crop
+            if (currentMode == StickerEditorView.EditorMode.CROP) {
+                editorView.applyCrop()
+                currentMode = StickerEditorView.EditorMode.TEXT
+                editorView.editorMode = StickerEditorView.EditorMode.TEXT
+            }
             val bitmap = withContext(Dispatchers.Default) {
                 editorView.getCroppedBitmap()
             }

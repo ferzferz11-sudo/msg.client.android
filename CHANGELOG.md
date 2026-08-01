@@ -27,6 +27,12 @@
 **Sticker editor — text overlay координаты:**
 - `StickerEditorView.drawTextOverlaysOnBitmap()` — использовался naive scale `bitmap.width/view.width`, игнорируя `imageMatrix`. Фикс: inverse `imageMatrix` для преобразования view→bitmap координат + учёт crop offset.
 
+**Sticker editor — обрезка не применялась + двойная обрезка:**
+- Кнопка "Обрезать" только показывала overlay, не применяла обрезку. Фикс: `StickerEditorView.applyCrop()` — реально обрезает bitmap при уходе из CROP режима.
+- `saveAndReturn()` — после `applyCrop()` режим оставался CROP → `getCroppedBitmap()` обрезал повторно (85% от уже обрезанного). Фикс: переключение на TEXT после обрезки.
+- MIME type fallback для `file://` URI из кеша (contentResolver может вернуть `application/octet-stream`).
+- `StickerGridAdapter.unbind()` — Glide cleanup при рециклировании view.
+
 **ChatList прелоадер зависал:**
 - `ChatListViewModel` — `_isLoading.value = true` ставился ДО `viewModelScope.launch`, а `false` — в `finally` внутри корутины. При mutex guard корутина не доходила до `try` → loading застревал. Фикс: `_isLoading` перенесён внутрь корутины, после `tryLock()`.
 - `ChatListActivity` — `SwipeRefreshLayout` отключён (`isEnabled = false`) — убран бесконечно крутящийся спиннер.
