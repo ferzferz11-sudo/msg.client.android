@@ -176,11 +176,16 @@ class StickerEditorView @JvmOverloads constructor(
         val right = mappedRect.right.toInt().coerceIn(left + 1, bmp.width)
         val bottom = mappedRect.bottom.toInt().coerceIn(top + 1, bmp.height)
 
-        val w = right - left
-        val h = bottom - top
+        var w = right - left
+        var h = bottom - top
         if (w <= 0 || h <= 0) return false
 
-        val cropped = Bitmap.createBitmap(bmp, left, top, w, h)
+        // Enforce square output to match the square crop overlay
+        val squareSize = min(w, h)
+        val adjLeft = left + (w - squareSize) / 2
+        val adjTop = top + (h - squareSize) / 2
+
+        val cropped = Bitmap.createBitmap(bmp, adjLeft, adjTop, squareSize, squareSize)
 
         // Preserve filter state: crop both filtered and original bitmaps
         val hasFilter = filteredBitmap != null && filteredBitmap !== originalBitmap

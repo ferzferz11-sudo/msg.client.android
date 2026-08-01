@@ -240,12 +240,9 @@ class StickerEditorActivity : AppCompatActivity() {
 
     private fun saveAndReturn() {
         lifecycleScope.launch {
-            // Apply crop if still in crop mode, then switch to TEXT so getCroppedBitmap doesn't re-crop
-            if (currentMode == StickerEditorView.EditorMode.CROP) {
-                editorView.applyCrop()
-                currentMode = StickerEditorView.EditorMode.TEXT
-                editorView.editorMode = StickerEditorView.EditorMode.TEXT
-            }
+            // getCroppedBitmap() handles crop mapping + square enforcement when in CROP mode.
+            // Don't call applyCrop() here — it would replace the bitmap without square enforcement,
+            // and switching to TEXT mode would skip the square crop in getCroppedBitmap().
             val bitmap = withContext(Dispatchers.Default) {
                 editorView.getCroppedBitmap()
             }

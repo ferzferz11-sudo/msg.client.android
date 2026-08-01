@@ -69,6 +69,7 @@ class MediaPickerSheet(
     private var allPacks = listOf<StickerPack>()
     private var currentPacks = listOf<StickerPack>()
     private var emojiInitialized = false
+    private var stickerTabInitialized = false
     private var searchJob: Job? = null
     private var isSearchActive = false
 
@@ -133,6 +134,8 @@ class MediaPickerSheet(
     }
 
     private fun setupStickerTab() {
+        if (stickerTabInitialized) return
+        stickerTabInitialized = true
         val tabLayout = findViewById<TabLayout>(R.id.tabLayout) ?: return
         val emojiContainer = findViewById<android.view.View>(R.id.emojiContainer)
         val stickerContainer = findViewById<LinearLayout>(R.id.stickerContainer)
