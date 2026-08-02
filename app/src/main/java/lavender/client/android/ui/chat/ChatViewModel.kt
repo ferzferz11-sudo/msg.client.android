@@ -135,7 +135,7 @@ class ChatViewModel : ViewModel() {
             try {
                 val pinned = GrpcClient.getPinnedMessages(currentRoomId)
                 _pinnedMessageIds.value = pinned.map { it.id }.toSet()
-            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+            } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
         }
     }
 
@@ -246,7 +246,11 @@ class ChatViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 AppDatabase.getDatabase(context).messageDao().clearRoom(currentRoomId)
-            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+            } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
         }
+    }
+
+    companion object {
+        private const val TAG = "ChatViewModel"
     }
 }

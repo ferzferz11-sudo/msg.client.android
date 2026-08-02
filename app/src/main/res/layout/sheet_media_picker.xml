@@ -80,6 +80,16 @@
                 android:clipToPadding="false"
                 android:paddingHorizontal="8dp" />
 
+            <TextView
+                android:id="@+id/tvSectionHeader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="4dp"
+                android:textSize="12sp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:visibility="gone" />
+
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvStickers"
                 android:layout_width="match_parent"

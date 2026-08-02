@@ -291,7 +291,7 @@ object AiV2ChatUseCase {
                     if (cached.isNotEmpty()) {
                         return Result.success(cached to cached.size)
                     }
-                } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+                } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
             }
             Result.failure(e)
         }

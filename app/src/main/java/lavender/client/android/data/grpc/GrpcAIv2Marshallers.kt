@@ -10,6 +10,8 @@ import java.io.ByteArrayOutputStream
 // Server proto: messenger.ChatService/*
 // Field order from AI_V2_CLIENT_INTEGRATION.md
 
+private const val TAG = "GrpcAIv2Marshallers"
+
 // ======= ChatWithAIV2 =======
 
 class ChatWithAIV2RequestMarshaller : MethodDescriptor.Marshaller<ChatWithAIV2RequestProto> {
@@ -70,7 +72,7 @@ class ChatWithAIV2ResponseMarshaller : MethodDescriptor.Marshaller<ChatWithAIV2R
                                 }
                             }
                             toolCalls.add(ToolCallRequestV2Proto(tcId, tcName, tcArgs))
-                        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+                        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
                     }
                 }
                 7 -> hasRagContext = cis.readBool()
@@ -316,7 +318,7 @@ class ListAIToolsResponseMarshaller : MethodDescriptor.Marshaller<ListAIToolsRes
                                 }
                             }
                             tools.add(ToolInfoV2Proto(name, desc, schema, role))
-                        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+                        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
                     }
                 }
                 else -> cis.skipField(tag)
@@ -458,7 +460,7 @@ class GetAIAgentReviewsResponseMarshaller : MethodDescriptor.Marshaller<GetAIAge
                                 }
                             }
                             reviews.add(AgentReviewProto(userId, rating, review, createdAt))
-                        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+                        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
                     }
                 }
                 2 -> avgRating = cis.readFloat()
@@ -623,7 +625,7 @@ class GetAIUsageStatsResponseMarshaller : MethodDescriptor.Marshaller<GetAIUsage
                                 }
                             }
                             stats.add(UsageStatEntryProto(agentId, totalT, reqCount, periodStart, agentName))
-                        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+                        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
                     }
                 }
                 2 -> totalTokens = cis.readInt32()
@@ -748,7 +750,7 @@ class GetAIV2ChatHistoryResponseMarshaller : MethodDescriptor.Marshaller<GetAIV2
                                 }
                             }
                             messages.add(AIV2ChatMessageProto(id, chatId, role, content, agentId, tokenCount, modelUsed, createdAt))
-                        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+                        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
                     }
                 }
                 else -> cis.skipField(tag)
@@ -796,7 +798,7 @@ class ListAIV2ChatsResponseMarshaller : MethodDescriptor.Marshaller<ListAIV2Chat
                                 }
                             }
                             chats.add(AIV2ChatInfoProto(id, name, chatType, agentId, createdAt, updatedAt))
-                        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+                        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
                     }
                 }
                 else -> cis.skipField(tag)

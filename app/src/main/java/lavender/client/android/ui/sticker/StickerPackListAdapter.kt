@@ -54,7 +54,7 @@ class StickerPackListAdapter(
                 val surfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
                 val cardView = itemView as? com.google.android.material.card.MaterialCardView
                 cardView?.setCardBackgroundColor(surfaceColor)
-            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+            } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
 
             val statusRes = when (pack.status) {
                 "approved" -> R.string.sticker_approved
@@ -83,6 +83,14 @@ class StickerPackListAdapter(
                     coverView.visibility = View.VISIBLE
                     coverImageView?.visibility = View.GONE
                     if (url.startsWith("http://") || url.startsWith("https://")) {
+                        coverView.setFailureListener { e ->
+                            android.util.Log.e("Lottie", "Failed to load: $url", e)
+                            coverView.visibility = View.GONE
+                            coverImageView?.let { iv ->
+                                iv.visibility = View.VISIBLE
+                                Glide.with(itemView.context).load(url).placeholder(R.drawable.ic_image_placeholder).error(R.drawable.ic_image_placeholder).centerCrop().into(iv)
+                            }
+                        }
                         coverView.setAnimationFromUrl(url)
                     } else {
                         coverView.setAnimation(url)
@@ -118,6 +126,7 @@ class StickerPackListAdapter(
     }
 
     companion object {
+        private const val TAG = "StickerPackListAdapter"
         private fun resolveAttr(context: android.content.Context, attr: Int, fallback: Int): Int {
             val tv = android.util.TypedValue()
             return if (context.theme.resolveAttribute(attr, tv, true) && tv.resourceId != 0) {

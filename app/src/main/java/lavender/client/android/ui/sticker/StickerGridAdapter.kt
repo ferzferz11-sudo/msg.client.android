@@ -44,6 +44,12 @@ class StickerGridAdapter(
                 thumbnailView.visibility = View.GONE
                 lottieView.repeatCount = 0
                 if (url.startsWith("http://") || url.startsWith("https://")) {
+                    lottieView.setFailureListener { e ->
+                        android.util.Log.e("Lottie", "Failed to load: $url", e)
+                        lottieView.visibility = View.GONE
+                        thumbnailView.visibility = View.VISIBLE
+                        Glide.with(itemView.context).load(sticker.thumbnailUrl).placeholder(R.drawable.ic_image_placeholder).error(R.drawable.ic_image_placeholder).centerCrop().into(thumbnailView)
+                    }
                     lottieView.setAnimationFromUrl(url)
                 } else {
                     lottieView.setAnimation(url)

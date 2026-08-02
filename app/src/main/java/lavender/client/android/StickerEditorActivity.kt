@@ -126,7 +126,7 @@ class StickerEditorActivity : AppCompatActivity() {
             etTextInput.setHintTextColor(ThemeUtils.adjustAlpha(textPrimary, 0.5f))
             btnAddText.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
             btnAddText.setTextColor(ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE))
-        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     private var pickedColor = Color.WHITE
@@ -285,6 +285,7 @@ class StickerEditorActivity : AppCompatActivity() {
     }
 
     companion object {
+        private const val TAG = "StickerEditorActivity"
         const val EXTRA_IMAGE_URI = "sticker_image_uri"
         const val EXTRA_RESULT_URI = "sticker_result_uri"
 

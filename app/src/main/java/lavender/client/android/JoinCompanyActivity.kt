@@ -60,7 +60,7 @@ class JoinCompanyActivity : AppCompatActivity() {
             etInviteCode.setHintTextColor(ThemeUtils.adjustAlpha(textPrimary, 0.5f))
             btnJoin.backgroundTintList = android.content.res.ColorStateList.valueOf(primary)
             btnJoin.setTextColor(onPrimary)
-        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     private fun joinCompany(code: String) {
@@ -78,5 +78,9 @@ class JoinCompanyActivity : AppCompatActivity() {
                 Toast.makeText(this@JoinCompanyActivity, getString(R.string.join_failed), Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    companion object {
+        private const val TAG = "JoinCompanyActivity"
     }
 }

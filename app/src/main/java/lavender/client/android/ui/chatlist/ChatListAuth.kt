@@ -18,6 +18,8 @@ import lavender.client.android.ui.widget.ServerAuthBottomSheet
  * Extracted from ChatListActivity to reduce its size.
  */
 
+private const val TAG = "ChatListAuth"
+
 internal fun showAuthChoiceDialog(activity: ChatListActivity) {
     var serverAddress = CredentialStore.getServerAddress(activity)
     var host: String
@@ -78,7 +80,7 @@ internal fun showLoginBottomSheet(activity: ChatListActivity, serverAddress: Str
         onLogin = { u: String, p: String ->
             try {
                 activity.startActivity(Intent(activity, SplashLoadingActivity::class.java))
-            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+            } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
 
             SessionManager.login(activity, u, p, serverAddress, register = false, email = "") { result ->
                 activity.lifecycleScope.launch {
@@ -159,7 +161,7 @@ internal fun showRegisterBottomSheet(activity: ChatListActivity, serverAddress: 
         onRegister = { u: String, p: String, email: String ->
             try {
                 activity.startActivity(Intent(activity, SplashLoadingActivity::class.java))
-            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+            } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
 
             SessionManager.login(activity, u, p, serverAddress, register = true, email = email) { result ->
                 activity.lifecycleScope.launch {

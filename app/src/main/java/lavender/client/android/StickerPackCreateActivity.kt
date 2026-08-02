@@ -141,7 +141,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
             val onPrimaryColor = ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE)
             btnSave.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
             btnSave.setTextColor(onPrimaryColor)
-        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     private fun themeInputLayoutsIn(view: android.view.View, primaryColor: Int, onSurfaceColor: Int, surfaceColor: Int, textPrimaryColor: Int) {
@@ -338,8 +338,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
                         id = UUID.randomUUID().toString(),
                         packId = packId ?: "",
                         lottieUrl = url,
-                        thumbnailUrl = if (isImage) url else "",
-                        emoji = "\uD83C\uDFB5"
+                        thumbnailUrl = if (isImage) url else ""
                     )
                     currentStickers.add(newSticker)
                     android.util.Log.d("StickerPack", "Sticker added locally: total=${currentStickers.size}, id=${newSticker.id}")
@@ -356,11 +355,13 @@ class StickerPackCreateActivity : AppCompatActivity() {
     }
 
     private fun compressImage(uri: Uri, bytes: ByteArray): ByteArray {
+        var bitmap: android.graphics.Bitmap? = null
+        var scaledBitmap: android.graphics.Bitmap? = null
         return try {
-            val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return bytes
+            bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return bytes
             val maxDim = 512
             val scale = minOf(maxDim.toFloat() / bitmap.width, maxDim.toFloat() / bitmap.height, 1f)
-            val scaledBitmap = if (scale < 1f) {
+            scaledBitmap = if (scale < 1f) {
                 android.graphics.Bitmap.createScaledBitmap(
                     bitmap,
                     (bitmap.width * scale).toInt(),
@@ -370,11 +371,12 @@ class StickerPackCreateActivity : AppCompatActivity() {
             } else bitmap
             val outputStream = java.io.ByteArrayOutputStream()
             scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, outputStream)
-            if (scaledBitmap !== bitmap) scaledBitmap.recycle()
-            bitmap.recycle()
             outputStream.toByteArray()
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
             bytes
+        } finally {
+            scaledBitmap?.let { if (it !== bitmap) it.recycle() }
+            bitmap?.recycle()
         }
     }
 
@@ -400,6 +402,13 @@ class StickerPackCreateActivity : AppCompatActivity() {
                     android.util.Log.d("StickerPack", "Updating pack $packId, title=$title, cover=$coverStickerId")
                     val updateResult = GrpcClient.updateStickerPack(packId!!, title = title, coverStickerId = coverStickerId ?: "")
                     android.util.Log.d("StickerPack", "Update result: success=${updateResult?.success}")
+                    if (updateResult == null || !updateResult.success) {
+                        android.util.Log.e("StickerPack", "updateStickerPack failed: success=${updateResult?.success}")
+                        Toast.makeText(this@StickerPackCreateActivity, getString(R.string.failed), Toast.LENGTH_SHORT).show()
+                        btnSave.isEnabled = true
+                        isSaving = false
+                        return@launch
+                    }
                     Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_pack_updated), Toast.LENGTH_SHORT).show()
                     isSaving = false
                     finish()
@@ -453,7 +462,10 @@ class StickerPackCreateActivity : AppCompatActivity() {
                     val currentCover = coverStickerId
                     if (currentCover != null) {
                         android.util.Log.d("StickerPack", "Setting cover: $currentCover")
-                        GrpcClient.updateStickerPack(packId!!, coverStickerId = currentCover)
+                        val coverResult = GrpcClient.updateStickerPack(packId!!, coverStickerId = currentCover)
+                        if (coverResult == null || !coverResult.success) {
+                            android.util.Log.e("StickerPack", "Setting cover failed: success=${coverResult?.success}")
+                        }
                     }
                     Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_pack_created), Toast.LENGTH_SHORT).show()
                     isSaving = false
@@ -479,5 +491,9 @@ class StickerPackCreateActivity : AppCompatActivity() {
                 Toast.makeText(this@StickerPackCreateActivity, result?.error ?: getString(R.string.failed), Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    companion object {
+        private const val TAG = "StickerPackCreateActivity"
     }
 }

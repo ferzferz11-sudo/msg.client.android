@@ -1101,6 +1101,8 @@
     <string name="sticker_filter_cool">Холодный</string>
     <string name="sticker_filter_bright">Яркий</string>
     <string name="sticker_search_hint">Поиск стикеров…</string>
+    <string name="sticker_search_failed">Ошибка поиска. Проверьте соединение и попробуйте снова.</string>
+    <string name="sticker_no_results">Стикеры не найдены</string>
     <string name="sticker_added_to_favorites">Добавлено в избранное</string>
     <string name="sticker_removed_from_favorites">Удалено из избранного</string>
     <string name="follow_system_dark_mode">Следовать системной тёмной теме</string>
@@ -1150,5 +1152,13 @@
     <!-- Username format -->
     <string name="username_at">@%1$s</string>
     <string name="company_position_with_count">%1$s (%2$d)</string>
+
+    <!-- Accessibility -->
+    <string name="selection_indicator">Выбрать сообщение</string>
+    <string name="sticker_image">Стикер</string>
+    <string name="status_pending">Отправляется</string>
+    <string name="status_sent">Отправлено</string>
+    <string name="status_read">Прочитано</string>
+    <string name="status_error">Ошибка отправки</string>
 
 </resources>

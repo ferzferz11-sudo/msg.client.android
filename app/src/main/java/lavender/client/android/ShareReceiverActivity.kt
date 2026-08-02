@@ -26,6 +26,7 @@ import lavender.client.android.data.session.SessionManager
 import lavender.client.android.databinding.ActivityShareReceiverBinding
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.launch
 import lavender.client.android.ui.share.ShareReceiverViewModel
 
@@ -37,6 +38,9 @@ class ShareReceiverActivity : AppCompatActivity() {
     private var sharedUri: Uri? = null
     private var sharedMimeType: String = ""
     private var username: String = ""
+    private val errorHandler = CoroutineExceptionHandler { _, throwable ->
+        Log.e(TAG, "Uncaught coroutine exception", throwable)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,7 +50,7 @@ class ShareReceiverActivity : AppCompatActivity() {
             username = SessionManager.session.value.username
 
             val currentTheme = try { ThemeStore.currentTheme() } catch (_: Exception) { lavender.client.android.theme.BuiltInThemes.dark }
-            try { ThemeUtils.applyThemeToActivity(this, currentTheme) } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+            try { ThemeUtils.applyThemeToActivity(this, currentTheme) } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
 
             binding = ActivityShareReceiverBinding.inflate(layoutInflater)
             setContentView(binding.root)
@@ -57,7 +61,7 @@ class ShareReceiverActivity : AppCompatActivity() {
             setupUI()
             observeViewModel()
 
-            lifecycleScope.launch {
+            lifecycleScope.launch(errorHandler) {
                 viewModel.ensureConnection()
                 viewModel.loadChats()
             }
@@ -70,7 +74,7 @@ class ShareReceiverActivity : AppCompatActivity() {
                 handleSharedIntent()
                 setupUI()
                 observeViewModel()
-                lifecycleScope.launch {
+                lifecycleScope.launch(errorHandler) {
                     viewModel.ensureConnection()
                     viewModel.loadChats()
                 }
@@ -228,31 +232,35 @@ class ShareReceiverActivity : AppCompatActivity() {
     }
 
     private fun observeViewModel() {
-        lifecycleScope.launch {
+        lifecycleScope.launch(errorHandler) {
             viewModel.uiState.collect { state ->
-                if (state.chats.isEmpty() && !state.isLoading) {
-                    binding.noChatsText.isVisible = true
-                    binding.chatsRecyclerView.isVisible = false
-                } else {
-                    binding.noChatsText.isVisible = false
-                    binding.chatsRecyclerView.isVisible = true
-                    chatAdapter.submitList(state.chats)
-                }
+                try {
+                    if (state.chats.isEmpty() && !state.isLoading) {
+                        binding.noChatsText.isVisible = true
+                        binding.chatsRecyclerView.isVisible = false
+                    } else {
+                        binding.noChatsText.isVisible = false
+                        binding.chatsRecyclerView.isVisible = true
+                        chatAdapter.submitList(state.chats)
+                    }
 
-                binding.sendButton.isEnabled = !state.isSending
+                    binding.sendButton.isEnabled = !state.isSending
 
-                state.videoInfo?.let { showVideoPreview(it) }
-                state.linkPreview?.let { showLinkPreview(it) }
+                    state.videoInfo?.let { showVideoPreview(it) }
+                    state.linkPreview?.let { showLinkPreview(it) }
 
-                state.successMessage?.let { message ->
-                    Toast.makeText(this@ShareReceiverActivity, message, Toast.LENGTH_SHORT).show()
-                    viewModel.clearSuccess()
-                    finish()
-                }
+                    state.successMessage?.let { message ->
+                        Toast.makeText(this@ShareReceiverActivity, message, Toast.LENGTH_SHORT).show()
+                        viewModel.clearSuccess()
+                        finish()
+                    }
 
-                state.error?.let { error ->
-                    Toast.makeText(this@ShareReceiverActivity, getString(R.string.error) + ": $error", Toast.LENGTH_SHORT).show()
-                    viewModel.clearError()
+                    state.error?.let { error ->
+                        Toast.makeText(this@ShareReceiverActivity, getString(R.string.error) + ": $error", Toast.LENGTH_SHORT).show()
+                        viewModel.clearError()
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error updating UI state", e)
                 }
             }
         }
@@ -303,9 +311,17 @@ class ShareReceiverActivity : AppCompatActivity() {
                     onChatSelected(chat)
                 }
 
-                val theme = ThemeStore.currentTheme()
-                ThemeUtils.applyDefaultAvatar(avatarView, theme)
+                try {
+                    val theme = ThemeStore.currentTheme()
+                    ThemeUtils.applyDefaultAvatar(avatarView, theme)
+                } catch (_: Exception) {
+                    ThemeUtils.applyDefaultAvatar(avatarView, lavender.client.android.theme.BuiltInThemes.dark)
+                }
             }
         }
+    }
+
+    companion object {
+        private const val TAG = "ShareReceiverActivity"
     }
 }

@@ -12,6 +12,7 @@ object StickerPreferencesManager {
     private const val KEY_FAVORITES = "favorite_stickers"
     private const val MAX_RECENT = 20
     private const val MAX_FAVORITES = 100
+    private const val SCHEMA_VERSION = 1
 
     private var prefs: SharedPreferences? = null
 
@@ -88,7 +89,11 @@ object StickerPreferencesManager {
                 }
                 jsonArray.put(obj)
             }
-            getPrefs().edit().putString(key, jsonArray.toString()).apply()
+            val wrapper = org.json.JSONObject().apply {
+                put("version", SCHEMA_VERSION)
+                put("data", jsonArray)
+            }
+            getPrefs().edit().putString(key, wrapper.toString()).apply()
         } catch (e: Exception) {
             android.util.Log.e("StickerPrefs", "saveStickerList failed", e)
         }
@@ -97,25 +102,34 @@ object StickerPreferencesManager {
     private fun loadStickerList(key: String): List<Sticker> {
         return try {
             val json = getPrefs().getString(key, null) ?: return emptyList()
-            val jsonArray = JSONArray(json)
-            (0 until jsonArray.length()).mapNotNull { i ->
-                try {
-                    val obj = jsonArray.getJSONObject(i)
-                    Sticker(
-                        id = obj.optString("id", ""),
-                        packId = obj.optString("packId", ""),
-                        lottieUrl = obj.optString("lottieUrl", ""),
-                        thumbnailUrl = obj.optString("thumbnailUrl", ""),
-                        emoji = obj.optString("emoji", ""),
-                        width = obj.optInt("width", 512),
-                        height = obj.optInt("height", 512)
-                    ).takeIf { it.id.isNotEmpty() }
-                } catch (_: Exception) {
-                    null
-                }
+            val jsonArray = try {
+                val wrapper = org.json.JSONObject(json)
+                wrapper.getJSONArray("data")
+            } catch (_: org.json.JSONException) {
+                JSONArray(json)
             }
+            deserializeStickers(jsonArray)
         } catch (_: Exception) {
             emptyList()
+        }
+    }
+
+    private fun deserializeStickers(jsonArray: JSONArray): List<Sticker> {
+        return (0 until jsonArray.length()).mapNotNull { i ->
+            try {
+                val obj = jsonArray.getJSONObject(i)
+                Sticker(
+                    id = obj.optString("id", ""),
+                    packId = obj.optString("packId", ""),
+                    lottieUrl = obj.optString("animationUrl", obj.optString("lottieUrl", "")),
+                    thumbnailUrl = obj.optString("thumbnailUrl", ""),
+                    emoji = obj.optString("emoji", ""),
+                    width = obj.optInt("width", 512),
+                    height = obj.optInt("height", 512)
+                ).takeIf { it.id.isNotEmpty() }
+            } catch (_: Exception) {
+                null
+            }
         }
     }
 }

@@ -58,6 +58,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
     private lateinit var invitedAdapter: InvitedUserAdapter
 
     companion object {
+        private const val TAG = "ConferenceLobbyActivity"
         private val PERMISSIONS = arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
     }
 
@@ -327,7 +328,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
 
             binding.btnDelete.setTextColor(Color.WHITE)
             binding.btnLeave.setTextColor(Color.WHITE)
-        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     private fun initPreview() {
@@ -401,6 +402,10 @@ class InvitedUserAdapter(
     private var canRemove = false
     private var avatarCache: Map<String, String> = emptyMap()
 
+    companion object {
+        private const val TAG = "InvitedUserAdapter"
+    }
+
     fun updateUsers(newUsers: List<String>, canRemove: Boolean) {
         this.users = newUsers
         this.canRemove = canRemove
@@ -447,7 +452,7 @@ class InvitedUserAdapter(
                     lp.setMargins(0, 0, 0, (8 * itemView.resources.displayMetrics.density).toInt())
                     itemView.layoutParams = lp
                 }
-            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+            } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
 
             if (!avatarUrl.isNullOrEmpty()) {
                 Glide.with(itemView.context).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(avatarImg)

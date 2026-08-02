@@ -180,10 +180,10 @@ class MessageAdapter(
             if (canShowSenderInfo) {
                 avatarImageView.isVisible = true
                 if (message.avatarUrl.isNotEmpty()) {
-                    try { Glide.with(ctx).load(message.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(avatarImageView) } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+                    try { Glide.with(ctx).load(message.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(avatarImageView) } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
                     avatarImageView.imageTintList = null
                 } else {
-                    try { ThemeUtils.applyDefaultAvatar(avatarImageView, theme, theme.incomingBubbleColor) } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+                    try { ThemeUtils.applyDefaultAvatar(avatarImageView, theme, theme.incomingBubbleColor) } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
                 }
             }
             else { avatarImageView.visibility = if (isOutgoing) View.GONE else View.INVISIBLE }
@@ -229,7 +229,7 @@ class MessageAdapter(
                     audioMessageView.isVisible = false
                     messageImageView.isVisible = false
                     galleryThumbnailsRecyclerView.isVisible = false
-                } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+                } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
             }
         }
 
@@ -271,6 +271,7 @@ class MessageAdapter(
             val isTimedOut = !message.isSent && (System.currentTimeMillis() - message.timestamp > 60 * 1000)
             val icon = when { isTimedOut -> R.drawable.ic_loading_renew; isRead -> R.drawable.ic_message_read; message.isSent -> R.drawable.ic_message_sent; else -> R.drawable.ic_message_pending }
             readStatusIcon.setImageResource(icon)
+            readStatusIcon.contentDescription = when { isTimedOut -> ctx.getString(R.string.status_error); isRead -> ctx.getString(R.string.status_read); message.isSent -> ctx.getString(R.string.status_sent); else -> ctx.getString(R.string.status_pending) }
             val iconColor = when { isTimedOut -> Color.RED; isRead -> ContextCompat.getColor(ctx, R.color.tg_read_check); else -> secColor }
             readStatusIcon.imageTintList = ColorStateList.valueOf(iconColor)
             if (isTimedOut) { readStatusIcon.setOnClickListener { onRetrySendMessage?.invoke(message) }; readStatusIcon.isClickable = true }
@@ -372,8 +373,15 @@ class MessageAdapter(
             val isLottie = stickerUrl.endsWith(".json", ignoreCase = true)
             if (isLottie) {
                 lottieStickerView.isVisible = true
+                lottieStickerView.contentDescription = ctx.getString(R.string.sticker_image)
                 lottieStickerView.repeatCount = 0
                 if (stickerUrl.startsWith("http://") || stickerUrl.startsWith("https://")) {
+                    lottieStickerView.setFailureListener { e ->
+                        android.util.Log.e("Lottie", "Failed to load sticker: $stickerUrl", e)
+                        lottieStickerView.isVisible = false
+                        stickerImageView.isVisible = true
+                        Glide.with(ctx).load(stickerUrl).placeholder(R.drawable.ic_image_placeholder).error(R.drawable.ic_image_placeholder).centerCrop().into(stickerImageView)
+                    }
                     lottieStickerView.setAnimationFromUrl(stickerUrl)
                 } else {
                     lottieStickerView.setAnimation(stickerUrl)
@@ -383,6 +391,7 @@ class MessageAdapter(
                 lottieStickerView.setOnLongClickListener { if (isSelectionMode) onLongClick(pos) else { onLongClick(pos) }; true }
             } else {
                 stickerImageView.isVisible = true
+                stickerImageView.contentDescription = ctx.getString(R.string.sticker_image)
                 Glide.with(ctx).load(stickerUrl).placeholder(R.drawable.ic_image_placeholder).error(R.drawable.ic_image_placeholder).centerCrop().into(stickerImageView)
                 stickerImageView.setOnClickListener { if (isSelectionMode) onClick(pos) else onMessageClick(message) }
                 stickerImageView.setOnLongClickListener { if (isSelectionMode) onLongClick(pos) else { onLongClick(pos) }; true }
@@ -433,7 +442,7 @@ class MessageAdapter(
             if (message.repliedToUser.isNotEmpty()) { replyQuoteUser.text = message.repliedToUser; replyQuoteText.text = message.repliedToText
                 try { val onPrim = theme.onPrimaryColor.toColorInt(); val onSurf = theme.onSurfaceColor.toColorInt(); val txtPrim = theme.textPrimaryColor.toColorInt()
                     if (isOutgoing) { replyQuoteUser.setTextColor(onPrim); replyQuoteText.setTextColor(withAlpha(onPrim, 200)); replyQuoteContainer.setBackgroundColor(withAlpha(onPrim, 30)); replyQuoteBar.setBackgroundColor(onPrim) }
-                    else { replyQuoteUser.setTextColor(onSurf); replyQuoteText.setTextColor(withAlpha(txtPrim, 200)); replyQuoteContainer.setBackgroundColor(withAlpha(onSurf, 30)); replyQuoteBar.setBackgroundColor(onSurf) } } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) } }
+                    else { replyQuoteUser.setTextColor(onSurf); replyQuoteText.setTextColor(withAlpha(txtPrim, 200)); replyQuoteContainer.setBackgroundColor(withAlpha(onSurf, 30)); replyQuoteBar.setBackgroundColor(onSurf) } } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) } }
         }
 
         private fun bindForwardAttribution(message: Message, ctx: android.content.Context) {
@@ -447,7 +456,7 @@ class MessageAdapter(
 
         private fun bindSelectionIndicator(isSelected: Boolean, isSelectionMode: Boolean, theme: lavender.client.android.theme.Theme, ctx: android.content.Context) {
             selectionIndicator.isVisible = isSelectionMode; selectionIndicator.setImageResource(if (isSelected) R.drawable.ic_checked else R.drawable.ic_unchecked)
-            try { val pColor = theme.primaryColor.toColorInt(); val sColor = theme.textSecondaryColor.toColorInt(); selectionIndicator.imageTintList = ColorStateList.valueOf(if (isSelected) pColor else sColor) } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+            try { val pColor = theme.primaryColor.toColorInt(); val sColor = theme.textSecondaryColor.toColorInt(); selectionIndicator.imageTintList = ColorStateList.valueOf(if (isSelected) pColor else sColor) } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
             messageBubble.alpha = if (isSelected) 0.6f else 1.0f
             val selColor = try { ThemeUtils.adjustAlpha(theme.primaryColor.toColorInt(), 0.25f) } catch (_: Exception) { ContextCompat.getColor(ctx, R.color.lavender_mist_alpha) }
             itemView.setBackgroundColor(if (isSelected) selColor else Color.TRANSPARENT)
@@ -461,7 +470,7 @@ class MessageAdapter(
 
         private fun bindPinnedBadge(message: Message, theme: lavender.client.android.theme.Theme, ctx: android.content.Context) {
             val llPinned: LinearLayout? = itemView.findViewById(R.id.llPinnedBadge); val ivPinned: ImageView? = itemView.findViewById(R.id.ivPinnedIcon); val tvPinned: TextView? = itemView.findViewById(R.id.tvPinnedText)
-            if (llPinned != null && ivPinned != null && tvPinned != null) { val isPinned = pinnedMessageIds.contains(message.id); llPinned.isVisible = isPinned; if (isPinned) { tvPinned.text = message.text.ifEmpty { ctx.getString(R.string.pinned_message) }; try { llPinned.backgroundTintList = ColorStateList.valueOf(ThemeUtils.parseSafeColor(theme.surfaceColor, Color.LTGRAY)) } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) } } }
+            if (llPinned != null && ivPinned != null && tvPinned != null) { val isPinned = pinnedMessageIds.contains(message.id); llPinned.isVisible = isPinned; if (isPinned) { tvPinned.text = message.text.ifEmpty { ctx.getString(R.string.pinned_message) }; try { llPinned.backgroundTintList = ColorStateList.valueOf(ThemeUtils.parseSafeColor(theme.surfaceColor, Color.LTGRAY)) } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) } } }
         }
 
         private fun withAlpha(color: Int, alpha: Int): Int = (color and 0x00FFFFFF) or (alpha shl 24)
@@ -511,5 +520,9 @@ class MessageAdapter(
         }
 
         override fun getItemCount() = urls.size.coerceAtMost(4)
+    }
+
+    companion object {
+        private const val TAG = "MessageAdapter"
     }
 }

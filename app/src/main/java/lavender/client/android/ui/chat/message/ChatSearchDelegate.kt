@@ -95,7 +95,7 @@ class ChatSearchDelegate(
             val tint = ColorStateList.valueOf(onPrim)
             activity.findViewById<ImageButton>(R.id.searchPrev)?.imageTintList = tint
             activity.findViewById<ImageButton>(R.id.searchNext)?.imageTintList = tint
-        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
         searchInput.requestFocus()
         (activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager)
             .showSoftInput(searchInput, 0)
@@ -184,5 +184,9 @@ class ChatSearchDelegate(
         val messagesRecyclerView = activity.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.messagesRecyclerView)
         messagesRecyclerView.scrollToPosition(searchResults[currentSearchIndex])
         searchResultsCount.text = activity.getString(R.string.search_results_format, currentSearchIndex + 1, searchResults.size)
+    }
+
+    companion object {
+        private const val TAG = "ChatSearchDelegate"
     }
 }

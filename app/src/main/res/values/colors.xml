@@ -76,4 +76,17 @@
 
     <!-- Notification colors -->
     <color name="notification_unread_bg">#1A5F9EA0</color> <!-- Semi-transparent primary -->
+
+    <!-- Semantic colors -->
+    <color name="danger">#FF5252</color>
+    <color name="success">#4CAF50</color>
+    <color name="warning">#FFA000</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#888888</color>
+    <color name="text_hint">#80FFFFFF</color>
+    <color name="surface_elevated">#333333</color>
+    <color name="scrim_light">#80FFFFFF</color>
+    <color name="scrim_dark">#80000000</color>
+    <color name="scrim_heavy">#CC000000</color>
+    <color name="divider">#0D000000</color>
 </resources>

@@ -80,7 +80,7 @@ suspend fun listRemoteAgents(filterStatus: String = ""): List<RemoteAgentInfoPro
                                         status = status, capabilities = capabilities,
                                         activeTasks = activeTasks, lastHeartbeat = lastHeartbeat
                                     ))
-                                } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+                                } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
                             }
                         }
                         else -> cis.skipField(tag)

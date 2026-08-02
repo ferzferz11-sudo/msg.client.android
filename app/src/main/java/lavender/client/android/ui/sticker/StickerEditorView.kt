@@ -119,7 +119,7 @@ class StickerEditorView @JvmOverloads constructor(
                 fitImageToView()
                 invalidate()
             }
-        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     fun setImageBitmap(bitmap: Bitmap) {
@@ -555,5 +555,9 @@ class StickerEditorView @JvmOverloads constructor(
         filteredBitmap?.recycle()
         filteredBitmap = null
         textOverlays.clear()
+    }
+
+    companion object {
+        private const val TAG = "StickerEditorView"
     }
 }

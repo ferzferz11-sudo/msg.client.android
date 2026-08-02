@@ -323,7 +323,7 @@ class SuperAdminActivity : AppCompatActivity() {
             tabLayout.setTabTextColors(pColor.withAlpha(150), pColor)
             tabLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
             tabLayout.backgroundTintList = null
-        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     private fun Int.withAlpha(alpha: Int): Int {
@@ -384,5 +384,9 @@ class SuperAdminActivity : AppCompatActivity() {
             sheet.dismiss()
         }
         sheet.show()
+    }
+
+    companion object {
+        private const val TAG = "SuperAdminActivity"
     }
 }

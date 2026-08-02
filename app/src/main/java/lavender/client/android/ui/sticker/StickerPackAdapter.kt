@@ -67,6 +67,10 @@ class StickerPackAdapter(
                 val url = coverSticker.lottieUrl
                 if (url.isNotEmpty()) {
                     if (url.startsWith("http://") || url.startsWith("https://")) {
+                        coverView.setFailureListener { e ->
+                            android.util.Log.e("Lottie", "Failed to load: $url", e)
+                            coverView.visibility = View.GONE
+                        }
                         coverView.setAnimationFromUrl(url)
                     } else {
                         coverView.setAnimation(url)

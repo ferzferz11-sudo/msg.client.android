@@ -95,7 +95,7 @@ class ChatSelectionDelegate(
         forwardMessages.isVisible = count > 0
         try {
             selectionToolbar.setBackgroundColor(ThemeStore.currentTheme().primaryColor.toColorInt())
-        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     fun hideSelectionToolbar() {
@@ -184,5 +184,9 @@ class ChatSelectionDelegate(
                 sheet.show()
             }
         }
+    }
+
+    companion object {
+        private const val TAG = "ChatSelectionDelegate"
     }
 }

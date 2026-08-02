@@ -62,7 +62,7 @@ class ServerAuthBottomSheet(
             try {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("http://$serverHost/"))
                 context.startActivity(intent)
-            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+            } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
         }
 
         findViewById<TextView>(R.id.serverAuthName)?.text = serverName
@@ -74,7 +74,7 @@ class ServerAuthBottomSheet(
         try {
             val versionName = context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: ""
             findViewById<TextView>(R.id.serverAuthAppVersion)?.text = context.getString(R.string.app_version_format, versionName)
-        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
 
         findViewById<MaterialButton>(R.id.btnServerLogin)?.setOnClickListener {
             dismiss()
@@ -174,5 +174,9 @@ class ServerAuthBottomSheet(
     private fun updateStatusIndicator(isOnline: Boolean) {
         val indicatorColor = if (isOnline) Color.parseColor("#4CAF50") else Color.parseColor("#F44336")
         statusIndicator?.background?.setTint(indicatorColor)
+    }
+
+    companion object {
+        private const val TAG = "ServerAuthBottomSheet"
     }
 }

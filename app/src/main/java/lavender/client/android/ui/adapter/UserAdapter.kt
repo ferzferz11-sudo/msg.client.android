@@ -127,7 +127,7 @@ class UserAdapter(
                 if (wasOnline != isOnline) {
                     try {
                         notifyItemChanged(index, "status")
-                    } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+                    } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
                 }
             }
         }
@@ -252,5 +252,9 @@ class UserAdapter(
     private fun adjustAlpha(color: Int, factor: Float): Int {
         val alpha = (Color.alpha(color) * factor).toInt()
         return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color))
+    }
+
+    companion object {
+        private const val TAG = "UserAdapter"
     }
 }

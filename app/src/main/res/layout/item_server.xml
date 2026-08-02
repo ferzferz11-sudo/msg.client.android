@@ -59,7 +59,7 @@
             android:text="@string/default_badge"
             android:textSize="11sp"
             android:textStyle="bold"
-            android:textColor="#4ade80"
+            android:textColor="@color/success"
             android:background="@drawable/badge_background"
             android:paddingHorizontal="8dp"
             android:paddingVertical="2dp"
@@ -73,7 +73,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/delete"
             android:src="@drawable/ic_delete"
-            app:tint="#FF5252" />
+            app:tint="@color/danger" />
 
     </LinearLayout>
 

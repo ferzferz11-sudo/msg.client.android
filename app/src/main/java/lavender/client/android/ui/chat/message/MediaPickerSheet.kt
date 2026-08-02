@@ -41,13 +41,13 @@ class MediaPickerSheet(
 ) : StandardBottomSheet(activity, R.layout.sheet_media_picker) {
 
     init {
-        try { StickerPreferencesManager.init(activity) } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+        try { StickerPreferencesManager.init(activity) } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     private val stickerGridAdapter = StickerGridAdapter(
         onStickerClick = { sticker ->
             onStickerSelected(sticker)
-            try { StickerPreferencesManager.addRecent(sticker) } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+            try { StickerPreferencesManager.addRecent(sticker) } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
             dialog?.dismiss()
         },
         onStickerLongClick = { sticker ->
@@ -58,7 +58,7 @@ class MediaPickerSheet(
                     if (isFavorite) R.string.sticker_added_to_favorites else R.string.sticker_removed_from_favorites,
                     android.widget.Toast.LENGTH_SHORT
                 ).show()
-            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+            } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
         }
     )
 
@@ -85,7 +85,7 @@ class MediaPickerSheet(
                 setTabTextColors(ThemeUtils.adjustAlpha(textPrimaryColor, 0.6f), textPrimaryColor)
                 setSelectedTabIndicatorColor(primaryColor)
             }
-        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     fun showPicker() {
@@ -96,7 +96,7 @@ class MediaPickerSheet(
             root?.post { setupEmojiTab() }
         } catch (e: Exception) {
             android.util.Log.e("MediaPickerSheet", "showPicker failed", e)
-            try { android.widget.Toast.makeText(activity, android.R.string.cancel, android.widget.Toast.LENGTH_SHORT).show() } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+            try { android.widget.Toast.makeText(activity, android.R.string.cancel, android.widget.Toast.LENGTH_SHORT).show() } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
         }
     }
 
@@ -199,7 +199,15 @@ class MediaPickerSheet(
                 }
             }
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            override fun onTabReselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {
+                when (tab?.position) {
+                    1 -> showFavoritesTab()
+                    2 -> {
+                        isSearchActive = false
+                        loadStickerPacks()
+                    }
+                }
+            }
         })
     }
 
@@ -291,6 +299,7 @@ class MediaPickerSheet(
         val rvPacks = findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvStickerPacks)
         val rvStickers = findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvStickers) ?: return
         val emptyState = findViewById<LinearLayout>(R.id.stickerEmptyState) ?: return
+        val sectionHeader = findViewById<TextView>(R.id.tvSectionHeader)
 
         rvPacks?.isVisible = false
 
@@ -302,10 +311,17 @@ class MediaPickerSheet(
         if (combined.isNotEmpty()) {
             rvStickers.isVisible = true
             emptyState.isVisible = false
+            sectionHeader?.isVisible = true
+            sectionHeader?.text = if (favorites.isNotEmpty()) {
+                "\u2B50 Favorites (${favorites.size})"
+            } else {
+                "\uD83D\uDD50 Recent"
+            }
             stickerGridAdapter.submitList(combined)
         } else {
             rvStickers.isVisible = false
             emptyState.isVisible = true
+            sectionHeader?.isVisible = false
         }
     }
 
@@ -347,9 +363,14 @@ class MediaPickerSheet(
                 rvStickers.isVisible = false
                 emptyState.isVisible = true
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             rvStickers.isVisible = false
             emptyState.isVisible = true
+            android.widget.Toast.makeText(activity, R.string.sticker_search_failed, android.widget.Toast.LENGTH_SHORT).show()
         }
+    }
+
+    companion object {
+        private const val TAG = "MediaPickerSheet"
     }
 }

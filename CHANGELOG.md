@@ -1,5 +1,102 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.9] - 2026-08-01
+
+### Исправлено
+
+**Share receiver — fatal crash при пересылке в Лаву:**
+- `ShareReceiverActivity` — добавлен `CoroutineExceptionHandler` для `lifecycleScope.launch` (3 вызова)
+- `observeViewModel()` — flow collector обёрнут в try-catch для предотвращения фатала при ошибках UI
+- `ShareChatAdapter.ViewHolder.bind()` — `ThemeStore.currentTheme()` обёрнут в try-catch с fallback на `BuiltInThemes.dark`
+- `ShareReceiverViewModel.sendMessageToChat()` — обработка ошибок gRPC: проверка connection после retry, общий try-catch с показом error state
+
+**Стикеры не отправлялись из шторки (HIGH):**
+- `GrpcMessageV2Client.domainToSendRequest()` — добавлен mapping `stickerUrl` → `MessageMediaProto(type="sticker")`. Раньше стикер отправлялся как пустое текстовое сообщение
+
+**updateStickerPack() — показывал success при ошибке (HIGH):**
+- `StickerPackCreateActivity.savePack()` — добавлена проверка `updateResult == null || !updateResult.success` с показом error toast и ранним выходом (по аналогии с `createStickerPack`)
+- Вторичный вызов `updateStickerPack()` для cover — добавлено логирование ошибки
+
+**OutOfMemoryError в compressImage() (HIGH):**
+- `StickerPackCreateActivity.compressImage()` — `catch(Exception)` заменён на `catch(Throwable)` для перехвата `OutOfMemoryError`
+- Переменные `bitmap`/`scaledBitmap` вынесены из try, `recycle()` перенесён в `finally` блок для предотвращения утечки при OOM
+
+**Lottie crash при 404/malformed JSON (HIGH):**
+- Добавлен `setFailureListener()` для 4 вызовов `setAnimationFromUrl()`:
+  - `StickerPackListAdapter` — fallback на cover ImageView + Glide
+  - `StickerPackAdapter` — скрытие view при ошибке
+  - `MessageAdapter` — fallback на `stickerImageView` + Glide
+  - `StickerGridAdapter` — fallback на `thumbnailView` + Glide
+
+**Поиск стикеров — пустое состояние без сообщения об ошибке:**
+- `MediaPickerSheet.performSearch()` — добавлен Toast "Search failed" при catch
+- Добавлены строки `sticker_search_failed`, `sticker_no_results` (EN/RU)
+
+**JSON versioning для favorites:**
+- `StickerPreferencesManager` — формат сохранения изменён на `{"version":1,"data":[...]}`
+- Добавлена обратная совместимость: legacy JSONArray читается корректно
+- Добавлен fallback для переименованных полей (`animationUrl` ← `lottieUrl`)
+
+**Log tag "TAG" → class-specific идентификаторы:**
+- 54 вызова `Log.w("TAG", ...)` заменены на `Log.w(TAG, ...)` в 31 файле
+- Добавлены `private const val TAG = "ClassName"` в companion object каждого файла
+
+**Sticker emoji — hardcoded на 🎵:**
+- `StickerPackCreateActivity` — убран hardcoded `emoji = "🎵"`, используется дефолт пустой строки
+
+**Tab reselection — нельзя повторить при ошибке:**
+- `MediaPickerSheet.onTabReselected` — добавлен retry: `loadStickerPacks()` для tab 2, `showFavoritesTab()` для tab 1
+
+**Accessibility — contentDescription:**
+- `item_message.xml` — добавлен `contentDescription="@string/selection_indicator"` для `ivSelectionIndicator`
+- `MessageAdapter` — программная установка `contentDescription` для `stickerImageView`/`lottieStickerView` ("Sticker") и `readStatusIcon` (динамический: Sending/Sent/Read/Failed)
+- Добавлены строки: `selection_indicator`, `sticker_image`, `status_pending`, `status_sent`, `status_read`, `status_error` (EN/RU)
+
+**Favorites tab — favorites и recents смешаны:**
+- `MediaPickerSheet.showFavoritesTab()` — добавлен section header "⭐ Favorites (N)" / "🕐 Recent"
+- Добавлен `tvSectionHeader` в `sheet_media_picker.xml`
+
+**Dark mode — hardcoded hex цвета:**
+- 22 hardcoded hex значения заменены на `@color/` ресурсы в 14 layout XML
+- Добавлены семантические цвета в `colors.xml`/`colors-night.xml`: `danger`, `success`, `warning`, `text_primary`, `text_secondary`, `text_hint`, `surface_elevated`, `scrim_light`, `scrim_dark`, `scrim_heavy`, `divider`
+
+### Удалено
+
+**AvatarPrefetcher — мёртвый код:**
+- Удалён `AvatarPrefetcher.kt` (153 строки) — ни одной ссылки в коде, `@Suppress("Unused")`
+
+### Добавлено
+
+**Unit тесты:**
+- `DiffCallbackTest` — 12 тестов: `MessageDiffCallback` (id, text, timestamp, reactions, readStatus, sticker) + `StickerDiffCallback` (id, url, emoji)
+- `CompanyMarshallersTest` — 27 тестов: proto defaults, equality, marshaller parse empty для всех company response marshallers
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `GrpcMessageV2Client.kt` | `domainToSendRequest()` — sticker → MessageMediaProto mapping |
+| `StickerPackCreateActivity.kt` | updateStickerPack result check, compressImage OOM fix, emoji default |
+| `StickerPackListAdapter.kt` | `setFailureListener()`, TAG fix |
+| `StickerPackAdapter.kt` | `setFailureListener()`, TAG fix |
+| `MessageAdapter.kt` | `setFailureListener()`, contentDescription, TAG fix |
+| `StickerGridAdapter.kt` | `setFailureListener()` |
+| `MediaPickerSheet.kt` | search error Toast, tab resection retry, section header, TAG fix |
+| `StickerPreferencesManager.kt` | JSON versioning, legacy compat |
+| `AvatarPrefetcher.kt` | DELETED |
+| `sheet_media_picker.xml` | tvSectionHeader TextView |
+| `item_message.xml` | contentDescription для ivSelectionIndicator |
+| `colors.xml` + `colors-night.xml` | 11 семантических цветов |
+| 14 layout XML | 22 hardcoded hex → @color/ |
+| 31 файлов | Log.w("TAG") → Log.w(TAG) |
+| `strings.xml` + `strings-ru.xml` | 12 новых строк (sticker search, accessibility) |
+| `DiffCallbackTest.kt` | NEW — 12 unit тестов |
+| `CompanyMarshallersTest.kt` | NEW — 27 unit тестов |
+| `ShareReceiverActivity.kt` | CoroutineExceptionHandler, try-catch в observeViewModel + ViewHolder.bind |
+| `ShareReceiverViewModel.kt` | sendMessageToChat try-catch, connection check после retry |
+
+---
+
 ## [1.3.4.8] - 2026-08-01
 
 ### Исправлено

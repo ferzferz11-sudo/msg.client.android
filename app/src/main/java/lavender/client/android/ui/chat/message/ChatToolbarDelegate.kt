@@ -270,7 +270,7 @@ class ChatToolbarDelegate(
                 }
                 groupParticipantsContainer.addView(iv)
             }
-        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     private fun setupLobbyButton() {
@@ -404,4 +404,8 @@ class ChatToolbarDelegate(
     }
 
     private fun Int.dpToPx(): Int = (this * activity.resources.displayMetrics.density).toInt()
+
+    companion object {
+        private const val TAG = "ChatToolbarDelegate"
+    }
 }

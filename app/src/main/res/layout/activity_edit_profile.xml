@@ -301,12 +301,12 @@
                 android:layout_marginBottom="32dp"
                 android:text="@string/delete_profile"
                 android:textAllCaps="false"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary"
                 android:layout_gravity="center_horizontal"
-                app:backgroundTint="#FF5252"
+                app:backgroundTint="@color/danger"
                 app:cornerRadius="12dp"
                 app:icon="@drawable/ic_delete"
-                app:iconTint="#FFFFFF" />
+                app:iconTint="@color/text_primary" />
 
 
         </LinearLayout>

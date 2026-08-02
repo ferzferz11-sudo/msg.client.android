@@ -133,7 +133,7 @@ class PaletteFragment : Fragment() {
                     if (transparencySlider?.value?.toInt() != alpha) {
                         transparencySlider?.value = alpha.toFloat()
                     }
-                } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+                } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
             }
         }
 
@@ -231,5 +231,9 @@ class PaletteFragment : Fragment() {
             val luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
             return luminance > 0.5
         }
+    }
+
+    companion object {
+        private const val TAG = "PaletteFragment"
     }
 }

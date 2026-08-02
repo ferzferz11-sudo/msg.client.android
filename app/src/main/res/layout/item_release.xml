@@ -39,7 +39,7 @@
             android:textSize="11sp"
             android:textStyle="bold"
             android:background="@drawable/bg_tag_latest"
-            android:textColor="#4ade80" />
+            android:textColor="@color/success" />
 
     </LinearLayout>
 

@@ -10,6 +10,8 @@ import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.models.Reaction
 
+private const val TAG = "Entities"
+
 @Entity(tableName = "messages")
 data class MessageEntity(
     @PrimaryKey val id: String,
@@ -106,7 +108,7 @@ fun MessageEntity.toDomain(): Message {
             val obj = arr.getJSONObject(i)
             reactions.add(Reaction(obj.getString("user"), obj.getString("emoji")))
         }
-    } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+    } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
 
     val imageUrls = mutableListOf<String>()
     try {
@@ -114,7 +116,7 @@ fun MessageEntity.toDomain(): Message {
         for (i in 0 until arr.length()) {
             imageUrls.add(arr.getString(i))
         }
-    } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+    } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
 
     return Message(
         id = id,

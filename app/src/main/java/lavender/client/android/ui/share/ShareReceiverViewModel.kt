@@ -139,58 +139,67 @@ class ShareReceiverViewModel(application: Application) : AndroidViewModel(applic
 
     fun sendMessageToChat(chat: ChatInfo, sharedText: String, sharedUri: Uri?, videoInfo: VideoInfo?, linkPreview: LinkPreview?) {
         viewModelScope.launch {
-            val session = SessionManager.session.value
-            if (session.username.isEmpty()) {
-                _uiState.value = _uiState.value.copy(error = "Username is empty")
-                return@launch
-            }
-
-            _uiState.value = _uiState.value.copy(isSending = true)
-
-            var imageUrl = ""
-            if (sharedUri != null) {
-                imageUrl = uploadFile(sharedUri) ?: ""
-                if (imageUrl.isEmpty()) {
-                    _uiState.value = _uiState.value.copy(isSending = false, error = "Failed to upload file")
+            try {
+                val session = SessionManager.session.value
+                if (session.username.isEmpty()) {
+                    _uiState.value = _uiState.value.copy(error = "Username is empty")
                     return@launch
                 }
-            }
 
-            if (imageUrl.isEmpty() && linkPreview?.imageUrl?.isNotEmpty() == true) {
-                imageUrl = downloadAndUploadImage(linkPreview.imageUrl) ?: ""
-            }
+                _uiState.value = _uiState.value.copy(isSending = true)
 
-            val messageText = if (videoInfo != null) {
-                if (sharedText.isNotEmpty()) {
-                    "$sharedText\n\n${getApplication<Application>().getString(lavender.client.android.R.string.video_preview)}: ${videoInfo.videoUrl}"
+                var imageUrl = ""
+                if (sharedUri != null) {
+                    imageUrl = uploadFile(sharedUri) ?: ""
+                    if (imageUrl.isEmpty()) {
+                        _uiState.value = _uiState.value.copy(isSending = false, error = "Failed to upload file")
+                        return@launch
+                    }
+                }
+
+                if (imageUrl.isEmpty() && linkPreview?.imageUrl?.isNotEmpty() == true) {
+                    imageUrl = downloadAndUploadImage(linkPreview.imageUrl) ?: ""
+                }
+
+                val messageText = if (videoInfo != null) {
+                    if (sharedText.isNotEmpty()) {
+                        "$sharedText\n\n${getApplication<Application>().getString(lavender.client.android.R.string.video_preview)}: ${videoInfo.videoUrl}"
+                    } else {
+                        "${getApplication<Application>().getString(lavender.client.android.R.string.video_preview)}: ${videoInfo.videoUrl}"
+                    }
                 } else {
-                    "${getApplication<Application>().getString(lavender.client.android.R.string.video_preview)}: ${videoInfo.videoUrl}"
+                    sharedText
                 }
-            } else {
-                sharedText
-            }
 
-            if (GrpcClient.connectionStatus.value != ConnectionStatus.READY) {
-                GrpcClient.startChatV2(chat.id) { /* ignore */ }
-                var retries = 0
-                while (GrpcClient.connectionStatus.value != ConnectionStatus.READY && retries < 10) {
-                    kotlinx.coroutines.delay(500)
-                    retries++
+                if (GrpcClient.connectionStatus.value != ConnectionStatus.READY) {
+                    GrpcClient.startChatV2(chat.id) { /* ignore */ }
+                    var retries = 0
+                    while (GrpcClient.connectionStatus.value != ConnectionStatus.READY && retries < 10) {
+                        kotlinx.coroutines.delay(500)
+                        retries++
+                    }
+                    if (GrpcClient.connectionStatus.value != ConnectionStatus.READY) {
+                        _uiState.value = _uiState.value.copy(isSending = false, error = "Connection failed. Please try again.")
+                        return@launch
+                    }
                 }
+
+                val message = Message(
+                    user = session.username,
+                    text = messageText,
+                    timestamp = System.currentTimeMillis(),
+                    roomId = chat.id,
+                    imageUrl = imageUrl,
+                    userId = GrpcClient.getUserId() ?: ""
+                )
+
+                GrpcClient.sendMessageV2(message)
+
+                _uiState.value = _uiState.value.copy(isSending = false, successMessage = "Message sent")
+            } catch (e: Exception) {
+                Log.e("ShareReceiver", "Failed to send message", e)
+                _uiState.value = _uiState.value.copy(isSending = false, error = e.message ?: "Unknown error")
             }
-
-            val message = Message(
-                user = session.username,
-                text = messageText,
-                timestamp = System.currentTimeMillis(),
-                roomId = chat.id,
-                imageUrl = imageUrl,
-                userId = GrpcClient.getUserId() ?: ""
-            )
-
-            GrpcClient.sendMessageV2(message)
-
-            _uiState.value = _uiState.value.copy(isSending = false, successMessage = "Message sent")
         }
     }
 

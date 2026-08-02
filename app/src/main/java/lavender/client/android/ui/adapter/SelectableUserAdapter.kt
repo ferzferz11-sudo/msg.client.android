@@ -49,7 +49,7 @@ class SelectableUserAdapter(
             cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
             cachedSurface = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
             colorsInitialized = true
-        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     fun setUsers(newUsers: List<String>) {
@@ -199,5 +199,9 @@ class SelectableUserAdapter(
             updateAvatar(avatarUrl, theme)
             updateStatus(isOnline)
         }
+    }
+
+    companion object {
+        private const val TAG = "SelectableUserAdapter"
     }
 }

@@ -34,6 +34,8 @@ import lavender.client.android.ui.widget.StandardBottomSheet
  * Extracted to reduce ChatListActivity from 1470 to ~800 lines.
  */
 
+private const val TAG = "ChatListToolbar"
+
 internal fun setupToolbarActions(activity: ChatListActivity, @Suppress("UNUSED_PARAMETER") username: String) {
     activity.ivToolbarUserAvatar?.setOnClickListener {
         showSettingsSheet(activity)
@@ -77,7 +79,7 @@ internal fun showSettingsSheet(activity: ChatListActivity, onBack: (() -> Unit)?
                         sheet.findViewById<View>(R.id.actionAdmin)?.isVisible = true
                     }
                 }
-            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+            } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
         }
     }
 

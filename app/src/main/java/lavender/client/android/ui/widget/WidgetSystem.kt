@@ -109,6 +109,10 @@ open class StandardBottomSheet(
     protected var backButton: ImageView? = null
     protected var hasBackStack = false
 
+    companion object {
+        private const val TAG = "StandardBottomSheet"
+    }
+
     init {
         initViews(layoutId)
         applyTheme(theme)
@@ -134,7 +138,7 @@ open class StandardBottomSheet(
     override fun applyTheme(theme: Theme) {
         try {
             dialog?.let { ThemeApplier.applyToDialog(it, theme) }
-        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
 
         try {
             val bgColor = ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK)
@@ -148,7 +152,7 @@ open class StandardBottomSheet(
 
             // Theme any InputLayouts and EditTexts
             root?.let { findAndThemeInputs(it, theme, primaryColor, onSurfaceColor, textPrimaryColor) }
-        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     protected fun findAndThemeInputs(view: View, theme: Theme, primaryColor: Int, onSurfaceColor: Int, textPrimaryColor: Int) {
@@ -293,7 +297,7 @@ open class StandardBottomSheet(
         dialog?.show()
         try {
             dialog?.behavior?.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
-        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     fun showWithNavigation() {

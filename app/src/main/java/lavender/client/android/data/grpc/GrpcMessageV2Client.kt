@@ -208,6 +208,11 @@ class GrpcMessageV2Client(
                 url = message.imageUrl,
                 urls = message.imageUrls.ifEmpty { listOf(message.imageUrl).filter { it.isNotEmpty() } }
             )
+            message.stickerUrl.isNotEmpty() -> MessageMediaProto(
+                type = "sticker",
+                url = message.stickerUrl,
+                urls = listOf(message.stickerThumbnailUrl).filter { it.isNotEmpty() }
+            )
             else -> null
         }
 

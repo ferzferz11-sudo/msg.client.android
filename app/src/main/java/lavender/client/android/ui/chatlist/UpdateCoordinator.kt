@@ -220,7 +220,7 @@ class UpdateCoordinator(
                 }
             }
             connection.disconnect()
-        } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     // ======= Notification for downloaded update =======
@@ -249,5 +249,9 @@ class UpdateCoordinator(
             .build()
 
         notificationManager.notify(1007, notification)
+    }
+
+    companion object {
+        private const val TAG = "UpdateCoordinator"
     }
 }

@@ -33,7 +33,7 @@ class SplashActivity : AppCompatActivity() {
                     putString("last_crash", "${throwable.javaClass.simpleName}: ${throwable.message}\n${throwable.stackTraceToString().take(2000)}")
                     putLong("last_crash_time", System.currentTimeMillis())
                 }
-            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+            } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
             Thread.getDefaultUncaughtExceptionHandler()?.uncaughtException(thread, throwable)
         }
 
@@ -306,5 +306,9 @@ class SplashActivity : AppCompatActivity() {
     /** Clear all local cache silently on successful login. */
     private fun clearAllCache() {
         lavender.client.android.data.cache.CacheUtils.clearAllSync(this)
+    }
+
+    companion object {
+        private const val TAG = "SplashActivity"
     }
 }

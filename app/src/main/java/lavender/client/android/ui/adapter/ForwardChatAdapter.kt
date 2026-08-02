@@ -61,7 +61,7 @@ class ForwardChatAdapter(
                 )
                 chatName.setTextColor(theme.textPrimaryColor.toColorInt())
                 chatType.setTextColor(theme.textSecondaryColor.toColorInt())
-            } catch (e: Exception) { Log.w("TAG", "Caught: " + e.message) }
+            } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
 
             loadAvatars(chat)
 
@@ -131,5 +131,9 @@ class ForwardChatAdapter(
         }
 
         private fun Int.dpToPx(): Int = (this * itemView.resources.displayMetrics.density).toInt()
+    }
+
+    companion object {
+        private const val TAG = "ForwardChatAdapter"
     }
 }
