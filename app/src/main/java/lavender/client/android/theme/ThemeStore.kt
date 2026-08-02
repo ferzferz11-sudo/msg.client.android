@@ -34,34 +34,25 @@ object ThemeStore {
         val themeId = prefs.getCurrentThemeId()
         followSystemDarkMode = prefs.isFollowSystemDarkMode()
 
-        syncNightMode(context)
-
         if (followSystemDarkMode) {
             _theme.value = resolveSystemTheme(context)
-            return
-        }
-
-        // Instant load for built-in themes
-        if (themeId == "dark" || themeId == "builtin_dark_graphite") {
+        } else if (themeId == "dark" || themeId == "builtin_dark_graphite") {
             _theme.value = BuiltInThemes.dark
-            return
-        }
-        if (themeId == "light") {
+        } else if (themeId == "light") {
             _theme.value = BuiltInThemes.BASE_LIGHT
-            return
+        } else {
+            val builtIn = BuiltInThemes.findById(themeId)
+            if (builtIn != null) {
+                _theme.value = builtIn
+            } else {
+                val cached = prefs.getCustomThemeCache()
+                if (cached != null && cached.id == themeId) {
+                    _theme.value = cached
+                }
+            }
         }
 
-        val builtIn = BuiltInThemes.findById(themeId)
-        if (builtIn != null) {
-            _theme.value = builtIn
-            return
-        }
-
-        // Load custom theme from cache
-        val cached = prefs.getCustomThemeCache()
-        if (cached != null && cached.id == themeId) {
-            _theme.value = cached
-        }
+        syncNightMode(context)
     }
 
     fun refresh(context: Context, username: String, force: Boolean = false): Job {

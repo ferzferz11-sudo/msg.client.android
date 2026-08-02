@@ -115,6 +115,9 @@ class ContactsActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
+                    if (!state.isLoading) {
+                        adapter.setUsers(state.contacts)
+                    }
                     binding.emptyStateContainer.isVisible = state.contacts.isEmpty() && !state.isLoading
                     state.chatCreated?.let { event ->
                         viewModel.consumeChatCreatedEvent()

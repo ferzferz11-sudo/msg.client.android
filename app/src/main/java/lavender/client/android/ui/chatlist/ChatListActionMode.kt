@@ -40,7 +40,7 @@ internal fun enterSelectionMode(activity: ChatListActivity) {
 
 internal fun exitSelectionMode(activity: ChatListActivity) {
     activity.isSelectionMode = false
-    activity.chatAdapter.clearSelection()
+    try { activity.chatAdapter.clearSelection() } catch (_: Exception) {}
     // Restore avatar container (FrameLayout wrapper)
     activity.ivToolbarUserAvatar?.parent?.let { (it as? android.view.View)?.isVisible = true }
     activity.llToolbarTitleContainer?.isVisible = true
@@ -58,13 +58,13 @@ internal fun exitSelectionMode(activity: ChatListActivity) {
 }
 
 internal fun updateActionModeTitle(activity: ChatListActivity) {
-    val count = activity.chatAdapter.getSelectedIds().size
+    val count = try { activity.chatAdapter.getSelectedIds().size } catch (_: Exception) { return }
     activity.tvToolbarTitle?.text = activity.getString(R.string.selected_count, count)
     updateActionModeIcons(activity)
 }
 
 private fun updateActionModeIcons(activity: ChatListActivity) {
-    val selectedChats = activity.chatAdapter.getSelectedChats()
+    val selectedChats = try { activity.chatAdapter.getSelectedChats() } catch (_: Exception) { return }
     if (selectedChats.isEmpty()) return
     val allMuted = selectedChats.all { it.isMuted }
     activity.toolbar?.menu?.findItem(R.id.action_mute)?.let { item ->

@@ -1,8 +1,58 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.10] - 2026-08-01
+
+### Исправлено
+
+**Контакты — пустой список (regression):**
+- `ContactsActivity.setupObservers()` — `uiState.collect` проверял `state.contacts.isEmpty()` для empty state, но never передавал данные в адаптер. Добавлен `adapter.setUsers(state.contacts)`
+
+**Стикеры — тап не отправлял стикер в чат:**
+- `StickerGridAdapter.bind()` — click listener устанавливался только на `lottieView`. При fallback на `thumbnailView` (Lottie failed to load) тап молчал. Исправлено: listeners на оба view
+- `ChatInputDelegate.sendStickerMessage()` — добавлен try-catch с Toast при ошибке отправки
+
+**Фатал при смене темы на светлую:**
+- `ThemeStore.init()` — `syncNightMode()` вызывался ДО обновления `_theme.value` → читал stale dark → `MODE_NIGHT_NO` на втором вызове → `Activity.recreate()` в середине `onResume()`. Исправлено: сначала `_theme.value`, потом `syncNightMode()`
+
+**Share receiver — fatal crash при пересылке в Лаву:**
+- `ShareReceiverActivity` — добавлен `CoroutineExceptionHandler` для всех `lifecycleScope.launch` (3 вызова)
+- `observeViewModel()` — flow collector обёрнут в try-catch
+- `ShareChatAdapter.ViewHolder.bind()` — `ThemeStore.currentTheme()` обёрнут в try-catch с fallback
+- `ShareReceiverViewModel.sendMessageToChat()` — проверка connection после retry loop, общий try-catch с error state
+
+**Reply терялся при наличии media:**
+- `ProtoUtils.createMessageFromV2Proto()` — `when` с mutually exclusive branches: reply skip при наличии media. Заменён на два независимых `if`
+
+**ChatListActionMode — crash при activity recreation:**
+- `exitSelectionMode()`, `updateActionModeTitle()`, `updateActionModeIcons()` — добавлены try-catch guards для `chatAdapter` access
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `ContactsActivity.kt` | `adapter.setUsers(state.contacts)` в uiState.collect |
+| `StickerGridAdapter.kt` | Click listeners на оба view (lottie + thumbnail) |
+| `ChatInputDelegate.kt` | sendStickerMessage try-catch |
+| `ThemeStore.kt` | syncNightMode() после _theme.value update |
+| `ShareReceiverActivity.kt` | CoroutineExceptionHandler, try-catch observe + ViewHolder |
+| `ShareReceiverViewModel.kt` | sendMessageToChat try-catch, connection check |
+| `ProtoUtils.kt` | Reply + media: `when` → два независимых `if` |
+| `ChatListActionMode.kt` | try-catch guards для chatAdapter |
+
+---
+
 ## [1.3.4.9] - 2026-08-01
 
 ### Исправлено
+
+**Контакты — пустой список (regression):**
+- `ContactsActivity.setupObservers()` — добавлен `adapter.setUsers(state.contacts)` в `uiState.collect`. Данные загружались из gRPC но не передавались в адаптер
+
+**Стикеры — тап не отправлял стикер:**
+- `StickerGridAdapter.bind()` — click listener устанавливался только на `lottieView`, при fallback на `thumbnailView` (Lottie failed) тап молчал. Исправлено: listeners на оба view
+
+**Фатал при смене темы на светлую:**
+- `ThemeStore.init()` — `syncNightMode()` вызывался ДО обновления `_theme.value` → читал stale dark theme → `MODE_NIGHT_NO` на втором вызове → `Activity.recreate()` в середине `onResume()`. Исправлено: сначала обновляется `_theme.value`, потом `syncNightMode()`
 
 **Share receiver — fatal crash при пересылке в Лаву:**
 - `ShareReceiverActivity` — добавлен `CoroutineExceptionHandler` для `lifecycleScope.launch` (3 вызова)
@@ -94,6 +144,11 @@
 | `CompanyMarshallersTest.kt` | NEW — 27 unit тестов |
 | `ShareReceiverActivity.kt` | CoroutineExceptionHandler, try-catch в observeViewModel + ViewHolder.bind |
 | `ShareReceiverViewModel.kt` | sendMessageToChat try-catch, connection check после retry |
+| `ContactsActivity.kt` | `adapter.setUsers(state.contacts)` в uiState.collect |
+| `StickerGridAdapter.kt` | Click listeners на оба view (lottie + thumbnail) |
+| `ThemeStore.kt` | syncNightMode() после _theme.value update |
+| `ProtoUtils.kt` | Reply + media: `when` → `if` для независимого парсинга |
+| `ChatListActionMode.kt` | try-catch guards для chatAdapter access |
 
 ---
 

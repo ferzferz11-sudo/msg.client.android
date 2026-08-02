@@ -66,12 +66,10 @@ class StickerGridAdapter(
                     .into(thumbnailView)
             }
 
-            val clickTarget: View = if (isLottie) lottieView else thumbnailView
-            clickTarget.setOnClickListener { onStickerClick(sticker) }
-            clickTarget.setOnLongClickListener {
-                onStickerLongClick?.invoke(sticker)
-                true
-            }
+            lottieView.setOnClickListener { onStickerClick(sticker) }
+            lottieView.setOnLongClickListener { onStickerLongClick?.invoke(sticker); true }
+            thumbnailView.setOnClickListener { onStickerClick(sticker) }
+            thumbnailView.setOnLongClickListener { onStickerLongClick?.invoke(sticker); true }
         }
 
         fun unbind() {

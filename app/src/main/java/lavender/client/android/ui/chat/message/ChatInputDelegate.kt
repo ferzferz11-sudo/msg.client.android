@@ -348,24 +348,29 @@ class ChatInputDelegate(
     }
 
     private fun sendStickerMessage(sticker: lavender.client.android.data.models.Sticker) {
-        val msg = Message(
-            id = java.util.UUID.randomUUID().toString(),
-            user = username,
-            text = "",
-            timestamp = System.currentTimeMillis(),
-            roomId = roomId,
-            userId = grpcClient.getUserId() ?: "",
-            isSent = false,
-            stickerUrl = sticker.lottieUrl,
-            stickerThumbnailUrl = sticker.thumbnailUrl,
-            repliedToMessageId = replyingTo?.id ?: "",
-            repliedToUser = replyingTo?.user ?: "",
-            repliedToText = replyingTo?.text ?: ""
-        )
-        grpcClient.addLocalMessage(msg)
-        grpcClient.sendMessageV2(msg)
-        grpcClient.deleteDraft(roomId)
-        resetInput()
+        try {
+            val msg = Message(
+                id = java.util.UUID.randomUUID().toString(),
+                user = username,
+                text = "",
+                timestamp = System.currentTimeMillis(),
+                roomId = roomId,
+                userId = grpcClient.getUserId() ?: "",
+                isSent = false,
+                stickerUrl = sticker.lottieUrl,
+                stickerThumbnailUrl = sticker.thumbnailUrl,
+                repliedToMessageId = replyingTo?.id ?: "",
+                repliedToUser = replyingTo?.user ?: "",
+                repliedToText = replyingTo?.text ?: ""
+            )
+            grpcClient.addLocalMessage(msg)
+            grpcClient.sendMessageV2(msg)
+            grpcClient.deleteDraft(roomId)
+            resetInput()
+        } catch (e: Exception) {
+            android.util.Log.e("ChatInput", "Failed to send sticker", e)
+            android.widget.Toast.makeText(activity, activity.getString(R.string.failed) + ": ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+        }
     }
 
     // ======= Attachments =======

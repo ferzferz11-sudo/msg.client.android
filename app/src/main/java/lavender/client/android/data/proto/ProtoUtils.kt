@@ -169,27 +169,26 @@ object ProtoUtils {
         var repliedToMessageId = ""; var repliedToText = ""
         var stickerUrl = ""; var stickerThumbnailUrl = ""
 
-        when {
-            proto.media != null -> {
-                when (proto.media.type) {
-                    "image" -> {
-                        imageUrl = proto.media.url
-                        imageUrls = proto.media.urls.ifEmpty { listOf(proto.media.url).filter { it.isNotEmpty() } }
-                    }
-                    "voice" -> {
-                        voiceUrl = proto.media.url
-                        duration = proto.media.duration
-                    }
-                    "sticker" -> {
-                        stickerUrl = proto.media.url
-                        stickerThumbnailUrl = proto.media.urls.firstOrNull() ?: ""
-                    }
+        if (proto.media != null) {
+            when (proto.media.type) {
+                "image" -> {
+                    imageUrl = proto.media.url
+                    imageUrls = proto.media.urls.ifEmpty { listOf(proto.media.url).filter { it.isNotEmpty() } }
+                }
+                "voice" -> {
+                    voiceUrl = proto.media.url
+                    duration = proto.media.duration
+                }
+                "sticker" -> {
+                    stickerUrl = proto.media.url
+                    stickerThumbnailUrl = proto.media.urls.firstOrNull() ?: ""
                 }
             }
-            proto.reply != null -> {
-                repliedToMessageId = proto.reply.messageId
-                repliedToText = proto.reply.preview
-            }
+        }
+
+        if (proto.reply != null) {
+            repliedToMessageId = proto.reply.messageId
+            repliedToText = proto.reply.preview
         }
 
         val reactions = if (proto.reactions.isNotEmpty()) {
