@@ -157,11 +157,12 @@ class GrpcMessageV2Client(
                     }
                 }
             }
-            proto.reply != null -> {
-                repliedToMessageId = proto.reply.messageId
-                repliedToText = proto.reply.preview
-                repliedToUser = resolveUsername(proto.reply.senderId)
-            }
+        }
+
+        if (proto.reply != null) {
+            repliedToMessageId = proto.reply.messageId
+            repliedToText = proto.reply.preview
+            repliedToUser = resolveUsername(proto.reply.senderId)
         }
 
         // Workaround: server overwrites Content=Text with Content=Reply in oneof,
@@ -259,27 +260,26 @@ class GrpcMessageV2Client(
             val dedupedCache = deduplicateByContent(cached)
             Log.d(TAG, "loadHistoryV2 cache: loaded ${cached.size} msgs (${dedupedCache.size} after dedup) from Room DB, ${dedupedCache.count { it.reactions.isNotEmpty() }} with reactions")
             if (dedupedCache.isNotEmpty()) {
-                // Skip cache merge if server phase already completed with correct data
-                if (!loadHistoryServerCompleted) {
-                    messages.update { current ->
-                        if (current.isEmpty()) dedupedCache
-                        else {
-                            val currentMap = current.associateBy { getMessageHash(it) }
-                            dedupedCache.map { cachedMsg ->
-                                val localMsg = currentMap[getMessageHash(cachedMsg)]
-                                if (localMsg != null) {
-                                    val mergedReactions = if (cachedMsg.reactions.isEmpty() && localMsg.reactions.isNotEmpty()) {
-                                        localMsg.reactions
-                                    } else if (cachedMsg.reactions.isNotEmpty() && localMsg.reactions.isNotEmpty()) {
-                                        val cachedUserIds = cachedMsg.reactions.map { it.user }.toSet()
-                                        cachedMsg.reactions + localMsg.reactions.filter { it.user !in cachedUserIds }
-                                    } else {
-                                        cachedMsg.reactions
-                                    }
-                                    cachedMsg.copy(isRead = localMsg.isRead || cachedMsg.isRead, reactions = mergedReactions)
-                                } else cachedMsg
-                            } + current.filterNot { msg -> dedupedCache.any { getMessageHash(it) == getMessageHash(msg) } }
-                        }
+                messages.update { current ->
+                    if (loadHistoryServerCompleted) return@update current
+                    if (current.isEmpty()) {
+                        dedupedCache
+                    } else {
+                        val currentMap = current.associateBy { getMessageHash(it) }
+                        dedupedCache.map { cachedMsg ->
+                            val localMsg = currentMap[getMessageHash(cachedMsg)]
+                            if (localMsg != null) {
+                                val mergedReactions = if (cachedMsg.reactions.isEmpty() && localMsg.reactions.isNotEmpty()) {
+                                    localMsg.reactions
+                                } else if (cachedMsg.reactions.isNotEmpty() && localMsg.reactions.isNotEmpty()) {
+                                    val cachedUserIds = cachedMsg.reactions.map { it.user }.toSet()
+                                    cachedMsg.reactions + localMsg.reactions.filter { it.user !in cachedUserIds }
+                                } else {
+                                    cachedMsg.reactions
+                                }
+                                cachedMsg.copy(isRead = localMsg.isRead || cachedMsg.isRead, reactions = mergedReactions)
+                            } else cachedMsg
+                        } + current.filterNot { msg -> dedupedCache.any { getMessageHash(it) == getMessageHash(msg) } }
                     }
                 }
             }
@@ -562,10 +562,15 @@ class GrpcMessageV2Client(
     private fun getContentHash(message: Message): String =
         "${message.userId}:${message.text}:${message.timestamp / 1000}"
 
+    private fun getContentHashForDedup(message: Message): String {
+        val idPart = message.id.takeIf { it.isNotEmpty() } ?: "no_id"
+        return "${message.userId}:${message.text}:${message.timestamp / 1000}:$idPart"
+    }
+
     private fun deduplicateByContent(messages: List<Message>): List<Message> {
         val seen = mutableMapOf<String, Message>()
         for (msg in messages) {
-            val key = getContentHash(msg)
+            val key = getContentHashForDedup(msg)
             val existing = seen[key]
             if (existing == null) {
                 seen[key] = msg

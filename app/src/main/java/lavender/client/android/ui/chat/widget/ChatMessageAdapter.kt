@@ -83,18 +83,36 @@ class ChatMessageAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        val item = getItem(position)
-        when (holder) {
-            is DateSeparatorHolder -> holder.bind(item)
-            is TypingHolder -> holder.bind(item)
-            is UserMessageHolder -> holder.bind(item)
-            is AgentMessageHolder -> holder.bind(item)
+        val item = try { getItem(position) } catch (e: Exception) {
+            android.util.Log.e("ChatMessageAdapter", "getItem($position) failed: ${e.message}", e)
+            return
         }
+        try {
+            when (holder) {
+                is DateSeparatorHolder -> holder.bind(item)
+                is TypingHolder -> holder.bind(item)
+                is UserMessageHolder -> holder.bind(item)
+                is AgentMessageHolder -> holder.bind(item)
+            }
 
-        // Fade-in + slide animation for new messages (not typing, not date separator)
-        if (!item.isTyping && !item.isDateSeparator && position !in animatedPositions) {
-            animatedPositions.add(position)
-            animateMessageIn(holder.itemView, item.isCurrentUser)
+            // Fade-in + slide animation for new messages (not typing, not date separator)
+            if (!item.isTyping && !item.isDateSeparator && position !in animatedPositions) {
+                animatedPositions.add(position)
+                animateMessageIn(holder.itemView, item.isCurrentUser)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("ChatMessageAdapter", "bind crashed at pos $position: ${e.message}", e)
+            try {
+                // Minimal fallback: show plain text
+                holder.itemView.findViewById<TextView>(R.id.agentMessageText)?.let {
+                    it.text = item.content.ifEmpty { "…" }
+                    it.isVisible = true
+                }
+                holder.itemView.findViewById<LinearLayout>(R.id.userMessageContainer)?.isVisible = false
+                holder.itemView.findViewById<LinearLayout>(R.id.agentMessageContainer)?.isVisible = true
+                holder.itemView.findViewById<LinearLayout>(R.id.typingContainer)?.isVisible = false
+                holder.itemView.findViewById<TextView>(R.id.tvDateSeparator)?.isVisible = false
+            } catch (_: Exception) {}
         }
     }
 

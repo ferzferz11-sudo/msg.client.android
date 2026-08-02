@@ -1,5 +1,50 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.11] - 2026-08-02
+
+### Исправлено
+
+**Crash guards — ChatMessageAdapter:**
+- `onBindViewHolder()` — добавлен try-catch с fallback (минимальный рендер plain text). Без обработки любое исключение в `holder.bind()` крашило Activity
+
+**Stale position в click listeners (16 locations):**
+- `MessageAdapter` — все click/long-click listeners, захватывавшие `pos` из bind-time, заменены на `bindingAdapterPosition` с `NO_POSITION` guard. IOOBE при быстрых insert/remove из списка
+
+**Reply+media — reply терялся (regression confirmed):**
+- `GrpcMessageV2Client.messageV2ToDomain()` — `when` block делал media и reply mutually exclusive. Заменён на два независимых `if`. ProtoUtils.kt уже был исправлен ранее
+
+**Sticker-only сообщения невидимы:**
+- `MessageAdapter.bind()` — `isCompletelyEmpty` не проверял `stickerUrl`. Sticker-only сообщения скрывались с `View.GONE`
+
+**deduplicateByContent — hash-коллизии при пустом userId:**
+- Добавлен `getContentHashForDedup()` с ID tiebreaker. `getContentHash()` (для merge matching) оставлен без изменений
+
+**Swipe reply — IOOBE на stale currentList:**
+- `NewChatActivity` — swipe handler использует `getOrNull()` вместо прямого `[position]`
+
+**TOCTOU race в loadHistoryV2:**
+- `loadHistoryServerCompleted` проверка перенесена внутрь `messages.update` lambda (атомарно через CAS)
+
+**bind() fallback completeness:**
+- catch-блок теперь сбрасывает 20+ views (sticker, reactions, reply quote, forwarding, selection, read status и т.д.)
+
+**Контакты — собственный аккаунт дублируется:**
+- `ContactsViewModel.loadContacts()` — фильтрует `list.filter { it != username }`
+- `GrpcProfileClient.addContact()` — guard от self-addition
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `ChatMessageAdapter.kt` | try-catch в onBindViewHolder |
+| `MessageAdapter.kt` | bindingAdapterPosition в 16 click listeners + stickerUrl в isCompletelyEmpty + fallback completeness |
+| `GrpcMessageV2Client.kt` | `when` → `if` для reply+media + getContentHashForDedup + TOCTOU fix |
+| `NewChatActivity.kt` | getOrNull() в swipe handler |
+| `ContactsViewModel.kt` | filter own username from contacts |
+| `GrpcProfileClient.kt` | self-add guard in addContact |
+
+---
+
 ## [1.3.4.10] - 2026-08-01
 
 ### Исправлено

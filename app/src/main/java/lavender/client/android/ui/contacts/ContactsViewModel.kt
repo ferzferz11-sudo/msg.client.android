@@ -41,7 +41,7 @@ class ContactsViewModel(application: Application) : AndroidViewModel(application
             viewModelScope.launch {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    contacts = list
+                    contacts = list.filter { it != username }
                 )
             }
         }

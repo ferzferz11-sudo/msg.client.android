@@ -300,7 +300,10 @@ class NewChatActivity : AppCompatActivity() {
         selectionDelegate.setAdapter(adapter)
 
         val swipeController = MessageSwipeController(this) { position, direction ->
-            if (direction == ItemTouchHelper.LEFT) { inputDelegate.showReplyPreview(adapter.currentList[position]); adapter.notifyItemChanged(position) }
+            if (direction == ItemTouchHelper.LEFT) {
+                val msg = adapter.currentList.getOrNull(position)
+                if (msg != null) { inputDelegate.showReplyPreview(msg); adapter.notifyItemChanged(position) }
+            }
             else if (direction == ItemTouchHelper.RIGHT) finish()
         }
         ItemTouchHelper(swipeController).attachToRecyclerView(messagesRecyclerView)

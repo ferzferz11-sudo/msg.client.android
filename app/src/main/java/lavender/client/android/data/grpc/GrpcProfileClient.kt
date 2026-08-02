@@ -266,6 +266,7 @@ class GrpcProfileClient(
     // ======= Contacts =======
 
     fun addContact(username: String, contactUsername: String, callback: (Boolean, String) -> Unit) {
+        if (username == contactUsername) { callback(false, "Cannot add yourself"); return }
         val currentChannel = getChannel() ?: return
         val call = currentChannel.newCall(
             io.grpc.MethodDescriptor.newBuilder<AddContactRequestProto, AddContactResponseProto>()
