@@ -107,10 +107,12 @@
                 android:visibility="gone">
 
                 <TextView
+                    android:id="@+id/tvEmptyText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/sticker_empty"
                     android:textSize="14sp"
+                    android:gravity="center"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <com.google.android.material.button.MaterialButton

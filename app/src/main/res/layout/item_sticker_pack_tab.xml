@@ -12,11 +12,22 @@
         android:layout_height="48dp"
         android:scaleType="centerCrop" />
 
+    <TextView
+        android:id="@+id/tvPackName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="1dp"
+        android:gravity="center"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:textSize="8sp"
+        android:textColor="?android:attr/textColorSecondary" />
+
     <View
         android:id="@+id/selectedIndicator"
         android:layout_width="24dp"
         android:layout_height="2dp"
-        android:layout_marginTop="2dp"
+        android:layout_marginTop="1dp"
         android:background="?attr/colorPrimary"
         android:visibility="invisible" />
 </LinearLayout>

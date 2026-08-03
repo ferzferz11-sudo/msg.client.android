@@ -4,6 +4,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -16,6 +17,13 @@ class StickerGridAdapter(
     private val onStickerClick: (Sticker) -> Unit,
     private val onStickerLongClick: ((Sticker) -> Unit)? = null
 ) : ListAdapter<Sticker, StickerGridAdapter.StickerViewHolder>(StickerDiffCallback()) {
+
+    private var favoriteIds: Set<String> = emptySet()
+
+    fun setFavoriteIds(ids: Set<String>) {
+        favoriteIds = ids
+        notifyDataSetChanged()
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StickerViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_sticker_grid, parent, false)
@@ -34,6 +42,7 @@ class StickerGridAdapter(
     inner class StickerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val lottieView: LottieAnimationView = itemView.findViewById(R.id.lottieView)
         private val thumbnailView: ImageView = itemView.findViewById(R.id.thumbnailView)
+        private val favoriteIndicator: TextView = itemView.findViewById(R.id.favoriteIndicator)
 
         fun bind(sticker: Sticker) {
             val url = sticker.lottieUrl
@@ -65,6 +74,8 @@ class StickerGridAdapter(
                     .centerCrop()
                     .into(thumbnailView)
             }
+
+            favoriteIndicator.visibility = if (sticker.id in favoriteIds) View.VISIBLE else View.GONE
 
             lottieView.setOnClickListener { onStickerClick(sticker) }
             lottieView.setOnLongClickListener { onStickerLongClick?.invoke(sticker); true }

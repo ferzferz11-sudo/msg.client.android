@@ -1,5 +1,41 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.12] - 2026-08-02
+
+### Исправлено
+
+**Аватары в списке чатов — моргание/пропажа/неправильные аватары:**
+- `ChatAdapter` — убран `post {}` вокруг Glide.load(), который откладывал загрузку past recycle point → неправильные аватары во ViewHolder
+- `clearAvatar()` — добавлен `Glide.clear(ivChatAvatar)` вместо `setImageDrawable(null)` — отменяет in-flight Glide запросы
+- `override(48, 48)` → dp-based размер `(48 * density).toInt()` — не размывается на xxhdpi
+- Добавлен `diskCacheStrategy(ALL)` для аватаров — меньше сетевых запросов
+- `updateAllUsers()` — уведомляет только items с изменившимися аватарами (вместо всех direct chats). Убран `otherParticipantCache.clear()`
+
+**Стикеры — i18n и UX:**
+- `"Favorites (count)"` и `"Recent"` — заменены на string resources (`sticker_favorites_header`, `sticker_recent_header`) с RU переводами
+- Добавлен `sticker_no_favorites` — подсказка в пустом состоянии ("Нажмите и удерживайте стикер, чтобы добавить")
+- `StickerPackCreateActivity` — hardcoded `"Error: "` заменён на `getString(R.string.error_colon, ...)`
+- Добавлен индикатор избранного (⭐) на стикерах в grid — `item_sticker_grid.xml` + `StickerGridAdapter.setFavoriteIds()`
+- `item_sticker_pack_tab.xml` — добавлен `tvPackName` для отображения имени пакета в шторке стикеров
+- `StickerPackAdapter` — bind(pack.title) в tvPackName
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `ChatAdapter.kt` | Removed post{}, added Glide.clear(), dp-based size, diskCacheStrategy(ALL), optimized updateAllUsers |
+| `MediaPickerSheet.kt` | i18n section headers, favorite IDs pass-through, empty state text |
+| `StickerGridAdapter.kt` | Favorite indicator support (setFavoriteIds + star overlay) |
+| `StickerPackAdapter.kt` | Pack name binding in tvPackName |
+| `item_sticker_pack_tab.xml` | Added tvPackName TextView |
+| `item_sticker_grid.xml` | Added favoriteIndicator TextView |
+| `sheet_media_picker.xml` | Added tvEmptyText ID to empty state |
+| `StickerPackCreateActivity.kt` | error_colon string resource |
+| `values/strings.xml` | sticker_favorites_header, sticker_recent_header, sticker_no_favorites |
+| `values-ru/strings.xml` | Russian translations for above |
+
+---
+
 ## [1.3.4.11] - 2026-08-02
 
 ### Исправлено

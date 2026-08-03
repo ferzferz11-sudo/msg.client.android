@@ -245,15 +245,18 @@ class ChatAdapter(
     }
 
     fun updateAllUsers(users: List<lavender.client.android.data.proto.UserInfoProto>) {
+        val oldAvatarCache = avatarUrlCache
         allUsersMap = users.associateBy { it.username }
         avatarUrlCache = users.associate { it.username to it.avatarUrl }
-        otherParticipantCache.clear()
         val currentItems = currentList
         val changedPositions = mutableListOf<Int>()
         for (i in currentItems.indices) {
             val item = currentItems[i]
             if (item is FlatItem.ChatItem && item.chat.type == "direct" && !item.chat.isSecret && !item.chat.id.startsWith("favorites_")) {
-                changedPositions.add(i)
+                val otherUser = getOrComputeOtherParticipant(item.chat, currentUsername, otherParticipantCache)
+                val oldUrl = oldAvatarCache[otherUser] ?: ""
+                val newUrl = avatarUrlCache[otherUser] ?: ""
+                if (oldUrl != newUrl) changedPositions.add(i)
             }
         }
         for (pos in changedPositions) {
@@ -344,13 +347,14 @@ class ChatAdapter(
                 val currentTag = ivChatAvatar.tag as? String
                 if (avatarUrl.isNotEmpty() && avatarUrl != currentTag) {
                     ivChatAvatar.tag = avatarUrl
-                    ivChatAvatar.post {
-                        com.bumptech.glide.Glide.with(itemView.context).load(avatarUrl)
-                            .placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar)
-                            .override(48, 48).circleCrop().into(ivChatAvatar)
-                    }
+                    val sizePx = (48 * itemView.resources.displayMetrics.density).toInt()
+                    com.bumptech.glide.Glide.with(itemView.context).load(avatarUrl)
+                        .placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar)
+                        .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
+                        .override(sizePx, sizePx).circleCrop().into(ivChatAvatar)
                 } else if (avatarUrl.isEmpty() && currentTag != null) {
                     ivChatAvatar.tag = null
+                    com.bumptech.glide.Glide.with(itemView.context).clear(ivChatAvatar)
                     ivChatAvatar.setImageResource(R.drawable.ic_default_avatar)
                 }
             } catch (_: Exception) { ivChatAvatar.setImageResource(R.drawable.ic_default_avatar) }
@@ -494,7 +498,7 @@ class ChatAdapter(
 
         fun clearAvatar() {
             ivChatAvatar.tag = null
-            ivChatAvatar.setImageDrawable(null)
+            com.bumptech.glide.Glide.with(itemView.context).clear(ivChatAvatar)
         }
     }
 }

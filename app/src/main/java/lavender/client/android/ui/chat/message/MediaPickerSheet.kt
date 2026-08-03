@@ -278,6 +278,8 @@ class MediaPickerSheet(
         if (pack.stickers.isNotEmpty()) {
             rvStickers.isVisible = true
             emptyState.isVisible = false
+            val favorites = try { StickerPreferencesManager.getFavoriteStickers() } catch (_: Exception) { emptyList() }
+            stickerGridAdapter.setFavoriteIds(favorites.map { it.id }.toSet())
             stickerGridAdapter.submitList(pack.stickers)
         } else {
             rvStickers.isVisible = false
@@ -306,22 +308,30 @@ class MediaPickerSheet(
         val favorites = try { StickerPreferencesManager.getFavoriteStickers() } catch (_: Exception) { emptyList() }
         val recent = try { StickerPreferencesManager.getRecentStickers() } catch (_: Exception) { emptyList() }
 
-        val combined = (favorites + recent).distinctBy { it.id }
+        // Show favorites first, then recent (without duplicating)
+        val favoriteIds = favorites.map { it.id }.toSet()
+        val recentOnly = recent.filter { it.id !in favoriteIds }
+        val combined = favorites + recentOnly
+
+        stickerGridAdapter.setFavoriteIds(favoriteIds)
 
         if (combined.isNotEmpty()) {
             rvStickers.isVisible = true
             emptyState.isVisible = false
             sectionHeader?.isVisible = true
             sectionHeader?.text = if (favorites.isNotEmpty()) {
-                "\u2B50 Favorites (${favorites.size})"
+                activity.getString(R.string.sticker_favorites_header, favorites.size)
             } else {
-                "\uD83D\uDD50 Recent"
+                activity.getString(R.string.sticker_recent_header)
             }
             stickerGridAdapter.submitList(combined)
         } else {
             rvStickers.isVisible = false
             emptyState.isVisible = true
             sectionHeader?.isVisible = false
+            // Update empty state text for favorites context
+            val emptyText = emptyState.findViewById<TextView>(R.id.tvEmptyText)
+            emptyText?.text = activity.getString(R.string.sticker_no_favorites)
         }
     }
 

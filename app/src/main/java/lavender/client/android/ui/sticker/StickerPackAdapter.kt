@@ -3,6 +3,7 @@ package lavender.client.android.ui.sticker
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -51,6 +52,7 @@ class StickerPackAdapter(
     inner class PackViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val coverView: LottieAnimationView = itemView.findViewById(R.id.lottieCover)
         private val selectedIndicator: View = itemView.findViewById(R.id.selectedIndicator)
+        private val tvPackName: TextView = itemView.findViewById(R.id.tvPackName)
 
         fun unbind() {
             coverView.cancelAnimation()
@@ -59,6 +61,7 @@ class StickerPackAdapter(
 
         fun bind(pack: StickerPack, isSelected: Boolean) {
             selectedIndicator.visibility = if (isSelected) View.VISIBLE else View.INVISIBLE
+            tvPackName.text = pack.title.ifEmpty { pack.name }
 
             val coverSticker = pack.stickers.firstOrNull { it.id == pack.coverStickerId }
                 ?: pack.stickers.firstOrNull()

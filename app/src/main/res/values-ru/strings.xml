@@ -1105,6 +1105,9 @@
     <string name="sticker_no_results">Стикеры не найдены</string>
     <string name="sticker_added_to_favorites">Добавлено в избранное</string>
     <string name="sticker_removed_from_favorites">Удалено из избранного</string>
+    <string name="sticker_favorites_header">Избранное (%d)</string>
+    <string name="sticker_recent_header">Недавние</string>
+    <string name="sticker_no_favorites">В избранном пока пусто.\nНажмите и удерживайте стикер, чтобы добавить.</string>
     <string name="follow_system_dark_mode">Следовать системной тёмной теме</string>
     <string name="follow_system_dark_mode_desc">Автоматическое переключение между светлой и тёмной темой в зависимости от системных настроек</string>
     <string name="archive">Архивировать</string>

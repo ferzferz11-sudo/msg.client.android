@@ -473,7 +473,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 android.util.Log.e("StickerPack", "savePack exception: ${e.javaClass.simpleName}: ${e.message}", e)
-                Toast.makeText(this@StickerPackCreateActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@StickerPackCreateActivity, getString(R.string.error_colon, e.message ?: ""), Toast.LENGTH_SHORT).show()
                 btnSave.isEnabled = true
                 isSaving = false
             }

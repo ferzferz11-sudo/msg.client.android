@@ -1104,6 +1104,9 @@
     <string name="sticker_no_results">No stickers found</string>
     <string name="sticker_added_to_favorites">Added to favorites</string>
     <string name="sticker_removed_from_favorites">Removed from favorites</string>
+    <string name="sticker_favorites_header">Favorites (%d)</string>
+    <string name="sticker_recent_header">Recent</string>
+    <string name="sticker_no_favorites">No favorites yet.\nLong-press a sticker to add it.</string>
     <string name="follow_system_dark_mode">Follow system dark mode</string>
     <string name="follow_system_dark_mode_desc">Automatically switch between light and dark theme based on system setting</string>
     <string name="archive">Archive</string>
