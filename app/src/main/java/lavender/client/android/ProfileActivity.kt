@@ -402,6 +402,7 @@ class ProfileActivity : AppCompatActivity() {
         applyThemeToView(findViewById(android.R.id.content), currentTheme)
         val bioTitle = findViewById<TextView>(R.id.bioTitle)
         bioTitle?.setTextColor(primaryColor)
+        findViewById<TextView>(R.id.companyTitleLabel)?.setTextColor(primaryColor)
         val positionBubble = findViewById<com.google.android.material.card.MaterialCardView>(R.id.positionBubble)
         val primaryContainerBg = ThemeUtils.adjustAlpha(primaryColor, 0.15f)
         positionBubble?.setCardBackgroundColor(ColorStateList.valueOf(primaryContainerBg))
@@ -681,7 +682,7 @@ class ProfileActivity : AppCompatActivity() {
             is android.widget.CheckBox -> view.buttonTintList = ColorStateList.valueOf(primary)
             is android.widget.ImageView -> view.imageTintList = ColorStateList.valueOf(primary)
             is TextView -> {
-                if (view.id == R.id.participantsTitle || view.id == R.id.profileName || view.id == R.id.bioTitle || view.id == R.id.settingsTitle) view.setTextColor(primary)
+                if (view.id == R.id.participantsTitle || view.id == R.id.profileName || view.id == R.id.bioTitle || view.id == R.id.settingsTitle || view.id == R.id.companyTitleLabel) view.setTextColor(primary)
                 else view.setTextColor(textPrimary)
             }
             is com.google.android.material.card.MaterialCardView -> {

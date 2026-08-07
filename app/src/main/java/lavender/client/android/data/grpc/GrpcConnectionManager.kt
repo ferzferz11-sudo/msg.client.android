@@ -167,7 +167,7 @@ class GrpcConnectionManager(
                 builder.intercept(BearerTokenInterceptor(appCtx))
             }
 
-            channel?.shutdownNow()
+            channel?.shutdown()
             val newChannel = builder.build()
             Log.d(TAG, "Channel built: $serverAddress:$port")
             newChannel

@@ -300,6 +300,22 @@ class LavenderMessagingService : FirebaseMessagingService() {
             ).addRemoteInput(remoteInput).build()
         )
 
+        // Mark as Read action
+        val markReadIntent = Intent(this, NotificationMarkReadReceiver::class.java).apply {
+            putExtra(NotificationMarkReadReceiver.EXTRA_ROOM_ID, roomId)
+        }
+        val markReadPendingIntent = PendingIntent.getBroadcast(
+            this,
+            roomId.hashCode() + 20000,
+            markReadIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        notificationBuilder.addAction(
+            R.drawable.ic_message_read,
+            getString(R.string.mark_as_read),
+            markReadPendingIntent
+        )
+
         // Применяем стиль — MessagingStyle обязателен для inline reply на Android 12+
         val style = prefs.getString("notification_style", "standard")
         val useMessagingStyle = style == "messaging" || android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
@@ -434,6 +450,22 @@ class LavenderMessagingService : FirebaseMessagingService() {
             val extras = android.os.Bundle()
             extras.putString("room_id", roomId)
             notificationBuilder.addExtras(extras)
+
+            // Mark as Read action
+            val markReadIntent = Intent(context, NotificationMarkReadReceiver::class.java).apply {
+                putExtra(NotificationMarkReadReceiver.EXTRA_ROOM_ID, roomId)
+            }
+            val markReadPendingIntent = PendingIntent.getBroadcast(
+                context,
+                roomId.hashCode() + 20000,
+                markReadIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            notificationBuilder.addAction(
+                R.drawable.ic_message_read,
+                context.getString(R.string.mark_as_read),
+                markReadPendingIntent
+            )
 
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                 val user = androidx.core.app.Person.Builder().setName(title).build()

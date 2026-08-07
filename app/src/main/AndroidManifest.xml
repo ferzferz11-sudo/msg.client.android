@@ -191,6 +191,10 @@
         <receiver
             android:name=".data.fcm.NotificationReplyReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".data.fcm.NotificationMarkReadReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

@@ -409,10 +409,12 @@ object SessionManager {
             }
 
             if (serverAddress.isNotEmpty() && GrpcClient.connectionStatus.value == ConnectionStatus.DISCONNECTED) {
-                val parts = serverAddress.split(":")
-                val host = parts[0]
-                val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-                GrpcClient.connect(host, useTls = false, port = port, context = context)
+                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    val parts = serverAddress.split(":")
+                    val host = parts[0]
+                    val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+                    GrpcClient.connect(host, useTls = false, port = port, context = context)
+                }
 
                 ChatKeepAliveService.start(context)
 

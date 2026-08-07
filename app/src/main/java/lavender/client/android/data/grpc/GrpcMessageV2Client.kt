@@ -109,6 +109,11 @@ class GrpcMessageV2Client(
         return allUsers().firstOrNull { it.userId == senderId }?.username ?: ""
     }
 
+    private fun resolveAvatarUrl(senderId: String): String {
+        if (senderId.isEmpty()) return ""
+        return allUsers().firstOrNull { it.userId == senderId }?.avatarUrl ?: ""
+    }
+
     // ====== Parse reactions JSON bytes → List<Reaction> ======
 
     internal fun parseReactions(reactionsBytes: ByteArray): List<Reaction> {
@@ -139,6 +144,7 @@ class GrpcMessageV2Client(
         } ?: System.currentTimeMillis()
 
         val username = resolveUsername(proto.senderId)
+        val avatarUrl = resolveAvatarUrl(proto.senderId)
 
         var imageUrl = ""; var imageUrls = emptyList<String>()
         var voiceUrl = ""; var duration = 0
@@ -190,6 +196,7 @@ class GrpcMessageV2Client(
             voiceUrl = voiceUrl,
             duration = duration,
             userId = proto.senderId,
+            avatarUrl = avatarUrl,
             isE2EE = proto.isE2EE,
             e2eePayload = proto.e2eePayload,
             mentions = proto.mentions,

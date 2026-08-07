@@ -44,6 +44,7 @@ class MessageAdapter(
     private val onMessageLongClick: ((Message) -> Unit)? = null,
     private val chatId: String = "",
     private val onRetrySendMessage: ((Message) -> Unit)? = null,
+    private val onReplyQuoteClick: ((String) -> Unit)? = null,
 ) : ListAdapter<Message, MessageAdapter.MessageViewHolder>(MessageDiffCallback()) {
 
     private val selectedPositions = mutableSetOf<Int>()
@@ -457,9 +458,15 @@ class MessageAdapter(
         private fun bindReplyQuote(message: Message, isOutgoing: Boolean, theme: lavender.client.android.theme.Theme) {
             replyQuoteContainer.isVisible = message.repliedToUser.isNotEmpty()
             if (message.repliedToUser.isNotEmpty()) { replyQuoteUser.text = message.repliedToUser; replyQuoteText.text = message.repliedToText
+                replyQuoteContainer.isClickable = true
+                replyQuoteContainer.isFocusable = true
+                replyQuoteContainer.setOnClickListener {
+                    if (message.repliedToMessageId.isNotEmpty()) onReplyQuoteClick?.invoke(message.repliedToMessageId)
+                }
                 try { val onPrim = theme.onPrimaryColor.toColorInt(); val onSurf = theme.onSurfaceColor.toColorInt(); val txtPrim = theme.textPrimaryColor.toColorInt()
                     if (isOutgoing) { replyQuoteUser.setTextColor(onPrim); replyQuoteText.setTextColor(withAlpha(onPrim, 200)); replyQuoteContainer.setBackgroundColor(withAlpha(onPrim, 30)); replyQuoteBar.setBackgroundColor(onPrim) }
-                    else { replyQuoteUser.setTextColor(onSurf); replyQuoteText.setTextColor(withAlpha(txtPrim, 200)); replyQuoteContainer.setBackgroundColor(withAlpha(onSurf, 30)); replyQuoteBar.setBackgroundColor(onSurf) } } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) } }
+                    else { replyQuoteUser.setTextColor(onSurf); replyQuoteText.setTextColor(withAlpha(txtPrim, 200)); replyQuoteContainer.setBackgroundColor(withAlpha(onSurf, 30)); replyQuoteBar.setBackgroundColor(onSurf) } } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
+            } else { replyQuoteContainer.setOnClickListener(null); replyQuoteContainer.isClickable = false }
         }
 
         private fun bindForwardAttribution(message: Message, ctx: android.content.Context) {

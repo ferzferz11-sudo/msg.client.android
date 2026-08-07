@@ -293,7 +293,8 @@ class NewChatActivity : AppCompatActivity() {
             onSelectionChanged = { if (it > 0) selectionDelegate.showSelectionToolbar(it) else selectionDelegate.hideSelectionToolbar() },
             onMessageLongClick = { selectionDelegate.enterSelectionMode(it) },
             chatId = data.roomId,
-            onRetrySendMessage = { retryMessage(it) }
+            onRetrySendMessage = { retryMessage(it) },
+            onReplyQuoteClick = { repliedToMessageId -> scrollToMessage(repliedToMessageId) }
         )
         messagesRecyclerView.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         messagesRecyclerView.adapter = adapter
@@ -624,6 +625,20 @@ class NewChatActivity : AppCompatActivity() {
             pinnedMsgAdapter.submitList(pinnedMessages)
             rv?.adapter = pinnedMsgAdapter
             sheet.show()
+        }
+    }
+
+    private fun scrollToMessage(messageId: String) {
+        val pos = adapter.currentList.indexOfFirst { it.id == messageId }
+        if (pos != -1) {
+            messagesRecyclerView.scrollToPosition(pos)
+            messagesRecyclerView.post {
+                val holder = messagesRecyclerView.findViewHolderForAdapterPosition(pos)
+                holder?.itemView?.let { view ->
+                    view.setBackgroundColor(android.graphics.Color.parseColor("#33FFFFFF"))
+                    view.postDelayed({ view.setBackgroundColor(android.graphics.Color.TRANSPARENT) }, 1500)
+                }
+            }
         }
     }
 
