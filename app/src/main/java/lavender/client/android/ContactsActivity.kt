@@ -259,14 +259,28 @@ class ContactsActivity : AppCompatActivity() {
         sheet.setAdapter(userAdapter)
         viewModel.loadAllUsers()
 
-        val contacts = viewModel.uiState.value.contacts
+        viewModel.loadContacts(username)
         val usersJob = lifecycleScope.launch {
-            viewModel.observeAllUsers { allUsers ->
-                val filtered = allUsers
-                    .filter { it.username != username && !contacts.contains(it.username) }
-                    .map { it.username }
-                sheet.setLoading(false)
-                userAdapter.setUsers(filtered)
+            launch {
+                viewModel.observeAllUsers { allUsers ->
+                    val contacts = viewModel.uiState.value.contacts
+                    val filtered = allUsers
+                        .filter { it.username != username && !contacts.contains(it.username) }
+                        .map { it.username }
+                    sheet.setLoading(false)
+                    userAdapter.setUsers(filtered)
+                }
+            }
+            launch {
+                viewModel.uiState.collect { state ->
+                    val allUsers = state.allUsers
+                    if (allUsers.isNotEmpty()) {
+                        val filtered = allUsers
+                            .filter { it.username != username && !state.contacts.contains(it.username) }
+                            .map { it.username }
+                        userAdapter.setUsers(filtered)
+                    }
+                }
             }
         }
 

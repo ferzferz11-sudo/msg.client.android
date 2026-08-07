@@ -18,6 +18,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.ConferenceLobbyActivity
 import lavender.client.android.ProfileActivity
+import lavender.client.android.ui.chatlist.ChatListActivity
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.theme.ThemeStore
@@ -92,7 +93,13 @@ class ChatToolbarDelegate(
             android.util.Log.e("ChatToolbar", "setSupportActionBar failed: ${e.message}")
         }
         setNavigationIcon(R.drawable.ic_back_arrow)
-        toolbar.setNavigationOnClickListener { activity.onBackPressedDispatcher.onBackPressed() }
+        toolbar.setNavigationOnClickListener {
+            val intent = Intent(activity, ChatListActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            activity.startActivity(intent)
+            activity.finish()
+        }
 
         try {
             if (isSecret) {

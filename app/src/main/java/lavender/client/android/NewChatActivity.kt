@@ -38,6 +38,7 @@ import lavender.client.android.data.models.Message
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.ui.adapter.MessageAdapter
 import lavender.client.android.ui.adapter.MessageSwipeController
+import lavender.client.android.ui.chat.ChatMetadataState
 import lavender.client.android.ui.chat.ChatViewModel
 import lavender.client.android.ui.chat.ChatViewModelFactory
 import lavender.client.android.ui.chat.NewChatViewModel
@@ -391,6 +392,34 @@ class NewChatActivity : AppCompatActivity() {
                     kotlinx.coroutines.delay(60.seconds)
                     if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
                         grpcClient.loadUsers()
+                    }
+                }
+            }
+        }
+
+        // Retry fetchChatMetadata when connection becomes READY (handles notification-open case)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                grpcClient.connectionStatus.collect { status ->
+                    if (status == ConnectionStatus.READY) {
+                        val m = newChatViewModel.metadata.value
+                        if (m.avatarUrl.isEmpty() && m.participantsJson == "[]" && data.roomId.startsWith("favorites_").not()) {
+                            chatViewModel.fetchChatMetadata(data.username, data.roomId, data.isDirect, data.participantsJson, data.chatName) { meta ->
+                                lifecycleScope.launch {
+                                    if (isFinishing || isDestroyed) return@launch
+                                    newChatViewModel.updateMetadata(ChatMetadataState(
+                                        chatName = meta.chatName, isDirect = meta.isDirect, chatType = meta.chatType,
+                                        participantsJson = meta.participantsJson, creator = meta.creator,
+                                        avatarUrl = meta.avatarUrl, fullAvatarUrl = meta.fullAvatarUrl
+                                    ))
+                                    val updated = newChatViewModel.metadata.value
+                                    toolbarDelegate.configure(data.roomId, data.username, updated.chatName, updated.isDirect, updated.chatType, updated.participantsJson, updated.creator, updated.avatarUrl, updated.fullAvatarUrl, data.isSecret)
+                                    toolbarDelegate.setup()
+                                    toolbarDelegate.refreshSubtitle()
+                                    adapter.isGroupChat = !updated.isDirect; adapter.adminUsername = updated.creator
+                                }
+                            }
+                        }
                     }
                 }
             }

@@ -1,5 +1,36 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.14] - 2026-08-07
+
+### Исправлено
+
+**ANR при «Поделиться в Lavender» (Critical):**
+- `ShareReceiverActivity.onCreate()` — `SessionManager.initFromPrefs()` вызывался синхронно на Main thread. `EncryptedSharedPreferences.create()` инициализирует Android Keystore, что на некоторых устройствах блокирует UI на несколько секунд. Перенесён в `Dispatchers.IO`
+
+**Аватар в тулбаре чата — не загружался при открытии из пуш-уведомления (High):**
+- `NewChatActivity.setupObservers()` — добавлен observer `connectionStatus`. При открытии из уведомления `fetchChatMetadata()` вызывался до установки gRPC-соединения → `getChats` возвращал `NOT_CONNECTED` → аватар оставался дефолтным. Теперь при переходе в READY автоматически повторяется загрузка метаданных чата
+
+**Кнопка «Назад» в тулбаре чата — неправильное поведение при открытии из уведомления:**
+- `ChatToolbarDelegate.setup()` — кнопка "назад" использовала `onBackPressedDispatcher.onBackPressed()`, что при открытии из пуш-уведомления возвращало на предыдущий Activity в стеке вместо списка чатов. Заменён на явный переход к `ChatListActivity` с `FLAG_ACTIVITY_CLEAR_TOP`
+
+**Индикатор обновления — показывался после установки нового APK:**
+- `UpdateCoordinator.updateIndicatorVisibility()` — флаги `update_available` / `update_downloaded` не сбрасывались после установки обновления. Добавлена проверка: если `BuildConfig.VERSION_NAME` совпадает с `latest_version` — флаги сбрасываются, индикатор скрывается сразу
+
+**Контакты — добавление уже существующих контактов (Medium):**
+- `ContactsActivity.showAddContactDialog()` — фильтр «уже в контактах» захватывал снимок `contacts` до завершения async `loadContacts()` → список мог быть пустым, и существующие контакты показывались в диалоге добавления. Исправлено: `loadContacts()` вызывается перед открытием диалога, фильтр берёт актуальные данные из `uiState` при каждом обновлении
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `ShareReceiverActivity.kt` | `initFromPrefs()` → `Dispatchers.IO` через `withContext` |
+| `NewChatActivity.kt` | Retry `fetchChatMetadata` при `connectionStatus == READY`; импорт `ChatMetadataState` |
+| `ChatToolbarDelegate.kt` | Явный переход к `ChatListActivity` вместо `onBackPressedDispatcher` |
+| `UpdateCoordinator.kt` | Проверка текущей версии → сброс флагов обновления |
+| `ContactsActivity.kt` | Фильтр контактов: reload перед диалогом + observe uiState |
+
+---
+
 ## [1.3.4.13] - 2026-08-07
 
 ### Добавлено

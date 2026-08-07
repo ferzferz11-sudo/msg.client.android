@@ -116,6 +116,22 @@ class UpdateCoordinator(
         var isDownloaded = prefs.getBoolean("update_downloaded", false)
         val isDownloading = prefs.getBoolean("update_downloading", false)
 
+        // If current version matches the latest/downloaded version, update was already installed — clear flags
+        val currentVersion = BuildConfig.VERSION_NAME
+        val latestVersion = prefs.getString("latest_version", null)
+        val downloadedVersion = prefs.getString("downloaded_version", null)
+        if ((isAvailable || isDownloaded) && (currentVersion == latestVersion || currentVersion == downloadedVersion)) {
+            prefs.edit {
+                putBoolean("update_available", false)
+                putBoolean("update_downloaded", false)
+                putBoolean("update_downloading", false)
+                remove("apk_path")
+                remove("downloaded_version")
+            }
+            llUpdateContainer?.isVisible = false
+            return
+        }
+
         // Validate APK file still exists — reset if deleted
         if (isDownloaded) {
             val apkPath = prefs.getString("apk_path", null)

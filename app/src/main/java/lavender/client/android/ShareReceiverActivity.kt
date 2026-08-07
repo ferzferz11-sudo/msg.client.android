@@ -27,7 +27,9 @@ import lavender.client.android.databinding.ActivityShareReceiverBinding
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.ui.share.ShareReceiverViewModel
 
 class ShareReceiverActivity : AppCompatActivity() {
@@ -46,9 +48,6 @@ class ShareReceiverActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         try {
-            SessionManager.initFromPrefs(this)
-            username = SessionManager.session.value.username
-
             val currentTheme = try { ThemeStore.currentTheme() } catch (_: Exception) { lavender.client.android.theme.BuiltInThemes.dark }
             try { ThemeUtils.applyThemeToActivity(this, currentTheme) } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
 
@@ -62,6 +61,10 @@ class ShareReceiverActivity : AppCompatActivity() {
             observeViewModel()
 
             lifecycleScope.launch(errorHandler) {
+                withContext(Dispatchers.IO) {
+                    SessionManager.initFromPrefs(this@ShareReceiverActivity)
+                }
+                username = SessionManager.session.value.username
                 viewModel.ensureConnection()
                 viewModel.loadChats()
             }
@@ -75,6 +78,10 @@ class ShareReceiverActivity : AppCompatActivity() {
                 setupUI()
                 observeViewModel()
                 lifecycleScope.launch(errorHandler) {
+                    withContext(Dispatchers.IO) {
+                        SessionManager.initFromPrefs(this@ShareReceiverActivity)
+                    }
+                    username = SessionManager.session.value.username
                     viewModel.ensureConnection()
                     viewModel.loadChats()
                 }
