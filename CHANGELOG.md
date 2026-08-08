@@ -1,5 +1,23 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.17] - 2026-08-08
+
+### Исправлено
+
+**gRPC keepalive ошибки и отсутствие reconnect (High):**
+- `GrpcConnectionManager.buildChannel()` — `channel?.shutdown()` вызывался ДО создания нового канала, что отменяло in-flight вызовы (CANCELLED). Исправлено: shutdown вызывается ПОСЛЕ build, channel обновляется до shutdown старого
+- `GrpcChatAuxClient.getAllUsers` — UNAVAILABLE ошибки не триггерли reconnect. Добавлен reconnect callback, вызывается при UNAVAILABLE
+- `GrpcMessageV2Client.loadHistoryV2` — CANCELLED ошибки не триггерли reconnect. Добавлен reconnect callback, вызывается при UNAVAILABLE и CANCELLED
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `GrpcConnectionManager.kt` | `buildChannel` shutdown order fix (shutdown after build) |
+| `GrpcChatAuxClient.kt` | `reconnect` callback, UNAVAILABLE → reconnect |
+| `GrpcMessageV2Client.kt` | `reconnect` callback, UNAVAILABLE/CANCELLED → reconnect |
+| `RealGrpcClient.kt` | `reconnect` lambdas для chatAuxClient и messageV2Client |
+
 ## [1.3.4.16] - 2026-08-08
 
 ### Исправлено

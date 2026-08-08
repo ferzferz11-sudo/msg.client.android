@@ -36,7 +36,8 @@ class GrpcMessageV2Client(
     private val deletedMessageHashes: MutableSet<String>,
     private val scope: CoroutineScope,
     private val appContext: () -> Context?,
-    @Suppress("UNUSED_PARAMETER") private val onReadReceipt: ((String, String) -> Unit)? = null
+    @Suppress("UNUSED_PARAMETER") private val onReadReceipt: ((String, String) -> Unit)? = null,
+    private val reconnect: (() -> Unit)? = null
 ) {
     companion object {
         private const val TAG = "GrpcMsgV2"
@@ -349,6 +350,9 @@ class GrpcMessageV2Client(
             override fun onClose(status: Status, trailers: Metadata) {
                 if (!status.isOk) {
                     ErrorHandler.handle("$TAG.loadHistoryV2", StatusRuntimeException(status))
+                    if (status.code == Status.Code.UNAVAILABLE || status.code == Status.Code.CANCELLED) {
+                        reconnect?.invoke()
+                    }
                     onCompletion("", false)
                 }
             }

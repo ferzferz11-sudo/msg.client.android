@@ -188,7 +188,8 @@ object RealGrpcClient {
         getChannel = { getChannel() },
         getUserId = { currentUserId },
         allUsers = _allUsers,
-        serverTime = _serverTime
+        serverTime = _serverTime,
+        reconnect = { connectionManager.reconnect() }
     )
 
     // ====== Module: Profile Client ======
@@ -231,7 +232,8 @@ object RealGrpcClient {
         appContext = { appContext },
         onReadReceipt = { roomId, reader ->
             scope.launch { _readReceiptEvent.emit(Pair(roomId, reader)) }
-        }
+        },
+        reconnect = { connectionManager.reconnect() }
     )
 
     // ====== Module: Server Discovery Client ======

@@ -8,7 +8,8 @@ class GrpcChatAuxClient(
     private val getChannel: () -> io.grpc.ManagedChannel?,
     private val getUserId: () -> String?,
     private val allUsers: kotlinx.coroutines.flow.MutableStateFlow<List<UserInfoProto>>,
-    private val serverTime: kotlinx.coroutines.flow.MutableStateFlow<com.google.protobuf.Timestamp?>
+    private val serverTime: kotlinx.coroutines.flow.MutableStateFlow<com.google.protobuf.Timestamp?>,
+    private val reconnect: (() -> Unit)? = null
 ) {
     companion object {
         private const val TAG = "GrpcChatAuxClient"
@@ -33,7 +34,12 @@ class GrpcChatAuxClient(
                 callback(message.users)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) ErrorHandler.handle("GrpcChatAuxClient.getAllUsers", "Status: ${status.code} — ${status.description}")
+                if (!status.isOk) {
+                    ErrorHandler.handle("GrpcChatAuxClient.getAllUsers", "Status: ${status.code} — ${status.description}")
+                    if (status.code == io.grpc.Status.Code.UNAVAILABLE) {
+                        reconnect?.invoke()
+                    }
+                }
             }
         }, io.grpc.Metadata())
         call.sendMessage(GetAllUsersRequestProto())
