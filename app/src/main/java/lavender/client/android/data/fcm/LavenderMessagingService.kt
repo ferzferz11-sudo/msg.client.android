@@ -17,6 +17,7 @@ import lavender.client.android.R
 import kotlinx.coroutines.*
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.calls.CallManager
+import lavender.client.android.data.session.SessionManager
 
 class LavenderMessagingService : FirebaseMessagingService() {
 
@@ -58,9 +59,10 @@ class LavenderMessagingService : FirebaseMessagingService() {
         val title = remoteMessage.data["title"] ?: remoteMessage.notification?.title ?: getString(R.string.new_message)
         val body = remoteMessage.data["body"] ?: remoteMessage.notification?.body ?: ""
         val roomId = remoteMessage.data["room_id"] ?: "general"
+        val messageId = remoteMessage.data["message_id"] ?: ""
 
         // Показываем уведомление
-        showNotification(title, body, roomId)
+        showNotification(title, body, roomId, messageId)
     }
 
     @Suppress("OVERRIDE_DEPRECATION")
@@ -173,7 +175,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
         notificationManager.notify(callId.hashCode(), notificationBuilder.build())
     }
 
-    private fun showNotification(title: String, body: String, roomId: String) {
+    private fun showNotification(title: String, body: String, roomId: String, messageId: String = "") {
         val channelId = "lavender_messages_v2"
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
@@ -282,6 +284,9 @@ class LavenderMessagingService : FirebaseMessagingService() {
         val replyIntent = Intent(this, NotificationReplyReceiver::class.java).apply {
             putExtra(NotificationReplyReceiver.EXTRA_ROOM_ID, roomId)
             putExtra("room_id", roomId)
+            putExtra(NotificationReplyReceiver.EXTRA_MESSAGE_ID, messageId)
+            putExtra(NotificationReplyReceiver.EXTRA_SENDER, title)
+            putExtra(NotificationReplyReceiver.EXTRA_ORIGINAL_TEXT, body)
         }
         val replyPendingIntent = PendingIntent.getBroadcast(
             this,
@@ -320,9 +325,12 @@ class LavenderMessagingService : FirebaseMessagingService() {
         val style = prefs.getString("notification_style", "standard")
         val useMessagingStyle = style == "messaging" || android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
         if (useMessagingStyle) {
-            val user = androidx.core.app.Person.Builder().setName(title).build()
-            val messagingStyle = NotificationCompat.MessagingStyle(user)
-                .addMessage(body, System.currentTimeMillis(), user)
+            val currentUsername = SessionManager.session.value.username
+            val selfName: String = currentUsername.ifEmpty { getString(R.string.you) }
+            val self = androidx.core.app.Person.Builder().setName(selfName).build()
+            val sender = androidx.core.app.Person.Builder().setName(title).build()
+            val messagingStyle = NotificationCompat.MessagingStyle(self)
+                .addMessage(body, System.currentTimeMillis(), sender)
 
             if (roomId != "general") {
                 messagingStyle.setConversationTitle(title)
@@ -377,7 +385,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
             }
         }
 
-        fun showNotificationFromStream(context: Context, title: String, body: String, roomId: String) {
+        fun showNotificationFromStream(context: Context, title: String, body: String, roomId: String, messageId: String = "") {
             val channelId = "lavender_messages_v2"
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -451,6 +459,31 @@ class LavenderMessagingService : FirebaseMessagingService() {
             extras.putString("room_id", roomId)
             notificationBuilder.addExtras(extras)
 
+            // Reply action (inline reply from notification)
+            val replyIntent = Intent(context, NotificationReplyReceiver::class.java).apply {
+                putExtra(NotificationReplyReceiver.EXTRA_ROOM_ID, roomId)
+                putExtra("room_id", roomId)
+                putExtra(NotificationReplyReceiver.EXTRA_MESSAGE_ID, messageId)
+                putExtra(NotificationReplyReceiver.EXTRA_SENDER, title)
+                putExtra(NotificationReplyReceiver.EXTRA_ORIGINAL_TEXT, body)
+            }
+            val replyPendingIntent = PendingIntent.getBroadcast(
+                context,
+                roomId.hashCode() + 10000,
+                replyIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+            )
+            val remoteInput = RemoteInput.Builder(NotificationReplyReceiver.REPLY_KEY)
+                .setLabel(context.getString(R.string.reply))
+                .build()
+            notificationBuilder.addAction(
+                NotificationCompat.Action.Builder(
+                    R.drawable.send_24,
+                    context.getString(R.string.reply),
+                    replyPendingIntent
+                ).addRemoteInput(remoteInput).build()
+            )
+
             // Mark as Read action
             val markReadIntent = Intent(context, NotificationMarkReadReceiver::class.java).apply {
                 putExtra(NotificationMarkReadReceiver.EXTRA_ROOM_ID, roomId)
@@ -468,9 +501,12 @@ class LavenderMessagingService : FirebaseMessagingService() {
             )
 
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                val user = androidx.core.app.Person.Builder().setName(title).build()
-                val messagingStyle = NotificationCompat.MessagingStyle(user)
-                    .addMessage(body, System.currentTimeMillis(), user)
+                val currentUsername = SessionManager.session.value.username
+                val selfName: String = currentUsername.ifEmpty { context.getString(R.string.you) }
+                val self = androidx.core.app.Person.Builder().setName(selfName).build()
+                val sender = androidx.core.app.Person.Builder().setName(title).build()
+                val messagingStyle = NotificationCompat.MessagingStyle(self)
+                    .addMessage(body, System.currentTimeMillis(), sender)
                 if (roomId != "general") {
                     messagingStyle.setConversationTitle(title)
                     messagingStyle.setGroupConversation(!roomId.startsWith("direct_"))

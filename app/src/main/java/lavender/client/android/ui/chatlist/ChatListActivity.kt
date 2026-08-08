@@ -1,5 +1,6 @@
 package lavender.client.android.ui.chatlist
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
@@ -102,6 +103,9 @@ class ChatListActivity : AppCompatActivity() {
 
     // Sheet navigation: re-open parent sheet after returning from activity
     internal var isNavigatingDeeper = false
+
+    // Mark-as-read broadcast receiver (from notification action)
+    private var markReadReceiver: BroadcastReceiver? = null
     internal val settingsActivityLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) {
@@ -154,6 +158,30 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         setupUI()
+        registerMarkReadReceiver()
+    }
+
+    private fun registerMarkReadReceiver() {
+        markReadReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val roomId = intent.getStringExtra("room_id") ?: return
+                Log.d(TAG, "MarkRead broadcast received: room=$roomId")
+                viewModel.markAsRead(roomId)
+            }
+        }
+        val filter = android.content.IntentFilter(lavender.client.android.data.fcm.NotificationMarkReadReceiver.ACTION_CHAT_MARKED_READ)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(markReadReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(markReadReceiver, filter)
+        }
+    }
+
+    override fun onDestroy() {
+        markReadReceiver?.let {
+            try { unregisterReceiver(it) } catch (_: Exception) {}
+        }
+        super.onDestroy()
     }
 
     private fun setupUI() {

@@ -1,5 +1,44 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.16] - 2026-08-08
+
+### Исправлено
+
+**Контакты не добавлялись (Critical):**
+- Серверный баг в `server_contacts.go`: `contactID := req.UserId` — присваивал ID текущего пользователя вместо контакта. Клиент всегда отправлял `userId` = свой UUID, поэтому сервер вызывал `AddContactByUserID(userID, userID)` — пользователь добавлял сам себя. Исправлено: `contactID := req.ContactUsername`
+
+**Диалог добавления контактов — улучшения (Medium):**
+- `ContactsActivity.showAddContactDialog()` — убран дублирующий observer (`observeAllUsers` + `uiState.collect` → только `uiState.collect`), добавлена проверка `success` в callback `addContact`, Toast об ошибках добавления, блокировка кнопки во время операции
+- `ContactsViewModel` — удалён неиспользуемый `observeAllUsers()`
+- Новая строка `contacts_add_failed` (EN+RU)
+
+**Ответ из пуш-уведомления показывался как от собеседника (High):**
+- `LavenderMessagingService` — `MessagingStyle` использовал одного `Person` для отправителя и для "себя". При ответе из пуша сообщение отображалось как будто его отправил собеседник. Исправлено: отдельные `Person` — `self` (текущий пользователь) и `sender` (собеседник). Применено в `showNotification` и `showNotificationFromStream`
+
+**«Прочитано» из пуша не обновляло UI (High):**
+- `NotificationMarkReadReceiver` — после подтверждения сервера отправляется broadcast `ACTION_CHAT_MARKED_READ`. `ChatListActivity`接收广播 → `viewModel.markAsRead(roomId)` сбрасывает счётчик непрочитанных. `NewChatActivity`接收广播 → `forceLoadHistory()` обновляет флаги `isRead`
+
+**Ответ из пуша без цитаты на исходное сообщение (High):**
+- `NotificationReplyReceiver` — `Message` создавался без полей `repliedToMessageId`/`repliedToUser`/`repliedToText`. Исправлено: данные исходного сообщения (`messageId`, `sender`, `originalText`) передаются через intent extras уведомления
+- `showNotification` — читает `message_id` из FCM data payload и передаёт в reply intent
+- `showNotificationFromStream` — принимает параметр `messageId`, передаёт в reply intent. Добавлен inline reply action (раньше была только кнопка «Прочитано»)
+- Сервер: FCM push payload теперь включает `message_id` (выполнено серверным агентом)
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `ContactsActivity.kt` | Единый observer, success check, error Toast, button lock |
+| `ContactsViewModel.kt` | Удалён `observeAllUsers()` |
+| `LavenderMessagingService.kt` | `MessagingStyle` self/sender Persons, `messageId` param, reply action в stream |
+| `NotificationMarkReadReceiver.kt` | Broadcast `ACTION_CHAT_MARKED_READ` после markRead |
+| `NotificationReplyReceiver.kt` | Reply extras: `EXTRA_MESSAGE_ID`, `EXTRA_SENDER`, `EXTRA_ORIGINAL_TEXT` |
+| `RealGrpcClient.kt` | `msg.id` передаётся в `showNotificationFromStream` |
+| `ChatListActivity.kt` | BroadcastReceiver для markRead → `viewModel.markAsRead()` |
+| `NewChatActivity.kt` | BroadcastReceiver для markRead → `forceLoadHistory()` |
+| `values/strings.xml` | `contacts_add_failed` |
+| `values-ru/strings.xml` | `contacts_add_failed` |
+
 ## [1.3.4.15] - 2026-08-07
 
 ### Исправлено

@@ -279,6 +279,7 @@
     <string name="add_contact">Add Contact</string>
     <string name="create_chat_after">Create chat immediately</string>
     <string name="contacts_added">Added %d contacts</string>
+    <string name="contacts_add_failed">Failed to add %d contacts</string>
     <string name="all_contacts_already_in_group">All your contacts are already in this group</string>
     <string name="already_in_contacts">User is already in contacts</string>
     <string name="no_contacts">No contacts yet. Add some to start chatting!</string>

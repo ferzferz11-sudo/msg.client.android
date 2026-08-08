@@ -628,7 +628,7 @@ object RealGrpcClient {
                                 appContext?.let { ctx ->
                                     val title = msg.user.ifEmpty { "New message" }
                                     val body = msg.text.take(200)
-                                    lavender.client.android.data.fcm.LavenderMessagingService.showNotificationFromStream(ctx, title, body, currentRoomId)
+                                    lavender.client.android.data.fcm.LavenderMessagingService.showNotificationFromStream(ctx, title, body, currentRoomId, msg.id)
                                 }
                             }
                         }

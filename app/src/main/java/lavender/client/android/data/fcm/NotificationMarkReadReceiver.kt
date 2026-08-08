@@ -46,6 +46,11 @@ class NotificationMarkReadReceiver : BroadcastReceiver() {
                 GrpcClient.markRead(roomId, username) {
                     Log.d("FCM", "Mark as read completed for room: $roomId")
                     dismissNotification(context, roomId)
+                    val broadcast = Intent(ACTION_CHAT_MARKED_READ).apply {
+                        putExtra(EXTRA_ROOM_ID, roomId)
+                        setPackage(context.packageName)
+                    }
+                    context.sendBroadcast(broadcast)
                 }
             } catch (e: Exception) {
                 Log.e("FCM", "MarkRead error: ${e.message}", e)
@@ -62,5 +67,6 @@ class NotificationMarkReadReceiver : BroadcastReceiver() {
 
     companion object {
         const val EXTRA_ROOM_ID = "room_id"
+        const val ACTION_CHAT_MARKED_READ = "lavender.client.android.ACTION_CHAT_MARKED_READ"
     }
 }

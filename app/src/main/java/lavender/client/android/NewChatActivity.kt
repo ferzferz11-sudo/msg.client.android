@@ -162,6 +162,7 @@ class NewChatActivity : AppCompatActivity() {
         }
         chatViewModel.markRead(data.username)
         chatViewModel.ensureUserIdSet(this) { loadDraft() }
+        registerMarkReadReceiver()
 
         lifecycleScope.launch {
             SessionManager.logoutEvent.collect { finish() }
@@ -671,7 +672,29 @@ class NewChatActivity : AppCompatActivity() {
         }
     }
 
+    private var markReadReceiver: android.content.BroadcastReceiver? = null
+
+    private fun registerMarkReadReceiver() {
+        markReadReceiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val roomId = intent.getStringExtra("room_id") ?: return
+                if (roomId == data.roomId) {
+                    chatViewModel.forceLoadHistory()
+                }
+            }
+        }
+        val filter = android.content.IntentFilter(lavender.client.android.data.fcm.NotificationMarkReadReceiver.ACTION_CHAT_MARKED_READ)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(markReadReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(markReadReceiver, filter)
+        }
+    }
+
     override fun onDestroy() {
+        markReadReceiver?.let {
+            try { unregisterReceiver(it) } catch (_: Exception) {}
+        }
         e2eeDelegate.cancelPendingRetries()
         super.onDestroy()
     }

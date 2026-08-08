@@ -25,7 +25,11 @@ class NotificationReplyReceiver : BroadcastReceiver() {
 
         if (replyText.isBlank()) return
 
-        Log.d("FCM", "Reply from notification: room=$roomId, text=$replyText")
+        val repliedToMessageId = intent.getStringExtra(EXTRA_MESSAGE_ID) ?: ""
+        val repliedToUser = intent.getStringExtra(EXTRA_SENDER) ?: ""
+        val repliedToText = intent.getStringExtra(EXTRA_ORIGINAL_TEXT) ?: ""
+
+        Log.d("FCM", "Reply from notification: room=$roomId, text=$replyText, replyTo=$repliedToMessageId")
 
         val pendingResult = goAsync()
         val session = SessionManager.session.value
@@ -53,7 +57,10 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                     user = username,
                     userId = myId,
                     text = replyText,
-                    timestamp = System.currentTimeMillis()
+                    timestamp = System.currentTimeMillis(),
+                    repliedToMessageId = repliedToMessageId,
+                    repliedToUser = repliedToUser,
+                    repliedToText = repliedToText
                 )
 
                 GrpcClient.sendMessageV2(msg) { result ->
@@ -80,6 +87,9 @@ class NotificationReplyReceiver : BroadcastReceiver() {
     companion object {
         const val REPLY_KEY = "reply_text"
         const val EXTRA_ROOM_ID = "room_id"
+        const val EXTRA_MESSAGE_ID = "message_id"
+        const val EXTRA_SENDER = "sender"
+        const val EXTRA_ORIGINAL_TEXT = "original_text"
 
         fun getResultsFromIntent(intent: Intent): android.os.Bundle? {
             return RemoteInput.getResultsFromIntent(intent)

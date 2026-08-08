@@ -258,28 +258,17 @@ class ContactsActivity : AppCompatActivity() {
 
         sheet.setAdapter(userAdapter)
         viewModel.loadAllUsers()
-
         viewModel.loadContacts(username)
+
         val usersJob = lifecycleScope.launch {
-            launch {
-                viewModel.observeAllUsers { allUsers ->
-                    val contacts = viewModel.uiState.value.contacts
+            viewModel.uiState.collect { state ->
+                val allUsers = state.allUsers
+                if (allUsers.isNotEmpty()) {
                     val filtered = allUsers
-                        .filter { it.username != username && !contacts.contains(it.username) }
+                        .filter { it.username != username && !state.contacts.contains(it.username) }
                         .map { it.username }
                     sheet.setLoading(false)
                     userAdapter.setUsers(filtered)
-                }
-            }
-            launch {
-                viewModel.uiState.collect { state ->
-                    val allUsers = state.allUsers
-                    if (allUsers.isNotEmpty()) {
-                        val filtered = allUsers
-                            .filter { it.username != username && !state.contacts.contains(it.username) }
-                            .map { it.username }
-                        userAdapter.setUsers(filtered)
-                    }
                 }
             }
         }
@@ -289,26 +278,34 @@ class ContactsActivity : AppCompatActivity() {
 
         sheet.onActionClick {
             val selected = userAdapter.getSelectedUsers()
-            if (selected.isNotEmpty()) {
-                val createChat = sheet.isCreateChatChecked()
-                var completed = 0
-                val total = selected.size
-                selected.forEach { contact ->
-                    viewModel.addContact(username, contact) { success ->
-                        completed++
-                        if (completed == total) {
-                            lifecycleScope.launch {
-                                Toast.makeText(this@ContactsActivity, getString(R.string.contacts_added, selected.size), Toast.LENGTH_SHORT).show()
-                                sheet.dismiss()
-                                if (createChat) {
-                                    if (selected.size == 1) {
-                                        viewModel.createDirectChat(username, selected.first())
-                                    } else {
-                                        viewModel.createGroupChat(getString(R.string.default_group_name), selected + username, username)
-                                    }
+            if (selected.isEmpty()) return@onActionClick
+
+            val createChat = sheet.isCreateChatChecked()
+            sheet.setActionButtonEnabled(false)
+            var completed = 0
+            var failed = 0
+            val total = selected.size
+            selected.forEach { contact ->
+                viewModel.addContact(username, contact) { success ->
+                    if (!success) failed++
+                    completed++
+                    if (completed == total) {
+                        lifecycleScope.launch {
+                            if (failed > 0) {
+                                Toast.makeText(this@ContactsActivity, getString(R.string.contacts_add_failed, failed), Toast.LENGTH_SHORT).show()
+                            }
+                            if (failed < total) {
+                                Toast.makeText(this@ContactsActivity, getString(R.string.contacts_added, total - failed), Toast.LENGTH_SHORT).show()
+                            }
+                            sheet.dismiss()
+                            if (createChat && failed == 0) {
+                                if (selected.size == 1) {
+                                    viewModel.createDirectChat(username, selected.first())
                                 } else {
-                                    viewModel.loadContacts(username)
+                                    viewModel.createGroupChat(getString(R.string.default_group_name), selected + username, username)
                                 }
+                            } else {
+                                viewModel.loadContacts(username)
                             }
                         }
                     }

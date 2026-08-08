@@ -77,14 +77,6 @@ class ContactsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun observeAllUsers(onCollect: (List<UserInfoProto>) -> Unit) {
-        viewModelScope.launch {
-            grpcClient.allUsers.collect { users ->
-                onCollect(users)
-            }
-        }
-    }
-
     fun createDirectChat(username: String, targetUser: String) {
         grpcClient.createDirectChat(username, targetUser) { chatId ->
             if (chatId != null) {
