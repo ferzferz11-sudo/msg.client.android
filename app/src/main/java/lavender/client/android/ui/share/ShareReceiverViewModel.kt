@@ -171,29 +171,31 @@ class ShareReceiverViewModel(application: Application) : AndroidViewModel(applic
                     sharedText
                 }
 
-                if (GrpcClient.connectionStatus.value != ConnectionStatus.READY) {
-                    GrpcClient.startChatV2(chat.id) { /* ignore */ }
-                    var retries = 0
-                    while (GrpcClient.connectionStatus.value != ConnectionStatus.READY && retries < 10) {
-                        kotlinx.coroutines.delay(500)
-                        retries++
-                    }
+                withContext(Dispatchers.IO) {
                     if (GrpcClient.connectionStatus.value != ConnectionStatus.READY) {
-                        _uiState.value = _uiState.value.copy(isSending = false, error = "Connection failed. Please try again.")
-                        return@launch
+                        GrpcClient.startChatV2(chat.id) { /* ignore */ }
+                        var retries = 0
+                        while (GrpcClient.connectionStatus.value != ConnectionStatus.READY && retries < 10) {
+                            kotlinx.coroutines.delay(500)
+                            retries++
+                        }
+                        if (GrpcClient.connectionStatus.value != ConnectionStatus.READY) {
+                            _uiState.value = _uiState.value.copy(isSending = false, error = "Connection failed. Please try again.")
+                            return@withContext
+                        }
                     }
+
+                    val message = Message(
+                        user = session.username,
+                        text = messageText,
+                        timestamp = System.currentTimeMillis(),
+                        roomId = chat.id,
+                        imageUrl = imageUrl,
+                        userId = GrpcClient.getUserId() ?: ""
+                    )
+
+                    GrpcClient.sendMessageV2(message)
                 }
-
-                val message = Message(
-                    user = session.username,
-                    text = messageText,
-                    timestamp = System.currentTimeMillis(),
-                    roomId = chat.id,
-                    imageUrl = imageUrl,
-                    userId = GrpcClient.getUserId() ?: ""
-                )
-
-                GrpcClient.sendMessageV2(message)
 
                 _uiState.value = _uiState.value.copy(isSending = false, successMessage = "Message sent")
             } catch (e: Exception) {

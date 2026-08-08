@@ -175,7 +175,10 @@ class ChatToolbarDelegate(
                         val p = arr.getString(i)
                         if (p != username) { other = p; break }
                     }
-                    if (other.isNotEmpty()) grpcClient.getAvatarCache()[other] else null
+                    if (other.isNotEmpty()) {
+                        grpcClient.getAvatarCache()[other]
+                            ?: grpcClient.allUsers.value.firstOrNull { it.username == other }?.avatarUrl?.takeIf { it.isNotEmpty() }
+                    } else null
                 } catch (_: Exception) { null }
             } else null
 
@@ -266,8 +269,8 @@ class ChatToolbarDelegate(
                         ContextCompat.getColor(activity, R.color.white)
                     }
                 }
-                val cache = grpcClient.getAvatarCache()
-                val url = cache[u]
+                val url = grpcClient.getAvatarCache()[u]
+                    ?: grpcClient.allUsers.value.firstOrNull { it.username == u }?.avatarUrl?.takeIf { it.isNotEmpty() }
                 if (!url.isNullOrEmpty()) {
                     com.bumptech.glide.Glide.with(activity).load(url)
                         .placeholder(R.drawable.ic_default_avatar).circleCrop().into(iv)

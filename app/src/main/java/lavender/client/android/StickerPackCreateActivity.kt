@@ -42,6 +42,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
     private lateinit var btnSubmit: MaterialButton
 
     private val currentStickers = mutableListOf<Sticker>()
+    private var originalStickerIds = mutableSetOf<String>()
     private var packId: String? = null
     private var isDraft = true
     private var coverStickerId: String? = null
@@ -224,6 +225,8 @@ class StickerPackCreateActivity : AppCompatActivity() {
             currentStickers.addAll(pack.stickers.map { s ->
                 Sticker(s.id, s.packId, s.lottieUrl, s.thumbnailUrl, s.emoji, s.width, s.height)
             })
+            originalStickerIds.clear()
+            originalStickerIds.addAll(pack.stickers.map { it.id })
             stickerGridAdapter.submitList(currentStickers.toList())
             updateSaveButtonState()
         }
@@ -408,6 +411,20 @@ class StickerPackCreateActivity : AppCompatActivity() {
                         btnSave.isEnabled = true
                         isSaving = false
                         return@launch
+                    }
+                    val newStickers = currentStickers.filter { it.id !in originalStickerIds }
+                    if (newStickers.isNotEmpty()) {
+                        android.util.Log.d("StickerPack", "Adding ${newStickers.size} new stickers to pack $packId")
+                        var addFailed = 0
+                        for (sticker in newStickers) {
+                            if (sticker.lottieUrl.isEmpty()) { addFailed++; continue }
+                            val addResult = GrpcClient.addSticker(
+                                packId!!, sticker.lottieUrl, sticker.thumbnailUrl,
+                                sticker.emoji, sticker.width, sticker.height
+                            )
+                            if (addResult?.success != true) addFailed++
+                        }
+                        if (addFailed > 0) android.util.Log.e("StickerPack", "$addFailed new stickers failed to add")
                     }
                     Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_pack_updated), Toast.LENGTH_SHORT).show()
                     isSaving = false

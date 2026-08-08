@@ -338,6 +338,11 @@ class ChatInputDelegate(
             onStickerSelected = { sticker -> sendStickerMessage(sticker) },
             onCreateStickerPack = {
                 activity.startActivity(Intent(activity, StickerPackCreateActivity::class.java))
+            },
+            onEditStickerPack = { packId ->
+                val intent = Intent(activity, StickerPackCreateActivity::class.java)
+                intent.putExtra("PACK_ID", packId)
+                activity.startActivity(intent)
             }
         )
         sheet.showPicker()

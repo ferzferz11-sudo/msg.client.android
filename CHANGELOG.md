@@ -1,5 +1,46 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.15] - 2026-08-07
+
+### Исправлено
+
+**Аватар в тулбаре — не показывался для не-контактов (High):**
+- `ChatToolbarDelegate.setupNormalToolbar()` и `setupGroupAvatars()` — использовали только `grpcClient.getAvatarCache()` (ConcurrentHashMap, заполняется при `getUserAvatar()`). Для пользователей не в контактах URL был null → дефолтный аватар. Добавлен fallback на `grpcClient.allUsers` StateFlow, который содержит `avatarUrl` для ВСЕХ пользователей из `GetAllUsers` RPC
+
+**Контакт не фильтровался после добавления + некорректное определение завершения (Medium):**
+- `ChatListFABs.showAddContactDialog()` — completion detection использовал `(added + (total - selected.indexOf(contact) - 1)) == total`, что dismiss'ило диалог после ПЕРВОГО успешного добавления. Заменён на `AtomicInteger` для корректного подсчёта завершённых callback'ов. Также `currentContacts.add(contact)` после каждого успешного добавления + `collectJob?.cancel()` при dismiss
+
+**Sticker pack — добавление стикеров в существующий пакет не персистилось на сервер (Medium):**
+- `StickerPackCreateActivity.savePack()` — update path только обновлял title и cover через `updateStickerPack()`. Новые стикеры (загруженные после создания пакета) не добавлялись на сервер. Добавлен `originalStickerIds` для трекинга серверных стикеров + `addSticker()` вызовы для новых стикеров в update path
+
+**Sticker pack — имя пакета нечитаемо мелкое (Low):**
+- `item_sticker_pack_tab.xml` — `tvPackName` textSize увеличен с 8sp до 10sp
+
+**ANR при отправке через «Поделиться в Lavender» (Critical):**
+- `ShareReceiverViewModel.sendMessageToChat()` — `startChatV2()` и `sendMessageV2()` вызывались на `Dispatchers.Main`. `startChatV2()` → `AuthManager.getAccessToken()` → `getEncryptedPrefs()` — блокирующий I/O вызов на Main thread. Обёрнуто в `withContext(Dispatchers.IO)`
+
+**Sticker picker — оба таба показывают одинаковый контент, нет UI для создания/редактирования пакетов (Medium):**
+- `sheet_media_picker.xml` — `btnCreatePack` вынесен из `stickerEmptyState` (теперь всегда видим в tab 2)
+- `MediaPickerSheet` — добавлен `onEditStickerPack` callback, кнопка "Создать пакет" показывается/скрывается при переключении табов
+- `StickerPackAdapter` — добавлен `onPackLongClick` для long-press → редактирование пакета
+- `ChatInputDelegate` — передаёт `onEditStickerPack` callback для открытия `StickerPackCreateActivity` с `PACK_ID`
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `ChatToolbarDelegate.kt` | Fallback на `allUsers` для аватаров (direct + group) |
+| `ChatListFABs.kt` | `AtomicInteger` completion, `currentContacts.add()`, `collectJob` cancel |
+| `StickerPackCreateActivity.kt` | `originalStickerIds` + `addSticker()` в update path |
+| `item_sticker_pack_tab.xml` | textSize 8sp→10sp |
+| `ShareReceiverViewModel.kt` | gRPC вызовы обёрнуты в `withContext(Dispatchers.IO)` |
+| `sheet_media_picker.xml` | `btnCreatePack` вынесен из empty state |
+| `MediaPickerSheet.kt` | `onEditStickerPack` callback, show/hide btnCreatePack по табам |
+| `StickerPackAdapter.kt` | `onPackLongClick` support |
+| `ChatInputDelegate.kt` | `onEditStickerPack` callback → `StickerPackCreateActivity` |
+
+---
+
 ## [1.3.4.14] - 2026-08-07
 
 ### Исправлено

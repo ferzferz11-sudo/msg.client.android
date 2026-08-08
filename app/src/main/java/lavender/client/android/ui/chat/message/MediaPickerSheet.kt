@@ -37,7 +37,8 @@ class MediaPickerSheet(
     private val activity: Activity,
     private val onEmojiSelected: (String) -> Unit,
     private val onStickerSelected: (Sticker) -> Unit,
-    private val onCreateStickerPack: (() -> Unit)? = null
+    private val onCreateStickerPack: (() -> Unit)? = null,
+    private val onEditStickerPack: ((String) -> Unit)? = null
 ) : StandardBottomSheet(activity, R.layout.sheet_media_picker) {
 
     init {
@@ -62,9 +63,13 @@ class MediaPickerSheet(
         }
     )
 
-    private val stickerPackAdapter = StickerPackAdapter { pack ->
-        loadPackStickers(pack)
-    }
+    private val stickerPackAdapter = StickerPackAdapter(
+        onPackClick = { pack -> loadPackStickers(pack) },
+        onPackLongClick = { pack ->
+            dismiss()
+            onEditStickerPack?.invoke(pack.id)
+        }
+    )
 
     private var allPacks = listOf<StickerPack>()
     private var currentPacks = listOf<StickerPack>()
@@ -179,6 +184,8 @@ class MediaPickerSheet(
             }
         })
 
+        val btnCreatePack = findViewById<android.view.View>(R.id.btnCreatePack)
+
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 when (tab?.position) {
@@ -189,11 +196,13 @@ class MediaPickerSheet(
                     1 -> {
                         emojiContainer?.isVisible = false
                         stickerContainer?.isVisible = true
+                        btnCreatePack?.isVisible = false
                         showFavoritesTab()
                     }
                     2 -> {
                         emojiContainer?.isVisible = false
                         stickerContainer?.isVisible = true
+                        btnCreatePack?.isVisible = true
                         if (!isSearchActive) loadStickerPacks()
                     }
                 }

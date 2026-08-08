@@ -102,11 +102,14 @@ internal fun showAddContactDialog(activity: ChatListActivity) {
 
     sheet.setAdapter(userAdapter)
 
+    var collectJob: kotlinx.coroutines.Job? = null
+
     GrpcClient.getContacts(username) { contacts ->
         currentContacts.clear()
         currentContacts.addAll(contacts)
 
-        activity.lifecycleScope.launch {
+        collectJob?.cancel()
+        collectJob = activity.lifecycleScope.launch {
             GrpcClient.allUsers.collect { allUsersList ->
                 val filtered = allUsersList
                     .map { it.username }
@@ -127,11 +130,16 @@ internal fun showAddContactDialog(activity: ChatListActivity) {
 
         var added = 0
         val total = selected.size
+        val completed = java.util.concurrent.atomic.AtomicInteger(0)
         for (contact in selected) {
             GrpcClient.addContact(username, contact) { success, _ ->
-                if (success) added++
-                if (added == total || (added + (total - selected.indexOf(contact) - 1)) == total) {
+                if (success) {
+                    added++
+                    currentContacts.add(contact)
+                }
+                if (completed.incrementAndGet() == total) {
                     activity.lifecycleScope.launch {
+                        collectJob?.cancel()
                         sheet.dismiss()
                         if (sheet.isCreateChatChecked() && selected.isNotEmpty()) {
                             val firstContact = selected.first()

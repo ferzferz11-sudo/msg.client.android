@@ -13,7 +13,8 @@ import lavender.client.android.R
 import lavender.client.android.data.models.StickerPack
 
 class StickerPackAdapter(
-    private val onPackClick: (StickerPack) -> Unit
+    private val onPackClick: (StickerPack) -> Unit,
+    private val onPackLongClick: ((StickerPack) -> Unit)? = null
 ) : ListAdapter<StickerPack, StickerPackAdapter.PackViewHolder>(PackDiffCallback()) {
 
     private var selectedPosition = 0
@@ -37,6 +38,10 @@ class StickerPackAdapter(
             notifyItemChanged(old)
             notifyItemChanged(selectedPosition)
             onPackClick(pack)
+        }
+        holder.itemView.setOnLongClickListener {
+            onPackLongClick?.invoke(pack)
+            true
         }
     }
 
