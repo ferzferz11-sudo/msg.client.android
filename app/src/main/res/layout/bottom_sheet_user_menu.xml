@@ -131,6 +131,18 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/actionClearCache"
+        style="@style/MenuActionItemStyle"
+        android:visibility="gone">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:src="@drawable/ic_delete" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/clear_cache" />
+    </LinearLayout>
+
+    <LinearLayout
         android:id="@+id/actionContacts"
         style="@style/MenuActionItemStyle">
         <ImageView

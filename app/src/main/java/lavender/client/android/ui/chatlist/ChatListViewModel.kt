@@ -73,6 +73,9 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     val companyNameCache = mutableMapOf<String, String>()
     val tabFilter: StateFlow<String> = _tabFilter.asStateFlow()
 
+    private val _scrollToTopEvent = MutableStateFlow(0L)
+    val scrollToTopEvent: StateFlow<Long> = _scrollToTopEvent.asStateFlow()
+
     private val locallyReadChats: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     // Multi-company: companyId → positionLevel cache
@@ -534,34 +537,53 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun archiveChat(chatId: String) {
+    fun archiveChat(chatId: String, onResult: ((Boolean) -> Unit)? = null) {
+        // Optimistic update — remove from visible list immediately
+        val previousChats = allChats
+        allChats = allChats.map {
+            if (it.id == chatId) it.copy(isArchived = true) else it
+        }
+        buildSections(allChats)
+
         viewModelScope.launch {
             try {
                 val success = GrpcClient.archiveChat(chatId)
-                if (success) {
-                    allChats = allChats.map {
-                        if (it.id == chatId) it.copy(isArchived = true) else it
-                    }
+                if (!success) {
+                    // Revert on failure
+                    allChats = previousChats
                     buildSections(allChats)
                 }
+                onResult?.invoke(success)
             } catch (e: Exception) {
+                // Revert on error
+                allChats = previousChats
+                buildSections(allChats)
                 ErrorHandler.handle(TAG, "Failed to archive chat $chatId", e)
+                onResult?.invoke(false)
             }
         }
     }
 
-    fun unarchiveChat(chatId: String) {
+    fun unarchiveChat(chatId: String, onResult: ((Boolean) -> Unit)? = null) {
+        val previousChats = allChats
+        allChats = allChats.map {
+            if (it.id == chatId) it.copy(isArchived = false) else it
+        }
+        buildSections(allChats)
+
         viewModelScope.launch {
             try {
                 val success = GrpcClient.unarchiveChat(chatId)
-                if (success) {
-                    allChats = allChats.map {
-                        if (it.id == chatId) it.copy(isArchived = false) else it
-                    }
+                if (!success) {
+                    allChats = previousChats
                     buildSections(allChats)
                 }
+                onResult?.invoke(success)
             } catch (e: Exception) {
+                allChats = previousChats
+                buildSections(allChats)
                 ErrorHandler.handle(TAG, "Failed to unarchive chat $chatId", e)
+                onResult?.invoke(false)
             }
         }
     }
@@ -632,6 +654,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
 
     fun setTabFilter(filter: String) {
         _tabFilter.value = filter
+        _scrollToTopEvent.value = System.currentTimeMillis()
         buildSections(allChats)
     }
 

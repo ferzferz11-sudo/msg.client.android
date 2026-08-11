@@ -4,8 +4,18 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp"
+    android:paddingHorizontal="24dp"
     android:gravity="center_horizontal">
+
+    <!-- Drag Handle -->
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="16dp"
+        android:background="?attr/colorOnSurfaceVariant"
+        android:alpha="0.3" />
 
     <!-- User Avatar -->
     <de.hdodenhof.circleimageview.CircleImageView

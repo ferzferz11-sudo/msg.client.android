@@ -286,3 +286,96 @@ data class SetPrimaryCompanyResponseProto(
     val success: Boolean = false,
     val message: String = ""
 )
+
+// ===== Company Settings =====
+
+data class CompanySettingsProto(
+    val companyId: String = "",
+    val inviteOnly: Boolean = false,
+    val defaultPositionId: String = "",
+    val allowMemberInvite: Boolean = false,
+    val chatAccess: String = "member",
+    val requireApproval: Boolean = false
+)
+
+data class GetCompanySettingsRequestProto(
+    val companyId: String = ""
+)
+
+data class GetCompanySettingsResponseProto(
+    val settings: CompanySettingsProto? = null
+)
+
+data class UpdateCompanySettingsRequestProto(
+    val companyId: String = "",
+    val settings: CompanySettingsProto? = null
+)
+
+data class UpdateCompanySettingsResponseProto(
+    val success: Boolean = false
+)
+
+// ===== Invite Codes =====
+
+data class InviteCodeInfoProto(
+    val id: String = "",
+    val code: String = "",
+    val companyId: String = "",
+    val createdBy: String = "",
+    val createdAt: String = "",
+    val expiresAt: String = "",
+    val maxUses: Int = 1,
+    val useCount: Int = 0,
+    val isActive: Boolean = true
+)
+
+data class GenerateInviteCodeRequestProto(
+    val companyId: String = "",
+    val expiresHours: Int = 0,
+    val maxUses: Int = 1
+)
+
+data class GenerateInviteCodeResponseProto(
+    val success: Boolean = false,
+    val code: InviteCodeInfoProto? = null
+)
+
+data class JoinByInviteCodeRequestProto(
+    val code: String = ""
+)
+
+data class JoinByInviteCodeResponseProto(
+    val success: Boolean = false,
+    val companyId: String = "",
+    val member: CompanyMemberProto? = null
+)
+
+data class RevokeInviteCodeRequestProto(
+    val codeId: String = ""
+)
+
+data class RevokeInviteCodeResponseProto(
+    val success: Boolean = false
+)
+
+data class ListInviteCodesRequestProto(
+    val companyId: String = ""
+)
+
+data class ListInviteCodesResponseProto(
+    val codes: List<InviteCodeInfoProto> = emptyList()
+)
+
+// ===== Company Notifications =====
+
+data class SendCompanyNotificationRequestProto(
+    val companyId: String = "",
+    val eventType: Int = 0,
+    val actorUsername: String = "",
+    val targetUsername: String = "",
+    val positionName: String = ""
+)
+
+data class SendCompanyNotificationResponseProto(
+    val success: Boolean = false
+)

@@ -26,7 +26,7 @@
     <string name="about_description">Лава: платформа защищенных бизнес-коммуникаций</string>
     <string name="server_address">%s</string>
     <string name="server_address_local">192.168.1.135:50051</string>
-    <string name="download_update">обновить</string>
+    <string name="download_update">Скачать %1$s</string>
     <string name="downloading_update">Загрузка обновления Лавы</string>
     <string name="update">Обновить</string>
     <string name="connection_logs">Логи соединения:</string>
@@ -172,8 +172,8 @@
     <string name="no_users_available">Нет доступных пользователей</string>
     <string name="select_user">Выберите пользователя</string>
     <string name="online_users">Пользователи онлайн</string>
-    <string name="update_available">Доступно обновление</string>
-    <string name="install_update">Установить обновление</string>
+    <string name="update_available">Доступна версия %1$s</string>
+    <string name="install_update">Установить %1$s</string>
     <string name="update_download_prompt">Доступна новая версия. Скачать?</string>
     <string name="downloading">Загрузка…</string>
     <string name="delete_chats">Удалить чаты</string>
@@ -184,8 +184,8 @@
     <string name="mute_chats_confirmation">Отключить уведомления для %d выбранных чатов? Вы не будете получать push-уведомления из этих чатов.</string>
     <string name="unmute_chats">Включить уведомления</string>
     <string name="unmute_chats_confirmation">Включить уведомления для %d выбранных чатов? Вы снова будете получать push-уведомления из этих чатов.</string>
-    <string name="mute">Отключить</string>
-    <string name="unmute">Включить</string>
+    <string name="mute">Заглушить Пуш-уведомления</string>
+    <string name="unmute">Включить Пуш-уведомления</string>
     <string name="muted_count">Уведомления отключены в %d чатах</string>
     <string name="unmuted_count">Уведомления включены в %d чатах</string>
     <string name="add_chat">Добавить чат</string>

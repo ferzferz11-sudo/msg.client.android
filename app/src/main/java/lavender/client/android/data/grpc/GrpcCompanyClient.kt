@@ -343,6 +343,120 @@ object GrpcCompanyClient {
         }
     }
 
+    // ===== Company Settings =====
+
+    suspend fun getCompanySettings(companyId: String): GetCompanySettingsResponseProto? {
+        return try {
+            unaryCall(
+                fullMethod = "messenger.CompanyService/GetCompanySettings",
+                requestMarshaller = GetCompanySettingsRequestMarshaller(),
+                responseMarshaller = GetCompanySettingsResponseMarshaller(),
+                request = GetCompanySettingsRequestProto(companyId = companyId)
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "getCompanySettings failed: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun updateCompanySettings(companyId: String, settings: CompanySettingsProto): UpdateCompanySettingsResponseProto? {
+        return try {
+            unaryCall(
+                fullMethod = "messenger.CompanyService/UpdateCompanySettings",
+                requestMarshaller = UpdateCompanySettingsRequestMarshaller(),
+                responseMarshaller = UpdateCompanySettingsResponseMarshaller(),
+                request = UpdateCompanySettingsRequestProto(companyId = companyId, settings = settings)
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "updateCompanySettings failed: ${e.message}")
+            null
+        }
+    }
+
+    // ===== Invite Codes =====
+
+    suspend fun generateInviteCode(companyId: String, expiresHours: Int = 0, maxUses: Int = 1): GenerateInviteCodeResponseProto? {
+        return try {
+            unaryCall(
+                fullMethod = "messenger.CompanyService/GenerateInviteCode",
+                requestMarshaller = GenerateInviteCodeRequestMarshaller(),
+                responseMarshaller = GenerateInviteCodeResponseMarshaller(),
+                request = GenerateInviteCodeRequestProto(companyId = companyId, expiresHours = expiresHours, maxUses = maxUses)
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "generateInviteCode failed: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun joinByInviteCode(code: String): JoinByInviteCodeResponseProto? {
+        return try {
+            unaryCall(
+                fullMethod = "messenger.CompanyService/JoinByInviteCode",
+                requestMarshaller = JoinByInviteCodeRequestMarshaller(),
+                responseMarshaller = JoinByInviteCodeResponseMarshaller(),
+                request = JoinByInviteCodeRequestProto(code = code)
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "joinByInviteCode failed: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun revokeInviteCode(codeId: String): RevokeInviteCodeResponseProto? {
+        return try {
+            unaryCall(
+                fullMethod = "messenger.CompanyService/RevokeInviteCode",
+                requestMarshaller = RevokeInviteCodeRequestMarshaller(),
+                responseMarshaller = RevokeInviteCodeResponseMarshaller(),
+                request = RevokeInviteCodeRequestProto(codeId = codeId)
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "revokeInviteCode failed: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun listInviteCodes(companyId: String): ListInviteCodesResponseProto? {
+        return try {
+            unaryCall(
+                fullMethod = "messenger.CompanyService/ListInviteCodes",
+                requestMarshaller = ListInviteCodesRequestMarshaller(),
+                responseMarshaller = ListInviteCodesResponseMarshaller(),
+                request = ListInviteCodesRequestProto(companyId = companyId)
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "listInviteCodes failed: ${e.message}")
+            null
+        }
+    }
+
+    // ===== Company Notifications =====
+
+    suspend fun sendCompanyNotification(
+        companyId: String,
+        eventType: Int,
+        actorUsername: String = "",
+        targetUsername: String = "",
+        positionName: String = ""
+    ): SendCompanyNotificationResponseProto? {
+        return try {
+            unaryCall(
+                fullMethod = "messenger.CompanyService/SendCompanyNotification",
+                requestMarshaller = SendCompanyNotificationRequestMarshaller(),
+                responseMarshaller = SendCompanyNotificationResponseMarshaller(),
+                request = SendCompanyNotificationRequestProto(
+                    companyId = companyId, eventType = eventType,
+                    actorUsername = actorUsername, targetUsername = targetUsername,
+                    positionName = positionName
+                )
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "sendCompanyNotification failed: ${e.message}")
+            null
+        }
+    }
+
     // ===== Generic unary call =====
 
     @Suppress("UNCHECKED_CAST")

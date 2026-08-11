@@ -37,7 +37,7 @@
     <string name="about_description">Лава: платформа защищенных бизнес-коммуникаций</string>
     <string name="server_address">%s</string>
     <string name="server_address_local">192.168.1.135:50051</string>
-    <string name="download_update">update</string>
+    <string name="download_update">Download %1$s</string>
     <string name="downloading_update">Downloading Lava Update</string>
     <string name="update">Update</string>
     <string name="connection_logs">Connection logs:</string>
@@ -182,8 +182,8 @@
     <string name="no_users_available">No users available</string>
     <string name="select_user">Select User</string>
     <string name="online_users">Online Users</string>
-    <string name="update_available">Update available</string>
-    <string name="install_update">Install update</string>
+    <string name="update_available">Version %1$s available</string>
+    <string name="install_update">Install %1$s</string>
     <string name="update_download_prompt">New version available. Download?</string>
     <string name="downloading">Downloading…</string>
     <string name="delete_chats">Delete Chats</string>
@@ -194,8 +194,8 @@
     <string name="mute_chats_confirmation">Mute notifications for %d selected chats? You won\'t receive push notifications from these chats.</string>
     <string name="unmute_chats">Unmute Chats</string>
     <string name="unmute_chats_confirmation">Unmute notifications for %d selected chats? You will receive push notifications from these chats again.</string>
-    <string name="mute">Mute</string>
-    <string name="unmute">Unmute</string>
+    <string name="mute">Mute Push Notifications</string>
+    <string name="unmute">Unmute Push Notifications</string>
     <string name="muted_count">Muted %d chats</string>
     <string name="unmuted_count">Unmuted %d chats</string>
     <string name="add_chat">Add Chat</string>

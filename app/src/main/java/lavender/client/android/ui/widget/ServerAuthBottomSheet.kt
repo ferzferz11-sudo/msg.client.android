@@ -111,7 +111,8 @@ class ServerAuthBottomSheet(
                     val prefs = context.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE)
                     val isDownloaded = prefs.getBoolean("update_downloaded", false)
                     if (isDownloaded) {
-                        btnUpdate?.text = context.getString(R.string.install_update)
+                        val downloadedVersion = prefs.getString("downloaded_version", "")
+                        btnUpdate?.text = context.getString(R.string.install_update, downloadedVersion ?: "")
                         btnUpdate?.isEnabled = true
                     }
                 }
@@ -123,15 +124,16 @@ class ServerAuthBottomSheet(
         val btnUpdate = findViewById<MaterialButton>(R.id.btnUpdateApp) ?: return
 
         // Always check for updates first — this clears stale APK if version mismatch
-        updateManager.checkForUpdates { isAvailable, _ ->
+        updateManager.checkForUpdates { isAvailable, latestVersion ->
             val prefs = context.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE)
             val isDownloaded = prefs.getBoolean("update_downloaded", false)
+            val downloadedVersion = prefs.getString("downloaded_version", null)
 
             btnUpdate.post {
-                if (isDownloaded) {
+                if (isDownloaded && downloadedVersion == latestVersion) {
                     val apkPath = prefs.getString("apk_path", null)
                     if (apkPath != null && File(apkPath).exists()) {
-                        btnUpdate.text = context.getString(R.string.install_update)
+                        btnUpdate.text = context.getString(R.string.install_update, downloadedVersion ?: "")
                         btnUpdate.visibility = View.VISIBLE
                     }
                 } else if (isAvailable) {

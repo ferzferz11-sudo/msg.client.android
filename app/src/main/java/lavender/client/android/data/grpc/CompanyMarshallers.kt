@@ -673,3 +673,225 @@ class SetPrimaryCompanyResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<
         return SetPrimaryCompanyResponseProto(success, message)
     }
 }
+
+// ===== Company Settings =====
+
+private fun parseCompanySettings(cis: com.google.protobuf.CodedInputStream): CompanySettingsProto {
+    var companyId = ""; var inviteOnly = false; var defaultPositionId = ""
+    var allowMemberInvite = false; var chatAccess = "member"; var requireApproval = false
+    while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break
+        when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+            1 -> companyId = cis.readString(); 2 -> inviteOnly = cis.readBool()
+            3 -> defaultPositionId = cis.readString(); 4 -> allowMemberInvite = cis.readBool()
+            5 -> chatAccess = cis.readString(); 6 -> requireApproval = cis.readBool()
+            else -> cis.skipField(tag)
+        }
+    }
+    return CompanySettingsProto(companyId, inviteOnly, defaultPositionId, allowMemberInvite, chatAccess, requireApproval)
+}
+
+private fun writeCompanySettings(cos: com.google.protobuf.CodedOutputStream, field: Int, v: CompanySettingsProto) {
+    val baos = java.io.ByteArrayOutputStream(); val inner = com.google.protobuf.CodedOutputStream.newInstance(baos)
+    if (v.companyId.isNotEmpty()) inner.writeString(1, v.companyId)
+    if (v.inviteOnly) inner.writeBool(2, v.inviteOnly)
+    if (v.defaultPositionId.isNotEmpty()) inner.writeString(3, v.defaultPositionId)
+    if (v.allowMemberInvite) inner.writeBool(4, v.allowMemberInvite)
+    if (v.chatAccess != "member") inner.writeString(5, v.chatAccess)
+    if (v.requireApproval) inner.writeBool(6, v.requireApproval)
+    inner.flush(); cos.writeByteArray(field, baos.toByteArray())
+}
+
+class GetCompanySettingsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetCompanySettingsRequestProto> {
+    override fun stream(v: GetCompanySettingsRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.companyId.isNotEmpty()) cos.writeString(1, v.companyId)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): GetCompanySettingsRequestProto = GetCompanySettingsRequestProto()
+}
+
+class GetCompanySettingsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetCompanySettingsResponseProto> {
+    override fun stream(v: GetCompanySettingsResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetCompanySettingsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var settings: CompanySettingsProto? = null
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> { val len = cis.readUInt32(); settings = parseCompanySettings(com.google.protobuf.CodedInputStream.newInstance(cis.readRawBytes(len))) }
+                else -> cis.skipField(tag)
+            }
+        }
+        return GetCompanySettingsResponseProto(settings)
+    }
+}
+
+class UpdateCompanySettingsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UpdateCompanySettingsRequestProto> {
+    override fun stream(v: UpdateCompanySettingsRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.companyId.isNotEmpty()) cos.writeString(1, v.companyId)
+        v.settings?.let { writeCompanySettings(cos, 2, it) }
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): UpdateCompanySettingsRequestProto = UpdateCompanySettingsRequestProto()
+}
+
+class UpdateCompanySettingsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<UpdateCompanySettingsResponseProto> {
+    override fun stream(v: UpdateCompanySettingsResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): UpdateCompanySettingsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var success = false
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                else -> cis.skipField(tag)
+            }
+        }
+        return UpdateCompanySettingsResponseProto(success)
+    }
+}
+
+// ===== Invite Codes =====
+
+private fun parseInviteCodeInfo(cis: com.google.protobuf.CodedInputStream): InviteCodeInfoProto {
+    var id = ""; var code = ""; var companyId = ""; var createdBy = ""; var createdAt = ""
+    var expiresAt = ""; var maxUses = 1; var useCount = 0; var isActive = true
+    while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break
+        when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+            1 -> id = cis.readString(); 2 -> code = cis.readString(); 3 -> companyId = cis.readString()
+            4 -> createdBy = cis.readString(); 5 -> createdAt = cis.readString(); 6 -> expiresAt = cis.readString()
+            7 -> maxUses = cis.readInt32(); 8 -> useCount = cis.readInt32(); 9 -> isActive = cis.readBool()
+            else -> cis.skipField(tag)
+        }
+    }
+    return InviteCodeInfoProto(id, code, companyId, createdBy, createdAt, expiresAt, maxUses, useCount, isActive)
+}
+
+class GenerateInviteCodeRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GenerateInviteCodeRequestProto> {
+    override fun stream(v: GenerateInviteCodeRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.companyId.isNotEmpty()) cos.writeString(1, v.companyId)
+        if (v.expiresHours != 0) cos.writeInt32(2, v.expiresHours)
+        if (v.maxUses != 1) cos.writeInt32(3, v.maxUses)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): GenerateInviteCodeRequestProto = GenerateInviteCodeRequestProto()
+}
+
+class GenerateInviteCodeResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GenerateInviteCodeResponseProto> {
+    override fun stream(v: GenerateInviteCodeResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GenerateInviteCodeResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var success = false; var code: InviteCodeInfoProto? = null
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> { val len = cis.readUInt32(); code = parseInviteCodeInfo(com.google.protobuf.CodedInputStream.newInstance(cis.readRawBytes(len))) }
+                else -> cis.skipField(tag)
+            }
+        }
+        return GenerateInviteCodeResponseProto(success, code)
+    }
+}
+
+class JoinByInviteCodeRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<JoinByInviteCodeRequestProto> {
+    override fun stream(v: JoinByInviteCodeRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.code.isNotEmpty()) cos.writeString(1, v.code)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): JoinByInviteCodeRequestProto = JoinByInviteCodeRequestProto()
+}
+
+class JoinByInviteCodeResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<JoinByInviteCodeResponseProto> {
+    override fun stream(v: JoinByInviteCodeResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): JoinByInviteCodeResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var success = false; var companyId = ""; var member: CompanyMemberProto? = null
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool(); 2 -> companyId = cis.readString()
+                3 -> { val len = cis.readUInt32(); member = parseMember(com.google.protobuf.CodedInputStream.newInstance(cis.readRawBytes(len))) }
+                else -> cis.skipField(tag)
+            }
+        }
+        return JoinByInviteCodeResponseProto(success, companyId, member)
+    }
+}
+
+class RevokeInviteCodeRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<RevokeInviteCodeRequestProto> {
+    override fun stream(v: RevokeInviteCodeRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.codeId.isNotEmpty()) cos.writeString(1, v.codeId)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): RevokeInviteCodeRequestProto = RevokeInviteCodeRequestProto()
+}
+
+class RevokeInviteCodeResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<RevokeInviteCodeResponseProto> {
+    override fun stream(v: RevokeInviteCodeResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): RevokeInviteCodeResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var success = false
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                else -> cis.skipField(tag)
+            }
+        }
+        return RevokeInviteCodeResponseProto(success)
+    }
+}
+
+class ListInviteCodesRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<ListInviteCodesRequestProto> {
+    override fun stream(v: ListInviteCodesRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.companyId.isNotEmpty()) cos.writeString(1, v.companyId)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): ListInviteCodesRequestProto = ListInviteCodesRequestProto()
+}
+
+class ListInviteCodesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<ListInviteCodesResponseProto> {
+    override fun stream(v: ListInviteCodesResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): ListInviteCodesResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        val codes = mutableListOf<InviteCodeInfoProto>()
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> { val len = cis.readUInt32(); codes.add(parseInviteCodeInfo(com.google.protobuf.CodedInputStream.newInstance(cis.readRawBytes(len)))) }
+                else -> cis.skipField(tag)
+            }
+        }
+        return ListInviteCodesResponseProto(codes)
+    }
+}
+
+// ===== Company Notifications =====
+
+class SendCompanyNotificationRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<SendCompanyNotificationRequestProto> {
+    override fun stream(v: SendCompanyNotificationRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.companyId.isNotEmpty()) cos.writeString(1, v.companyId)
+        if (v.eventType != 0) cos.writeInt32(2, v.eventType)
+        if (v.actorUsername.isNotEmpty()) cos.writeString(3, v.actorUsername)
+        if (v.targetUsername.isNotEmpty()) cos.writeString(4, v.targetUsername)
+        if (v.positionName.isNotEmpty()) cos.writeString(5, v.positionName)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): SendCompanyNotificationRequestProto = SendCompanyNotificationRequestProto()
+}
+
+class SendCompanyNotificationResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<SendCompanyNotificationResponseProto> {
+    override fun stream(v: SendCompanyNotificationResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): SendCompanyNotificationResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var success = false
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                else -> cis.skipField(tag)
+            }
+        }
+        return SendCompanyNotificationResponseProto(success)
+    }
+}

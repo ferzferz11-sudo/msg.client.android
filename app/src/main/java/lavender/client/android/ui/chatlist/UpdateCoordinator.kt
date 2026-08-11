@@ -95,6 +95,16 @@ class UpdateCoordinator(
             titleView?.text = context.getString(R.string.ok)
             updateIcon?.setImageResource(R.drawable.ic_checked)
             btnUpdate?.text = context.getString(R.string.force_download)
+        } else {
+            // Check if we have a downloaded version that's now outdated
+            val prefs = context.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE)
+            val downloadedVersion = prefs.getString("downloaded_version", null)
+            val isDownloaded = prefs.getBoolean("update_downloaded", false)
+            if (isDownloaded && downloadedVersion != null && downloadedVersion != latest) {
+                btnUpdate?.text = context.getString(R.string.download_update, latest)
+            } else {
+                btnUpdate?.text = context.getString(R.string.download_update, latest)
+            }
         }
 
         messageView?.text = context.getString(R.string.version_info_format, current, latest)
@@ -145,25 +155,27 @@ class UpdateCoordinator(
             }
         }
 
+        // If downloaded version is outdated (newer version available), treat as not downloaded
+        val effectiveDownloaded = isDownloaded && downloadedVersion == latestVersion
+
         // Show container if update is ready or downloading
-        llUpdateContainer?.isVisible = isAvailable || isDownloading || isDownloaded
+        llUpdateContainer?.isVisible = isAvailable || isDownloading || effectiveDownloaded
 
         if (isDownloading) {
             tvUpdateAvailable?.isVisible = false
             tvUpdateProgress?.isVisible = true
         } else {
             tvUpdateProgress?.isVisible = false
-            tvUpdateAvailable?.isVisible = isAvailable || isDownloaded
-            // Update text: "Install update" when downloaded, "Update available" when not
-            tvUpdateAvailable?.text = if (isDownloaded) {
-                context.getString(R.string.install_update)
-            } else {
-                context.getString(R.string.update_available)
+            tvUpdateAvailable?.isVisible = isAvailable || effectiveDownloaded
+            tvUpdateAvailable?.text = when {
+                effectiveDownloaded -> context.getString(R.string.install_update, downloadedVersion ?: "")
+                isAvailable -> context.getString(R.string.update_available, latestVersion ?: "")
+                else -> ""
             }
         }
 
         llUpdateContainer?.setOnClickListener {
-            if (isDownloaded) {
+            if (effectiveDownloaded) {
                 val apkPath = prefs.getString("apk_path", null)
                 if (apkPath != null) {
                     UpdateUtils.installApk(context, File(apkPath))
@@ -256,7 +268,7 @@ class UpdateCoordinator(
 
         val notification = NotificationCompat.Builder(context, UpdateUtils.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_update_available)
-            .setContentTitle(context.getString(R.string.update_available))
+            .setContentTitle(context.getString(R.string.update_available, latestVersion))
             .setContentText(context.getString(R.string.version_available, latestVersion))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)

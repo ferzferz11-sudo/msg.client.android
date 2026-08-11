@@ -40,6 +40,8 @@ class StickerPackCreateActivity : AppCompatActivity() {
     private lateinit var btnAddSticker: MaterialButton
     private lateinit var btnSave: MaterialButton
     private lateinit var btnSubmit: MaterialButton
+    private lateinit var btnDelete: MaterialButton
+    private lateinit var bottomBar: android.view.View
 
     private val currentStickers = mutableListOf<Sticker>()
     private var originalStickerIds = mutableSetOf<String>()
@@ -97,9 +99,17 @@ class StickerPackCreateActivity : AppCompatActivity() {
         btnAddSticker = findViewById(R.id.btnAddSticker)
         btnSave = findViewById(R.id.btnSave)
         btnSubmit = findViewById(R.id.btnSubmit)
+        btnDelete = findViewById(R.id.btnDelete)
+        bottomBar = findViewById(R.id.bottomBar)
 
         applyThemeToFields()
         updateSaveButtonState()
+
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(bottomBar) { view, insets ->
+            val navBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.navigationBars())
+            view.setPadding(view.paddingLeft, view.paddingTop, view.paddingRight, navBars.bottom + (12 * resources.displayMetrics.density).toInt())
+            insets
+        }
 
         toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
         toolbar.navigationIcon?.setTint(getColor(R.color.white))
@@ -111,14 +121,17 @@ class StickerPackCreateActivity : AppCompatActivity() {
         btnAddSticker.setOnClickListener { pickStickerFile() }
         btnSave.setOnClickListener { savePack() }
         btnSubmit.setOnClickListener { submitPack() }
+        btnDelete.setOnClickListener { deletePack() }
 
         packId = intent.getStringExtra("PACK_ID")
         if (packId != null) {
             toolbar.title = getString(R.string.sticker_edit_pack)
+            btnDelete.visibility = android.view.View.VISIBLE
             loadPack()
         } else {
             toolbar.title = getString(R.string.sticker_create_pack)
             btnSubmit.visibility = android.view.View.GONE
+            btnDelete.visibility = android.view.View.GONE
             val username = GrpcClient.getCurrentUsername() ?: ""
             etTitle.setText(getString(R.string.sticker_default_pack_name, username))
             etTitle.selectAll()
@@ -509,6 +522,25 @@ class StickerPackCreateActivity : AppCompatActivity() {
                 Toast.makeText(this@StickerPackCreateActivity, result?.error ?: getString(R.string.failed), Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun deletePack() {
+        val id = packId ?: return
+        android.app.AlertDialog.Builder(this)
+            .setTitle(R.string.sticker_delete_pack)
+            .setPositiveButton(getString(R.string.delete)) { _, _ ->
+                lifecycleScope.launch {
+                    val result = GrpcClient.deleteStickerPack(id)
+                    if (result?.success == true) {
+                        Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_removed), Toast.LENGTH_SHORT).show()
+                        finish()
+                    } else {
+                        Toast.makeText(this@StickerPackCreateActivity, getString(R.string.failed_to_delete), Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton(getString(R.string.cancel_dialog), null)
+            .show()
     }
 
     companion object {

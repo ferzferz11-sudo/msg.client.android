@@ -30,6 +30,6 @@
         android:layout_width="4dp"
         android:layout_height="24dp"
         android:layout_marginStart="8dp"
-        android:background="?attr/colorPrimary"
+        android:background="?attr/colorPrimaryContainer"
         android:visibility="invisible" />
 </LinearLayout>

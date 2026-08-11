@@ -49,30 +49,6 @@
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/actionNotifications"
-        style="@style/MenuActionItemStyle">
-        <ImageView
-            style="@style/MenuActionIconStyle"
-            android:src="@drawable/ic_notification_history" />
-        <TextView
-            style="@style/MenuActionTextStyle"
-            android:text="@string/notifications" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/actionAdmin"
-        style="@style/MenuActionItemStyle"
-        android:visibility="gone">
-        <ImageView
-            style="@style/MenuActionIconStyle"
-            android:contentDescription="@string/admin_panel"
-            android:src="@android:drawable/ic_lock_lock" />
-        <TextView
-            style="@style/MenuActionTextStyle"
-            android:text="@string/admin_panel" />
-    </LinearLayout>
-
-    <LinearLayout
         android:id="@+id/actionServers"
         style="@style/MenuActionItemStyle">
         <ImageView
@@ -81,17 +57,6 @@
         <TextView
             style="@style/MenuActionTextStyle"
             android:text="@string/servers" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/actionClearCache"
-        style="@style/MenuActionItemStyle">
-        <ImageView
-            style="@style/MenuActionIconStyle"
-            android:src="@drawable/ic_delete" />
-        <TextView
-            style="@style/MenuActionTextStyle"
-            android:text="@string/clear_cache" />
     </LinearLayout>
 
     <LinearLayout

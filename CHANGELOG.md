@@ -1,5 +1,83 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.20] - 2026-08-11
+
+### Исправлено
+
+**Sticker pack — выбор не отмечается визually (Medium):**
+- `StickerPackAdapter` — заменён `selectedPosition` (Int) на `selectedPackId` (String). `notifyDataSetChanged()` для надёжного обновления. Добавлена фоновая подсветка выбранного элемента (15% alpha primary). Индикатор → `colorPrimaryContainer`
+
+**Sticker pack — нет кнопки удалить при редактировании (Medium):**
+- `StickerPackCreateActivity` — добавлена кнопка `btnDelete` (textButton, `colorError`). Видна только при редактировании. Confirmation dialog → `GrpcClient.deleteStickerPack()`
+
+**Save button залезает под навигацию (Low):**
+- `activity_sticker_pack_create.xml` — `WindowInsetsCompat.Type.navigationBars()` на `bottomBar`
+
+**StickerEditorView — скачок фокуса при zoom (Medium):**
+- Добавлен `isScaling` флаг + `onScaleBegin`/`onScaleEnd`. `constrainImage()` вызывается только после завершения pinch-жеста. `lastTouchX/Y` обновляется в ветках перетаскивания
+
+**StickerEditorView — неточная обрезка (Medium):**
+- Связано с zoom focus — теперь изображение остаётся на месте при zoom
+
+**Список чатов — скролл при смене вкладки (Medium):**
+- `ChatListViewModel` — добавлен `scrollToTopEvent` при `setTabFilter()`. `ChatListActivity` — observer вызывает `scrollToPosition(0)`
+
+**Шторка звонка — нет drag handle (Low):**
+- `sheet_pre_call.xml` — добавлен View (40dp x 4dp, `colorOnSurfaceVariant`, alpha 0.3)
+
+**Список чатов — мерцание при обновлении (Low):**
+- `activity_chat_list.xml` — `scrollbars="none"`. `ChatListActivity` — `setHasFixedSize(true)`
+
+**Mute — переименование (Low):**
+- Swipe action: "Отключить" → "Заглушить Пуш-уведомления", "Включить" → "Включить Пуш-уведомления"
+
+**Архивирование через swipe — чат не исчезал (Medium):**
+- `ChatListViewModel.archiveChat()` — оптимистичное обновление: `allChats` + `buildSections` вызываются ДО gRPC-вызова. При ошибке — откат. Toast показывается только после успеха через callback `onResult`
+- `ChatListActivity` swipe handler — Toast вынесен в callback `archiveChat { success -> ... }`
+
+### Улучшения
+
+**Система обновлений — версия в тексте:**
+- `update_available` = "Доступна версия %1$s" / "Version %1$s available"
+- `install_update` = "Установить %1$s" / "Install %1$s"
+- `download_update` = "Скачать %1$s" / "Download %1$s"
+- Если скачанная версия устарела (`downloadedVersion != latestVersion`), показывается "Скачать" вместо "Установить"
+
+**Настройки профиля — очистка:**
+- Удалены Notifications и Admin panel из "Дополнительные настройки" (уже есть в основной шторке)
+- "Очистка локального кэша" перенесена в основную шторку профиля, доступна только админу
+
+**Company RPC интеграция (клиент):**
+- Proto-классы для Settings, Invite Codes, Notifications
+- Маршаллеры для7 новых RPC
+- `GrpcCompanyClient` методы: `getCompanySettings`, `updateCompanySettings`, `generateInviteCode`, `joinByInviteCode`, `revokeInviteCode`, `listInviteCodes`, `sendCompanyNotification`
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `StickerPackAdapter.kt` | Selection tracking по ID, фоновая подсветка |
+| `item_sticker_pack_tab.xml` | Indicator color → `colorPrimaryContainer` |
+| `MediaPickerSheet.kt` | `selectPack()` после загрузки |
+| `StickerPackCreateActivity.kt` | Кнопка удаления, WindowInsets |
+| `activity_sticker_pack_create.xml` | Bottom bar с delete button |
+| `StickerEditorView.kt` | isScaling флаг, pinch/drag логика |
+| `ChatListViewModel.kt` | scrollToTopEvent, Archive/unarchive optimistic update + callback |
+| `ChatListActivity.kt` | scrollToTop observer, setHasFixedSize, Clear Cache, Archive Toast callback |
+| `sheet_pre_call.xml` | Drag handle |
+| `activity_chat_list.xml` | scrollbar="none" |
+| `bottom_sheet_user_menu.xml` | Clear Cache (admin only) |
+| `bottom_sheet_additional_settings.xml` | Удалены Notifications, Admin, Clear Cache |
+| `ChatListToolbar.kt` | Clear Cache handler, удалены лишние handlers |
+| `strings.xml` (EN+RU) | Update versioning, mute rename |
+| `UpdateCoordinator.kt` | Version in text, downloaded-but-outdated |
+| `ServerAuthBottomSheet.kt` | Version in install text |
+| `CompanyProto.kt` | New proto data classes |
+| `CompanyMarshallers.kt` | New marshallers |
+| `GrpcCompanyClient.kt` | New RPC methods |
+
+---
+
 ## [1.3.4.19] - 2026-08-11
 
 ### Новые фичи

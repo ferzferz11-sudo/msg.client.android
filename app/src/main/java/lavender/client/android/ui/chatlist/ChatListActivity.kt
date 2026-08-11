@@ -526,7 +526,7 @@ class ChatListActivity : AppCompatActivity() {
         rvChatList?.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = chatAdapter
-            setHasFixedSize(false)
+            setHasFixedSize(true)
             addOnScrollListener(object : RecyclerView.OnScrollListener() {
                 override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
                     if (dy > 0) {
@@ -558,6 +558,13 @@ class ChatListActivity : AppCompatActivity() {
                     val targetPos = minOf(firstVisible, chatAdapter.itemCount - 1)
                     rvChatList?.scrollToPosition(targetPos)
                 }
+            }
+        }
+
+        // Scroll to top when tab changes
+        lifecycleScope.launch {
+            viewModel.scrollToTopEvent.collectLatest {
+                rvChatList?.scrollToPosition(0)
             }
         }
 
@@ -644,8 +651,15 @@ class ChatListActivity : AppCompatActivity() {
 
                 options.add(getString(R.string.archive))
                 actions.add {
-                    viewModel.archiveChat(chat.id)
-                    Toast.makeText(this@ChatListActivity, getString(R.string.archived), Toast.LENGTH_SHORT).show()
+                    viewModel.archiveChat(chat.id) { success ->
+                        lifecycleScope.launch {
+                            if (success) {
+                                Toast.makeText(this@ChatListActivity, getString(R.string.archived), Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(this@ChatListActivity, getString(R.string.failed), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
                 }
 
                 options.add(if (chat.isMuted) getString(R.string.unmute) else getString(R.string.mute))

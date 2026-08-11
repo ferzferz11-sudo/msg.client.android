@@ -270,6 +270,7 @@ class MediaPickerSheet(
 
                 if (combinedPacks.isNotEmpty()) {
                     stickerPackAdapter.submitList(combinedPacks)
+                    stickerPackAdapter.selectPack(combinedPacks[0].id)
                     loadPackStickers(combinedPacks[0])
                 } else {
                     showEmptyState()

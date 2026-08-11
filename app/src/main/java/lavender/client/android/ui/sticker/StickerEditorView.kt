@@ -89,14 +89,21 @@ class StickerEditorView @JvmOverloads constructor(
     private var draggingImage = false
     private var draggingText = false
 
+    private var isScaling = false
+
     private val scaleDetector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+        override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+            isScaling = true
+            return editorMode == EditorMode.CROP || activeTextOverlay != null
+        }
+
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             if (editorMode == EditorMode.CROP) {
                 val factor = detector.scaleFactor
                 val focusX = detector.focusX
                 val focusY = detector.focusY
                 imageMatrix.postScale(factor, factor, focusX, focusY)
-                constrainImage()
+                // Don't constrain during scale — let user zoom freely, constrain on gesture end
                 invalidate()
                 return true
             }
@@ -108,6 +115,14 @@ class StickerEditorView @JvmOverloads constructor(
                 return true
             }
             return false
+        }
+
+        override fun onScaleEnd(detector: ScaleGestureDetector) {
+            isScaling = false
+            if (editorMode == EditorMode.CROP) {
+                constrainImage()
+                invalidate()
+            }
         }
     })
 
@@ -394,25 +409,29 @@ class StickerEditorView @JvmOverloads constructor(
                     }
                 }
 
-                if (editorMode == EditorMode.CROP && !scaleDetector.isInProgress) {
+                if (editorMode == EditorMode.CROP && !isScaling) {
                     draggingImage = true
                     return true
                 }
             }
             MotionEvent.ACTION_MOVE -> {
-                if (draggingImage && editorMode == EditorMode.CROP && !scaleDetector.isInProgress) {
+                if (draggingImage && editorMode == EditorMode.CROP && !isScaling) {
                     val dx = event.x - lastTouchX
                     val dy = event.y - lastTouchY
                     imageMatrix.postTranslate(dx, dy)
+                    lastTouchX = event.x
+                    lastTouchY = event.y
                     constrainImage()
                     invalidate()
                     return true
                 }
-                if (draggingText && activeTextOverlay != null && !scaleDetector.isInProgress) {
+                if (draggingText && activeTextOverlay != null && !isScaling) {
                     val dx = event.x - lastTouchX
                     val dy = event.y - lastTouchY
                     activeTextOverlay!!.x += dx
                     activeTextOverlay!!.y += dy
+                    lastTouchX = event.x
+                    lastTouchY = event.y
                     invalidate()
                     return true
                 }
@@ -420,7 +439,7 @@ class StickerEditorView @JvmOverloads constructor(
                 lastTouchX = event.x
                 lastTouchY = event.y
             }
-            MotionEvent.ACTION_UP -> {
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 draggingImage = false
                 draggingText = false
             }
