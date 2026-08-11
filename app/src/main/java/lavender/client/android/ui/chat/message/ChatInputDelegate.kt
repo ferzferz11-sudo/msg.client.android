@@ -1,5 +1,4 @@
 package lavender.client.android.ui.chat.message
-import android.util.Log
 
 import android.Manifest
 import android.content.Intent
@@ -8,14 +7,12 @@ import android.net.Uri
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.TypedValue
 import android.view.View
 import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -23,29 +20,28 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.MapPickerActivity
 import lavender.client.android.R
 import lavender.client.android.StickerPackCreateActivity
 import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.grpc.ProfileClient
 import lavender.client.android.data.models.Message
+import lavender.client.android.network.HttpClient
+import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.data.ThemeMappers
 import lavender.client.android.ui.adapter.MentionAdapter
 import lavender.client.android.ui.audio.AudioRecordingView
 import lavender.client.android.ui.widget.ActionBottomSheet
 import lavender.client.android.ui.widget.SheetAction
 import lavender.client.android.ui.widget.StandardBottomSheet
-
-import lavender.client.android.theme.ThemeStore
-import lavender.client.android.theme.data.ThemeMappers
-import lavender.client.android.data.grpc.ProfileClient
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.Request
-import lavender.client.android.network.HttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
@@ -87,6 +83,7 @@ class ChatInputDelegate(
     var onSendMessage: ((text: String, imageUrl: String) -> Unit)? = null
     var onTypingSignal: ((isTyping: Boolean) -> Unit)? = null
     var onReplyChanged: ((Message?) -> Unit)? = null
+    var onStickerSent: (() -> Unit)? = null
 
     private val pickImageLauncher = activity.registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -372,6 +369,7 @@ class ChatInputDelegate(
             grpcClient.sendMessageV2(msg)
             grpcClient.deleteDraft(roomId)
             resetInput()
+            onStickerSent?.invoke()
         } catch (e: Exception) {
             android.util.Log.e("ChatInput", "Failed to send sticker", e)
             android.widget.Toast.makeText(activity, activity.getString(R.string.failed) + ": ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
@@ -621,8 +619,8 @@ class ChatInputDelegate(
     // ======= Audio Recording =======
 
     fun showAudioRecordingView(onRecordingFinished: (File, Int) -> Unit) {
-        if (activity.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            activity.requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 1001)
+        if (activity.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            activity.requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 1001)
             return
         }
         val sheet = StandardBottomSheet(activity)

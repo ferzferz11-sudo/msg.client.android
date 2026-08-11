@@ -27,6 +27,7 @@ import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.data.db.toEntity
 import lavender.client.android.data.db.toDomain
 import lavender.client.android.data.ai.AiV2ChatUseCase
+import androidx.core.content.edit
 
 /**
  * ChatListViewModel — ViewModel для ChatListActivity.
@@ -67,6 +68,9 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     private val _tabFilter = MutableStateFlow("all")
+
+    /** Cache of company names keyed by companyId. Populated from session + company chats. */
+    val companyNameCache = mutableMapOf<String, String>()
     val tabFilter: StateFlow<String> = _tabFilter.asStateFlow()
 
     private val locallyReadChats: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
@@ -87,7 +91,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
             if (allChats.isEmpty()) {
                 try {
                     val db = lavender.client.android.data.db.AppDatabase.getDatabase(getApplication())
-                    val cached = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    val cached = withContext(Dispatchers.IO) {
                         db.chatDao().getAllChats().map { it.toDomain() }
                     }
                     if (cached.isNotEmpty()) {
@@ -223,7 +227,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                 hasMore = true
                 // Ensure JWT is fresh before any gRPC call
                 withContext(Dispatchers.IO) {
-                    lavender.client.android.data.session.SessionManager.ensureFreshToken(getApplication())
+                    SessionManager.ensureFreshToken(getApplication())
                 }
 
                 val username = SessionManager.session.value.username
@@ -281,7 +285,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                         if (error == "UNAUTHENTICATED" || error == "PERMISSION_DENIED") {
                             Log.w(TAG, "loadChats: auth error ($error) — retrying token refresh before logout")
                             withContext(Dispatchers.IO) {
-                                lavender.client.android.data.session.SessionManager.forceTokenRefresh(getApplication())
+                                SessionManager.forceTokenRefresh(getApplication())
                             }
                             // Retry getChats once with refreshed token
                             val retriedPage = kotlinx.coroutines.withTimeoutOrNull(10.seconds) {
@@ -394,12 +398,17 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
             }
             if (response?.companies != null) {
                 companyPositionCache.clear()
+                companyNameCache.clear()
                 for (entry in response.companies) {
                     val companyId = entry.company?.id ?: continue
                     val positionLevel = entry.member?.position?.level ?: 0
                     companyPositionCache[companyId] = positionLevel
+                    val companyName = entry.company?.name ?: ""
+                    if (companyName.isNotEmpty()) {
+                        companyNameCache[companyId] = companyName
+                    }
                 }
-                Log.d(TAG, "Loaded ${companyPositionCache.size} company positions")
+                Log.d(TAG, "Loaded ${companyPositionCache.size} company positions, ${companyNameCache.size} names")
             }
         } catch (e: Exception) {
             Log.w(TAG, "loadCompanyPositions failed: ${e.message}")
@@ -590,7 +599,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                         } catch (e: Exception) { ErrorHandler.handle(TAG, "Failed to delete AI chat from cache", e) }
                         val prefs = getApplication<android.app.Application>().getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
                         val deleted = prefs.getStringSet("deleted_ai_chats", emptySet()) ?: emptySet()
-                        prefs.edit().putStringSet("deleted_ai_chats", deleted + chatId).apply()
+                        prefs.edit { putStringSet("deleted_ai_chats", deleted + chatId) }
                     }
                     onResult(null)
                     return@launch
@@ -680,10 +689,15 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
         val userCompanyId = lavender.client.android.data.session.SessionManager.session.value.companyId
 
         // Apply tab filter
-        val filteredChats = when (tab) {
-            "ai" -> chats.filter { it.type == "owl" || it.type == "hermes" }
-            "groups" -> chats.filter { it.type == "group" || it.type == "general" || it.type == "conference" }
-            "company" -> chats.filter { it.companyId.isNotEmpty() }
+        val filteredChats = when {
+            tab == "ai" -> chats.filter { it.type == "owl" || it.type == "hermes" }
+            tab == "groups" -> chats.filter { it.type == "group" || it.type == "general" || it.type == "conference" }
+            tab == "company" -> chats.filter { it.companyId.isNotEmpty() }
+            tab.startsWith("company:") -> {
+                val targetCompanyId = tab.removePrefix("company:")
+                chats.filter { it.companyId == targetCompanyId }
+            }
+            tab == "archive" -> chats.filter { it.isArchived }
             else -> chats // "all"
         }.filter { chat ->
             // Company chat access control (per-company)
@@ -703,9 +717,10 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
             if (it.isSecret) it.copy(lastMessageText = "") else it
         }
 
-        val pinned = maskedChats.filter { it.isPinned && !it.isArchived }
+        val isArchiveTab = tab == "archive"
+        val pinned = maskedChats.filter { it.isPinned && (isArchiveTab || !it.isArchived) }
             .sortedByDescending { it.pinnedAt }
-        val allRegular = maskedChats.filter { !it.isPinned && !it.isArchived }
+        val allRegular = maskedChats.filter { !it.isPinned && (isArchiveTab || !it.isArchived) }
             .sortedByDescending { it.lastMessageTime }
 
         val sectionList = mutableListOf<SectionItem>()

@@ -934,6 +934,7 @@
     <string name="tab_ai">AI Chats</string>
     <string name="tab_groups">Groups</string>
     <string name="tab_company">Company</string>
+    <string name="tab_archive">Archive</string>
     <string name="section_pinned">Pinned</string>
     <string name="section_favorites">Favorites</string>
     <string name="section_all_chats">All Chats</string>

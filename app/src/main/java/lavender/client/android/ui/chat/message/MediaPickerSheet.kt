@@ -149,7 +149,7 @@ class MediaPickerSheet(
         val emptyState = findViewById<LinearLayout>(R.id.stickerEmptyState)
         val btnCreate = findViewById<android.view.View>(R.id.btnCreatePack)
 
-        rvPacks?.layoutManager = LinearLayoutManager(activity, LinearLayoutManager.HORIZONTAL, false)
+        rvPacks?.layoutManager = LinearLayoutManager(activity, LinearLayoutManager.VERTICAL, false)
         rvPacks?.adapter = stickerPackAdapter
 
         rvStickers?.layoutManager = GridLayoutManager(activity, 4)

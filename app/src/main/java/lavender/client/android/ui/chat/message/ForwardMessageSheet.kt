@@ -76,11 +76,36 @@ class ForwardMessageSheet(
             val previewView = LayoutInflater.from(activity).inflate(R.layout.item_forward_preview, previewContainer, false)
             val tvPreviewText = previewView.findViewById<TextView>(R.id.tvPreviewText)
             val tvPreviewUser = previewView.findViewById<TextView>(R.id.tvPreviewUser)
+            val ivMedia = previewView.findViewById<ImageView>(R.id.ivPreviewMedia)
 
-            tvPreviewText.text = msg.text.take(100)
+            val displayText = when {
+                msg.text.isNotEmpty() -> msg.text.take(100)
+                msg.stickerUrl.isNotEmpty() -> activity.getString(R.string.sticker_image)
+                msg.imageUrl.isNotEmpty() -> activity.getString(R.string.photo)
+                msg.voiceUrl.isNotEmpty() -> activity.getString(R.string.voice_message)
+                msg.isForwarded && msg.forwardedFrom.isNotEmpty() -> activity.getString(R.string.forwarded_from, msg.forwardedFrom)
+                else -> ""
+            }
+            tvPreviewText.text = displayText
             tvPreviewText.setTextColor(txtColor)
             tvPreviewUser.text = msg.user
             tvPreviewUser.setTextColor(ThemeUtils.adjustAlpha(txtColor, 0.6f))
+
+            // Show thumbnail for image/sticker
+            val thumbUrl = when {
+                msg.imageUrl.isNotEmpty() -> msg.imageUrl
+                msg.stickerThumbnailUrl.isNotEmpty() -> msg.stickerThumbnailUrl
+                msg.stickerUrl.isNotEmpty() -> msg.stickerUrl
+                else -> null
+            }
+            if (thumbUrl != null) {
+                ivMedia?.visibility = View.VISIBLE
+                com.bumptech.glide.Glide.with(activity.applicationContext)
+                    .load(thumbUrl)
+                    .placeholder(R.drawable.ic_image_placeholder)
+                    .centerCrop()
+                    .into(ivMedia!!)
+            }
 
             previewContainer.addView(previewView)
         }

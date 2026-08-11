@@ -1,5 +1,6 @@
 package lavender.client.android.ui.chatlist
 
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -41,6 +42,8 @@ import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.ChatAdapter
 import lavender.client.android.ui.widget.AIBottomSheet
 import kotlin.time.Duration.Companion.seconds
+import androidx.core.graphics.drawable.toDrawable
+import androidx.core.graphics.toColorInt
 
 /**
  * ChatListActivity — единый Activity для списка чатов.
@@ -148,7 +151,7 @@ class ChatListActivity : AppCompatActivity() {
         SessionManager.initFromPrefs(this)
         applyTheme()
 
-        val serverAddress = CredentialStore.getServerAddress(this) ?: ""
+        val serverAddress = CredentialStore.getServerAddress(this)
 
         if (serverAddress.isEmpty()) {
             Log.w(TAG, "No server address — showing auth dialog")
@@ -161,6 +164,8 @@ class ChatListActivity : AppCompatActivity() {
         registerMarkReadReceiver()
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    @Suppress("UnprotectedRegisterReceiver")
     private fun registerMarkReadReceiver() {
         markReadReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
@@ -171,7 +176,7 @@ class ChatListActivity : AppCompatActivity() {
         }
         val filter = android.content.IntentFilter(lavender.client.android.data.fcm.NotificationMarkReadReceiver.ACTION_CHAT_MARKED_READ)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(markReadReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            registerReceiver(markReadReceiver, filter, RECEIVER_NOT_EXPORTED)
         } else {
             registerReceiver(markReadReceiver, filter)
         }
@@ -406,7 +411,7 @@ class ChatListActivity : AppCompatActivity() {
         // Channel health check on resume from background
         val currentStatus = GrpcClient.connectionStatus.value
         if (currentStatus != ConnectionStatus.READY) {
-            val serverAddr = CredentialStore.getServerAddress(this) ?: ""
+            val serverAddr = CredentialStore.getServerAddress(this)
             if (serverAddr.isNotEmpty()) {
                 val parts = serverAddr.split(":")
                 val host = parts[0]
@@ -420,7 +425,7 @@ class ChatListActivity : AppCompatActivity() {
         if (::viewModel.isInitialized && GrpcClient.connectionStatus.value == ConnectionStatus.READY) {
             viewModel.loadChats(silent = true)
         }
-        // Pre-load users for add contact/create chat sheets
+        // Preload users for add contact/create chat sheets
         if (GrpcClient.connectionStatus.value == ConnectionStatus.READY) {
             GrpcClient.loadUsers()
         }
@@ -481,7 +486,7 @@ class ChatListActivity : AppCompatActivity() {
             viewModel.forceLogoutEvent.collect { error ->
                 Log.w("ChatListActivity", "Force logout triggered: $error")
                 Toast.makeText(this@ChatListActivity, R.string.session_expired, Toast.LENGTH_LONG).show()
-                lavender.client.android.data.session.SessionManager.logout(this@ChatListActivity)
+                SessionManager.logout(this@ChatListActivity)
                 finish()
                 startActivity(Intent(this@ChatListActivity, lavender.client.android.SplashActivity::class.java))
             }
@@ -502,7 +507,7 @@ class ChatListActivity : AppCompatActivity() {
                     navigateToChat(chat, username)
                 }
             },
-            onChatLongClick = { chat, anchorView ->
+            onChatLongClick = { chat, _ ->
                 if (!chatAdapter.isSelectionMode()) {
                     chatAdapter.setSelectionMode(true)
                     chatAdapter.toggleSelection(chat.id)
@@ -544,8 +549,9 @@ class ChatListActivity : AppCompatActivity() {
                 val layoutManager = rvChatList?.layoutManager as? LinearLayoutManager
                 val firstVisible = layoutManager?.findFirstCompletelyVisibleItemPosition() ?: 0
                 val wasNearTop = firstVisible <= 1
-                val previousItemCount = chatAdapter.itemCount
                 chatAdapter.setSections(sections)
+                // Update dynamic tabs (AI, per-company, Archive)
+                updateDynamicTabs(this@ChatListActivity, viewModel.getChats())
                 if (wasNearTop) {
                     rvChatList?.scrollToPosition(0)
                 } else if (chatAdapter.itemCount > 0) {
@@ -682,13 +688,13 @@ class ChatListActivity : AppCompatActivity() {
                 val itemView = viewHolder.itemView
 
                 if (dX < 0) {
-                    val deleteColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().primaryColor, android.graphics.Color.RED)
-                    val bg = android.graphics.drawable.ColorDrawable(deleteColor)
+                    val deleteColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().primaryColor, Color.RED)
+                    val bg = deleteColor.toDrawable()
                     bg.setBounds(itemView.right + dX.toInt(), itemView.top, itemView.right, itemView.bottom)
                     bg.draw(c)
 
                     val trashIcon = androidx.core.content.ContextCompat.getDrawable(this@ChatListActivity, android.R.drawable.ic_menu_delete)
-                    trashIcon?.mutate()?.setTint(android.graphics.Color.WHITE)
+                    trashIcon?.mutate()?.setTint(Color.WHITE)
                     val iconMargin = (itemView.height - (trashIcon?.intrinsicHeight ?: 0)) / 2
                     val iconTop = itemView.top + iconMargin
                     val iconBottom = iconTop + (trashIcon?.intrinsicHeight ?: 0)
@@ -697,13 +703,13 @@ class ChatListActivity : AppCompatActivity() {
                     trashIcon?.setBounds(iconLeft, iconTop, iconRight, iconBottom)
                     trashIcon?.draw(c)
                 } else if (dX > 0) {
-                    val pinColor = android.graphics.Color.parseColor("#4CAF50")
-                    val bg = android.graphics.drawable.ColorDrawable(pinColor)
+                    val pinColor = "#4CAF50".toColorInt()
+                    val bg = pinColor.toDrawable()
                     bg.setBounds(itemView.left, itemView.top, itemView.left + dX.toInt(), itemView.bottom)
                     bg.draw(c)
 
                     val pinIcon = androidx.core.content.ContextCompat.getDrawable(this@ChatListActivity, R.drawable.ic_pin)
-                    pinIcon?.mutate()?.setTint(android.graphics.Color.WHITE)
+                    pinIcon?.mutate()?.setTint(Color.WHITE)
                     val iconMargin = (itemView.height - (pinIcon?.intrinsicHeight ?: 0)) / 2
                     val iconTop = itemView.top + iconMargin
                     val iconBottom = iconTop + (pinIcon?.intrinsicHeight ?: 0)

@@ -10,11 +10,12 @@ import lavender.client.android.ConferenceLobbyActivity
  */
 object CallNavigator {
 
-    fun startCall(context: Context, receiverId: String, senderName: String = "") {
+    fun startCall(context: Context, receiverId: String, senderName: String = "", isVideo: Boolean = true) {
         val intent = Intent(context, CallActivity::class.java).apply {
             putExtra("RECEIVER_ID", receiverId)
             putExtra("SENDER_NAME", senderName)
             putExtra("IS_INCOMING", false)
+            putExtra("IS_VIDEO_CALL", isVideo)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(intent)

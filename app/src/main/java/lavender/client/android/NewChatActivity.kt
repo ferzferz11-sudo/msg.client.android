@@ -213,6 +213,7 @@ class NewChatActivity : AppCompatActivity() {
 
         inputDelegate.configure(data.roomId, data.username, m.isDirect, m.participantsJson, data.isSecret)
         inputDelegate.onSendMessage = { text, imageUrl -> sendMessage(text, imageUrl) }
+        inputDelegate.onStickerSent = { shouldScrollToBottom = true }
         inputDelegate.onTypingSignal = { isTyping -> grpcClient.sendTypingSignal(data.username, isTyping) }
         inputDelegate.onAudioRecord = { file, dur -> chatViewModel.uploadAudio(this, file, dur, data.username) { msg -> lifecycleScope.launch { Toast.makeText(this@NewChatActivity, msg, Toast.LENGTH_SHORT).show() } } }
         inputDelegate.onReplyChanged = { m ->
@@ -286,11 +287,20 @@ class NewChatActivity : AppCompatActivity() {
         adapter = MessageAdapter(
             currentUsername = data.username, isGroupChat = !m.isDirect, adminUsername = m.creator,
             onMessageClick = { message ->
-                val text = message.text.trim().lowercase()
-                val isCall = CallMessageHelper.isCallOrConference(text)
-                val isEnded = CallMessageHelper.isCallEnded(text)
-                if (isCall && !isEnded) joinConference()
-                else messageMenuDelegate.showReactionsDialog(message) { msg -> inputDelegate.showReplyPreview(msg) }
+                if (message.stickerUrl.isNotEmpty()) {
+                    // Open sticker fullscreen
+                    val intent = android.content.Intent(this, FullScreenImageActivity::class.java).apply {
+                        putExtra("image_url", message.stickerThumbnailUrl.ifEmpty { message.stickerUrl })
+                        putExtra("sticker_url", message.stickerUrl)
+                    }
+                    startActivity(intent)
+                } else {
+                    val text = message.text.trim().lowercase()
+                    val isCall = CallMessageHelper.isCallOrConference(text)
+                    val isEnded = CallMessageHelper.isCallEnded(text)
+                    if (isCall && !isEnded) joinConference()
+                    else messageMenuDelegate.showReactionsDialog(message) { msg -> inputDelegate.showReplyPreview(msg) }
+                }
             },
             onSelectionChanged = { if (it > 0) selectionDelegate.showSelectionToolbar(it) else selectionDelegate.hideSelectionToolbar() },
             onMessageLongClick = { selectionDelegate.enterSelectionMode(it) },
@@ -513,7 +523,7 @@ class NewChatActivity : AppCompatActivity() {
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
         if (lavender.client.android.data.auth.AuthManager.isJwtAuthenticated(this)
             && lavender.client.android.data.auth.AuthManager.needsRefresh(this)) {
-            lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) { lavender.client.android.data.session.SessionManager.ensureFreshToken(this@NewChatActivity) }
+            lifecycleScope.launch(Dispatchers.IO) { SessionManager.ensureFreshToken(this@NewChatActivity) }
         }
         if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
             grpcClient.loadUsers()
@@ -525,11 +535,13 @@ class NewChatActivity : AppCompatActivity() {
             try {
                 lifecycleScope.launch {
                     if (isFinishing || isDestroyed) return@launch
-                    newChatViewModel.updateMetadata(lavender.client.android.ui.chat.ChatMetadataState(
-                        chatName = meta.chatName, isDirect = meta.isDirect, chatType = meta.chatType,
-                        participantsJson = meta.participantsJson, creator = meta.creator,
-                        avatarUrl = meta.avatarUrl, fullAvatarUrl = meta.fullAvatarUrl
-                    ))
+                    newChatViewModel.updateMetadata(
+                        ChatMetadataState(
+                            chatName = meta.chatName, isDirect = meta.isDirect, chatType = meta.chatType,
+                            participantsJson = meta.participantsJson, creator = meta.creator,
+                            avatarUrl = meta.avatarUrl, fullAvatarUrl = meta.fullAvatarUrl
+                        )
+                    )
                     val m = newChatViewModel.metadata.value
                     toolbarDelegate.configure(data.roomId, data.username, m.chatName, m.isDirect, m.chatType, m.participantsJson, m.creator, m.avatarUrl, m.fullAvatarUrl, data.isSecret)
                     toolbarDelegate.setup()
@@ -597,10 +609,25 @@ class NewChatActivity : AppCompatActivity() {
             R.id.action_video_call -> {
                 val other = toolbarDelegate.getOtherParticipant()
                 if (!other.isNullOrEmpty()) {
-                    val otherUserId = GrpcClient.allUsers.value
-                        .firstOrNull { it.username == other }?.userId ?: other
-                    lavender.client.android.data.calls.CallManager.initiateCall(other)
-                    lavender.client.android.data.calls.CallNavigator.startCall(this, otherUserId, other)
+                    val otherUser = GrpcClient.allUsers.value.firstOrNull { it.username == other }
+                    val otherUserId = otherUser?.userId ?: other
+                    val avatarUrl = otherUser?.avatarUrl?.takeIf { it.isNotEmpty() }
+                    val lastSeenAt = otherUser?.lastSeenAt
+                    lavender.client.android.ui.chat.message.PreCallSheet(
+                        activity = this,
+                        username = other,
+                        userId = otherUserId,
+                        avatarUrl = avatarUrl,
+                        lastSeenAt = lastSeenAt,
+                        onAudioCall = { userId, name ->
+                            lavender.client.android.data.calls.CallManager.initiateCall(name)
+                            lavender.client.android.data.calls.CallNavigator.startCall(this, userId, name, isVideo = false)
+                        },
+                        onVideoCall = { userId, name ->
+                            lavender.client.android.data.calls.CallManager.initiateCall(name)
+                            lavender.client.android.data.calls.CallNavigator.startCall(this, userId, name, isVideo = true)
+                        }
+                    ).show()
                 }
                 true
             }
@@ -674,6 +701,7 @@ class NewChatActivity : AppCompatActivity() {
 
     private var markReadReceiver: android.content.BroadcastReceiver? = null
 
+    @Suppress("UnprotectedRegisterReceiver")
     private fun registerMarkReadReceiver() {
         markReadReceiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {

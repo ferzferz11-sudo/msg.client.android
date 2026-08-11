@@ -149,6 +149,7 @@ class GrpcMessageV2Client(
 
         var imageUrl = ""; var imageUrls = emptyList<String>()
         var voiceUrl = ""; var duration = 0
+        var stickerUrl = ""; var stickerThumbnailUrl = ""
         var repliedToMessageId = ""; var repliedToText = ""; var repliedToUser = ""
 
         when {
@@ -161,6 +162,10 @@ class GrpcMessageV2Client(
                     "voice" -> {
                         voiceUrl = proto.media.url
                         duration = proto.media.duration
+                    }
+                    "sticker" -> {
+                        stickerUrl = proto.media.url
+                        stickerThumbnailUrl = proto.media.urls.firstOrNull() ?: ""
                     }
                 }
             }
@@ -201,6 +206,8 @@ class GrpcMessageV2Client(
             isE2EE = proto.isE2EE,
             e2eePayload = proto.e2eePayload,
             mentions = proto.mentions,
+            stickerUrl = stickerUrl,
+            stickerThumbnailUrl = stickerThumbnailUrl,
             isForwarded = proto.forwardedFrom.isNotEmpty(),
             forwardedFrom = proto.forwardedFrom
         )

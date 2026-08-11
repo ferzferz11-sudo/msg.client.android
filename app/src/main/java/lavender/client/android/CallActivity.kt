@@ -38,6 +38,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     
     private var isMicEnabled = true
     private var isCameraEnabled = true
+    private var isVideoCall = true
 
     private val eglBase = EglBase.create()
     private var isRemoteViewInitialized = false
@@ -49,8 +50,18 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         if (permissions.values.all { it }) {
             if (!isIncoming || isConference) initWebRtc()
         } else {
-            Toast.makeText(this, getString(R.string.camera_mic_permissions_required), Toast.LENGTH_LONG).show()
-            finish()
+            // Retry after 500ms — system may not have updated permission state yet
+            // (race condition after first registration)
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                val requiredPermissions = if (isVideoCall || isConference) PERMISSIONS else AUDIO_PERMISSIONS
+                if (!isFinishing && !isDestroyed && hasPermissions(requiredPermissions)) {
+                    Log.d(TAG, "Permissions granted on retry")
+                    if (!isIncoming || isConference) initWebRtc()
+                } else {
+                    Toast.makeText(this, getString(R.string.camera_mic_permissions_required), Toast.LENGTH_LONG).show()
+                    finish()
+                }
+            }, 500)
         }
     }
 
@@ -62,6 +73,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     companion object {
         private const val TAG = "CallActivity"
         private val PERMISSIONS = arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+        private val AUDIO_PERMISSIONS = arrayOf(Manifest.permission.RECORD_AUDIO)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,6 +90,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         receiverId = intent.getStringExtra("RECEIVER_ID") ?: ""
         isIncoming = intent.getBooleanExtra("IS_INCOMING", false)
         isConference = intent.getBooleanExtra("IS_CONFERENCE", false)
+        isVideoCall = intent.getBooleanExtra("IS_VIDEO_CALL", true)
         roomId = intent.getStringExtra("ROOM_ID") ?: ""
         val senderName = intent.getStringExtra("SENDER_NAME") ?: ""
 
@@ -121,12 +134,16 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             binding.btnMic.visibility = View.GONE
             binding.btnCamera.visibility = View.GONE
             isCameraEnabled = false
+        } else if (!isVideoCall && !isConference) {
+            isCameraEnabled = false
+            binding.btnCamera.setImageResource(R.drawable.ic_videocam_off)
         }
 
-        if (hasPermissions()) {
+        val requiredPermissions = if (isVideoCall || isConference) PERMISSIONS else AUDIO_PERMISSIONS
+        if (hasPermissions(requiredPermissions)) {
             if (!isIncoming || isConference) initWebRtc()
         } else {
-            permissionLauncher.launch(PERMISSIONS)
+            permissionLauncher.launch(requiredPermissions)
         }
 
         setupButtons()
@@ -488,5 +505,5 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         }
     }
 
-    private fun hasPermissions() = PERMISSIONS.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
+    private fun hasPermissions(permissions: Array<String> = PERMISSIONS) = permissions.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
 }

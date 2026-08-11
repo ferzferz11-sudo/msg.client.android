@@ -326,17 +326,15 @@ class ProfileActivity : AppCompatActivity() {
             }
 
             actionVoiceCall?.setOnClickListener {
-                val currentUsername = grpcClient.getCurrentUsername() ?: return@setOnClickListener
                 val otherUserId = data.userId.ifEmpty { data.username }
                 lavender.client.android.data.calls.CallManager.initiateCall(data.username)
-                lavender.client.android.data.calls.CallNavigator.startCall(this, otherUserId, data.username)
+                lavender.client.android.data.calls.CallNavigator.startCall(this, otherUserId, data.username, isVideo = false)
             }
 
             actionVideoCall?.setOnClickListener {
-                val currentUsername = grpcClient.getCurrentUsername() ?: return@setOnClickListener
                 val otherUserId = data.userId.ifEmpty { data.username }
                 lavender.client.android.data.calls.CallManager.initiateCall(data.username)
-                lavender.client.android.data.calls.CallNavigator.startCall(this, otherUserId, data.username)
+                lavender.client.android.data.calls.CallNavigator.startCall(this, otherUserId, data.username, isVideo = true)
             }
 
             if (data.email.isNotEmpty()) {

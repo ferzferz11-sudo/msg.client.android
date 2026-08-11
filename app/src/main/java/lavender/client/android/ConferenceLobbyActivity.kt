@@ -51,6 +51,17 @@ class ConferenceLobbyActivity : AppCompatActivity() {
     ) { permissions ->
         if (permissions.values.all { it }) {
             initPreview()
+        } else {
+            // Retry after 500ms — system may not have updated permission state yet
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                if (!isFinishing && !isDestroyed && hasPermissions()) {
+                    Log.d(TAG, "Permissions granted on retry")
+                    initPreview()
+                } else {
+                    Toast.makeText(this, getString(R.string.camera_mic_permissions_required), Toast.LENGTH_LONG).show()
+                    finish()
+                }
+            }, 500)
         }
     }
     private val eglBase = EglBase.create()

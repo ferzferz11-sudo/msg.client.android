@@ -1,5 +1,62 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.19] - 2026-08-11
+
+### Новые фичи
+
+**Pre-call screen (Medium):**
+- Новый `PreCallSheet` — bottom sheet перед началом звонка. Показывает аватар, имя, последнее время в сети собеседника. Две кнопки: аудиозвонок и видеозвонок. Кнопка отмены
+- `CallNavigator.startCall()` — новый параметр `isVideo: Boolean`. `CallActivity` читает `IS_VIDEO_CALL` из intent
+- Для аудиозвонков запрашивается только `RECORD_AUDIO` (не `CAMERA`). Камеру можно включить во время звонка
+- `NewChatActivity` — иконка звонка теперь открывает `PreCallSheet` вместо прямого старта звонка
+- `ProfileActivity` — кнопки голосового и видеозвонка передают корректный `isVideo` флаг
+
+**Fullscreen просмотр стикеров (Low):**
+- Тап на стикер в чате открывает `FullScreenImageActivity` вместо reactions dialog
+- Тап на стикер в редакторе пакета (`StickerPackCreateActivity`) тоже открывает fullscreen
+
+### Исправлено
+
+**Стикеры исчезают после отправки (Critical):**
+- `GrpcMessageV2Client.messageV2ToDomain()` — `when` блок обрабатывал только `"image"` и `"voice"`, но не `"sticker"`. Входящие стикеры не парсились → `stickerUrl` оставался пустым → стикер отображался как пустое сообщение. При `loadHistoryV2` стикеры "исчезали". Исправлено: добавлен кейс `"sticker"` → парсинг `stickerUrl`/`stickerThumbnailUrl`
+
+**Скролл к стикеру после отправки (Medium):**
+- `ChatInputDelegate.sendStickerMessage()` не устанавливал `shouldScrollToBottom` → чат не прокручивался к отправленному стикеру. Исправлено: добавлен callback `onStickerSent`, в `NewChatActivity` устанавливает `shouldScrollToBottom = true`
+
+**Crop editor — скачок при pinch zoom (Medium):**
+- `StickerEditorView.onTouchEvent()` — `lastTouchX/Y` не обновлялись во время pinch gesture → при переключении на drag координаты были stale → скачок изображения. Исправлено: `lastTouchX/Y` обновляются в каждом `ACTION_MOVE`
+
+**Crop editor — обрезание не по границе (Medium):**
+- `getCroppedBitmap()` использовал двухэтапный crop (mappedRect → square enforcement через center) вместо прямого маппинга. Исправлено: используется тот же подход что и в `applyCrop()` — `Bitmap.createBitmap` с square enforcement через `adjLeft`/`adjTop`
+
+**Sticker pack — имя пакета не помещается (Low):**
+- `item_sticker_pack_tab.xml` — горизонтальный layout 64dp с 10sp текстом. Исправлено: вертикальный список, каждый пакет — горизонтальная строка (40dp cover + 14sp name + indicator). `rvStickerPacks` — `wrap_content` + `nestedScrollingEnabled=false`
+
+**Права камеры/микрофона после регистрации (High):**
+- После первой регистрации система иногда не успевала обновить кеш прав → `hasPermissions()` возвращал `false` хотя права были выданы. Пользователь не мог позвонить до перезахода в приложение
+- Исправлено: в `CallActivity` и `ConferenceLobbyActivity` добавлен retry через 500ms в callback permission launcher. Если права "отклонены", повторная проверка через 500ms — система успевает обновить состояние. Toast + finish только при подтверждённом отказе
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `PreCallSheet.kt` | Новый файл — bottom sheet с аватаром, именем, last seen, audio/video кнопки |
+| `sheet_pre_call.xml` | Новый layout |
+| `bg_circle_primary.xml` | Новый drawable — круглый фон для кнопок звонка |
+| `ic_call.xml` | Новый drawable — иконка телефонного звонка |
+| `CallNavigator.kt` | Параметр `isVideo` в `startCall()` |
+| `CallActivity.kt` | `IS_VIDEO_CALL` extra, `AUDIO_PERMISSIONS`, permission retry |
+| `ConferenceLobbyActivity.kt` | Permission retry (500ms) |
+| `NewChatActivity.kt` | PreCallSheet, sticker fullscreen tap, sticker scroll |
+| `ProfileActivity.kt` | `isVideo` флаг для audio/video кнопок |
+| `GrpcMessageV2Client.kt` | `sticker` case в `messageV2ToDomain()`, `stickerUrl`/`stickerThumbnailUrl` в Message |
+| `ChatInputDelegate.kt` | `onStickerSent` callback |
+| `StickerEditorView.kt` | Pinch zoom jump fix, crop offset fix |
+| `StickerPackCreateActivity.kt` | Sticker tap → fullscreen |
+| `MediaPickerSheet.kt` | Vertical pack list |
+| `item_sticker_pack_tab.xml` | Vertical item layout, 14sp text |
+| `sheet_media_picker.xml` | `rvStickerPacks` wrap_content + nestedScrolling |
+
 ## [1.3.4.18] - 2026-08-11
 
 ### Исправлено

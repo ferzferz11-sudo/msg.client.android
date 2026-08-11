@@ -1,11 +1,11 @@
 package lavender.client.android
-import android.util.Log
 
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -20,7 +20,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Sticker
-import lavender.client.android.data.models.StickerPack
 import lavender.client.android.network.HttpClient
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
@@ -31,6 +30,7 @@ import okhttp3.MultipartBody
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.UUID
+import androidx.core.graphics.scale
 
 class StickerPackCreateActivity : AppCompatActivity() {
 
@@ -49,7 +49,13 @@ class StickerPackCreateActivity : AppCompatActivity() {
     private var isSaving = false
 
     private val stickerGridAdapter = StickerGridAdapter(
-        onStickerClick = { },
+        onStickerClick = { sticker ->
+            val intent = android.content.Intent(this, FullScreenImageActivity::class.java).apply {
+                putExtra("image_url", sticker.thumbnailUrl.ifEmpty { sticker.lottieUrl })
+                putExtra("sticker_url", sticker.lottieUrl)
+            }
+            startActivity(intent)
+        },
         onStickerLongClick = { sticker -> showStickerOptions(sticker) }
     )
 
@@ -365,12 +371,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
             val maxDim = 512
             val scale = minOf(maxDim.toFloat() / bitmap.width, maxDim.toFloat() / bitmap.height, 1f)
             scaledBitmap = if (scale < 1f) {
-                android.graphics.Bitmap.createScaledBitmap(
-                    bitmap,
-                    (bitmap.width * scale).toInt(),
-                    (bitmap.height * scale).toInt(),
-                    true
-                )
+                bitmap.scale((bitmap.width * scale).toInt(), (bitmap.height * scale).toInt())
             } else bitmap
             val outputStream = java.io.ByteArrayOutputStream()
             scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, outputStream)
@@ -402,11 +403,11 @@ class StickerPackCreateActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 if (packId != null) {
-                    android.util.Log.d("StickerPack", "Updating pack $packId, title=$title, cover=$coverStickerId")
+                    Log.d("StickerPack", "Updating pack $packId, title=$title, cover=$coverStickerId")
                     val updateResult = GrpcClient.updateStickerPack(packId!!, title = title, coverStickerId = coverStickerId ?: "")
-                    android.util.Log.d("StickerPack", "Update result: success=${updateResult?.success}")
+                    Log.d("StickerPack", "Update result: success=${updateResult?.success}")
                     if (updateResult == null || !updateResult.success) {
-                        android.util.Log.e("StickerPack", "updateStickerPack failed: success=${updateResult?.success}")
+                        Log.e("StickerPack", "updateStickerPack failed: success=${updateResult?.success}")
                         Toast.makeText(this@StickerPackCreateActivity, getString(R.string.failed), Toast.LENGTH_SHORT).show()
                         btnSave.isEnabled = true
                         isSaving = false
@@ -414,7 +415,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
                     }
                     val newStickers = currentStickers.filter { it.id !in originalStickerIds }
                     if (newStickers.isNotEmpty()) {
-                        android.util.Log.d("StickerPack", "Adding ${newStickers.size} new stickers to pack $packId")
+                        Log.d("StickerPack", "Adding ${newStickers.size} new stickers to pack $packId")
                         var addFailed = 0
                         for (sticker in newStickers) {
                             if (sticker.lottieUrl.isEmpty()) { addFailed++; continue }
@@ -424,24 +425,24 @@ class StickerPackCreateActivity : AppCompatActivity() {
                             )
                             if (addResult?.success != true) addFailed++
                         }
-                        if (addFailed > 0) android.util.Log.e("StickerPack", "$addFailed new stickers failed to add")
+                        if (addFailed > 0) Log.e("StickerPack", "$addFailed new stickers failed to add")
                     }
                     Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_pack_updated), Toast.LENGTH_SHORT).show()
                     isSaving = false
                     finish()
                 } else {
-                    android.util.Log.d("StickerPack", "Creating pack: title=$title, name=$name, stickers=${currentStickers.size}")
+                    Log.d("StickerPack", "Creating pack: title=$title, name=$name, stickers=${currentStickers.size}")
                     val result = GrpcClient.createStickerPack(title, name)
-                    android.util.Log.d("StickerPack", "Create result: success=${result?.success}, error=${result?.error}, packId=${result?.pack?.id}")
+                    Log.d("StickerPack", "Create result: success=${result?.success}, error=${result?.error}, packId=${result?.pack?.id}")
                     if (result == null) {
-                        android.util.Log.e("StickerPack", "createStickerPack returned null — channel issue or auth failure")
+                        Log.e("StickerPack", "createStickerPack returned null — channel issue or auth failure")
                         Toast.makeText(this@StickerPackCreateActivity, getString(R.string.unknown_error), Toast.LENGTH_SHORT).show()
                         btnSave.isEnabled = true
                         isSaving = false
                         return@launch
                     }
                     if (!result.success) {
-                        android.util.Log.e("StickerPack", "createStickerPack failed: ${result.error}")
+                        Log.e("StickerPack", "createStickerPack failed: ${result.error}")
                         Toast.makeText(this@StickerPackCreateActivity, result.error.ifEmpty { getString(R.string.failed) }, Toast.LENGTH_SHORT).show()
                         btnSave.isEnabled = true
                         isSaving = false
@@ -449,39 +450,39 @@ class StickerPackCreateActivity : AppCompatActivity() {
                     }
                     val newPackId = result.pack?.id
                     if (newPackId.isNullOrEmpty()) {
-                        android.util.Log.e("StickerPack", "createStickerPack success but pack.id is null/empty")
+                        Log.e("StickerPack", "createStickerPack success but pack.id is null/empty")
                         Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_upload_failed), Toast.LENGTH_SHORT).show()
                         btnSave.isEnabled = true
                         isSaving = false
                         return@launch
                     }
                     packId = newPackId
-                    android.util.Log.d("StickerPack", "Pack created: $packId, adding ${currentStickers.size} stickers")
+                    Log.d("StickerPack", "Pack created: $packId, adding ${currentStickers.size} stickers")
                     toolbar.title = getString(R.string.sticker_edit_pack)
                     var addFailed = 0
                     for ((idx, sticker) in currentStickers.withIndex()) {
                         if (sticker.lottieUrl.isEmpty()) {
-                            android.util.Log.w("StickerPack", "Skipping sticker ${idx+1}: empty lottieUrl")
+                            Log.w("StickerPack", "Skipping sticker ${idx+1}: empty lottieUrl")
                             addFailed++
                             continue
                         }
-                        android.util.Log.d("StickerPack", "Adding sticker ${idx+1}/${currentStickers.size}: url=${sticker.lottieUrl}")
+                        Log.d("StickerPack", "Adding sticker ${idx+1}/${currentStickers.size}: url=${sticker.lottieUrl}")
                         val addResult = GrpcClient.addSticker(
                             packId!!, sticker.lottieUrl, sticker.thumbnailUrl,
                             sticker.emoji, sticker.width, sticker.height
                         )
-                        android.util.Log.d("StickerPack", "addSticker result: success=${addResult?.success}, error=${addResult?.error}")
+                        Log.d("StickerPack", "addSticker result: success=${addResult?.success}, error=${addResult?.error}")
                         if (addResult?.success != true) addFailed++
                     }
                     if (addFailed > 0) {
-                        android.util.Log.e("StickerPack", "$addFailed stickers failed to add")
+                        Log.e("StickerPack", "$addFailed stickers failed to add")
                     }
                     val currentCover = coverStickerId
                     if (currentCover != null) {
-                        android.util.Log.d("StickerPack", "Setting cover: $currentCover")
+                        Log.d("StickerPack", "Setting cover: $currentCover")
                         val coverResult = GrpcClient.updateStickerPack(packId!!, coverStickerId = currentCover)
                         if (coverResult == null || !coverResult.success) {
-                            android.util.Log.e("StickerPack", "Setting cover failed: success=${coverResult?.success}")
+                            Log.e("StickerPack", "Setting cover failed: success=${coverResult?.success}")
                         }
                     }
                     Toast.makeText(this@StickerPackCreateActivity, getString(R.string.sticker_pack_created), Toast.LENGTH_SHORT).show()
@@ -489,7 +490,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
                     finish()
                 }
             } catch (e: Exception) {
-                android.util.Log.e("StickerPack", "savePack exception: ${e.javaClass.simpleName}: ${e.message}", e)
+                Log.e("StickerPack", "savePack exception: ${e.javaClass.simpleName}: ${e.message}", e)
                 Toast.makeText(this@StickerPackCreateActivity, getString(R.string.error_colon, e.message ?: ""), Toast.LENGTH_SHORT).show()
                 btnSave.isEnabled = true
                 isSaving = false

@@ -1,15 +1,26 @@
 package lavender.client.android.ui.sticker
-import android.util.Log
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Typeface
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
-import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import androidx.core.graphics.withSave
+import androidx.core.graphics.withTranslation
+import androidx.core.graphics.createBitmap
 
 class StickerEditorView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyle: Int = 0
@@ -267,9 +278,9 @@ class StickerEditorView @JvmOverloads constructor(
         super.onDraw(canvas)
         val bmp = filteredBitmap ?: originalBitmap ?: return
 
-        canvas.save()
-        canvas.drawBitmap(bmp, imageMatrix, imagePaint)
-        canvas.restore()
+        canvas.withSave {
+            drawBitmap(bmp, imageMatrix, imagePaint)
+        }
 
         if (editorMode == EditorMode.CROP) {
             drawCropOverlay(canvas)
@@ -318,11 +329,10 @@ class StickerEditorView @JvmOverloads constructor(
         text.textPaint.color = text.color
         text.textPaint.textSize = text.fontSize
 
-        canvas.save()
-        canvas.translate(text.x, text.y)
-        canvas.scale(text.scaleX, text.scaleY)
-        canvas.drawText(text.text, 0f, 0f, text.textPaint)
-        canvas.restore()
+        canvas.withTranslation(text.x, text.y) {
+            scale(text.scaleX, text.scaleY)
+            drawText(text.text, 0f, 0f, text.textPaint)
+        }
     }
 
     fun addTextOverlay(text: String, color: Int = Color.WHITE): TextOverlay {
@@ -395,8 +405,6 @@ class StickerEditorView @JvmOverloads constructor(
                     val dy = event.y - lastTouchY
                     imageMatrix.postTranslate(dx, dy)
                     constrainImage()
-                    lastTouchX = event.x
-                    lastTouchY = event.y
                     invalidate()
                     return true
                 }
@@ -405,11 +413,12 @@ class StickerEditorView @JvmOverloads constructor(
                     val dy = event.y - lastTouchY
                     activeTextOverlay!!.x += dx
                     activeTextOverlay!!.y += dy
-                    lastTouchX = event.x
-                    lastTouchY = event.y
                     invalidate()
                     return true
                 }
+                // Always update lastTouch to prevent jump when switching from pinch to drag
+                lastTouchX = event.x
+                lastTouchY = event.y
             }
             MotionEvent.ACTION_UP -> {
                 draggingImage = false
@@ -444,25 +453,20 @@ class StickerEditorView @JvmOverloads constructor(
             val h = bottom - top
             if (w <= 0 || h <= 0) return null
 
-            val cropped = Bitmap.createBitmap(bmp, left, top, w, h)
+            // Enforce square output to match the square crop overlay
+            val squareSize = min(w, h)
+            val adjLeft = left + (w - squareSize) / 2
+            val adjTop = top + (h - squareSize) / 2
 
-            val outputSize = min(cropped.width, cropped.height)
-            val output = Bitmap.createBitmap(outputSize, outputSize, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(output)
-            val srcLeft = (cropped.width - outputSize) / 2
-            val srcTop = (cropped.height - outputSize) / 2
-            val srcRect = Rect(srcLeft, srcTop, srcLeft + outputSize, srcTop + outputSize)
-            canvas.drawBitmap(cropped, srcRect, RectF(0f, 0f, outputSize.toFloat(), outputSize.toFloat()), imagePaint)
+            val cropped = Bitmap.createBitmap(bmp, adjLeft, adjTop, squareSize, squareSize)
 
-            if (cropped !== bmp) cropped.recycle()
+            drawTextOverlaysOnBitmap(cropped, cropOffsetX = adjLeft.toFloat(), cropOffsetY = adjTop.toFloat())
 
-            drawTextOverlaysOnBitmap(output, cropOffsetX = left.toFloat(), cropOffsetY = top.toFloat())
-
-            return output
+            return cropped
         }
 
         // In TEXT/FILTER mode: return full bitmap with text overlays
-        val output = Bitmap.createBitmap(bmp.width, bmp.height, Bitmap.Config.ARGB_8888)
+        val output = createBitmap(bmp.width, bmp.height)
         val canvas = Canvas(output)
         canvas.drawBitmap(bmp, 0f, 0f, imagePaint)
         drawTextOverlaysOnBitmap(output)
@@ -487,11 +491,10 @@ class StickerEditorView @JvmOverloads constructor(
             val scale = bitmap.width.toFloat() / (filteredBitmap ?: originalBitmap ?: return@forEach).width.toFloat()
             text.textPaint.textSize = text.fontSize * scale
 
-            canvas.save()
-            canvas.translate(px, py)
-            canvas.scale(text.scaleX, text.scaleY)
-            canvas.drawText(text.text, 0f, 0f, text.textPaint)
-            canvas.restore()
+            canvas.withTranslation(px, py) {
+                scale(text.scaleX, text.scaleY)
+                drawText(text.text, 0f, 0f, text.textPaint)
+            }
         }
     }
 
@@ -507,7 +510,7 @@ class StickerEditorView @JvmOverloads constructor(
     }
 
     private fun applyColorFilter(src: Bitmap, type: FilterType): Bitmap {
-        val result = Bitmap.createBitmap(src.width, src.height, src.config ?: Bitmap.Config.ARGB_8888)
+        val result = createBitmap(src.width, src.height, src.config ?: Bitmap.Config.ARGB_8888)
         val canvas = Canvas(result)
         val paint = Paint(Paint.FILTER_BITMAP_FLAG)
 
