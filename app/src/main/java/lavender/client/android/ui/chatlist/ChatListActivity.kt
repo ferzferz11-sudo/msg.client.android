@@ -328,9 +328,10 @@ class ChatListActivity : AppCompatActivity() {
         lifecycleScope.launch {
             var wasReady = GrpcClient.connectionStatus.value == ConnectionStatus.READY
             GrpcClient.connectionStatus.collect { status ->
+                val chatsReady = viewModel.chatsLoaded.value
                 val statusText = when (status) {
                     ConnectionStatus.CONNECTING -> getString(R.string.connecting)
-                    ConnectionStatus.READY -> getString(R.string.connection_online)
+                    ConnectionStatus.READY -> if (chatsReady) getString(R.string.connection_online) else getString(R.string.connecting)
                     ConnectionStatus.DISCONNECTED -> {
                         if (GrpcClient.serverShuttingDown.value) getString(R.string.server_restarting)
                         else if (CredentialStore.getServerAddress(this@ChatListActivity).isNotEmpty()) getString(R.string.connecting)
@@ -351,6 +352,15 @@ class ChatListActivity : AppCompatActivity() {
                     }
                 }
                 if (status != ConnectionStatus.READY) wasReady = false
+            }
+        }
+
+        // Update subtitle when chats finish loading (switch from "Connecting..." to "Online")
+        lifecycleScope.launch {
+            viewModel.chatsLoaded.collect { loaded ->
+                if (loaded && GrpcClient.connectionStatus.value == ConnectionStatus.READY) {
+                    tvToolbarSubtitle?.text = getString(R.string.connection_online)
+                }
             }
         }
 
@@ -627,21 +637,26 @@ class ChatListActivity : AppCompatActivity() {
                 val actions = mutableListOf<() -> Unit>()
 
                 options.add(getString(R.string.archive))
-                actions.add { viewModel.archiveChat(chat.id) }
+                actions.add {
+                    viewModel.archiveChat(chat.id)
+                    Toast.makeText(this@ChatListActivity, getString(R.string.archived), Toast.LENGTH_SHORT).show()
+                }
 
                 options.add(if (chat.isMuted) getString(R.string.unmute) else getString(R.string.mute))
-                actions.add { viewModel.toggleMute(chat.id, !chat.isMuted) }
+                actions.add {
+                    viewModel.toggleMute(chat.id, !chat.isMuted)
+                    val msg = if (chat.isMuted) getString(R.string.unmuted) else getString(R.string.muted)
+                    Toast.makeText(this@ChatListActivity, msg, Toast.LENGTH_SHORT).show()
+                }
 
                 options.add(getString(R.string.delete))
                 actions.add {
                     androidx.appcompat.app.AlertDialog.Builder(this@ChatListActivity)
                         .setTitle(R.string.delete_chat)
                         .setPositiveButton(R.string.delete) { _, _ ->
-                            GrpcClient.deleteChat(chat.id, GrpcClient.getCurrentUsername() ?: "") { success, _ ->
+                            viewModel.deleteChat(chat.id) { error ->
                                 lifecycleScope.launch {
-                                    if (success) {
-                                        chatAdapter.setSections(viewModel.sections.value)
-                                    } else {
+                                    if (error != null) {
                                         Toast.makeText(this@ChatListActivity, getString(R.string.failed), Toast.LENGTH_SHORT).show()
                                     }
                                 }

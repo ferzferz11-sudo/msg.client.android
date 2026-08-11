@@ -54,6 +54,9 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _chatsLoaded = MutableStateFlow(false)
+    val chatsLoaded: StateFlow<Boolean> = _chatsLoaded.asStateFlow()
+
     private val _connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
     val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus.asStateFlow()
 
@@ -378,6 +381,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                 ErrorHandler.handle(TAG, "Failed to load chats", e)
             } finally {
                 _isLoading.value = false
+                _chatsLoaded.value = true
                 loadChatsMutex.unlock()
             }
         }

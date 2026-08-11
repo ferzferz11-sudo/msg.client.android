@@ -180,8 +180,8 @@ class ChatSelectionDelegate(
                         hideSelectionToolbar()
                     }
                 )
-                sheet.loadChats(f)
                 sheet.show()
+                sheet.loadChats(f)
             }
         }
     }

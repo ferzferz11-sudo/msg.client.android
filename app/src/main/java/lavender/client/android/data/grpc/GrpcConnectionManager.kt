@@ -4,7 +4,8 @@ import android.content.Context
 import android.util.Log
 import io.grpc.ManagedChannel
 import io.grpc.okhttp.OkHttpChannelBuilder
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.util.concurrent.TimeUnit
 
@@ -29,7 +30,7 @@ class GrpcConnectionManager(
 
         // Channel configuration
         private const val KEEP_ALIVE_TIME_SECONDS = 30L
-        private const val KEEP_ALIVE_TIMEOUT_SECONDS = 10L
+        private const val KEEP_ALIVE_TIMEOUT_SECONDS = 20L
         private const val MAX_INBOUND_MESSAGE_SIZE = 64 * 1024 * 1024 // 64 MB
         private const val IDLE_TIMEOUT_MINUTES = 25L
 

@@ -1,5 +1,48 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.4.18] - 2026-08-11
+
+### Исправлено
+
+**Пересылка сообщений — список чатов пуст (High):**
+- `ChatSelectionDelegate.forwardSelectedMessages()` — `sheet.loadChats(f)` вызывался ДО `sheet.show()`, но `adapter` создаётся в `show()`. `loadChats()` делал `adapter?.submitList()` на `null` → список чатов оставался пустым, поиск ничего не находил. Исправлено: порядок вызовов `show()` → `loadChats()`
+
+**Избранное — CANCELLED ошибки при загрузке истории (Medium):**
+- `GrpcMessageV2Client.loadHistoryV2()` — каждый вызов создавал новый gRPC call без отмены предыдущего. Множественные вызовы (из `switchRoom`, connection observer, markRead broadcast) вызывали каскад CANCELLED ошибок (~200ms интервал). Исправлено: добавлен `currentHistoryCall` — новый вызов отменяет предыдущий через `call.cancel()`
+- CANCELLED ошибки триггерли reconnect → дополнительные вызовы → дополнительные CANCELLED. Исправлено: CANCELLED убран из триггера reconnect (это клиентская отмена, не серверный disconnect), логируется как debug вместо error
+
+**Swipe actions — delete не обновлял ViewModel (Medium):**
+- `ChatListActivity.setupSwipeActions()` — delete action вызывал `GrpcClient.deleteChat()` напрямую вместо `viewModel.deleteChat()`. ViewModel не обновлял своё `allChats` → UI не отражал удаление. Исправлено: используется `viewModel.deleteChat()` с callback
+
+**Swipe actions — нет обратной связи после archive/mute (Low):**
+- Добавлены Toast-уведомления: "Архивировано", "Заглушено", "Включено" (EN+RU)
+
+### Улучшения
+
+**Тулбар списка чатов — "В сети" до загрузки чатов (Low):**
+- Раньше тулбар показывал "В сети" сразу при `ConnectionStatus.READY`, даже если список чатов ещё не загружен. На медленном интернете это вводило пользователей в заблуждение. Исправлено: добавлен `chatsLoaded: StateFlow<Boolean>` в `ChatListViewModel`. Тулбар показывает "Подключение..." пока чаты не загружены, затем переключается на "В сети"
+
+**gRPC keepalive timeout (Low):**
+- `GrpcConnectionManager.KEEP_ALIVE_TIMEOUT_SECONDS` увеличен с 10 до 20 секунд. 10 секунд слишком агрессивно для мобильных сетей (3G/4G/WiFi переходы) — latency spikes >10s вызывали `UNAVAILABLE — Keepalive failed`
+
+**Build cleanup (Low):**
+- Удалён неиспользуемый plugin alias `kotlin-android` из `libs.versions.toml` (AGP 9.x имеет встроенную поддержку Kotlin)
+- Исправлены wildcard imports в `GrpcConnectionManager.kt` и `GrpcReconnectStrategy.kt` (Rule 22)
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `ChatSelectionDelegate.kt` | Порядок `show()` → `loadChats()` |
+| `GrpcMessageV2Client.kt` | `currentHistoryCall` tracking, CANCELLED handling |
+| `ChatListActivity.kt` | Swipe delete через viewModel, Toast feedback, toolbar status logic |
+| `ChatListViewModel.kt` | `chatsLoaded` StateFlow |
+| `GrpcConnectionManager.kt` | `KEEP_ALIVE_TIMEOUT_SECONDS` 10→20, wildcard import fix |
+| `GrpcReconnectStrategy.kt` | Wildcard import fix |
+| `libs.versions.toml` | Удалён `kotlin-android` alias и `kotlin` version |
+| `values/strings.xml` | `archived`, `muted`, `unmuted` |
+| `values-ru/strings.xml` | `archived`, `muted`, `unmuted` |
+
 ## [1.3.4.17] - 2026-08-08
 
 ### Исправлено

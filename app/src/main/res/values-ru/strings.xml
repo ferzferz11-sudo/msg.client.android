@@ -1112,6 +1112,9 @@
     <string name="follow_system_dark_mode">Следовать системной тёмной теме</string>
     <string name="follow_system_dark_mode_desc">Автоматическое переключение между светлой и тёмной темой в зависимости от системных настроек</string>
     <string name="archive">Архивировать</string>
+    <string name="archived">Архивировано</string>
+    <string name="muted">Заглушено</string>
+    <string name="unmuted">Включено</string>
     <string name="delete_chat">Удалить чат</string>
     <string name="failed">Ошибка</string>
 

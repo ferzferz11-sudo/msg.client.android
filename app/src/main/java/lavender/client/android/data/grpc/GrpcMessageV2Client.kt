@@ -258,8 +258,12 @@ class GrpcMessageV2Client(
     // ====== Get History V2 (cursor-based pagination) ======
 
     @Volatile private var loadHistoryServerCompleted = false
+    private var currentHistoryCall: ClientCall<*, *>? = null
 
     fun loadHistoryV2(roomId: String, cursor: String = "", limit: Int = MAX_HISTORY_LIMIT, onCompletion: (String, Boolean) -> Unit = { _, _ -> }) {
+        // Cancel previous in-flight call to prevent CANCELLED cascade
+        currentHistoryCall?.cancel("Superseded by new loadHistoryV2", null)
+        currentHistoryCall = null
         loadHistoryServerCompleted = false
         // Always load from cache first (offline-first)
         scope.launch(Dispatchers.IO) {
@@ -300,6 +304,7 @@ class GrpcMessageV2Client(
         }
 
         val call = currentChannel.newCall(METHOD_GET_HISTORY_V2, CallOptions.DEFAULT)
+        currentHistoryCall = call
         call.start(object : ClientCall.Listener<GetHistoryV2ResponseProto>() {
             override fun onMessage(message: GetHistoryV2ResponseProto) {
                 loadHistoryServerCompleted = true
@@ -348,9 +353,15 @@ class GrpcMessageV2Client(
                 onCompletion(message.nextCursor, message.hasMore)
             }
             override fun onClose(status: Status, trailers: Metadata) {
+                currentHistoryCall = null
                 if (!status.isOk) {
-                    ErrorHandler.handle("$TAG.loadHistoryV2", StatusRuntimeException(status))
-                    if (status.code == Status.Code.UNAVAILABLE || status.code == Status.Code.CANCELLED) {
+                    // Don't log CANCELLED as error if we cancelled it ourselves
+                    if (status.code == Status.Code.CANCELLED) {
+                        Log.d(TAG, "loadHistoryV2: cancelled (superseded or channel closed)")
+                    } else {
+                        ErrorHandler.handle("$TAG.loadHistoryV2", StatusRuntimeException(status))
+                    }
+                    if (status.code == Status.Code.UNAVAILABLE) {
                         reconnect?.invoke()
                     }
                     onCompletion("", false)

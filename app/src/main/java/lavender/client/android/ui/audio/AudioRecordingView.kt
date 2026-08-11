@@ -1,7 +1,7 @@
 package lavender.client.android.ui.audio
-import android.util.Log
 
 import android.animation.ObjectAnimator
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.util.AttributeSet
@@ -11,6 +11,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.toColorInt
 import lavender.client.android.R
 import lavender.client.android.audio.AudioRecorder
 import lavender.client.android.data.proto.CustomThemeProto
@@ -68,23 +69,23 @@ class AudioRecordingView @JvmOverloads constructor(
         }
 
         val primColor = try {
-            theme?.primaryColor?.let { Color.parseColor(it) } ?: ContextCompat.getColor(context, R.color.lavender_mist)
+            theme?.primaryColor?.toColorInt() ?: ContextCompat.getColor(context, R.color.lavender_mist)
         } catch (_: Exception) {
             ContextCompat.getColor(context, R.color.lavender_mist)
         }
         val onPrimColor = try {
-            theme?.onPrimaryColor?.let { Color.parseColor(it) } ?: Color.WHITE
+            theme?.onPrimaryColor?.toColorInt() ?: Color.WHITE
         } catch (_: Exception) {
             Color.WHITE
         }
         val textPrimary = try {
-            theme?.textPrimaryColor?.let { Color.parseColor(it) } ?: Color.BLACK
+            theme?.textPrimaryColor?.toColorInt() ?: Color.BLACK
         } catch (_: Exception) {
             Color.BLACK
         }
 
         val secondaryTxtColor = try {
-            theme?.textSecondaryColor?.let { Color.parseColor(it) } ?: Color.GRAY
+            theme?.textSecondaryColor?.toColorInt() ?: Color.GRAY
         } catch (_: Exception) {
             Color.GRAY
         }
@@ -219,6 +220,7 @@ class AudioRecordingView @JvmOverloads constructor(
         timerHandler.post(timerRunnable!!)
     }
 
+    @SuppressLint("SetTextI18n")
     private fun stopTimer() {
         timerRunnable?.let { timerHandler.removeCallbacks(it) }
         timerRunnable = null

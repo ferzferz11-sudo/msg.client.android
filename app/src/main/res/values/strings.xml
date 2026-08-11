@@ -1111,6 +1111,9 @@
     <string name="follow_system_dark_mode">Follow system dark mode</string>
     <string name="follow_system_dark_mode_desc">Automatically switch between light and dark theme based on system setting</string>
     <string name="archive">Archive</string>
+    <string name="archived">Archived</string>
+    <string name="muted">Muted</string>
+    <string name="unmuted">Unmuted</string>
     <string name="delete_chat">Delete chat</string>
     <string name="failed">Failed</string>
 
