@@ -47,10 +47,10 @@
 
             <ImageView
                 android:id="@+id/actionSearch"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_marginEnd="8dp"
-                android:padding="8dp"
+                android:padding="10dp"
                 android:src="@drawable/ic_search_custom"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/search"
@@ -58,10 +58,10 @@
 
             <ImageView
                 android:id="@+id/actionCreateChat"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_marginEnd="8dp"
-                android:padding="8dp"
+                android:padding="10dp"
                 android:src="@drawable/chat_add_on_24"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:visibility="gone"
@@ -70,10 +70,10 @@
 
             <ImageView
                 android:id="@+id/actionDelete"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_marginEnd="8dp"
-                android:padding="8dp"
+                android:padding="10dp"
                 android:src="@drawable/ic_delete"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:visibility="gone"

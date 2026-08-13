@@ -45,6 +45,11 @@
 - uploadErrorIcon: 32dp → 48dp
 - uploadSuccessIcon: помечен как декоративный
 
+**Touch targets: contacts activity (Medium):**
+- actionSearch: 40dp → 48dp
+- actionCreateChat: 40dp → 48dp
+- actionDelete: 40dp → 48dp
+
 ### Accessibility
 
 **Sticker editor color pickers (Medium):**
