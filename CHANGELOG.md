@@ -1,5 +1,42 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.5] - 2026-08-13
+
+### Исправлено
+
+**ANR: Thread.sleep в waitForRefreshComplete (Critical):**
+- Заменён polling на `CountDownLatch` — безопасно для любого потока
+- Добавлена проверка Main thread в `performTokenRefresh`
+- Устраняет ANR при обновлении токена на Main thread
+
+**Race condition: chatV2RequestObserver (Critical):**
+- Все read/write операции обёрнуты в `synchronized(chatV2Lock)`
+- Устраняет concurrent modification при работе с gRPC стримом
+
+**Reconnect backoff: cap mismatch (High):**
+- Единый cap 30s вместо 60s — backoff больше не «залипает» на максимальной задержке
+
+**Dead code: isRetrying (Low):**
+- Удалено поле `isRetrying` (никогда не устанавливалось в true)
+
+**Disk I/O: addDeletedHash (Medium):**
+- SharedPreferences запись debounce 500ms — одна запись на пачку удалений сообщений
+- Новая миграция DB v17: индекс на `deleted_messages.deletedAt`
+
+**Channel shutdown: in-flight calls (Medium):**
+- `shutdownNow()` для forced reconnects вместо `shutdown()` — reconnect не зависает
+
+**loadDeletedMessages: дублирование (Low):**
+- Guard flag: загрузка только один раз за сессию
+
+**Avatar cache: лишние копии (Medium):**
+- Debounce `avatarCacheFlow` обновлений (500ms) — батчинг при массовой загрузке аватаров
+
+**Optimistic READY статус (High):**
+- Убрано немедленное READY после `build()` канала
+- Статус READY устанавливается только при подтверждении первым ChatV2 ответом
+- UI не показывает READY при недоступном сервере
+
 ## [1.4.0.4] - 2026-08-13
 
 ### Исправлено
