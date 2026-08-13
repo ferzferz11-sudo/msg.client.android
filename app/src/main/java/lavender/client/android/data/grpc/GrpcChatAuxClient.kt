@@ -9,13 +9,18 @@ class GrpcChatAuxClient(
     private val getUserId: () -> String?,
     private val allUsers: kotlinx.coroutines.flow.MutableStateFlow<List<UserInfoProto>>,
     private val serverTime: kotlinx.coroutines.flow.MutableStateFlow<com.google.protobuf.Timestamp?>,
-    private val reconnect: (() -> Unit)? = null
+    private val reconnect: (() -> Unit)? = null,
+    private val refreshToken: (() -> Unit)? = null
 ) {
     companion object {
         private const val TAG = "GrpcChatAuxClient"
     }
 
     fun loadAllUsers(callback: (List<UserInfoProto>) -> Unit) {
+        loadAllUsersInternal(callback, retryCount = 0)
+    }
+
+    private fun loadAllUsersInternal(callback: (List<UserInfoProto>) -> Unit, retryCount: Int) {
         val currentChannel = getChannel() ?: return
         val call = currentChannel.newCall(
             io.grpc.MethodDescriptor.newBuilder<GetAllUsersRequestProto, GetAllUsersResponseProto>()
@@ -35,9 +40,16 @@ class GrpcChatAuxClient(
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (!status.isOk) {
-                    ErrorHandler.handle("GrpcChatAuxClient.getAllUsers", "Status: ${status.code} — ${status.description}")
-                    if (status.code == io.grpc.Status.Code.UNAVAILABLE) {
-                        reconnect?.invoke()
+                    if (status.code == io.grpc.Status.Code.UNAUTHENTICATED && retryCount < 1) {
+                        Log.w(TAG, "GetAllUsers: UNAUTHENTICATED — refreshing token and retrying")
+                        refreshToken?.invoke()
+                        // Retry after token refresh
+                        loadAllUsersInternal(callback, retryCount + 1)
+                    } else {
+                        ErrorHandler.handle("GrpcChatAuxClient.getAllUsers", "Status: ${status.code} — ${status.description}")
+                        if (status.code == io.grpc.Status.Code.UNAVAILABLE) {
+                            reconnect?.invoke()
+                        }
                     }
                 }
             }

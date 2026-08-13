@@ -220,7 +220,12 @@ object RealGrpcClient {
         getUserId = { currentUserId },
         allUsers = _allUsers,
         serverTime = _serverTime,
-        reconnect = { connectionManager.reconnect() }
+        reconnect = { connectionManager.reconnect() },
+        refreshToken = {
+            appContext?.let { ctx ->
+                lavender.client.android.data.session.SessionManager.ensureFreshToken(ctx)
+            }
+        }
     )
 
     // ====== Module: Profile Client ======
