@@ -17,3 +17,4 @@ local.properties
 
 # MiMoCode internal (memory, plans, commands)
 .mimocode/
+releases/
