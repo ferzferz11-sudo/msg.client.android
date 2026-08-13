@@ -272,4 +272,399 @@ class GrpcMarshallersTest {
         val fields = readFieldNumbers(bytes)
         assertEquals(listOf(1, 2, 3), fields)
     }
+
+    // ======= Auth V2 =======
+    // SignInRequestV2: username=1, password=2, device=3, client_version=4
+
+    @Test
+    fun signInRequestV2_stream_fieldOrder() {
+        val req = SignInRequestV2Proto(username = "alice", password = "secret", deviceId = "dev-1", deviceName = "Pixel", clientVersion = "1.4.0.4")
+        val bytes = SignInRequestV2Marshaller().stream(req).readBytes()
+        val fields = readFieldNumbers(bytes)
+        assertEquals(listOf(1, 2, 3, 4), fields)
+    }
+
+    @Test
+    fun signInRequestV2_stream_nonEmpty() {
+        val req = SignInRequestV2Proto(username = "alice", password = "secret")
+        val bytes = SignInRequestV2Marshaller().stream(req).readBytes()
+        assertTrue(bytes.isNotEmpty())
+    }
+
+    @Test
+    fun signInRequestV2_stream_emptyFields_producesEmptyBytes() {
+        val req = SignInRequestV2Proto()
+        val bytes = SignInRequestV2Marshaller().stream(req).readBytes()
+        assertTrue(bytes.isEmpty())
+    }
+
+    // SignUpRequestV2: username=1, password=2, email=3, device=4, client_version=5
+
+    @Test
+    fun signUpRequestV2_stream_fieldOrder() {
+        val req = SignUpRequestV2Proto(username = "alice", password = "secret", email = "a@b.com", deviceId = "dev-1", deviceName = "Pixel", clientVersion = "1.4.0.4")
+        val bytes = SignUpRequestV2Marshaller().stream(req).readBytes()
+        val fields = readFieldNumbers(bytes)
+        assertEquals(listOf(1, 2, 3, 4, 5), fields)
+    }
+
+    @Test
+    fun signUpRequestV2_stream_emptyFields_producesEmptyBytes() {
+        val req = SignUpRequestV2Proto()
+        val bytes = SignUpRequestV2Marshaller().stream(req).readBytes()
+        assertTrue(bytes.isEmpty())
+    }
+
+    // RefreshTokenRequest: refresh_token=1
+
+    @Test
+    fun refreshTokenRequest_stream_fieldOrder() {
+        val req = RefreshTokenRequestProto(refreshToken = "refresh-abc")
+        val bytes = RefreshTokenRequestMarshaller().stream(req).readBytes()
+        val fields = readFieldNumbers(bytes)
+        assertEquals(listOf(1), fields)
+    }
+
+    @Test
+    fun refreshTokenRequest_stream_emptyFields_producesEmptyBytes() {
+        val req = RefreshTokenRequestProto()
+        val bytes = RefreshTokenRequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isEmpty())
+    }
+
+    // SignOutRequest: refresh_token=1, all_devices=2
+
+    @Test
+    fun signOutRequest_stream_fieldOrder() {
+        val req = SignOutRequestProto(refreshToken = "refresh-abc", allDevices = true)
+        val bytes = SignOutRequestMarshaller().stream(req).readBytes()
+        val fields = readFieldNumbers(bytes)
+        assertEquals(listOf(1, 2), fields)
+    }
+
+    @Test
+    fun signOutRequest_stream_emptyFields_producesEmptyBytes() {
+        val req = SignOutRequestProto()
+        val bytes = SignOutRequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isEmpty())
+    }
+
+    // AuthResponseV2: parse empty
+
+    @Test
+    fun authResponseV2_parseEmpty() {
+        val parsed = AuthResponseV2Marshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse(parsed.success)
+        assertEquals("", parsed.message)
+        assertEquals("", parsed.accessToken)
+        assertEquals("", parsed.refreshToken)
+        assertEquals(0L, parsed.accessExpiresAt)
+        assertEquals(0L, parsed.refreshExpiresAt)
+        assertEquals("", parsed.userId)
+        assertEquals("", parsed.username)
+    }
+
+    // RefreshTokenResponse: parse empty
+
+    @Test
+    fun refreshTokenResponse_parseEmpty() {
+        val parsed = RefreshTokenResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertEquals("", parsed.accessToken)
+        assertEquals("", parsed.refreshToken)
+        assertEquals(0L, parsed.accessExpiresAt)
+        assertEquals(0L, parsed.refreshExpiresAt)
+    }
+
+    // SimpleAuthResponse: parse empty
+
+    @Test
+    fun simpleAuthResponse_parseEmpty() {
+        val parsed = SimpleAuthResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse(parsed.success)
+        assertEquals("", parsed.message)
+    }
+
+    // Auth V2 Proto defaults
+
+    @Test
+    fun signInRequestV2Proto_defaults() {
+        val req = SignInRequestV2Proto()
+        assertEquals("", req.username)
+        assertEquals("", req.password)
+        assertEquals("", req.deviceId)
+        assertEquals("", req.deviceName)
+        assertEquals("android", req.deviceType)
+        assertEquals("", req.clientVersion)
+    }
+
+    @Test
+    fun authResponseV2Proto_defaults() {
+        val resp = AuthResponseV2Proto()
+        assertFalse(resp.success)
+        assertEquals("", resp.accessToken)
+        assertEquals("", resp.refreshToken)
+        assertEquals("", resp.userId)
+        assertEquals("", resp.username)
+    }
+
+    // ======= Favorites =======
+    // AddFavoriteRequest: user_id=1, message_id=2
+
+    @Test
+    fun addFavoriteRequest_stream_fieldOrder() {
+        val req = AddFavoriteRequestProto(userId = "uuid-123", messageId = "msg-789")
+        val bytes = AddFavoriteRequestMarshaller().stream(req).readBytes()
+        val fields = readFieldNumbers(bytes)
+        assertEquals(listOf(1, 2), fields)
+    }
+
+    @Test
+    fun addFavoriteRequest_stream_nonEmpty() {
+        val req = AddFavoriteRequestProto(userId = "uuid-123", messageId = "msg-789")
+        val bytes = AddFavoriteRequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isNotEmpty())
+    }
+
+    @Test
+    fun addFavoriteRequest_stream_emptyFields_producesEmptyBytes() {
+        val req = AddFavoriteRequestProto()
+        val bytes = AddFavoriteRequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isEmpty())
+    }
+
+    // RemoveFavoriteRequest: user_id=1, message_id=2
+
+    @Test
+    fun removeFavoriteRequest_stream_fieldOrder() {
+        val req = RemoveFavoriteRequestProto(userId = "uuid-123", messageId = "msg-789")
+        val bytes = RemoveFavoriteRequestMarshaller().stream(req).readBytes()
+        val fields = readFieldNumbers(bytes)
+        assertEquals(listOf(1, 2), fields)
+    }
+
+    @Test
+    fun removeFavoriteRequest_stream_emptyFields_producesEmptyBytes() {
+        val req = RemoveFavoriteRequestProto()
+        val bytes = RemoveFavoriteRequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isEmpty())
+    }
+
+    // GetFavoritesRequest: user_id=1
+
+    @Test
+    fun getFavoritesRequest_stream_fieldOrder() {
+        val req = GetFavoritesRequestProto(userId = "uuid-123")
+        val bytes = GetFavoritesRequestMarshaller().stream(req).readBytes()
+        val fields = readFieldNumbers(bytes)
+        assertEquals(listOf(1), fields)
+    }
+
+    @Test
+    fun getFavoritesRequest_stream_emptyFields_producesEmptyBytes() {
+        val req = GetFavoritesRequestProto()
+        val bytes = GetFavoritesRequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isEmpty())
+    }
+
+    // Favorites response parse empty
+
+    @Test
+    fun addFavoriteResponse_parseEmpty() {
+        val parsed = AddFavoriteResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse(parsed.success)
+        assertEquals("", parsed.message)
+    }
+
+    @Test
+    fun removeFavoriteResponse_parseEmpty() {
+        val parsed = RemoveFavoriteResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse(parsed.success)
+    }
+
+    @Test
+    fun getFavoritesResponse_parseEmpty() {
+        val parsed = GetFavoritesResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertTrue(parsed.messages.isEmpty())
+    }
+
+    // Favorites Proto defaults
+
+    @Test
+    fun addFavoriteRequestProto_defaults() {
+        val req = AddFavoriteRequestProto()
+        assertEquals("", req.userId)
+        assertEquals("", req.messageId)
+    }
+
+    @Test
+    fun removeFavoriteRequestProto_defaults() {
+        val req = RemoveFavoriteRequestProto()
+        assertEquals("", req.userId)
+        assertEquals("", req.messageId)
+    }
+
+    @Test
+    fun getFavoritesRequestProto_defaults() {
+        val req = GetFavoritesRequestProto()
+        assertEquals("", req.userId)
+    }
+
+    // ======= Profile V2 =======
+    // UpdateProfileV2Request: username=1, bio=2, status=3, locale=4
+
+    @Test
+    fun updateProfileV2Request_stream_fieldOrder() {
+        val req = UpdateProfileV2RequestProto(username = "alice", bio = "Hello", status = "Online", locale = "ru")
+        val bytes = UpdateProfileV2RequestMarshaller().stream(req).readBytes()
+        val fields = readFieldNumbers(bytes)
+        assertEquals(listOf(1, 2, 3, 4), fields)
+    }
+
+    @Test
+    fun updateProfileV2Request_stream_nonEmpty() {
+        val req = UpdateProfileV2RequestProto(bio = "Hello")
+        val bytes = UpdateProfileV2RequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isNotEmpty())
+    }
+
+    @Test
+    fun updateProfileV2Request_stream_emptyFields_producesEmptyBytes() {
+        val req = UpdateProfileV2RequestProto()
+        val bytes = UpdateProfileV2RequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isEmpty())
+    }
+
+    // UpdateAvatarV2Request: avatar_url=1, full_avatar_url=2
+
+    @Test
+    fun updateAvatarV2Request_stream_fieldOrder() {
+        val req = UpdateAvatarV2RequestProto(avatarUrl = "https://cdn/avatar.jpg", fullAvatarUrl = "https://cdn/avatar_full.jpg")
+        val bytes = UpdateAvatarV2RequestMarshaller().stream(req).readBytes()
+        val fields = readFieldNumbers(bytes)
+        assertEquals(listOf(1, 2), fields)
+    }
+
+    @Test
+    fun updateAvatarV2Request_stream_emptyFields_producesEmptyBytes() {
+        val req = UpdateAvatarV2RequestProto()
+        val bytes = UpdateAvatarV2RequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isEmpty())
+    }
+
+    // DeleteProfileV2Request: password=1
+
+    @Test
+    fun deleteProfileV2Request_stream_fieldOrder() {
+        val req = DeleteProfileV2RequestProto(password = "secret123")
+        val bytes = DeleteProfileV2RequestMarshaller().stream(req).readBytes()
+        val fields = readFieldNumbers(bytes)
+        assertEquals(listOf(1), fields)
+    }
+
+    @Test
+    fun deleteProfileV2Request_stream_emptyFields_producesEmptyBytes() {
+        val req = DeleteProfileV2RequestProto()
+        val bytes = DeleteProfileV2RequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isEmpty())
+    }
+
+    // Profile V2 response parse empty
+
+    @Test
+    fun getProfileResponse_parseEmpty() {
+        val parsed = GetProfileResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertEquals("", parsed.userId)
+        assertEquals("", parsed.username)
+        assertEquals("", parsed.email)
+        assertEquals("", parsed.avatarUrl)
+        assertEquals("en", parsed.locale)
+        assertFalse(parsed.isSuperAdmin)
+    }
+
+    @Test
+    fun updateProfileV2Response_parseEmpty() {
+        val parsed = UpdateProfileV2ResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse(parsed.success)
+        assertEquals("", parsed.message)
+    }
+
+    @Test
+    fun updateAvatarV2Response_parseEmpty() {
+        val parsed = UpdateAvatarV2ResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse(parsed.success)
+        assertEquals("", parsed.message)
+        assertEquals("", parsed.avatarUrl)
+        assertEquals("", parsed.fullAvatarUrl)
+    }
+
+    @Test
+    fun deleteProfileV2Response_parseEmpty() {
+        val parsed = DeleteProfileV2ResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse(parsed.success)
+        assertEquals("", parsed.message)
+    }
+
+    // Profile V2 Proto defaults
+
+    @Test
+    fun getProfileResponseProto_defaults() {
+        val resp = GetProfileResponseProto()
+        assertEquals("", resp.userId)
+        assertEquals("", resp.username)
+        assertEquals("", resp.email)
+        assertEquals("en", resp.locale)
+        assertFalse(resp.isSuperAdmin)
+        assertEquals(0, resp.positionLevel)
+    }
+
+    @Test
+    fun updateProfileV2RequestProto_defaults() {
+        val req = UpdateProfileV2RequestProto()
+        assertEquals("", req.username)
+        assertEquals("", req.bio)
+        assertEquals("", req.status)
+        assertEquals("", req.locale)
+    }
+
+    @Test
+    fun deleteProfileV2RequestProto_defaults() {
+        val req = DeleteProfileV2RequestProto()
+        assertEquals("", req.password)
+    }
+
+    // ======= GetUserSettings =======
+    // GetUserSettingsResponse: locale=1, theme_id=2, push_enabled=3, custom=4
+
+    @Test
+    fun getUserSettingsResponse_parseEmpty() {
+        val parsed = GetUserSettingsResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertEquals("en", parsed.locale)
+        assertEquals("", parsed.themeId)
+        assertTrue(parsed.pushEnabled)
+        assertTrue(parsed.custom.isEmpty())
+    }
+
+    // UpdateUserSettingsRequest: locale=1, theme_id=2, push_enabled=3
+
+    @Test
+    fun updateUserSettingsRequest_stream_fieldOrder() {
+        val req = UpdateUserSettingsRequestProto(locale = "ru", themeId = "dark-1", pushEnabled = false)
+        val bytes = UpdateUserSettingsRequestMarshaller().stream(req).readBytes()
+        val fields = readFieldNumbers(bytes)
+        assertEquals(listOf(1, 2, 3), fields)
+    }
+
+    @Test
+    fun updateUserSettingsRequest_stream_emptyFields_producesEmptyBytes() {
+        val req = UpdateUserSettingsRequestProto()
+        val bytes = UpdateUserSettingsRequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isEmpty())
+    }
+
+    @Test
+    fun updateUserSettingsResponse_parseEmpty() {
+        val parsed = UpdateUserSettingsResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse(parsed.success)
+        assertEquals("", parsed.message)
+    }
 }

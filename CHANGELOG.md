@@ -1,5 +1,20 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.4] - 2026-08-13
+
+### Testing
+
+**GrpcMarshallersTest expanded (Medium):**
+- Auth V2: SignInRequestV2, SignUpRequestV2, RefreshTokenRequest, SignOutRequest field order tests
+- Auth V2: AuthResponseV2, RefreshTokenResponse, SimpleAuthResponse parse-empty tests
+- Favorites: AddFavoriteRequest, RemoveFavoriteRequest, GetFavoritesRequest field order tests
+- Favorites: AddFavoriteResponse, RemoveFavoriteResponse, GetFavoritesResponse parse-empty tests
+- Profile V2: UpdateProfileV2Request, UpdateAvatarV2Request, DeleteProfileV2Request field order tests
+- Profile V2: GetProfileResponse, UpdateProfileV2Response, UpdateAvatarV2Response, DeleteProfileV2Response parse-empty tests
+- Settings: GetUserSettingsResponse, UpdateUserSettingsRequest, UpdateUserSettingsResponse tests
+- Proto defaults: SignInRequestV2Proto, AuthResponseV2Proto, GetProfileResponseProto, favorites protos
+- Total: 67 tests (was 27, +40 new)
+
 ## [1.4.0.3] - 2026-08-13
 
 ### Новые фичи
