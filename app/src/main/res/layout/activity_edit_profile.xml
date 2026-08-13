@@ -69,8 +69,8 @@
 
                             <de.hdodenhof.circleimageview.CircleImageView
                                 android:id="@+id/ivProfileAvatar"
-                                android:layout_width="80dp"
-                                android:layout_height="80dp"
+                                android:layout_width="96dp"
+                                android:layout_height="96dp"
                                 android:src="@drawable/ic_default_avatar"
                                 app:civ_border_width="2dp"
                                 app:civ_border_color="?attr/colorPrimary"
@@ -89,7 +89,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:orientation="vertical"
-                            android:gravity="end"
+                            android:gravity="start"
                             android:layout_marginStart="16dp">
 
                             <com.google.android.material.button.MaterialButton
