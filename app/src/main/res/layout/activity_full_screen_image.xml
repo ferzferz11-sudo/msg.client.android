@@ -55,7 +55,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_download"
             app:tint="@android:color/white"
-            android:contentDescription="Download"
+            android:contentDescription="@string/download_file"
             android:padding="12dp"
             android:scaleType="fitCenter" />
 
