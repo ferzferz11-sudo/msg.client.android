@@ -56,9 +56,6 @@
 **Send button visibility (Low):**
 - Иконка отправки скрыта при пустом тексте (как было раньше)
 
-### Серверные задачи
-- `TASK_CALL_MESSAGES.md` — разделение аудио/видео звонков (в процессе)
-
 ### Изменённые файлы (24)
 - `NewChatActivity.kt` — self-destruct timer, mute toast, dialog colors, call tap fix
 - `StickerPackCreateActivity.kt` — bottom bar padding
