@@ -73,6 +73,13 @@ class GrpcMessageV2Client(
             .setResponseMarshaller(DeleteMessageV2ResponseMarshaller())
             .build()
 
+        private val METHOD_CLEAR_ROOM_HISTORY = MethodDescriptor.newBuilder<ClearRoomHistoryRequestProto, ClearRoomHistoryResponseProto>()
+            .setType(MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/ClearRoomHistory")
+            .setRequestMarshaller(ClearRoomHistoryRequestMarshaller())
+            .setResponseMarshaller(ClearRoomHistoryResponseMarshaller())
+            .build()
+
         private val METHOD_SET_REACTION_V2 = MethodDescriptor.newBuilder<SetReactionV2RequestProto, SetReactionV2ResponseProto>()
             .setType(MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/SetReactionV2")
@@ -505,6 +512,30 @@ class GrpcMessageV2Client(
             }
         }, Metadata())
         call.sendMessage(DeleteMessageV2RequestProto(messageIds, getUserId() ?: ""))
+        call.halfClose()
+        call.request(1)
+    }
+
+    // ====== Clear Room History ======
+
+    fun clearRoomHistory(roomId: String, cb: (Boolean) -> Unit = {}) {
+        messages.update { emptyList() }
+        scope.launch(Dispatchers.IO) {
+            try { db()?.messageDao()?.clearRoom(roomId) } catch (_: Exception) {}
+        }
+
+        val currentChannel = getChannel() ?: return
+        val call = currentChannel.newCall(METHOD_CLEAR_ROOM_HISTORY, CallOptions.DEFAULT)
+        call.start(object : ClientCall.Listener<ClearRoomHistoryResponseProto>() {
+            override fun onMessage(msg: ClearRoomHistoryResponseProto) { cb(msg.success) }
+            override fun onClose(status: Status, trailers: Metadata) {
+                if (!status.isOk) {
+                    ErrorHandler.handle("$TAG.clearRoomHistory", StatusRuntimeException(status))
+                    cb(false)
+                }
+            }
+        }, Metadata())
+        call.sendMessage(ClearRoomHistoryRequestProto(roomId, getUsername() ?: ""))
         call.halfClose()
         call.request(1)
     }

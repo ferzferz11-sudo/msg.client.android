@@ -117,6 +117,15 @@ data class DeleteMessageV2ResponseProto(
     val success: Boolean = false
 )
 
+data class ClearRoomHistoryRequestProto(
+    val roomId: String = "",
+    val requesterUsername: String = ""
+)
+
+data class ClearRoomHistoryResponseProto(
+    val success: Boolean = false
+)
+
 data class SetReactionV2RequestProto(
     val messageId: String = "",
     val emoji: String = ""

@@ -1,5 +1,32 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.7] - 2026-08-13
+
+### Исправлено
+
+**Toolbar avatar: размер не совпадает с аватаром внутри чата (Medium):**
+- `ivToolbarUserAvatar`: 56dp → 48dp (FrameLayout + CircleImageView)
+- Теперь круг дефолтного аватара в тулбаре совпадает с размером внутри чата
+
+**Список чатов: высота плашек увеличена (Medium):**
+- Нижняя строка иконок: `layout_height="24dp"` → `wrap_content`, убран `marginTop="2dp"`
+- Плашки теперь занимают минимум места, когда иконки скрыты
+- Отступы иконок (mute, unread, lobby, progressBar): `marginStart` 4dp → 2dp — компактнее расположение
+
+**Очистка истории не работала (High):**
+- `clearMessages()` + `loadHistory()` — очищал локально, потом загружал с сервера, где сообщения на месте
+- Новый RPC `ClearRoomHistory` — удаляет сообщения из БД на сервере
+- Клиент: `clearRoomHistory()` отправляет запрос на сервер, синхронно чистит локальный кэш
+- Proto: добавлен `ClearRoomHistoryRequest`/`ClearRoomHistoryResponse`
+
+**Профиль: дефолтный аватар на светлой теме (Medium):**
+- `imageTintList` не очищался перед `applyDefaultAvatar()` — `colorFilter` мог не работать
+- Добавлен `imageTintList = null` в `updateProfileUI()` и `updateGroupUI()`
+
+**Тулбар: аватар не обновлялся после смены (Medium):**
+- `collectLatest` на `avatarCacheFlow` не переэмитит значение при возврате из ProfileActivity
+- `refreshToolbarAvatar()` вызывается в `onResume()` — читает текущий кэш и обновляет тулбар
+
 ## [1.4.0.6] - 2026-08-13
 
 ### Исправлено

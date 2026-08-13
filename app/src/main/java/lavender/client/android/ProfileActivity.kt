@@ -391,6 +391,7 @@ class ProfileActivity : AppCompatActivity() {
             profileAvatar.imageTintList = null
             setupAvatarClickListener(profileAvatar, data.fullAvatarUrl.ifEmpty { data.avatarUrl })
         } else {
+            profileAvatar.imageTintList = null
             ThemeUtils.applyDefaultAvatar(profileAvatar, currentTheme)
             profileAvatar.setOnClickListener(null)
         }
@@ -510,6 +511,7 @@ class ProfileActivity : AppCompatActivity() {
             profileAvatar.imageTintList = null
             setupAvatarClickListener(profileAvatar, data.fullAvatarUrl.ifEmpty { data.avatarUrl })
         } else {
+            profileAvatar.imageTintList = null
             ThemeUtils.applyDefaultAvatar(profileAvatar, currentTheme)
             profileAvatar.setOnClickListener(null)
         }

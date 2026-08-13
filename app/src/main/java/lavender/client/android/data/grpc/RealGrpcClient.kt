@@ -833,6 +833,7 @@ object RealGrpcClient {
         }
     }
     fun clearMessages() { _messages.value = emptyList() }
+    fun clearRoomHistory(roomId: String, cb: (Boolean) -> Unit = {}) { messageV2Client.clearRoomHistory(roomId, cb) }
 
     @Volatile private var markReadJob: kotlinx.coroutines.Job? = null
     @Volatile private var pendingMarkReadRoom: String? = null

@@ -40,16 +40,16 @@
                 android:gravity="center_vertical">
 
                 <FrameLayout
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:layout_marginEnd="12dp"
                     android:clickable="true"
                     android:focusable="true">
 
                     <de.hdodenhof.circleimageview.CircleImageView
                         android:id="@+id/ivToolbarUserAvatar"
-                        android:layout_width="56dp"
-                        android:layout_height="56dp"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
                         android:src="@drawable/ic_default_avatar"
                         android:padding="6dp" />
 

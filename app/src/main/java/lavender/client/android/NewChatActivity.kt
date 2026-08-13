@@ -734,10 +734,15 @@ class NewChatActivity : AppCompatActivity() {
                     .setTitle(R.string.clear_history)
                     .setMessage(R.string.clear_history_confirm)
                     .setPositiveButton(R.string.clear) { _, _ ->
-                        grpcClient.clearMessages()
-                        chatViewModel.clearRoomMessages(this)
-                        chatViewModel.loadHistory()
-                        Toast.makeText(this, getString(R.string.history_cleared), Toast.LENGTH_SHORT).show()
+                        grpcClient.clearRoomHistory(data.roomId) { success ->
+                            runOnUiThread {
+                                if (success) {
+                                    Toast.makeText(this, getString(R.string.history_cleared), Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(this, getString(R.string.error_colon, "Failed to clear history"), Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
                     }
                     .setNegativeButton(R.string.cancel_dialog, null)
                     .create()

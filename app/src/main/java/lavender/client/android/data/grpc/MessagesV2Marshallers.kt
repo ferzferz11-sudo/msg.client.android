@@ -335,6 +335,25 @@ class DeleteMessageV2ResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<De
     }
 }
 
+class ClearRoomHistoryRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<ClearRoomHistoryRequestProto> {
+    override fun stream(v: ClearRoomHistoryRequestProto): java.io.InputStream {
+        val baos = ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.roomId.isNotEmpty()) cos.writeString(1, v.roomId)
+        if (v.requesterUsername.isNotEmpty()) cos.writeString(2, v.requesterUsername)
+        cos.flush(); return ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): ClearRoomHistoryRequestProto = ClearRoomHistoryRequestProto()
+}
+
+class ClearRoomHistoryResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<ClearRoomHistoryResponseProto> {
+    override fun stream(v: ClearRoomHistoryResponseProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): ClearRoomHistoryResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (WireFormat.getTagFieldNumber(tag) == 1) ok = cis.readBool() else cis.skipField(tag) }
+        return ClearRoomHistoryResponseProto(ok)
+    }
+}
+
 class SetReactionV2RequestMarshaller : io.grpc.MethodDescriptor.Marshaller<SetReactionV2RequestProto> {
     override fun stream(v: SetReactionV2RequestProto): java.io.InputStream {
         val baos = ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)

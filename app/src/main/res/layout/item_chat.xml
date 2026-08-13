@@ -136,16 +136,16 @@
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="24dp"
+                android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="end|center_vertical"
-                android:layout_marginTop="2dp">
+                android:minHeight="0dp">
 
                 <ImageView
                     android:id="@+id/ivMuteIndicator"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:layout_marginStart="4dp"
+                    android:layout_marginStart="2dp"
                     android:padding="2dp"
                     android:src="@drawable/ic_volume_off"
                     app:tint="?attr/colorOnSurfaceVariant"
@@ -161,7 +161,7 @@
                     android:minWidth="20dp"
                     android:minHeight="20dp"
                     android:paddingHorizontal="5dp"
-                    android:layout_marginStart="4dp"
+                    android:layout_marginStart="2dp"
                     android:background="@drawable/unread_count_background"
                     android:gravity="center"
                     tools:text="1"
@@ -174,7 +174,7 @@
                     android:id="@+id/btnEnterLobby"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:layout_marginStart="4dp"
+                    android:layout_marginStart="2dp"
                     android:padding="4dp"
                     android:src="@drawable/ic_conference_lobby"
                     android:background="@drawable/circle_button"
@@ -191,7 +191,7 @@
                     style="?android:attr/progressBarStyleSmall"
                     android:layout_width="20dp"
                     android:layout_height="20dp"
-                    android:layout_marginStart="4dp"
+                    android:layout_marginStart="2dp"
                     android:visibility="gone"
                     tools:visibility="visible"
                     android:contentDescription="@null"

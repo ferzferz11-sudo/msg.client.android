@@ -339,7 +339,30 @@ class ChatListActivity : AppCompatActivity() {
                 }
             }
         }
+        setupConnectionObserver()
+    }
 
+    private fun refreshToolbarAvatar() {
+        val avatar = ivToolbarUserAvatar ?: return
+        val uname = SessionManager.session.value.username
+        val url = GrpcClient.avatarCacheFlow.value[uname]
+        if (!url.isNullOrEmpty()) {
+            isShowingDefaultAvatar = false
+            Glide.with(this)
+                .load(url)
+                .apply(RequestOptions.circleCropTransform()
+                    .placeholder(R.drawable.ic_default_avatar)
+                    .error(R.drawable.ic_default_avatar))
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .into(avatar)
+        } else {
+            isShowingDefaultAvatar = true
+            avatar.imageTintList = null
+            lavender.client.android.theme.ThemeUtils.applyDefaultAvatar(avatar, lavender.client.android.theme.ThemeStore.currentTheme())
+        }
+    }
+
+    private fun setupConnectionObserver() {
         // Observe connection status
         lifecycleScope.launch {
             var wasReady = GrpcClient.connectionStatus.value == ConnectionStatus.READY
@@ -440,6 +463,9 @@ class ChatListActivity : AppCompatActivity() {
         if (GrpcClient.connectionStatus.value == ConnectionStatus.READY) {
             GrpcClient.loadUsers()
         }
+
+        // Refresh toolbar avatar on resume (collectLatest doesn't replay on lifecycle restart)
+        refreshToolbarAvatar()
 
         // Re-open AI bottom sheet after returning from agent management
         if (shouldReopenAIBottomSheet) {
