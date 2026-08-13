@@ -887,6 +887,7 @@
     <string name="ssh_error">SSH error: %s</string>
     <string name="ssh_port_in_use">Local port %d already in use. Choose another port.</string>
     <string name="ssh_unknown_host">Unknown host "%s". Enter IP address.</string>
+    <string name="ssh_session_not_established">SSH session not established.</string>
 
     <!-- i18n: RemoteAgentViewModel -->
     <string name="no_output">(no output)</string>

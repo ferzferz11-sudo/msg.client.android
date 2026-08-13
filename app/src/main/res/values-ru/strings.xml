@@ -887,6 +887,7 @@
     <string name="ssh_error">SSH ошибка: %s</string>
     <string name="ssh_port_in_use">Локальный порт %d уже занят. Выберите другой порт.</string>
     <string name="ssh_unknown_host">Не удалось найти хост «%s». Введите IP адрес.</string>
+    <string name="ssh_session_not_established">SSH сессия не установлена.</string>
 
     <!-- i18n: RemoteAgentViewModel -->
     <string name="no_output">(нет вывода)</string>

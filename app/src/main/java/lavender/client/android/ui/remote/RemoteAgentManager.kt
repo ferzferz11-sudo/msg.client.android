@@ -39,7 +39,7 @@ object RemoteAgentManager {
         val isConnected: Boolean = false,
         val isTunnelActive: Boolean = false,
         val tunnelAddress: String = "",
-        val statusText: String = appContext?.getString(R.string.disconnected_status) ?: "Отключено"
+        val statusText: String = appContext?.getString(R.string.disconnected_status) ?: "Disconnected"
     )
 
     /**
@@ -146,7 +146,7 @@ object RemoteAgentManager {
      * Возвращает текстовый статус.
      */
     fun getStatusText(): String {
-        return service?.getStatusText() ?: (appContext?.getString(R.string.disconnected_status) ?: "Отключено")
+        return service?.getStatusText() ?: (appContext?.getString(R.string.disconnected_status) ?: "Disconnected")
     }
 
     /**
@@ -164,7 +164,7 @@ object RemoteAgentManager {
     ) {
         val svc = service
         if (svc == null) {
-            callback(false, appContext?.getString(R.string.service_not_started) ?: "Сервис не запущен. Попробуйте позже.", HermesGatewayManager.TunnelErrorType.GENERIC)
+            callback(false, appContext?.getString(R.string.service_not_started) ?: "Service not started. Try again later.", HermesGatewayManager.TunnelErrorType.GENERIC)
             return
         }
         svc.createTunnel(
@@ -210,7 +210,7 @@ object RemoteAgentManager {
     ) {
         val svc = service
         if (svc == null) {
-            callback.onTaskResult(false, "", appContext?.getString(R.string.service_not_started) ?: "Сервис не запущен")
+            callback.onTaskResult(false, "", appContext?.getString(R.string.service_not_started) ?: "Service not started")
             return
         }
         svc.sendTask(agentId, taskType, command, userId) { success, output, error ->

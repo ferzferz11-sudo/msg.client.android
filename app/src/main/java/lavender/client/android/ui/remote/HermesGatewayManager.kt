@@ -109,7 +109,7 @@ class HermesGatewayManager(private val context: Context) {
 
             if (!sess.isConnected) {
                 Log.e(TAG, "SSH session not connected")
-                return TunnelResult(false, "SSH сессия не установлена", TunnelErrorType.CONNECTION_REFUSED)
+                return TunnelResult(false, context.getString(R.string.ssh_session_not_established), TunnelErrorType.CONNECTION_REFUSED)
             }
 
             // Пробрасываем порт: localhost:localPort -> serverHost:serverPort
