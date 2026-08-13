@@ -40,6 +40,11 @@
 **Touch targets: marketplace agent card (Medium):**
 - btnFavorite: 40dp → 48dp
 
+**Touch targets: image preview container (Medium):**
+- removeImageButton: 24dp → 36dp (88dp preview context)
+- uploadErrorIcon: 32dp → 48dp
+- uploadSuccessIcon: помечен как декоративный
+
 ### Accessibility
 
 **Sticker editor color pickers (Medium):**
