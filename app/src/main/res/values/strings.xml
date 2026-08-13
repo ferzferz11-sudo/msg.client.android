@@ -252,6 +252,7 @@
     <string name="participants">Participants</string>
     <string name="add">Add</string>
     <string name="remove">Remove</string>
+    <string name="remove_participant">Remove participant</string>
     <string name="remove_participant_confirm">Are you sure you want to remove %s from the group?</string>
 
     <!-- Notification History -->

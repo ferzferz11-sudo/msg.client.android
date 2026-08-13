@@ -43,12 +43,13 @@
 
     <ImageButton
         android:id="@+id/btnRemove"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:src="@drawable/ic_close"
         android:visibility="gone"
+        android:padding="8dp"
         app:tint="@color/red"
-        android:contentDescription="@null" />
+        android:contentDescription="@string/remove_participant" />
 
 </LinearLayout>

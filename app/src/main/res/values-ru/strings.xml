@@ -238,6 +238,7 @@
     <string name="participants">Участники</string>
     <string name="add">Добавить</string>
     <string name="remove">Удалить</string>
+    <string name="remove_participant">Удалить участника</string>
     <string name="remove_participant_confirm">Вы уверены, что хотите удалить %s из группы?</string>
     <string name="preview">Просмотр</string>
     <string name="edit">Изменить профиль</string>

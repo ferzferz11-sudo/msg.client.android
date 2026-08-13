@@ -243,11 +243,12 @@
 
             <ImageButton
                 android:id="@+id/btnCancelReply"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_close"
                 android:contentDescription="@string/close"
+                android:padding="12dp"
                 app:tint="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
@@ -295,20 +296,22 @@
 
             <ImageButton
                 android:id="@+id/btnSearchPrev"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_up"
                 android:contentDescription="@string/search_previous"
+                android:padding="8dp"
                 app:tint="?attr/colorOnPrimary" />
 
             <ImageButton
                 android:id="@+id/btnSearchNext"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_down"
                 android:contentDescription="@string/search_next"
+                android:padding="8dp"
                 app:tint="?attr/colorOnPrimary" />
         </LinearLayout>
 
@@ -325,11 +328,12 @@
 
             <ImageButton
                 android:id="@+id/btnSelectionClose"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_close"
                 android:contentDescription="@string/close"
+                android:padding="8dp"
                 app:tint="?attr/colorOnPrimary" />
 
             <TextView
@@ -342,47 +346,52 @@
 
             <ImageButton
                 android:id="@+id/btnSelectionReply"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_reply"
                 android:contentDescription="@string/reply"
+                android:padding="8dp"
                 app:tint="?attr/colorOnPrimary" />
 
             <ImageButton
                 android:id="@+id/btnSelectionCopy"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_copy"
                 android:contentDescription="@string/copy"
+                android:padding="8dp"
                 app:tint="?attr/colorOnPrimary" />
 
             <ImageButton
                 android:id="@+id/btnSelectionForward"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_forward"
                 android:contentDescription="@string/forward"
+                android:padding="8dp"
                 app:tint="?attr/colorOnPrimary" />
 
             <ImageButton
                 android:id="@+id/btnSelectionDelete"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_delete"
                 android:contentDescription="@string/delete"
+                android:padding="8dp"
                 app:tint="?attr/colorOnPrimary" />
 
             <ImageButton
                 android:id="@+id/btnSelectionStar"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_star"
                 android:contentDescription="@string/add_to_favorites"
+                android:padding="8dp"
                 app:tint="?attr/colorOnPrimary" />
         </LinearLayout>
 

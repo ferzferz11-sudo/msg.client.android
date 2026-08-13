@@ -28,6 +28,18 @@
 **System messages: уменьшен размер шрифта (Low):**
 - Размер шрифта системных сообщений уменьшен с 13sp до 11sp
 
+**Touch targets: widget_chat.xml (Medium):**
+- btnCancelReply: 24dp → 48dp
+- btnSearchPrev/btnSearchNext: 40dp → 48dp
+- Selection toolbar (close, reply, copy, forward, delete, star): 40dp → 48dp
+
+**Touch targets: participant list (Medium):**
+- btnRemove: 40dp → 48dp + contentDescription `remove_participant`
+- Новая строка: `remove_participant` (EN+RU)
+
+**Touch targets: marketplace agent card (Medium):**
+- btnFavorite: 40dp → 48dp
+
 ### Accessibility
 
 **Sticker editor color pickers (Medium):**
