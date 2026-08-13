@@ -30,6 +30,11 @@
 - Layouts: `activity_notification.xml`, `activity_notification_log.xml`, `item_notification_log.xml`
 - Удалены обе записи из AndroidManifest.xml
 
+### Тесты
+
+- `GrpcMarshallersTest` — 27 тестов для критических маршаллеров (field order verification)
+- Покрытие: AddContact, RemoveContact, GetContacts, PinChat, UnPinChat, ArchiveChat, UnarchiveChat, PinMessage, UnPinMessage, SearchChats, MarkRead, SetMutedChat, DeleteChat
+
 ## [1.4.0.1] - 2026-08-13
 
 ### Новые фичи
