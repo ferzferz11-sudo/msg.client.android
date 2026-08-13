@@ -627,6 +627,7 @@
     <string name="terminate_session_confirm">Вы уверены, что хотите завершить этот сеанс?</string>
     <string name="terminate_all_sessions_description">Вы можете завершить все остальные сеансы на всех своих устройствах, кроме этого.</string>
     <string name="device_details">Информация об устройстве</string>
+    <string name="delete_device">Удалить устройство</string>
     <string name="device_id_label">ID устройства:</string>
     <string name="ip_address_label">IP-адрес:</string>
     <string name="client_version_label">Версия приложения:</string>

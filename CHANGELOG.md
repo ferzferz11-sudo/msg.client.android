@@ -22,6 +22,11 @@
 - Заменены hardcoded строки на string resources (`play_audio`, `pause_audio`)
 - Новые строки: `play_audio`, `pause_audio` (EN+RU)
 
+**Device list touch target (Medium):**
+- Delete device кнопка увеличена с 24dp до 48dp
+- Добавлен contentDescription `delete_device`
+- Новая строка: `delete_device` (EN+RU)
+
 ### Testing
 
 **GrpcMarshallersTest expanded (Medium):**
