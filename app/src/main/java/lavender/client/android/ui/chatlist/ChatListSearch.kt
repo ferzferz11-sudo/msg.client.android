@@ -66,10 +66,10 @@ private fun showSearchView(activity: ChatListActivity) {
         }
     }
 
-    // Replace menu with search view
+    // Replace menu with search view and expand immediately
     activity.toolbar?.menu?.clear()
     val searchItem = activity.toolbar?.menu?.add(Menu.NONE, R.id.action_search, Menu.NONE, R.string.search)
     searchItem?.actionView = searchView
     searchItem?.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-    searchView.requestFocus()
+    searchItem?.expandActionView()
 }
