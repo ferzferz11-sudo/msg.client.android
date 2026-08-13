@@ -383,6 +383,12 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                 // Load company positions for multi-company access control
                 loadCompanyPositions()
 
+                // Apply pending mute update from NewChatActivity
+                ChatListSharedState.pendingMuteUpdate?.let { (muteRoomId, muteState) ->
+                    allChats = allChats.map { if (it.id == muteRoomId) it.copy(isMuted = muteState) else it }
+                    ChatListSharedState.pendingMuteUpdate = null
+                }
+
                 buildSections(allChats)
             } catch (e: Exception) {
                 ErrorHandler.handle(TAG, "Failed to load chats", e)

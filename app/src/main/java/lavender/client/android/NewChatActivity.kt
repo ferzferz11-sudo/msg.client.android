@@ -678,14 +678,20 @@ class NewChatActivity : AppCompatActivity() {
             }
             R.id.action_mute_chat -> {
                 val newMuted = !isChatMuted
-                GrpcClient.setMutedChat(data.roomId, newMuted) { success ->
-                    runOnUiThread {
-                        if (success) {
-                            isChatMuted = newMuted
-                            invalidateOptionsMenu()
-                            Toast.makeText(this, if (newMuted) getString(R.string.muted) else getString(R.string.unmuted), Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(this, getString(R.string.error_colon, "Failed"), Toast.LENGTH_SHORT).show()
+                val roomId = data.roomId
+                if (roomId.isNotEmpty()) {
+                    GrpcClient.setMutedChat(roomId, newMuted) { success ->
+                        runOnUiThread {
+                            if (success) {
+                                isChatMuted = newMuted
+                                invalidateOptionsMenu()
+                                // Update chat list state so mute icon shows when navigating back
+                                lavender.client.android.ui.chatlist.ChatListSharedState.pendingMuteUpdate = Pair(roomId, newMuted)
+                                Toast.makeText(this, if (newMuted) getString(R.string.muted) else getString(R.string.unmuted), Toast.LENGTH_SHORT).show()
+                            } else {
+                                android.util.Log.e("NewChatActivity", "setMutedChat failed for room=$roomId muted=$newMuted")
+                                Toast.makeText(this, getString(R.string.error_colon, "Failed to update mute"), Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
                 }

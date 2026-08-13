@@ -4,6 +4,11 @@
 
 ### Исправлено
 
+**Mute from inside chat not reflected in chat list (Medium):**
+- При mute/unmute изнутри чата состояние теперь пробрасывается в ChatListViewModel через `ChatListSharedState`
+- Иконка mute отображается на списке чатов после возврата из чата
+- Добавлена валидация `roomId` перед отправкой запроса
+
 **Chat list search activates immediately (Low):**
 - Убран промежуточный значок лупы — поиск открывается сразу при тапе в меню
 - `expandActionView()` вызывается автоматически после создания SearchView
