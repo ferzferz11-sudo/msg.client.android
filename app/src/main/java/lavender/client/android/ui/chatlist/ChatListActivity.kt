@@ -334,8 +334,8 @@ class ChatListActivity : AppCompatActivity() {
                         .into(ivToolbarUserAvatar!!)
                 } else if (ivToolbarUserAvatar != null) {
                     isShowingDefaultAvatar = true
-                    ivToolbarUserAvatar!!.setImageResource(R.drawable.ic_default_avatar)
-                    ivToolbarUserAvatar!!.clearColorFilter()
+                    ivToolbarUserAvatar!!.imageTintList = null
+                    lavender.client.android.theme.ThemeUtils.applyDefaultAvatar(ivToolbarUserAvatar!!, lavender.client.android.theme.ThemeStore.currentTheme())
                 }
             }
         }
