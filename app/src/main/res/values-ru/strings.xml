@@ -312,6 +312,7 @@
     <string name="cancel_reply">Отменить ответ</string>
     <string name="search_previous">Предыдущее</string>
     <string name="search_next">Следующее</string>
+    <string name="add_to_favorites">Добавить в избранное</string>
     <string name="super_admin">Админ панель</string>
     <string name="about">О программе</string>
     <string name="about_program">О программе</string>

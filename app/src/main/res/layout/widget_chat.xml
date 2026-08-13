@@ -246,6 +246,7 @@
                 android:layout_height="24dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_close"
+                android:contentDescription="@string/close"
                 app:tint="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
@@ -297,6 +298,7 @@
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_up"
+                android:contentDescription="@string/search_previous"
                 app:tint="?attr/colorOnPrimary" />
 
             <ImageButton
@@ -305,6 +307,7 @@
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_down"
+                android:contentDescription="@string/search_next"
                 app:tint="?attr/colorOnPrimary" />
         </LinearLayout>
 
@@ -325,6 +328,7 @@
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_close"
+                android:contentDescription="@string/close"
                 app:tint="?attr/colorOnPrimary" />
 
             <TextView
@@ -341,6 +345,7 @@
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_reply"
+                android:contentDescription="@string/reply"
                 app:tint="?attr/colorOnPrimary" />
 
             <ImageButton
@@ -349,6 +354,7 @@
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_copy"
+                android:contentDescription="@string/copy"
                 app:tint="?attr/colorOnPrimary" />
 
             <ImageButton
@@ -357,6 +363,7 @@
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_forward"
+                android:contentDescription="@string/forward"
                 app:tint="?attr/colorOnPrimary" />
 
             <ImageButton
@@ -365,6 +372,7 @@
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_delete"
+                android:contentDescription="@string/delete"
                 app:tint="?attr/colorOnPrimary" />
 
             <ImageButton
@@ -373,6 +381,7 @@
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_star"
+                android:contentDescription="@string/add_to_favorites"
                 app:tint="?attr/colorOnPrimary" />
         </LinearLayout>
 

@@ -22,6 +22,16 @@
 - `RemoteAgentManager`: 4 строки-заглушки заменены на английские
 - `HermesGatewayManager`: добавлен строковый ресурс `ssh_session_not_established` (EN+RU)
 
+**Light theme text colors (High):**
+- `text_primary` в `values/colors.xml` исправлен с `#FFFFFF` (белый = невидимый) на `#212121` (тёмный)
+- `text_secondary` исправлен с `#888888` на `#616161` (лучший контраст)
+- `text_hint` исправлен с `#80FFFFFF` (невидимый) на `#80212121`
+- Тёмная тема не затронута (`values-night/colors.xml` уже корректна)
+
+**Chat screen accessibility (High):**
+- 9 ImageButtons в `widget_chat.xml` получили `contentDescription` (reply, copy, forward, delete, star, close, search prev/next)
+- Добавлены строковые ресурсы: `search_previous`, `add_to_favorites` (EN+RU)
+
 ### Удалено (dead code)
 
 - `NotificationActivity` + `NotificationAdapter` (ui/notification/) — не имели точек запуска

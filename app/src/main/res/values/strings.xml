@@ -323,6 +323,7 @@
     <string name="cancel_reply">Cancel reply</string>
     <string name="search_previous">Previous</string>
     <string name="search_next">Next</string>
+    <string name="add_to_favorites">Add to favorites</string>
     <string name="super_admin">Admin Panel</string>
     <string name="about">About</string>
     <string name="about_program">About Program</string>
