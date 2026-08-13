@@ -35,6 +35,7 @@
 
 **Chat screen accessibility (High):**
 - 9 ImageButtons в `widget_chat.xml` получили `contentDescription` (reply, copy, forward, delete, star, close, search prev/next)
+- 2 CheckBox'а получили `contentDescription` (`item_user_selectable.xml`, `widget_searchable_list_bottom_sheet.xml`)
 - Добавлены строковые ресурсы: `search_previous`, `add_to_favorites` (EN+RU)
 
 ### Удалено (dead code)

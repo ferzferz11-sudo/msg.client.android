@@ -109,6 +109,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="12dp"
         android:visibility="gone"
+        android:contentDescription="@string/create_group"
         android:textColor="?attr/colorOnSurface" />
 
 </LinearLayout>
