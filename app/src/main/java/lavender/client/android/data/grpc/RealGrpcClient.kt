@@ -633,6 +633,49 @@ object RealGrpcClient {
                         "SELF_DESTRUCT_TIMER" -> {
                             val timerValue = sysMessage.toIntOrNull() ?: 0
                             _selfDestructTimer.value = timerValue
+                            val targetRoomId = value.roomId.ifEmpty { currentRoomId }
+                            if (targetRoomId.isNotEmpty()) {
+                                val ctx = appContext
+                                val timerLabel = if (ctx != null) {
+                                    val res = ctx.resources
+                                    when (timerValue) {
+                                        0 -> res.getString(lavender.client.android.R.string.self_destruct_off)
+                                        30 -> res.getString(lavender.client.android.R.string.self_destruct_30s)
+                                        60 -> res.getString(lavender.client.android.R.string.self_destruct_1m)
+                                        300 -> res.getString(lavender.client.android.R.string.self_destruct_5m)
+                                        3600 -> res.getString(lavender.client.android.R.string.self_destruct_1h)
+                                        86400 -> res.getString(lavender.client.android.R.string.self_destruct_24h)
+                                        else -> "${timerValue}s"
+                                    }
+                                } else "${timerValue}s"
+                                val text = if (timerValue == 0) {
+                                    val d = ctx?.resources?.getString(lavender.client.android.R.string.self_destruct_disabled) ?: "Timer disabled"
+                                    "\uD83D\uDD25 $d"
+                                } else {
+                                    val t = ctx?.resources?.getString(lavender.client.android.R.string.self_destruct_set, timerLabel) ?: "Timer set: $timerLabel"
+                                    "\uD83D\uDD25 $t"
+                                }
+                                val sysMsg = Message(
+                                    id = "sd_timer_${targetRoomId}_${System.currentTimeMillis()}",
+                                    user = "",
+                                    text = text,
+                                    timestamp = System.currentTimeMillis() / 1000,
+                                    roomId = targetRoomId
+                                )
+                                if (targetRoomId == currentRoomId) {
+                                    _messages.update { current ->
+                                        if (current.any { it.id == sysMsg.id }) current
+                                        else current.toMutableList().apply { add(sysMsg) }
+                                    }
+                                }
+                            }
+                        }
+                        "DELETE_MESSAGE_V2" -> {
+                            addDeletedHash("id:$sysMessage")
+                            scope.launch(Dispatchers.IO) { db()?.messageDao()?.deleteMessage(sysMessage) }
+                            if (sysMessage.isNotEmpty()) {
+                                _messages.update { current -> current.filterNot { it.id == sysMessage } }
+                            }
                         }
                     }
                     return

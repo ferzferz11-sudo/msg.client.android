@@ -395,6 +395,8 @@
                         android:layout_height="20dp"
                         android:src="@drawable/ic_back_arrow"
                         android:rotation="180"
+                        android:contentDescription="@null"
+                        android:importantForAccessibility="no"
                         app:tint="?android:attr/textColorSecondary" />
 
                 </LinearLayout>

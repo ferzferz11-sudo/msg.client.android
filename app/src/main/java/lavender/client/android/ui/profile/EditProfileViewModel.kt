@@ -219,6 +219,38 @@ class EditProfileViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    fun deleteAvatar() {
+        viewModelScope.launch {
+            _avatarState.value = AvatarUploadState(isUploading = true)
+            try {
+                val context = getApplication<Application>()
+                val success = ProfileClient.updateAvatar(
+                    context = context,
+                    avatarUrl = "",
+                    fullAvatarUrl = ""
+                )
+                if (success) {
+                    _uiState.value = _uiState.value.copy(
+                        avatarUrl = "",
+                        fullAvatarUrl = "",
+                        successMessage = getApplication<Application>().getString(lavender.client.android.R.string.avatar_deleted)
+                    )
+                    _avatarState.value = AvatarUploadState()
+                    grpcClient.updateAvatarCache(
+                        SessionManager.session.value.username,
+                        "",
+                        ""
+                    )
+                } else {
+                    _avatarState.value = AvatarUploadState(error = "Failed to delete avatar")
+                }
+            } catch (e: Exception) {
+                Log.e("EditProfile", "Avatar delete failed", e)
+                _avatarState.value = AvatarUploadState(error = e.message)
+            }
+        }
+    }
+
     private suspend fun resizeImage(uri: Uri, maxWidth: Int, maxHeight: Int): ByteArray? = withContext(Dispatchers.IO) {
         try {
             val context = getApplication<Application>()

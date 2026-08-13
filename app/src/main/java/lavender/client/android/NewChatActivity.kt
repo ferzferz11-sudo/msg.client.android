@@ -812,6 +812,7 @@ class NewChatActivity : AppCompatActivity() {
     private var markReadReceiver: android.content.BroadcastReceiver? = null
 
     @Suppress("UnprotectedRegisterReceiver")
+    @android.annotation.SuppressLint("UnspecifiedRegisterReceiverFlag")
     private fun registerMarkReadReceiver() {
         markReadReceiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {

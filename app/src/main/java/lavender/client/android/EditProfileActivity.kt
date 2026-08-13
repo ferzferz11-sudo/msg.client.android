@@ -160,6 +160,18 @@ class EditProfileActivity : AppCompatActivity() {
             pickImageLauncher.launch(intent)
         }
 
+        val btnDeleteAvatar = findViewById<Button>(R.id.btnDeleteAvatar)
+        btnDeleteAvatar.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.delete_avatar)
+                .setMessage(R.string.delete_avatar_confirm)
+                .setPositiveButton(R.string.delete_avatar) { _, _ ->
+                    viewModel.deleteAvatar()
+                }
+                .setNegativeButton(R.string.cancel_dialog, null)
+                .show()
+        }
+
         usernameCard.setOnClickListener {
             showChangeUsernameDialog()
         }
@@ -255,6 +267,10 @@ class EditProfileActivity : AppCompatActivity() {
                 .placeholder(R.drawable.ic_default_avatar_white)
                 .error(R.drawable.ic_default_avatar_white)
                 .into(avatarImageView)
+            avatarImageView.imageTintList = null
+        } else {
+            Glide.with(this).clear(avatarImageView)
+            avatarImageView.setImageResource(R.drawable.ic_default_avatar_white)
             avatarImageView.imageTintList = null
         }
 

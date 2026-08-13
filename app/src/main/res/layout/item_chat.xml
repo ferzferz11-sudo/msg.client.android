@@ -143,6 +143,7 @@
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:layout_marginStart="8dp"
+            android:layout_gravity="bottom"
             android:padding="4dp"
             android:src="@drawable/ic_volume_off"
             app:tint="?attr/colorOnSurfaceVariant"
@@ -166,6 +167,7 @@
             android:minWidth="24dp"
             android:minHeight="24dp"
             android:paddingHorizontal="6dp"
+            android:layout_gravity="bottom"
             android:background="@drawable/unread_count_background"
             android:gravity="center"
             tools:text="1"
@@ -179,6 +181,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_marginStart="8dp"
+            android:layout_gravity="bottom"
             android:padding="8dp"
             android:src="@drawable/ic_conference_lobby"
             android:background="@drawable/circle_button"
@@ -196,9 +199,11 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:layout_marginStart="8dp"
+            android:layout_gravity="bottom"
             android:visibility="gone"
             tools:visibility="visible"
-            android:contentDescription="@null" />
+            android:contentDescription="@null"
+            android:importantForAccessibility="no" />
 
     </LinearLayout>
 

@@ -9,7 +9,7 @@ data class ReleaseAsset(
     val size: Long
 ) {
     val sizeFormatted: String
-        get() = if (size > 1048576) String.format("%.1f MB", size / 1048576.0) else String.format("%.0f KB", size / 1024.0)
+        get() = if (size > 1048576) String.format(java.util.Locale.ROOT, "%.1f MB", size / 1048576.0) else String.format(java.util.Locale.ROOT, "%.0f KB", size / 1024.0)
 
     companion object {
         fun fromJson(json: JSONObject): ReleaseAsset {

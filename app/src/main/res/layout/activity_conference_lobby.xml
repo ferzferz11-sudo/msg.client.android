@@ -132,6 +132,7 @@
                     android:src="@drawable/ic_videocam_off"
                     android:visibility="gone"
                     android:contentDescription="@null"
+                    android:importantForAccessibility="no"
                     app:tint="@color/white" />
             </com.google.android.material.card.MaterialCardView>
 

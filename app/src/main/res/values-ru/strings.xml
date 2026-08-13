@@ -127,6 +127,10 @@
     <string name="change_password">Изменить пароль</string>
     <string name="password_updated">Пароль успешно обновлен</string>
     <string name="change_avatar">Изменить аватар</string>
+    <string name="avatar_label">Аватар</string>
+    <string name="delete_avatar">Удалить</string>
+    <string name="avatar_deleted">Аватар удалён</string>
+    <string name="delete_avatar_confirm">Удалить фото аватара?</string>
     <string name="select_avatar">Выбрать аватар</string>
     <string name="change">Изменить</string>
     <string name="toggle_language">Язык: Русский</string>

@@ -67,6 +67,8 @@
                     android:layout_height="18dp"
                     android:layout_marginStart="6dp"
                     android:src="@drawable/ic_settings_account"
+                    android:contentDescription="@null"
+                    android:importantForAccessibility="no"
                     android:visibility="gone"
                     app:tint="@color/amber_500" />
 

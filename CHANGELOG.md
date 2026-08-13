@@ -1,5 +1,70 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.3] - 2026-08-13
+
+### Новые фичи
+
+**Profile avatar section redesign (Medium):**
+- Секция аватара в EditProfileActivity переработана: заголовок "Аватар", аватар слева (80dp), кнопки справа
+- Кнопка "Изменить" (иконка камеры) — выбор нового аватара
+- Кнопка "Удалить" (иконка удаления, красный цвет) — удаление аватара с подтверждением
+- `EditProfileViewModel.deleteAvatar()` — вызывает `ProfileClient.updateAvatar("")` для очистки
+- Toast "Аватар удалён" / "Avatar deleted" при успехе
+- Аватар сбрасывается на дефолтный после удаления
+- Новые строки: `avatar_label`, `delete_avatar`, `avatar_deleted`, `delete_avatar_confirm` (EN+RU)
+
+### Исправлено
+
+**Self-destruct timer: системное сообщение не отображалось (High):**
+- Обработчик `SELF_DESTRUCT_TIMER` в `RealGrpcClient` теперь создаёт системное сообщение в чате при установке/отключении таймера
+- Текст использует строковые ресурсы (`self_destruct_set`, `self_destruct_disabled`) с поддержкой EN/RU
+
+**Self-destruct timer: удалённые сообщения не очищались из Room DB (High):**
+- Добавлен обработчик `DELETE_MESSAGE_V2` в `RealGrpcClient` — сервер отправляет этот тип при auto-delete, но клиент обрабатывал только `DELETE_MESSAGE`
+- Удалённые таймером сообщения теперь корректно удаляются из Room DB и из in-memory списка
+
+**Chat list search не активировался сразу (Medium):**
+- `ChatListSearch.showSearchView()` — `expandActionView()` обёрнут в `toolbar.post{}` для корректного раскрытия после закрытия overflow меню
+- Добавлен `requestFocus()` + показ клавиатуры через `WindowInsetsController` (API 30+) с fallback на `InputMethodManager`
+
+**Light theme: дефолтный аватар без контура (Medium):**
+- Откат `ThemeUtils.applyDefaultAvatar()` для toolbar аватара в ChatListActivity — возврат к простому tint
+- `ThemeApplier` — убран специальный случай для ChatListActivity, единое поведение tint для всех Activity
+- Добавлен Primary color контур (1.5dp) для аватаров на плашках чатов ТОЛЬКО для светлых тем
+- `ChatAdapter` — `cachedIsLightTheme` флаг, border через `CircleImageView.setBorderWidth/setBorderColor`
+
+**Chat list icons: позиционирование внизу плашки (Low):**
+- Иконки mute, unread count, lobby, delete progress — `layout_gravity="bottom"` вместо `center_vertical`
+- Теперь выровнены по нижнему краю плашки, под текстом last-seen
+
+**Favorites star: выравнивание с overflow menu (Low):**
+- Звёздочка "Избранное" сдвинута вниз на 3dp для совпадения с иконкой меню
+
+**Dark mode: hardcoded цвета в item_log_entry.xml (Medium):**
+- `logSource`: `#AAAAAA` → `@color/text_secondary`
+- `logMessage`: `#FFFFFF` → `@color/text_primary`
+- Теперь корректно отображается в обеих темах
+
+### Code Quality
+
+**Lint warnings cleanup (Low):**
+- DefaultLocale: `Locale.ROOT` добавлен во все `String.format` вызовы (12 файлов)
+- CutPasteId: убран дублированный `findViewById` в MediaPickerSheet и ThemeApplier
+- UnspecifiedRegisterReceiverFlag: `@SuppressLint` для API-conditional registerReceiver
+- InflateParams: `setContentView(layoutResId)` вместо ручного inflate с null parent
+- SwitchIntDef: добавлен `STATE_IDLE` в AudioPlayerManager
+
+### Accessibility
+
+**Decorative ImageViews — importantForAccessibility (Medium):**
+- ~30 decorative ImageViews получили `android:importantForAccessibility="no"` + `android:contentDescription="@null"`
+- Файлы: activity_call, activity_chat_list, activity_contacts, activity_new_chat, activity_security, activity_servers, activity_super_admin, activity_themes, activity_changelog, activity_profile, activity_conference_lobby
+- item_theme (appliedIndicator, modeIndicator), item_admin_session, item_company_chat, item_company_position, item_device, item_server, item_share_chat, item_user_super_admin
+- widget_chat, widget_action_item, preview_chat, preview_chat_list
+- dialog_about, dialog_server_auth, dialog_reactions (4 иконки)
+- bottom_sheet_update, bottom_sheet_additional_settings (через MenuActionIconStyle)
+- Стиль `MenuActionIconStyle` — добавлены `contentDescription="@null"` и `importantForAccessibility="no"` (все иконки меню автоматически)
+
 ## [1.4.0.2] - 2026-08-13
 
 ### Исправлено

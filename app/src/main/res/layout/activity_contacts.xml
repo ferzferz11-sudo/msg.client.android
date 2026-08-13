@@ -12,7 +12,8 @@
         android:layout_height="match_parent"
         android:scaleType="centerCrop"
         android:visibility="gone"
-        android:contentDescription="@null" />
+        android:contentDescription="@null"
+        android:importantForAccessibility="no" />
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
@@ -109,6 +110,8 @@
                 android:layout_width="20dp"
                 android:layout_height="20dp"
                 android:src="@drawable/ic_search_custom"
+                android:contentDescription="@null"
+                android:importantForAccessibility="no"
                 app:tint="?attr/colorOnSurfaceVariant" />
 
             <EditText
@@ -169,6 +172,7 @@
             android:src="@drawable/ic_contacts"
             android:alpha="0.3"
             android:contentDescription="@null"
+            android:importantForAccessibility="no"
             app:tint="?attr/colorOnSurface" />
 
         <TextView

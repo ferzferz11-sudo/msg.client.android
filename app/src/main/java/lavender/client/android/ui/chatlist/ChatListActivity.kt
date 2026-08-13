@@ -267,23 +267,9 @@ class ChatListActivity : AppCompatActivity() {
         // Setup search menu in toolbar
         setupSearchMenu(this)
 
-        // Adjust overflow icon: shift up 3px for vertical alignment with favorites star
+        // Align favorites star with overflow menu icon (shift down 3dp)
         toolbar?.post {
-            for (i in 0 until (toolbar?.childCount ?: 0)) {
-                val child = toolbar?.getChildAt(i)
-                if (child is androidx.appcompat.widget.ActionMenuView) {
-                    for (j in 0 until child.childCount) {
-                        val menuChild = child.getChildAt(j)
-                        if (menuChild is android.widget.ImageButton) {
-                            val drawable = menuChild.drawable
-                            if (drawable == toolbar?.overflowIcon) {
-                                menuChild.translationY = -3f * resources.displayMetrics.density
-                                break
-                            }
-                        }
-                    }
-                }
-            }
+            ivFavorites?.translationY = 3f * resources.displayMetrics.density
         }
 
         // Setup tabs
@@ -348,7 +334,8 @@ class ChatListActivity : AppCompatActivity() {
                         .into(ivToolbarUserAvatar!!)
                 } else if (ivToolbarUserAvatar != null) {
                     isShowingDefaultAvatar = true
-                    lavender.client.android.theme.ThemeUtils.applyDefaultAvatar(ivToolbarUserAvatar!!, lavender.client.android.theme.ThemeStore.currentTheme())
+                    ivToolbarUserAvatar!!.setImageResource(R.drawable.ic_default_avatar)
+                    ivToolbarUserAvatar!!.clearColorFilter()
                 }
             }
         }

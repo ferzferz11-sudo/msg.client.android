@@ -29,6 +29,8 @@
         android:background="@android:color/transparent"
         android:scaleType="fitCenter"
         android:adjustViewBounds="true"
+        android:contentDescription="@null"
+        android:importantForAccessibility="no"
         android:clickable="true"
         android:focusable="true" />
 

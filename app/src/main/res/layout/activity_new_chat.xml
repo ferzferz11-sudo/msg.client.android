@@ -63,6 +63,7 @@
                     android:src="@drawable/ic_loading_renew"
                     android:visibility="gone"
                     android:contentDescription="@null"
+                    android:importantForAccessibility="no"
                     app:tint="?attr/colorOnPrimary" />
 
                 <LinearLayout
@@ -138,6 +139,8 @@
                     android:src="@drawable/ic_conference_lobby"
                     android:background="@drawable/circle_button"
                     android:backgroundTint="?attr/colorPrimary"
+                    android:contentDescription="@null"
+                    android:importantForAccessibility="no"
                     app:tint="?attr/colorOnPrimary"
                     android:padding="4dp" />
 

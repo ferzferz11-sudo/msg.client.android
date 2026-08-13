@@ -80,7 +80,7 @@ class MarketplaceAgentAdapter(
             agentDescription.text = agent.description
             agentModel.text = agent.model
             agentRating.rating = agent.avgRating
-            ratingText.text = String.format("%.1f", agent.avgRating)
+            ratingText.text = String.format(java.util.Locale.ROOT, "%.1f", agent.avgRating)
             installCount.text = "${agent.installCount} installs"
 
             updateFavoriteIcon(agent.id)

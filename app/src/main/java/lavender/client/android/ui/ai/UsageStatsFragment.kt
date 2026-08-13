@@ -101,8 +101,8 @@ class UsageStatsFragment : Fragment() {
 
     private fun formatNumber(n: Int): String {
         return when {
-            n >= 1_000_000 -> String.format("%.1fM", n / 1_000_000.0)
-            n >= 1_000 -> String.format("%.1fK", n / 1_000.0)
+            n >= 1_000_000 -> String.format(java.util.Locale.ROOT, "%.1fM", n / 1_000_000.0)
+            n >= 1_000 -> String.format(java.util.Locale.ROOT, "%.1fK", n / 1_000.0)
             else -> n.toString()
         }
     }

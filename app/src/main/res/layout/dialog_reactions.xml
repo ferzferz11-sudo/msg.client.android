@@ -33,6 +33,8 @@
             android:layout_height="24dp"
             android:src="@drawable/ic_reply"
             android:layout_marginEnd="16dp"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
             app:tint="?attr/colorPrimary" />
         <TextView
             android:layout_width="wrap_content"
@@ -54,6 +56,8 @@
             android:layout_height="24dp"
             android:src="@drawable/ic_copy"
             android:layout_marginEnd="16dp"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
             app:tint="?attr/colorPrimary" />
         <TextView
             android:layout_width="wrap_content"
@@ -75,6 +79,8 @@
             android:layout_height="24dp"
             android:src="@drawable/ic_edit"
             android:layout_marginEnd="16dp"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
             app:tint="?attr/colorPrimary" />
         <TextView
             android:layout_width="wrap_content"
@@ -96,6 +102,8 @@
             android:layout_height="24dp"
             android:src="@drawable/ic_delete"
             android:layout_marginEnd="16dp"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
             app:tint="?attr/colorPrimary" />
         <TextView
             android:layout_width="wrap_content"

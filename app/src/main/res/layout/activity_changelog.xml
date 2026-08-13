@@ -21,6 +21,8 @@
             android:src="@drawable/ic_notification_logo"
             android:scaleType="fitCenter"
             android:adjustViewBounds="true"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
             android:alpha="0" />
 
         <TextView

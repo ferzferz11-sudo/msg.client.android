@@ -46,8 +46,8 @@ class ForwardMessageSheet(
     fun show() {
         dialog = BottomSheetDialog(activity)
 
-        val view = LayoutInflater.from(activity).inflate(R.layout.sheet_forward_message, null, false)
-        dialog?.setContentView(view)
+        dialog?.setContentView(R.layout.sheet_forward_message)
+        val view = dialog?.findViewById<android.view.View>(com.google.android.material.R.id.design_bottom_sheet) ?: return
 
         // Theme
         val theme = ThemeStore.currentTheme()

@@ -55,6 +55,9 @@ class AudioPlayerManager private constructor(private val context: Context) {
                     
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         when (playbackState) {
+                            androidx.media3.common.Player.STATE_IDLE -> {
+                                _isLoading.value = false
+                            }
                             androidx.media3.common.Player.STATE_BUFFERING -> {
                                 _isLoading.value = true
                             }
@@ -157,7 +160,7 @@ class AudioPlayerManager private constructor(private val context: Context) {
         val seconds = (milliseconds / 1000).toInt()
         val minutes = seconds / 60
         val remainingSeconds = seconds % 60
-        return String.format("%d:%02d", minutes, remainingSeconds)
+        return String.format(java.util.Locale.ROOT, "%d:%02d", minutes, remainingSeconds)
     }
     
     fun getCurrentPositionFormatted(): String = formatTime(_currentPosition.value)

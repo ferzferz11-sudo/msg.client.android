@@ -188,7 +188,7 @@ class AudioMessageView @JvmOverloads constructor(
     private fun formatDuration(seconds: Int): String {
         val minutes = seconds / 60
         val secs = seconds % 60
-        return String.format("%d:%02d", minutes, secs)
+        return String.format(java.util.Locale.ROOT, "%d:%02d", minutes, secs)
     }
     
     fun setOnPlayClickListener(listener: (String) -> Unit) {

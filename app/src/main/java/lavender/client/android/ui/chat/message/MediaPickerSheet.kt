@@ -185,8 +185,6 @@ class MediaPickerSheet(
             }
         })
 
-        val btnCreatePack = findViewById<android.view.View>(R.id.btnCreatePack)
-
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 when (tab?.position) {
@@ -197,13 +195,13 @@ class MediaPickerSheet(
                     1 -> {
                         emojiContainer?.isVisible = false
                         stickerContainer?.isVisible = true
-                        btnCreatePack?.isVisible = false
+                        btnCreate?.isVisible = false
                         showFavoritesTab()
                     }
                     2 -> {
                         emojiContainer?.isVisible = false
                         stickerContainer?.isVisible = true
-                        btnCreatePack?.isVisible = true
+                        btnCreate?.isVisible = true
                         if (!isSearchActive) loadStickerPacks()
                     }
                 }

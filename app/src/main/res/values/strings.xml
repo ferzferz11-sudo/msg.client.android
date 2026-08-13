@@ -140,6 +140,10 @@
     <string name="change_password">Change Password</string>
     <string name="password_updated">Password updated successfully</string>
     <string name="change_avatar">Change Avatar</string>
+    <string name="avatar_label">Avatar</string>
+    <string name="delete_avatar">Delete</string>
+    <string name="avatar_deleted">Avatar deleted</string>
+    <string name="delete_avatar_confirm">Remove your avatar photo?</string>
     <string name="select_avatar">Select Avatar</string>
     <string name="change">Change</string>
     <string name="toggle_language">Language: English</string>

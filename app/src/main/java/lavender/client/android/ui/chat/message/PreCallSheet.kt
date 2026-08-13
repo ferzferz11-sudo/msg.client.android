@@ -31,8 +31,8 @@ class PreCallSheet(
 
     fun show() {
         dialog = BottomSheetDialog(activity)
-        val view = LayoutInflater.from(activity).inflate(R.layout.sheet_pre_call, null, false)
-        dialog?.setContentView(view)
+        dialog?.setContentView(R.layout.sheet_pre_call)
+        val view = dialog?.findViewById<android.view.View>(com.google.android.material.R.id.design_bottom_sheet) ?: return
 
         val theme = ThemeStore.currentTheme()
         val bgColor = ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK)

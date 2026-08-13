@@ -71,5 +71,18 @@ private fun showSearchView(activity: ChatListActivity) {
     val searchItem = activity.toolbar?.menu?.add(Menu.NONE, R.id.action_search, Menu.NONE, R.string.search)
     searchItem?.actionView = searchView
     searchItem?.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-    searchItem?.expandActionView()
+    // Post to ensure overflow menu is closed and toolbar is laid out
+    activity.toolbar?.post {
+        searchItem?.expandActionView()
+        searchView.requestFocus()
+        // Force keyboard show via WindowInsetsController (API 30+) with fallback
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            activity.window.insetsController?.show(android.view.WindowInsets.Type.ime())
+        } else {
+            @Suppress("DEPRECATION")
+            val imm = activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+            @Suppress("DEPRECATION")
+            imm?.showSoftInput(searchView.findFocus(), android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+        }
+    }
 }

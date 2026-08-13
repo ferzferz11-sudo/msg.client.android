@@ -87,6 +87,7 @@ class ChatAdapter(
     private var cachedSurfaceColor: Int = 0
     private var cachedSelectedColor: Int = 0
     private var cachedUnreadColor: Int = 0
+    private var cachedIsLightTheme: Boolean = false
     private var colorsInitialized = false
 
     private fun initColors(view: View) {
@@ -98,6 +99,7 @@ class ChatAdapter(
         cachedSurfaceColor = ThemeUtils.parseSafeColor(theme.incomingBubbleColor, Color.DKGRAY)
         cachedSelectedColor = Color.argb(48, Color.red(cachedPrimaryColor), Color.green(cachedPrimaryColor), Color.blue(cachedPrimaryColor))
         cachedUnreadColor = Color.argb(40, Color.red(cachedPrimaryColor), Color.green(cachedPrimaryColor), Color.blue(cachedPrimaryColor))
+        cachedIsLightTheme = ThemeUtils.isLight(ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK))
         colorsInitialized = true
     }
 
@@ -205,7 +207,7 @@ class ChatAdapter(
         when (val item = getItem(position)) {
             is FlatItem.SectionHeader -> (holder as SectionHeaderViewHolder).bind(item)
             is FlatItem.ChatItem -> (holder as ChatViewHolder).bind(
-                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedUnreadColor, cachedPrimaryColor, selectionMode, selectedIds.contains(item.chat.id), currentUsername, onlineUsersSet, allUsersMap, avatarUrlCache, otherParticipantCache
+                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedUnreadColor, cachedPrimaryColor, cachedIsLightTheme, selectionMode, selectedIds.contains(item.chat.id), currentUsername, onlineUsersSet, allUsersMap, avatarUrlCache, otherParticipantCache
             )
             null -> {}
         }
@@ -321,7 +323,7 @@ class ChatAdapter(
         private val cardView: com.google.android.material.card.MaterialCardView =
             itemView as com.google.android.material.card.MaterialCardView
 
-        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, unreadColor: Int, primaryColor: Int, selectionMode: Boolean, isSelected: Boolean, currentUsername: String, onlineUsers: Set<String>, allUsersMap: Map<String, lavender.client.android.data.proto.UserInfoProto>, avatarCache: Map<String, String>, otherParticipantCache: MutableMap<String, String>) {
+        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, unreadColor: Int, primaryColor: Int, isLightTheme: Boolean, selectionMode: Boolean, isSelected: Boolean, currentUsername: String, onlineUsers: Set<String>, allUsersMap: Map<String, lavender.client.android.data.proto.UserInfoProto>, avatarCache: Map<String, String>, otherParticipantCache: MutableMap<String, String>) {
             val hasUnread = chat.unreadCount > 0
             tvChatName.text = chat.getDisplayName(currentUsername)
             tvChatName.setTextColor(if (hasUnread) primaryColor else textPrimary)
@@ -347,6 +349,15 @@ class ChatAdapter(
                     ivChatAvatar.setImageResource(R.drawable.ic_default_avatar)
                 }
             } catch (_: Exception) { ivChatAvatar.setImageResource(R.drawable.ic_default_avatar) }
+
+            // Avatar border — Primary color outline on light themes only
+            if (isLightTheme) {
+                val borderPx = (1.5f * itemView.resources.displayMetrics.density).toInt()
+                ivChatAvatar.borderWidth = borderPx
+                ivChatAvatar.borderColor = primaryColor
+            } else {
+                ivChatAvatar.borderWidth = 0
+            }
 
             // Company badge
             tvCompanyBadge.isVisible = chat.companyId.isNotEmpty()

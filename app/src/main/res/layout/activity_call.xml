@@ -13,7 +13,8 @@
         android:layout_height="match_parent"
         android:scaleType="centerCrop"
         android:alpha="0.3"
-        android:contentDescription="@null" />
+        android:contentDescription="@null"
+        android:importantForAccessibility="no" />
 
     <org.webrtc.SurfaceViewRenderer
         android:id="@+id/remote_view"

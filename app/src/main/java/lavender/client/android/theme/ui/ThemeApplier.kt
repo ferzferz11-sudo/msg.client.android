@@ -42,8 +42,8 @@ object ThemeApplier {
             android.util.Log.e("ThemeApplier", "WindowInsetsController failed: ${e.message}")
         }
 
+        val root = activity.findViewById<View>(android.R.id.content)
         try {
-            val root = activity.findViewById<View>(android.R.id.content)
             activity.window.decorView.setBackgroundColor(bgColor)
             root?.setBackgroundColor(bgColor)
         } catch (e: Exception) {
@@ -131,13 +131,7 @@ object ThemeApplier {
             }
 
             activity.findViewById<ImageView>(R.id.ivToolbarUserAvatar)?.let { avatar ->
-                if (activity is lavender.client.android.ui.chatlist.ChatListActivity) {
-                    if (activity.isShowingDefaultAvatar) {
-                        lavender.client.android.theme.ThemeUtils.applyDefaultAvatar(avatar, theme)
-                    }
-                } else {
-                    avatar.imageTintList = ColorStateList.valueOf(customOnPrimary)
-                }
+                avatar.imageTintList = ColorStateList.valueOf(customOnPrimary)
             }
 
             activity.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fab)?.apply {
@@ -164,7 +158,7 @@ object ThemeApplier {
         }
 
         try {
-            val root2 = activity.findViewById<View>(android.R.id.content)
+
             activity.findViewById<ImageView>(R.id.chatBackground)?.let { bgImageView ->
                 val url = theme.chatBackgroundImageUrl
                 if (url.isNotEmpty()) {
@@ -174,7 +168,7 @@ object ThemeApplier {
                         .diskCacheStrategy(DiskCacheStrategy.ALL)
                         .centerCrop()
                         .into(bgImageView)
-                    root2?.setBackgroundColor(Color.TRANSPARENT)
+                    root?.setBackgroundColor(Color.TRANSPARENT)
                 } else {
                     bgImageView.visibility = View.GONE
                 }
@@ -189,7 +183,7 @@ object ThemeApplier {
                         .diskCacheStrategy(DiskCacheStrategy.ALL)
                         .centerCrop()
                         .into(chatListBgView)
-                    root2?.setBackgroundColor(Color.TRANSPARENT)
+                    root?.setBackgroundColor(Color.TRANSPARENT)
                 } else {
                     chatListBgView.visibility = View.GONE
                 }

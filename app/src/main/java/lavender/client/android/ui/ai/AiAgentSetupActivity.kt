@@ -93,10 +93,10 @@ class AiAgentSetupActivity : AppCompatActivity() {
         publicSwitch = findViewById(R.id.publicSwitch)
 
         temperatureSlider.addOnChangeListener { _, value, _ ->
-            temperatureValue.text = String.format("%.1f", value)
+            temperatureValue.text = String.format(java.util.Locale.ROOT, "%.1f", value)
             if (isLoaded) markChanged()
         }
-        temperatureValue.text = String.format("%.1f", temperatureSlider.value)
+        temperatureValue.text = String.format(java.util.Locale.ROOT, "%.1f", temperatureSlider.value)
     }
 
     private fun setupToolbar() {
@@ -252,7 +252,7 @@ class AiAgentSetupActivity : AppCompatActivity() {
                 ragEnabledSwitch.isChecked = it.ragEnabled
                 publicSwitch.isChecked = it.isPublic
                 temperatureSlider.value = it.temperature.coerceIn(0f, 2f)
-                temperatureValue.text = String.format("%.1f", it.temperature)
+                temperatureValue.text = String.format(java.util.Locale.ROOT, "%.1f", it.temperature)
                 maxTokensInput.setText(it.maxTokens.toString())
                 try {
                     val config = JSONObject(it.providerConfig)

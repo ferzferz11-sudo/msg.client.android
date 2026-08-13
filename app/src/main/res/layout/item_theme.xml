@@ -37,6 +37,7 @@
                 android:src="@drawable/ic_checked"
                 app:tint="@android:color/white"
                 android:contentDescription="@null"
+                android:importantForAccessibility="no"
                 android:visibility="gone" />
 
         </FrameLayout>
@@ -76,7 +77,8 @@
             android:layout_marginStart="8dp"
             android:src="@drawable/ic_light_mode"
             app:tint="?attr/colorOnSurfaceVariant"
-            android:contentDescription="@null" />
+            android:contentDescription="@null"
+            android:importantForAccessibility="no" />
 
         <ImageView
             android:id="@+id/editIndicator"
