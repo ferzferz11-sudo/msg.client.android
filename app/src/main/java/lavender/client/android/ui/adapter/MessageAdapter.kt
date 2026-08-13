@@ -1,4 +1,5 @@
 package lavender.client.android.ui.adapter
+import android.util.Log
 
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -24,7 +25,10 @@ import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import lavender.client.android.R
+import android.graphics.Typeface
+import lavender.client.android.data.calls.CallMessageHelper
 import lavender.client.android.data.models.Message
+import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import java.text.SimpleDateFormat
@@ -40,15 +44,38 @@ class MessageAdapter(
     private val onMessageLongClick: ((Message) -> Unit)? = null,
     private val chatId: String = "",
     private val onRetrySendMessage: ((Message) -> Unit)? = null,
+    private val onReplyQuoteClick: ((String) -> Unit)? = null,
 ) : ListAdapter<Message, MessageAdapter.MessageViewHolder>(MessageDiffCallback()) {
 
     private val selectedPositions = mutableSetOf<Int>()
     private var selectionMode = false
     private var searchHighlight: String? = null
     private var pinnedMessageIds = mutableSetOf<String>()
+    private val dayFormat = object : ThreadLocal<SimpleDateFormat>() {
+        override fun initialValue() = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+    }
 
-    fun setSearchHighlight(query: String?) { searchHighlight = query; notifyItemRangeChanged(0, itemCount) }
-    fun updatePinnedMessages(ids: Set<String>) { pinnedMessageIds = ids.toMutableSet(); notifyItemRangeChanged(0, itemCount) }
+    fun setSearchHighlight(query: String?) {
+        val oldHighlight = searchHighlight
+        searchHighlight = query
+        if (oldHighlight != query) {
+            for (i in 0 until itemCount) {
+                val msg = try { getItem(i) } catch (_: Exception) { continue }
+                if ((oldHighlight == null || msg.text.contains(oldHighlight, true)) ||
+                    (query != null && msg.text.contains(query, true))) {
+                    notifyItemChanged(i)
+                }
+            }
+        }
+    }
+    fun updatePinnedMessages(ids: Set<String>) {
+        val oldPinned = pinnedMessageIds.toSet()
+        pinnedMessageIds = ids.toMutableSet()
+        for (i in 0 until itemCount) {
+            val msg = try { getItem(i) } catch (_: Exception) { continue }
+            if (msg.id in oldPinned || msg.id in pinnedMessageIds) notifyItemChanged(i)
+        }
+    }
     fun getSelectedMessages(): List<Message> = selectedPositions.map { getItem(it) }
 
     @Suppress("UNUSED")
@@ -71,6 +98,11 @@ class MessageAdapter(
         return MessageViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_message, parent, false))
     }
 
+    override fun onViewRecycled(holder: MessageViewHolder) {
+        super.onViewRecycled(holder)
+        holder.unbind()
+    }
+
     override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
         val msg = getItem(position)
         val prev = if (position > 0) getItem(position - 1) else null
@@ -81,8 +113,9 @@ class MessageAdapter(
         val prevTs = prev?.let { if (it.timestamp > now) now else it.timestamp } ?: 0L
         val isSameMinute = prev != null && (curTs / 60000 == prevTs / 60000)
         val showDateSeparator = if (prev == null) true else {
-            val curDay = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(curTs))
-            val prevDay = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(prevTs))
+            val fmt = dayFormat.get()!!
+            val curDay = fmt.format(Date(curTs))
+            val prevDay = fmt.format(Date(prevTs))
             curDay != prevDay
         }
         holder.bind(msg, isOutgoing, selectedPositions.contains(position), isConsecutive && isSameMinute,
@@ -107,24 +140,36 @@ class MessageAdapter(
         private val replyQuoteUser: TextView = itemView.findViewById(R.id.tvReplyUser)
         private val replyQuoteText: TextView = itemView.findViewById(R.id.tvReplyText)
         private val replyQuoteBar: View = itemView.findViewById(R.id.vReplyBar)
+        private val forwardedFromText: TextView = itemView.findViewById(R.id.tvForwardedFrom)
         val messageImageView: ImageView = itemView.findViewById<ImageView>(R.id.ivMessageImage).apply {
             clipToOutline = true
             outlineProvider = object : android.view.ViewOutlineProvider() {
                 override fun getOutline(view: View, outline: android.graphics.Outline) { outline.setRoundRect(0, 0, view.width, view.height, 16f * itemView.resources.displayMetrics.density) }
             }
         }
-        private val galleryCountIndicator: TextView = itemView.findViewById(R.id.tvGalleryCount)
+        val galleryThumbnailsRecyclerView: RecyclerView = itemView.findViewById(R.id.rvGalleryThumbnails)
         val audioMessageView: lavender.client.android.ui.audio.AudioMessageView = itemView.findViewById(R.id.audioMessageView)
         val reactionsText: TextView = itemView.findViewById(R.id.tvReactions)
         private val btnDownloadFile: ImageButton = itemView.findViewById(R.id.btnDownloadFile)
+        val lottieStickerView: com.airbnb.lottie.LottieAnimationView = itemView.findViewById(R.id.lottieStickerView)
+        val stickerImageView: ImageView = itemView.findViewById(R.id.ivStickerImage)
+
+        fun unbind() {
+            lottieStickerView.cancelAnimation()
+            lottieStickerView.clearAnimation()
+            Glide.with(itemView.context).clear(messageImageView)
+            Glide.with(itemView.context).clear(avatarImageView)
+            Glide.with(itemView.context).clear(stickerImageView)
+        }
 
         fun bind(message: Message, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean,
                  isConsecutive: Boolean, isSelectionMode: Boolean, adapterPosition: Int, showDateSeparator: Boolean,
                  onClick: (Int) -> Unit, onLongClick: (Int) -> Unit, onMessageLongClick: ((Message) -> Unit)?) {
+            try {
             val ctx = itemView.context
             val isGroup = this@MessageAdapter.isGroupChat
-            val theme = ThemeStore.currentTheme()
-            val isCompletelyEmpty = message.text.isEmpty() && message.imageUrl.isEmpty() && message.voiceUrl.isEmpty() && message.imageUrls.isEmpty()
+            val theme = try { ThemeStore.currentTheme() } catch (_: Exception) { lavender.client.android.theme.BuiltInThemes.dark }
+            val isCompletelyEmpty = message.text.isEmpty() && message.imageUrl.isEmpty() && message.voiceUrl.isEmpty() && message.imageUrls.isEmpty() && message.stickerUrl.isEmpty()
             btnDownloadFile.isVisible = false
             if (isCompletelyEmpty) { itemView.visibility = View.GONE; itemView.layoutParams = itemView.layoutParams.also { it.height = 0 }; return }
             itemView.visibility = View.VISIBLE; itemView.layoutParams = itemView.layoutParams.also { if (it.height == 0) it.height = ViewGroup.LayoutParams.WRAP_CONTENT }
@@ -133,7 +178,15 @@ class MessageAdapter(
             messageText.text = message.text; userText.text = message.user; messageText.movementMethod = null
             val canShowSenderInfo = isGroup && !isOutgoing && !isConsecutive && !isSelectionMode
             userText.isVisible = canShowSenderInfo
-            if (canShowSenderInfo) { avatarImageView.isVisible = true; if (message.avatarUrl.isNotEmpty()) { Glide.with(ctx).load(message.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(avatarImageView); avatarImageView.imageTintList = null } else { ThemeUtils.applyDefaultAvatar(avatarImageView, theme, theme.incomingBubbleColor) } }
+            if (canShowSenderInfo) {
+                avatarImageView.isVisible = true
+                if (message.avatarUrl.isNotEmpty()) {
+                    try { Glide.with(ctx).load(message.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(avatarImageView) } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
+                    avatarImageView.imageTintList = null
+                } else {
+                    try { ThemeUtils.applyDefaultAvatar(avatarImageView, theme, theme.incomingBubbleColor) } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
+                }
+            }
             else { avatarImageView.visibility = if (isOutgoing) View.GONE else View.INVISIBLE }
 
             bindAlignment(message, isOutgoing, isConsecutive, isSelectionMode, isGroup)
@@ -142,11 +195,11 @@ class MessageAdapter(
             val finalSurface = if (surfaceColor != 0) surfaceColor else { if (isOutgoing) "#3D6B6C".toColorInt() else "#363636".toColorInt() }
             val secColor = (pTextColor and 0x00FFFFFF) or (0xCC shl 24)
 
-            val isCallMessage = message.text.contains("📹") || message.text.contains("📞") || message.text.contains("Видеозвонок") || message.text.contains("вызов") || message.text.contains("Звонок")
+            val isCallMessage = CallMessageHelper.isCallOrConference(message.text)
             val isSystem = message.user == "SYSTEM" && !isCallMessage
 
             bindBubbleStyle(isOutgoing, isSystem, finalSurface, pTextColor, secColor, canShowSenderInfo, theme)
-            if (isCallMessage) bindCallMessage(message, isOutgoing, pTextColor, ctx) else { messageText.text = message.text; messageText.textSize = 16f; messageText.setTypeface(null, android.graphics.Typeface.NORMAL); messageText.setTextColor(pTextColor) }
+            if (isCallMessage) bindCallMessage(message, isOutgoing, pTextColor, ctx) else { messageText.text = message.text; messageText.textSize = 16f; messageText.setTypeface(null, Typeface.NORMAL); messageText.setTextColor(pTextColor) }
             timeText.setTextColor(secColor); timeText.isVisible = !shouldHideTime; editedText.setTextColor(secColor)
             if (isOutgoing) bindReadStatus(message, secColor, ctx) else { readStatusIcon.isVisible = false }
 
@@ -157,18 +210,49 @@ class MessageAdapter(
             if (message.voiceUrl.isNotEmpty()) bindAudioContent(message, isOutgoing, isSelectionMode, theme, onClick, onLongClick, adapterPosition)
             else { audioMessageView.isVisible = false; bindTextContent(message, isOutgoing, isSelectionMode, pTextColor, theme, ctx, onClick, onLongClick, adapterPosition) }
 
+            bindStickerContent(message, isOutgoing, isSelectionMode, onClick, onLongClick, adapterPosition, ctx)
             bindImageContent(message, isOutgoing, isSelectionMode, onClick, onLongClick, adapterPosition, ctx)
             bindReactions(message, theme, isOutgoing, onClick)
             bindReplyQuote(message, isOutgoing, theme)
+            bindForwardAttribution(message, ctx)
             bindSelectionIndicator(isSelected, isSelectionMode, theme, ctx)
             bindContainerClicks(isSelectionMode, onClick, onLongClick, adapterPosition)
             bindPinnedBadge(message, theme, ctx)
             reactionsText.setOnClickListener { if (isSelectionMode) onClick(bindingAdapterPosition) else onMessageClick(message) }
+            } catch (e: Exception) {
+                android.util.Log.e("MessageAdapter", "bind crashed for msg ${message.id}: ${e.message}", e)
+                try {
+                    messageText.text = message.text.ifEmpty { "…" }
+                    messageText.setTextColor(Color.WHITE)
+                    messageText.isVisible = true
+                    avatarImageView.isVisible = false
+                    userText.isVisible = false
+                    timeText.isVisible = false
+                    editedText.isVisible = false
+                    audioMessageView.isVisible = false
+                    messageImageView.isVisible = false
+                    galleryThumbnailsRecyclerView.isVisible = false
+                    lottieStickerView.isVisible = false
+                    lottieStickerView.cancelAnimation()
+                    stickerImageView.isVisible = false
+                    reactionsText.isVisible = false
+                    replyQuoteContainer.isVisible = false
+                    forwardedFromText.isVisible = false
+                    btnDownloadFile.isVisible = false
+                    readStatusIcon.isVisible = false
+                    selectionIndicator.isVisible = false
+                    messageBubble.backgroundTintList = null
+                    messageBubble.alpha = 1.0f
+                    itemView.visibility = View.VISIBLE
+                    itemView.layoutParams = itemView.layoutParams.also { if (it.height == 0) it.height = ViewGroup.LayoutParams.WRAP_CONTENT }
+                    itemView.setBackgroundColor(Color.TRANSPARENT)
+                } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
+            }
         }
 
         private fun bindAlignment(message: Message, isOutgoing: Boolean, isConsecutive: Boolean, isSelectionMode: Boolean, isGroup: Boolean) {
             val lp = messageContainer.layoutParams
-            val isCallMessage = message.text.contains("📹") || message.text.contains("📞") || message.text.contains("Видеозвонок") || message.text.contains("вызов") || message.text.contains("Звонок")
+            val isCallMessage = CallMessageHelper.isCallOrConference(message.text)
             val isSystem = message.user == "SYSTEM" && !isCallMessage
             if (lp is RelativeLayout.LayoutParams) {
                 lp.removeRule(RelativeLayout.ALIGN_PARENT_START); lp.removeRule(RelativeLayout.ALIGN_PARENT_END); lp.removeRule(RelativeLayout.ALIGN_PARENT_LEFT); lp.removeRule(RelativeLayout.ALIGN_PARENT_RIGHT); lp.removeRule(RelativeLayout.END_OF); lp.removeRule(RelativeLayout.RIGHT_OF); lp.removeRule(RelativeLayout.CENTER_HORIZONTAL)
@@ -189,13 +273,13 @@ class MessageAdapter(
         }
 
         private fun bindCallMessage(message: Message, isOutgoing: Boolean, textColor: Int, ctx: android.content.Context) {
-            val raw = message.text; val isMissed = raw.contains("Пропущенный") || raw.contains("не принят") || raw.contains("отклонен")
-            val isCompleted = raw.contains("завершен")
+            val raw = message.text; val isMissed = CallMessageHelper.isCallMissed(raw)
+            val isCompleted = CallMessageHelper.isCallEnded(raw)
             val icon = when { isMissed -> if (isOutgoing) "🚫" else "📞↙️"; isCompleted -> if (isOutgoing) "📞↗️" else "📞↙️"; else -> if (isOutgoing) "📞↗️" else "📹" }
             val statusText = when { isMissed -> if (isOutgoing) ctx.getString(R.string.call_not_accepted) else ctx.getString(R.string.call_missed)
                 isCompleted -> { val dur = raw.substringAfter("(").substringBefore(")"); if (isOutgoing) ctx.getString(R.string.call_outgoing_with_duration, dur) else ctx.getString(R.string.call_incoming_with_duration, dur) }
                 else -> if (isOutgoing) ctx.getString(R.string.call_outgoing_video) else ctx.getString(R.string.call_incoming_video) }
-            messageText.text = "$icon $statusText"; messageText.textSize = 15f; messageText.setTypeface(null, android.graphics.Typeface.BOLD)
+            messageText.text = "$icon $statusText"; messageText.textSize = 15f; messageText.setTypeface(null, Typeface.BOLD)
             messageText.setTextColor(if (isMissed && !isOutgoing) "#FF5252".toColorInt() else textColor)
         }
 
@@ -204,6 +288,7 @@ class MessageAdapter(
             val isTimedOut = !message.isSent && (System.currentTimeMillis() - message.timestamp > 60 * 1000)
             val icon = when { isTimedOut -> R.drawable.ic_loading_renew; isRead -> R.drawable.ic_message_read; message.isSent -> R.drawable.ic_message_sent; else -> R.drawable.ic_message_pending }
             readStatusIcon.setImageResource(icon)
+            readStatusIcon.contentDescription = when { isTimedOut -> ctx.getString(R.string.status_error); isRead -> ctx.getString(R.string.status_read); message.isSent -> ctx.getString(R.string.status_sent); else -> ctx.getString(R.string.status_pending) }
             val iconColor = when { isTimedOut -> Color.RED; isRead -> ContextCompat.getColor(ctx, R.color.tg_read_check); else -> secColor }
             readStatusIcon.imageTintList = ColorStateList.valueOf(iconColor)
             if (isTimedOut) { readStatusIcon.setOnClickListener { onRetrySendMessage?.invoke(message) }; readStatusIcon.isClickable = true }
@@ -213,16 +298,17 @@ class MessageAdapter(
         private fun bindAudioContent(message: Message, isOutgoing: Boolean, isSelectionMode: Boolean, theme: lavender.client.android.theme.Theme, onClick: (Int) -> Unit, onLongClick: (Int) -> Unit, pos: Int) {
             messageText.isVisible = false; audioMessageView.isVisible = true
             audioMessageView.setAudioData(message.voiceUrl, message.duration); audioMessageView.applyTheme(theme, isOutgoing)
-            audioMessageView.setOnClickListener { if (isSelectionMode) onClick(pos) }
-            audioMessageView.setOnLongClickListener { if (isSelectionMode) onLongClick(pos) else { if (pos != RecyclerView.NO_POSITION) onLongClick(pos) }; true }
+            audioMessageView.setOnClickListener { val cp = bindingAdapterPosition; if (cp == RecyclerView.NO_POSITION) return@setOnClickListener; if (isSelectionMode) onClick(cp) }
+            audioMessageView.setOnLongClickListener { val cp = bindingAdapterPosition; if (cp == RecyclerView.NO_POSITION) return@setOnLongClickListener true; if (isSelectionMode) onLongClick(cp) else onLongClick(cp); true }
         }
 
         private fun bindTextContent(message: Message, isOutgoing: Boolean, isSelectionMode: Boolean, textColor: Int, theme: lavender.client.android.theme.Theme, ctx: android.content.Context, onClick: (Int) -> Unit, onLongClick: (Int) -> Unit, pos: Int) {
             val isFile = message.text.startsWith("File: ")
             val isLocation = message.text.startsWith("geo:")
+            val isSticker = message.stickerUrl.isNotEmpty()
             messageText.textSize = 16f; messageText.alpha = 1.0f
             editedText.text = ctx.getString(R.string.edited_label); editedText.isVisible = message.edited
-            messageText.isVisible = message.text.isNotEmpty() && message.text != "Image" && message.text != "Voice message" || (message.imageUrl.isNotEmpty() && message.text.isEmpty() && !isFile)
+            messageText.isVisible = !isSticker && (message.text.isNotEmpty() && message.text != "Image" && message.text != "Voice message" || (message.imageUrl.isNotEmpty() && message.text.isEmpty() && !isFile))
 
             if (isLocation) bindLocationContent(message, ctx, textColor, isSelectionMode, onClick, onLongClick, pos)
             else if (isFile) bindFileContent(message, ctx, textColor, isSelectionMode, onClick, onLongClick, pos)
@@ -233,8 +319,8 @@ class MessageAdapter(
             messageText.text = ctx.getString(R.string.location); messageText.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_location, 0, 0, 0); messageText.compoundDrawablePadding = 8.dpToPx()
             val tv = android.util.TypedValue(); ctx.theme.resolveAttribute(android.R.attr.textColorPrimary, tv, true)
             val color = if (tv.resourceId != 0) ContextCompat.getColor(ctx, tv.resourceId) else tv.data; messageText.compoundDrawables[0]?.setTint(color)
-            messageText.setOnClickListener { if (isSelectionMode) onClick(pos) else { val coords = message.text.removePrefix("geo:").split(","); if (coords.size == 2) { val lat = coords[0].toDoubleOrNull() ?: 0.0; val lng = coords[1].toDoubleOrNull() ?: 0.0; ctx.startActivity(android.content.Intent(ctx, lavender.client.android.MapPickerActivity::class.java).apply { putExtra("view_mode", true); putExtra("lat", lat); putExtra("lng", lng) }) } } }
-            messageText.setOnLongClickListener { if (isSelectionMode) onLongClick(pos) else { if (pos != RecyclerView.NO_POSITION) onLongClick(pos) }; true }
+            messageText.setOnClickListener { val cp = bindingAdapterPosition; if (cp == RecyclerView.NO_POSITION) return@setOnClickListener; if (isSelectionMode) onClick(cp) else { val coords = message.text.removePrefix("geo:").split(","); if (coords.size == 2) { val lat = coords[0].toDoubleOrNull() ?: 0.0; val lng = coords[1].toDoubleOrNull() ?: 0.0; ctx.startActivity(android.content.Intent(ctx, lavender.client.android.MapPickerActivity::class.java).apply { putExtra("view_mode", true); putExtra("lat", lat); putExtra("lng", lng) }) } } }
+            messageText.setOnLongClickListener { val cp = bindingAdapterPosition; if (cp == RecyclerView.NO_POSITION) return@setOnLongClickListener true; if (isSelectionMode) onLongClick(cp) else onLongClick(cp); true }
         }
 
         private fun bindFileContent(message: Message, ctx: android.content.Context, textColor: Int, isSelectionMode: Boolean, onClick: (Int) -> Unit, onLongClick: (Int) -> Unit, pos: Int) {
@@ -244,38 +330,124 @@ class MessageAdapter(
             btnDownloadFile.isVisible = !isSelectionMode; btnDownloadFile.setImageResource(fileIcon); btnDownloadFile.imageTintList = ColorStateList.valueOf(textColor)
             btnDownloadFile.setOnClickListener { val cp = bindingAdapterPosition; if (cp == RecyclerView.NO_POSITION) return@setOnClickListener; if (isSelectionMode) onClick(cp) else if (fileUrl.isNotEmpty()) ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, fileUrl.toUri())) }
             messageText.setOnClickListener { val cp = bindingAdapterPosition; if (cp == RecyclerView.NO_POSITION) return@setOnClickListener; if (isSelectionMode) onClick(cp) else if (fileUrl.isNotEmpty()) ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, fileUrl.toUri())) }
-            messageText.setOnLongClickListener { if (isSelectionMode) onLongClick(pos) else { if (pos != RecyclerView.NO_POSITION) onLongClick(pos) }; true }
+            messageText.setOnLongClickListener { val cp = bindingAdapterPosition; if (cp == RecyclerView.NO_POSITION) return@setOnLongClickListener true; if (isSelectionMode) onLongClick(cp) else onLongClick(cp); true }
         }
 
         private fun bindPlainContent(message: Message, theme: lavender.client.android.theme.Theme, ctx: android.content.Context, isSelectionMode: Boolean, onClick: (Int) -> Unit, onLongClick: (Int) -> Unit, pos: Int) {
             val text = message.text; val highlight = searchHighlight
             if (!highlight.isNullOrEmpty() && text.contains(highlight, ignoreCase = true)) {
-                val spannable = android.text.SpannableString(text); val start = text.lowercase().indexOf(highlight.lowercase())
-                if (start != -1) { val hlColor = try { ThemeUtils.adjustAlpha(theme.primaryColor.toColorInt(), 0.5f) } catch (_: Exception) { ContextCompat.getColor(ctx, R.color.lavender_mist_alpha) }; spannable.setSpan(android.text.style.BackgroundColorSpan(hlColor), start, start + highlight.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) }
+                val spannable = android.text.SpannableString(text)
+                val hlColor = try { ThemeUtils.adjustAlpha(theme.primaryColor.toColorInt(), 0.5f) } catch (_: Exception) { ContextCompat.getColor(ctx, R.color.lavender_mist_alpha) }
+                val lowerText = text.lowercase(); val lowerHighlight = highlight.lowercase(); var idx = 0
+                while (idx <= lowerText.length - lowerHighlight.length) {
+                    val start = lowerText.indexOf(lowerHighlight, idx)
+                    if (start == -1) break
+                    spannable.setSpan(android.text.style.BackgroundColorSpan(hlColor), start, start + highlight.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    idx = start + highlight.length
+                }
+                applyMentionSpans(spannable, message, ctx)
                 messageText.text = spannable
-            } else { messageText.text = text }
+            } else {
+                val spannable = android.text.SpannableString(text)
+                applyMentionSpans(spannable, message, ctx)
+                messageText.text = spannable
+            }
             messageText.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
             messageText.movementMethod = if (isSelectionMode) null else android.text.method.LinkMovementMethod.getInstance()
-            messageText.setOnClickListener { if (isSelectionMode) onClick(pos) else onMessageClick(message) }
+            messageText.setOnClickListener { val cp = bindingAdapterPosition; if (cp == RecyclerView.NO_POSITION) return@setOnClickListener; if (isSelectionMode) onClick(cp) else onMessageClick(message) }
             messageText.setOnTouchListener { v, event -> if (event.action == android.view.MotionEvent.ACTION_DOWN) v.tag = System.currentTimeMillis() else if (event.action == android.view.MotionEvent.ACTION_UP) { if (System.currentTimeMillis() - (v.tag as? Long ?: 0L) > android.view.ViewConfiguration.getLongPressTimeout()) return@setOnTouchListener true }; false }
             messageText.isClickable = true; messageText.isLongClickable = true; messageText.isFocusable = true
-            messageText.setOnLongClickListener { if (isSelectionMode) onLongClick(pos) else { if (pos != RecyclerView.NO_POSITION) onLongClick(pos) }; true }
+            messageText.setOnLongClickListener { val cp = bindingAdapterPosition; if (cp == RecyclerView.NO_POSITION) return@setOnLongClickListener true; if (isSelectionMode) onLongClick(cp) else onLongClick(cp); true }
+        }
+
+        private fun applyMentionSpans(spannable: android.text.SpannableString, message: Message, ctx: android.content.Context) {
+            val mentionedUsers = message.mentions.toSet()
+            if (mentionedUsers.isEmpty()) return
+            val mentionColor = try { ThemeUtils.adjustAlpha(lavender.client.android.theme.ThemeStore.currentTheme().primaryColor.toColorInt(), 0.85f) } catch (_: Exception) { ContextCompat.getColor(ctx, R.color.lavender_mist_alpha) }
+            val regex = Regex("@(\\w+)")
+            for (match in regex.findAll(spannable)) {
+                val username = match.groupValues[1]
+                if (username in mentionedUsers || mentionedUsers.isEmpty()) {
+                    val start = match.range.first; val end = match.range.last + 1
+                    spannable.setSpan(android.text.style.ForegroundColorSpan(mentionColor), start, end, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    spannable.setSpan(android.text.style.StyleSpan(Typeface.BOLD), start, end, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    spannable.setSpan(object : android.text.style.ClickableSpan() {
+                        override fun onClick(widget: android.view.View) {
+                            // Mention click — no action for now, just visual feedback
+                        }
+                    }, start, end, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+            }
+        }
+
+        private fun bindStickerContent(message: Message, isOutgoing: Boolean, isSelectionMode: Boolean, onClick: (Int) -> Unit, onLongClick: (Int) -> Unit, pos: Int, ctx: android.content.Context) {
+            val isSticker = message.stickerUrl.isNotEmpty()
+            lottieStickerView.isVisible = false
+            stickerImageView.isVisible = false
+            if (!isSticker) { lottieStickerView.setOnClickListener(null); lottieStickerView.setOnLongClickListener(null); stickerImageView.setOnClickListener(null); stickerImageView.setOnLongClickListener(null); return }
+
+            val stickerUrl = message.stickerUrl
+            val isLottie = stickerUrl.endsWith(".json", ignoreCase = true)
+            if (isLottie) {
+                lottieStickerView.isVisible = true
+                lottieStickerView.contentDescription = ctx.getString(R.string.sticker_image)
+                lottieStickerView.repeatCount = 0
+                if (stickerUrl.startsWith("http://") || stickerUrl.startsWith("https://")) {
+                    lottieStickerView.setFailureListener { e ->
+                        android.util.Log.e("Lottie", "Failed to load sticker: $stickerUrl", e)
+                        lottieStickerView.isVisible = false
+                        stickerImageView.isVisible = true
+                        Glide.with(ctx).load(stickerUrl).placeholder(R.drawable.ic_image_placeholder).error(R.drawable.ic_image_placeholder).centerCrop().into(stickerImageView)
+                    }
+                    lottieStickerView.setAnimationFromUrl(stickerUrl)
+                } else {
+                    lottieStickerView.setAnimation(stickerUrl)
+                }
+                lottieStickerView.playAnimation()
+                lottieStickerView.setOnClickListener { val cp = bindingAdapterPosition; if (cp == RecyclerView.NO_POSITION) return@setOnClickListener; if (isSelectionMode) onClick(cp) else onMessageClick(message) }
+                lottieStickerView.setOnLongClickListener { val cp = bindingAdapterPosition; if (cp == RecyclerView.NO_POSITION) return@setOnLongClickListener true; if (isSelectionMode) onLongClick(cp) else onLongClick(cp); true }
+            } else {
+                stickerImageView.isVisible = true
+                stickerImageView.contentDescription = ctx.getString(R.string.sticker_image)
+                Glide.with(ctx).load(stickerUrl).placeholder(R.drawable.ic_image_placeholder).error(R.drawable.ic_image_placeholder).centerCrop().into(stickerImageView)
+                stickerImageView.setOnClickListener { val cp = bindingAdapterPosition; if (cp == RecyclerView.NO_POSITION) return@setOnClickListener; if (isSelectionMode) onClick(cp) else onMessageClick(message) }
+                stickerImageView.setOnLongClickListener { val cp = bindingAdapterPosition; if (cp == RecyclerView.NO_POSITION) return@setOnLongClickListener true; if (isSelectionMode) onLongClick(cp) else onLongClick(cp); true }
+            }
         }
 
         private fun bindImageContent(message: Message, isOutgoing: Boolean, isSelectionMode: Boolean, onClick: (Int) -> Unit, onLongClick: (Int) -> Unit, pos: Int, ctx: android.content.Context) {
             val isFile = message.text.startsWith("File: "); val hasSingle = message.imageUrl.isNotEmpty(); val hasGallery = message.imageUrls.isNotEmpty()
-            val shouldShow = (hasSingle || hasGallery) && message.voiceUrl.isEmpty() && !isFile; messageImageView.isVisible = shouldShow
-            if (!shouldShow) { messageImageView.setOnClickListener(null); messageImageView.setOnLongClickListener(null); galleryCountIndicator.isVisible = false; return }
-            val displayUrl = if (hasGallery) message.imageUrls.first() else message.imageUrl
-            val imageUrl = if (displayUrl.startsWith("http")) displayUrl.trim() else "${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(ctx)}" + displayUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
-            Glide.with(ctx).load(imageUrl).diskCacheStrategy(DiskCacheStrategy.ALL).placeholder(R.drawable.ic_image_placeholder).error(R.drawable.ic_image_placeholder).timeout(60000).dontAnimate().centerCrop().override(Target.SIZE_ORIGINAL)
-                .listener(object : RequestListener<android.graphics.drawable.Drawable> {
-                    override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean { if (message.text.isEmpty()) { messageText.text = "🖼 ${ctx.getString(R.string.error_loading_image)}"; messageText.isVisible = true }; return false }
-                    override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any, target: Target<android.graphics.drawable.Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean { if (message.text.isEmpty()) messageText.isVisible = false; return false }
-                }).into(messageImageView)
-            galleryCountIndicator.isVisible = hasGallery && message.imageUrls.size > 1; if (galleryCountIndicator.isVisible) { galleryCountIndicator.text = "+${message.imageUrls.size - 1}"; messageImageView.contentDescription = "Gallery with ${message.imageUrls.size} images" }
-            messageImageView.setOnClickListener { if (isSelectionMode) onClick(pos) else { val url = displayUrl.lowercase(); val isVideo = url.endsWith(".mp4") || url.endsWith(".webm") || url.endsWith(".mkv") || url.endsWith(".mov"); if (isVideo) { val absUrl = if (displayUrl.startsWith("http")) displayUrl.trim() else "${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(ctx)}" + displayUrl.trim().let { if (it.startsWith("/")) it else "/$it" }; ctx.startActivity(android.content.Intent(ctx, lavender.client.android.VideoPlayerActivity::class.java).apply { putExtra("VIDEO_URL", absUrl); putExtra("IS_LOCAL", false) }) } else { val allUrls = if (hasGallery) message.imageUrls else currentList.filter { it.imageUrl.isNotEmpty() }.map { it.imageUrl }; ctx.startActivity(android.content.Intent(ctx, lavender.client.android.FullScreenImageActivity::class.java).apply { putExtra("image_url", displayUrl); putExtra("chat_id", chatId); putStringArrayListExtra("image_urls", ArrayList(allUrls)); putExtra("current_index", allUrls.indexOf(displayUrl)) }) } } }
-            messageImageView.setOnLongClickListener { if (isSelectionMode) onLongClick(pos) else { onLongClick(pos) }; true }
+            val isMultiImage = hasGallery && message.imageUrls.size > 1
+            val shouldShow = (hasSingle || hasGallery) && message.voiceUrl.isEmpty() && !isFile
+            messageImageView.isVisible = shouldShow && !isMultiImage
+            galleryThumbnailsRecyclerView.isVisible = shouldShow && isMultiImage
+            if (!shouldShow) { messageImageView.setOnClickListener(null); messageImageView.setOnLongClickListener(null); return }
+            if (isMultiImage) {
+                val urls = message.imageUrls.map { url ->
+                    if (url.startsWith("http")) url.trim() else "${CredentialStore.getHttpServerUrl(ctx)}" + url.trim().let { if (it.startsWith("/")) it else "/$it" }
+                }
+                val adapter = ThumbnailGridAdapter(urls) { clickIndex ->
+                    val cp = bindingAdapterPosition; if (cp == RecyclerView.NO_POSITION) return@ThumbnailGridAdapter
+                    if (isSelectionMode) onClick(cp) else {
+                        ctx.startActivity(android.content.Intent(ctx, lavender.client.android.FullScreenImageActivity::class.java).apply {
+                            putStringArrayListExtra("image_urls", ArrayList(urls))
+                            putExtra("current_index", clickIndex)
+                        })
+                    }
+                }
+                galleryThumbnailsRecyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(ctx, androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false)
+                galleryThumbnailsRecyclerView.adapter = adapter
+            } else {
+                val displayUrl = if (hasGallery) message.imageUrls.first() else message.imageUrl
+                val imageUrl = if (displayUrl.startsWith("http")) displayUrl.trim() else "${CredentialStore.getHttpServerUrl(ctx)}" + displayUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
+                Glide.with(ctx).load(imageUrl).diskCacheStrategy(DiskCacheStrategy.ALL).placeholder(R.drawable.ic_image_placeholder).error(R.drawable.ic_image_placeholder).timeout(60000).dontAnimate().centerCrop().override(Target.SIZE_ORIGINAL)
+                    .listener(object : RequestListener<android.graphics.drawable.Drawable> {
+                        override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean { if (message.text.isEmpty()) { messageText.text = "🖼 ${ctx.getString(R.string.error_loading_image)}"; messageText.isVisible = true }; return false }
+                        override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any, target: Target<android.graphics.drawable.Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean { if (message.text.isEmpty()) messageText.isVisible = false; return false }
+                    }).into(messageImageView)
+                messageImageView.setOnClickListener { val cp = bindingAdapterPosition; if (cp == RecyclerView.NO_POSITION) return@setOnClickListener; if (isSelectionMode) onClick(cp) else { val url = displayUrl.lowercase(); val isVideo = url.endsWith(".mp4") || url.endsWith(".webm") || url.endsWith(".mkv") || url.endsWith(".mov"); if (isVideo) { val absUrl = if (displayUrl.startsWith("http")) displayUrl.trim() else "${CredentialStore.getHttpServerUrl(ctx)}" + displayUrl.trim().let { if (it.startsWith("/")) it else "/$it" }; ctx.startActivity(android.content.Intent(ctx, lavender.client.android.VideoPlayerActivity::class.java).apply { putExtra("VIDEO_URL", absUrl); putExtra("IS_LOCAL", false) }) } else { val allUrls = if (hasGallery) message.imageUrls else currentList.filter { it.imageUrl.isNotEmpty() }.map { it.imageUrl }; ctx.startActivity(android.content.Intent(ctx, lavender.client.android.FullScreenImageActivity::class.java).apply { putExtra("image_url", displayUrl); putExtra("chat_id", chatId); putStringArrayListExtra("image_urls", ArrayList(allUrls)); putExtra("current_index", allUrls.indexOf(displayUrl)) }) } } }
+                messageImageView.setOnLongClickListener { val cp = bindingAdapterPosition; if (cp == RecyclerView.NO_POSITION) return@setOnLongClickListener true; if (isSelectionMode) onLongClick(cp) else onLongClick(cp); true }
+            }
         }
 
         private fun bindReactions(message: Message, theme: lavender.client.android.theme.Theme, isOutgoing: Boolean, onClick: (Int) -> Unit) {
@@ -286,28 +458,43 @@ class MessageAdapter(
         private fun bindReplyQuote(message: Message, isOutgoing: Boolean, theme: lavender.client.android.theme.Theme) {
             replyQuoteContainer.isVisible = message.repliedToUser.isNotEmpty()
             if (message.repliedToUser.isNotEmpty()) { replyQuoteUser.text = message.repliedToUser; replyQuoteText.text = message.repliedToText
+                replyQuoteContainer.isClickable = true
+                replyQuoteContainer.isFocusable = true
+                replyQuoteContainer.setOnClickListener {
+                    if (message.repliedToMessageId.isNotEmpty()) onReplyQuoteClick?.invoke(message.repliedToMessageId)
+                }
                 try { val onPrim = theme.onPrimaryColor.toColorInt(); val onSurf = theme.onSurfaceColor.toColorInt(); val txtPrim = theme.textPrimaryColor.toColorInt()
                     if (isOutgoing) { replyQuoteUser.setTextColor(onPrim); replyQuoteText.setTextColor(withAlpha(onPrim, 200)); replyQuoteContainer.setBackgroundColor(withAlpha(onPrim, 30)); replyQuoteBar.setBackgroundColor(onPrim) }
-                    else { replyQuoteUser.setTextColor(onSurf); replyQuoteText.setTextColor(withAlpha(txtPrim, 200)); replyQuoteContainer.setBackgroundColor(withAlpha(onSurf, 30)); replyQuoteBar.setBackgroundColor(onSurf) } } catch (_: Exception) {} }
+                    else { replyQuoteUser.setTextColor(onSurf); replyQuoteText.setTextColor(withAlpha(txtPrim, 200)); replyQuoteContainer.setBackgroundColor(withAlpha(onSurf, 30)); replyQuoteBar.setBackgroundColor(onSurf) } } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
+            } else { replyQuoteContainer.setOnClickListener(null); replyQuoteContainer.isClickable = false }
+        }
+
+        private fun bindForwardAttribution(message: Message, ctx: android.content.Context) {
+            if (message.isForwarded && message.forwardedFrom.isNotEmpty()) {
+                forwardedFromText.isVisible = true
+                forwardedFromText.text = ctx.getString(R.string.forwarded_from, message.forwardedFrom)
+            } else {
+                forwardedFromText.isVisible = false
+            }
         }
 
         private fun bindSelectionIndicator(isSelected: Boolean, isSelectionMode: Boolean, theme: lavender.client.android.theme.Theme, ctx: android.content.Context) {
             selectionIndicator.isVisible = isSelectionMode; selectionIndicator.setImageResource(if (isSelected) R.drawable.ic_checked else R.drawable.ic_unchecked)
-            try { val pColor = theme.primaryColor.toColorInt(); val sColor = theme.textSecondaryColor.toColorInt(); selectionIndicator.imageTintList = ColorStateList.valueOf(if (isSelected) pColor else sColor) } catch (_: Exception) {}
+            try { val pColor = theme.primaryColor.toColorInt(); val sColor = theme.textSecondaryColor.toColorInt(); selectionIndicator.imageTintList = ColorStateList.valueOf(if (isSelected) pColor else sColor) } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
             messageBubble.alpha = if (isSelected) 0.6f else 1.0f
             val selColor = try { ThemeUtils.adjustAlpha(theme.primaryColor.toColorInt(), 0.25f) } catch (_: Exception) { ContextCompat.getColor(ctx, R.color.lavender_mist_alpha) }
             itemView.setBackgroundColor(if (isSelected) selColor else Color.TRANSPARENT)
         }
 
         private fun bindContainerClicks(isSelectionMode: Boolean, onClick: (Int) -> Unit, onLongClick: (Int) -> Unit, pos: Int) {
-            if (isSelectionMode) { messageContainer.setOnClickListener { onClick(pos) }; messageContainer.setOnLongClickListener { onLongClick(pos); true }; messageContainer.isClickable = true; selectionIndicator.setOnClickListener { onClick(pos) }; selectionIndicator.isClickable = true }
+            if (isSelectionMode) { messageContainer.setOnClickListener { val cp = bindingAdapterPosition; if (cp != RecyclerView.NO_POSITION) onClick(cp) }; messageContainer.setOnLongClickListener { val cp = bindingAdapterPosition; if (cp != RecyclerView.NO_POSITION) onLongClick(cp); true }; messageContainer.isClickable = true; selectionIndicator.setOnClickListener { val cp = bindingAdapterPosition; if (cp != RecyclerView.NO_POSITION) onClick(cp) }; selectionIndicator.isClickable = true }
             else { messageContainer.setOnClickListener(null); messageContainer.setOnLongClickListener(null); messageContainer.isClickable = false; selectionIndicator.setOnClickListener(null); selectionIndicator.isClickable = false
                 messageBubble.setOnClickListener { val cp = bindingAdapterPosition; if (cp != RecyclerView.NO_POSITION) onClick(cp) }; messageBubble.setOnLongClickListener { val cp = bindingAdapterPosition; if (cp != RecyclerView.NO_POSITION) onLongClick(cp); true } }
         }
 
         private fun bindPinnedBadge(message: Message, theme: lavender.client.android.theme.Theme, ctx: android.content.Context) {
             val llPinned: LinearLayout? = itemView.findViewById(R.id.llPinnedBadge); val ivPinned: ImageView? = itemView.findViewById(R.id.ivPinnedIcon); val tvPinned: TextView? = itemView.findViewById(R.id.tvPinnedText)
-            if (llPinned != null && ivPinned != null && tvPinned != null) { val isPinned = pinnedMessageIds.contains(message.id); llPinned.isVisible = isPinned; if (isPinned) { tvPinned.text = message.text.ifEmpty { ctx.getString(R.string.pinned_message) }; try { llPinned.backgroundTintList = ColorStateList.valueOf(ThemeUtils.parseSafeColor(theme.surfaceColor, Color.LTGRAY)) } catch (_: Exception) {} } }
+            if (llPinned != null && ivPinned != null && tvPinned != null) { val isPinned = pinnedMessageIds.contains(message.id); llPinned.isVisible = isPinned; if (isPinned) { tvPinned.text = message.text.ifEmpty { ctx.getString(R.string.pinned_message) }; try { llPinned.backgroundTintList = ColorStateList.valueOf(ThemeUtils.parseSafeColor(theme.surfaceColor, Color.LTGRAY)) } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) } } }
         }
 
         private fun withAlpha(color: Int, alpha: Int): Int = (color and 0x00FFFFFF) or (alpha shl 24)
@@ -321,4 +508,45 @@ class MessageAdapter(
     private fun parseSafeColor(colorStr: String, defaultColor: Int): Int = try { colorStr.toColorInt() } catch (_: Exception) { defaultColor }
     data class MessageColors(val incomingBg: Int, val incomingText: Int, val outgoingBg: Int, val outgoingText: Int)
     class MessageDiffCallback : DiffUtil.ItemCallback<Message>() { override fun areItemsTheSame(a: Message, b: Message): Boolean = a.id == b.id; override fun areContentsTheSame(a: Message, b: Message): Boolean = a == b }
+
+    private class ThumbnailGridAdapter(
+        private val urls: List<String>,
+        private val onThumbnailClick: (Int) -> Unit
+    ) : RecyclerView.Adapter<ThumbnailGridAdapter.ThumbnailViewHolder>() {
+
+        inner class ThumbnailViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            val image: ImageView = itemView.findViewById(R.id.thumbnailImage)
+            val border: View = itemView.findViewById(R.id.selectedBorder)
+            init {
+                border.visibility = View.GONE
+            }
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ThumbnailViewHolder {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_thumbnail, parent, false)
+            view.layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                parent.resources.getDimensionPixelSize(R.dimen.chat_gallery_thumb_size).coerceAtLeast(64)
+            )
+            return ThumbnailViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: ThumbnailViewHolder, position: Int) {
+            val url = urls[position]
+            Glide.with(holder.itemView.context)
+                .load(url)
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .centerCrop()
+                .placeholder(R.drawable.ic_image_placeholder)
+                .error(R.drawable.ic_image_placeholder)
+                .into(holder.image)
+            holder.itemView.setOnClickListener { onThumbnailClick(position) }
+        }
+
+        override fun getItemCount() = urls.size.coerceAtMost(4)
+    }
+
+    companion object {
+        private const val TAG = "MessageAdapter"
+    }
 }

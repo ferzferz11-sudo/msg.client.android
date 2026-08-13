@@ -1,4 +1,5 @@
 package lavender.client.android.ui.chat.message
+import android.util.Log
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -10,13 +11,13 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.ui.adapter.MessageAdapter
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import lavender.client.android.ui.widget.StandardBottomSheet
 
 /**
@@ -31,7 +32,6 @@ class ChatSelectionDelegate(
     lateinit var toolbarContent: View
     lateinit var copyMessages: ImageButton
     lateinit var replyMessage: ImageButton
-    lateinit var pinMessageBtn: ImageButton
     lateinit var deleteMessages: ImageButton
     lateinit var forwardMessages: ImageButton
 
@@ -51,7 +51,6 @@ class ChatSelectionDelegate(
         toolbarContent = activity.findViewById(R.id.toolbarContent)
         copyMessages = activity.findViewById(R.id.copyMessages)
         replyMessage = activity.findViewById(R.id.replyMessage)
-        pinMessageBtn = activity.findViewById(R.id.pinMessage)
         deleteMessages = activity.findViewById(R.id.deleteMessages)
         forwardMessages = activity.findViewById(R.id.forwardMessages)
     }
@@ -70,12 +69,10 @@ class ChatSelectionDelegate(
     }
 
     fun setupListeners() {
-        activity.findViewById<ImageButton>(R.id.starMessages).setOnClickListener { starSelectedMessages() }
         copyMessages.setOnClickListener { copySelectedMessages() }
         replyMessage.setOnClickListener { replyToSelectedMessage() }
         deleteMessages.setOnClickListener { deleteSelectedMessages() }
         forwardMessages.setOnClickListener { forwardSelectedMessages() }
-        pinMessageBtn.setOnClickListener { pinSelectedMessages() }
     }
 
     fun enterSelectionMode(m: Message) {
@@ -96,10 +93,9 @@ class ChatSelectionDelegate(
         getToolbarDelegate?.invoke()?.setNavigationIcon(R.drawable.ic_close)
         replyMessage.isVisible = count == 1
         forwardMessages.isVisible = count > 0
-        pinMessageBtn.isVisible = count == 1
         try {
             selectionToolbar.setBackgroundColor(ThemeStore.currentTheme().primaryColor.toColorInt())
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     fun hideSelectionToolbar() {
@@ -151,7 +147,7 @@ class ChatSelectionDelegate(
         val sm = adapter?.getSelectedMessages() ?: return
         if (sm.isEmpty()) { hideSelectionToolbar(); return }
         grpcClient.getChats(username) { page ->
-            activity.runOnUiThread {
+            activity.lifecycleScope.launch {
                 val oc = page.chats.toMutableList()
                 if (!roomId.startsWith("favorites_")) {
                     oc.add(0, lavender.client.android.data.models.ChatInfo(
@@ -161,76 +157,36 @@ class ChatSelectionDelegate(
                 val f = oc.filter { it.id != roomId }
                 if (f.isEmpty()) {
                     Toast.makeText(activity, activity.getString(R.string.no_other_chats), Toast.LENGTH_SHORT).show()
-                    return@runOnUiThread
+                    return@launch
                 }
-                val sheet = lavender.client.android.ui.widget.ListBottomSheet(activity)
-                    .setTitle(activity.getString(R.string.forward_to))
-                val forwardAdapter = lavender.client.android.ui.adapter.ForwardChatAdapter(
-                    chats = f, currentUsername = username, avatarCache = grpcClient.getAvatarCache(),
-                    onChatSelected = { target ->
-                        sheet.dismiss()
-                        sm.forEach { m ->
-                            grpcClient.sendMessageV2(Message(
-                                user = username, text = m.text, timestamp = System.currentTimeMillis(),
-                                roomId = target.id, imageUrl = m.imageUrl, voiceUrl = m.voiceUrl,
-                                duration = m.duration, userId = grpcClient.getUserId() ?: ""
-                            ))
+                val sheet = ForwardMessageSheet(
+                    activity = activity,
+                    messages = sm,
+                    currentUsername = username,
+                    avatarCache = grpcClient.getAvatarCache(),
+                    onForward = { targetChats, messages ->
+                        targetChats.forEach { target ->
+                            messages.forEach { m ->
+                                val forwardFrom = if (m.user.isNotEmpty() && m.user != username) m.user else ""
+                                grpcClient.sendMessageV2(Message(
+                                    user = username, text = m.text, timestamp = System.currentTimeMillis(),
+                                    roomId = target.id, imageUrl = m.imageUrl, voiceUrl = m.voiceUrl,
+                                    duration = m.duration, userId = grpcClient.getUserId() ?: "",
+                                    isForwarded = forwardFrom.isNotEmpty(), forwardedFrom = forwardFrom
+                                ))
+                            }
                         }
                         Toast.makeText(activity, activity.getString(R.string.messages_forwarded), Toast.LENGTH_SHORT).show()
                         hideSelectionToolbar()
                     }
                 )
-                sheet.setAdapter(forwardAdapter)
                 sheet.show()
+                sheet.loadChats(f)
             }
         }
     }
 
-    private fun starSelectedMessages() {
-        val sm = adapter?.getSelectedMessages() ?: return
-        val uid = grpcClient.getUserId() ?: ""
-        if (uid.isEmpty()) {
-            Toast.makeText(activity, "User ID not loaded. Please wait.", Toast.LENGTH_SHORT).show()
-            return
-        }
-        var c = 0
-        sm.forEach { m ->
-            grpcClient.addFavorite(uid, m.id) { _, _ ->
-                c++
-                if (c == sm.size) activity.runOnUiThread {
-                    Toast.makeText(activity, activity.getString(R.string.added_to_favorites), Toast.LENGTH_SHORT).show()
-                    hideSelectionToolbar()
-                }
-            }
-        }
-    }
-
-    private fun pinSelectedMessages() {
-        val sm = adapter?.getSelectedMessages() ?: return
-        if (sm.isEmpty()) { hideSelectionToolbar(); return }
-        activity.lifecycleScope.launch {
-            var successCount = 0
-            var failCount = 0
-            sm.forEach { m ->
-                try {
-                    val isPinned = pinnedMessageIds.contains(m.id)
-                    val success = if (isPinned) {
-                        GrpcClient.unpinMessage(activity, roomId, m.id)
-                    } else {
-                        GrpcClient.pinMessage(activity, roomId, m.id)
-                    }
-                    if (success) successCount++ else failCount++
-                } catch (e: Exception) { failCount++ }
-            }
-            activity.runOnUiThread {
-                if (successCount > 0) {
-                    val msg = if (sm.size == 1 && pinnedMessageIds.contains(sm[0].id))
-                        activity.getString(R.string.unpin_message) else activity.getString(R.string.pinned_message)
-                    Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show()
-                }
-                if (failCount > 0) Toast.makeText(activity, "Failed: $failCount", Toast.LENGTH_SHORT).show()
-                hideSelectionToolbar()
-            }
-        }
+    companion object {
+        private const val TAG = "ChatSelectionDelegate"
     }
 }

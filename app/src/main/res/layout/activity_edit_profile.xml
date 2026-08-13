@@ -83,6 +83,45 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Username Section -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/usernameCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorOnSurfaceVariant"
+                app:cardBackgroundColor="@android:color/transparent">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/usernameLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/username_label"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorPrimary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:id="@+id/tvInlineUsername"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="16sp"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:background="?attr/selectableItemBackground"
+                        android:paddingVertical="4dp" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- Bio Section -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/bioCard"
@@ -110,24 +149,17 @@
                         android:textColor="?attr/colorPrimary"
                         android:layout_marginBottom="8dp" />
 
-                    <com.google.android.material.textfield.TextInputLayout
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/editTextBio"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        app:boxBackgroundMode="none"
-                        app:hintEnabled="false">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/editTextBio"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:hint="@string/tell_about_yourself"
-                            android:inputType="textMultiLine"
-                            android:minHeight="60dp"
-                            android:maxLines="5"
-                            android:padding="0dp"
-                            android:background="@android:color/transparent"
-                            android:textColor="?android:attr/textColorPrimary" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                        android:hint="@string/tell_about_yourself"
+                        android:inputType="textMultiLine"
+                        android:minHeight="60dp"
+                        android:maxLines="5"
+                        android:padding="0dp"
+                        android:background="@android:color/transparent"
+                        android:textColor="?android:attr/textColorPrimary" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnChangeBio"
@@ -157,23 +189,8 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnChangeUsername"
-                        style="@style/Widget.MaterialComponents.Button.TextButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="56dp"
-                        android:text="@string/change_username"
-                        android:textAllCaps="false"
-                        app:icon="@drawable/ic_person_edit"
-                        android:layout_gravity="center_horizontal" />
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="?attr/colorOnSurfaceVariant"
-                        android:alpha="0.2" />
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnChangePassword"
@@ -182,9 +199,96 @@
                         android:layout_height="56dp"
                         android:text="@string/change_password"
                         android:textAllCaps="false"
-                        app:icon="@drawable/ic_theme_toggle"
-                        android:layout_gravity="center_horizontal" />
+                        app:icon="@drawable/ic_theme_toggle" />
 
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Company Section -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/companyCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorOnSurfaceVariant"
+                app:cardBackgroundColor="@android:color/transparent">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="16dp">
+
+                    <de.hdodenhof.circleimageview.CircleImageView
+                        android:id="@+id/ivCompanyLogo"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginEnd="12dp"
+                        android:src="@drawable/ic_default_avatar"
+                        android:visibility="gone" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvCompanyLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/company"
+                            android:textStyle="bold"
+                            android:textColor="?attr/colorPrimary"
+                            android:textSize="12sp"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:id="@+id/tvCompanyName"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="2dp" />
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/positionBubble"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            app:cardBackgroundColor="?attr/colorPrimaryContainer"
+                            app:cardCornerRadius="12dp"
+                            app:cardElevation="0dp"
+                            app:strokeWidth="0dp">
+
+                            <TextView
+                                android:id="@+id/tvCompanyPosition"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:paddingHorizontal="12dp"
+                                android:paddingVertical="4dp"
+                                android:textColor="?attr/colorOnPrimaryContainer"
+                                android:textSize="13sp" />
+
+                        </com.google.android.material.card.MaterialCardView>
+
+                    </LinearLayout>
+
+                    <ImageButton
+                        android:id="@+id/btnCompanyAction"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_settings"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/my_company"
+                        android:layout_gravity="center_vertical"
+                        android:layout_marginStart="8dp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -197,12 +301,12 @@
                 android:layout_marginBottom="32dp"
                 android:text="@string/delete_profile"
                 android:textAllCaps="false"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary"
                 android:layout_gravity="center_horizontal"
-                app:backgroundTint="#FF5252"
+                app:backgroundTint="@color/danger"
                 app:cornerRadius="12dp"
                 app:icon="@drawable/ic_delete"
-                app:iconTint="#FFFFFF" />
+                app:iconTint="@color/text_primary" />
 
 
         </LinearLayout>

@@ -242,20 +242,20 @@ class ThemePaletteActivity : AppCompatActivity(),
         val theme = lavender.client.android.theme.Theme(
             id = "preview",
             name = "Preview",
-            primaryColor = currentColors["primaryColor"]!!,
-            onPrimaryColor = currentColors["onPrimaryColor"]!!,
-            surfaceColor = currentColors["surfaceColor"]!!,
-            onSurfaceColor = currentColors["onSurfaceColor"]!!,
-            backgroundColor = currentColors["backgroundColor"]!!,
-            textPrimaryColor = currentColors["textPrimaryColor"]!!,
-            textSecondaryColor = currentColors["textSecondaryColor"]!!,
-            surfaceContainer = currentColors["surfaceContainer"]!!,
-            bottomPanelColor = currentColors["bottomPanelColor"]!!,
-            onBottomPanelColor = currentColors["onBottomPanelColor"]!!,
-            outgoingBubbleColor = currentColors["outgoingBubbleColor"]!!,
-            incomingBubbleColor = currentColors["incomingBubbleColor"]!!,
-            outgoingTextColor = currentColors["outgoingTextColor"]!!,
-            incomingTextColor = currentColors["incomingTextColor"]!!,
+            primaryColor = currentColors["primaryColor"] ?: return,
+            onPrimaryColor = currentColors["onPrimaryColor"] ?: return,
+            surfaceColor = currentColors["surfaceColor"] ?: return,
+            onSurfaceColor = currentColors["onSurfaceColor"] ?: return,
+            backgroundColor = currentColors["backgroundColor"] ?: return,
+            textPrimaryColor = currentColors["textPrimaryColor"] ?: return,
+            textSecondaryColor = currentColors["textSecondaryColor"] ?: return,
+            surfaceContainer = currentColors["surfaceContainer"] ?: return,
+            bottomPanelColor = currentColors["bottomPanelColor"] ?: return,
+            onBottomPanelColor = currentColors["onBottomPanelColor"] ?: return,
+            outgoingBubbleColor = currentColors["outgoingBubbleColor"] ?: return,
+            incomingBubbleColor = currentColors["incomingBubbleColor"] ?: return,
+            outgoingTextColor = currentColors["outgoingTextColor"] ?: "",
+            incomingTextColor = currentColors["incomingTextColor"] ?: "",
             chatListBackgroundImageUrl = chatListBackgroundUri?.toString() ?: "",
             chatBackgroundImageUrl = chatBackgroundUri?.toString() ?: ""
         )
@@ -331,7 +331,7 @@ class ThemePaletteActivity : AppCompatActivity(),
                 withContext(Dispatchers.Main) {
                     uploadProgress.isVisible = false
                     saveButton.isVisible = true
-                    Toast.makeText(this@ThemePaletteActivity, "Error uploading backgrounds: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ThemePaletteActivity, getString(R.string.error_uploading_backgrounds, e.message), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -348,6 +348,10 @@ class ThemePaletteActivity : AppCompatActivity(),
             stream?.close()
             
             if (bytes == null) return@withContext ""
+            if (bytes.size > lavender.client.android.data.grpc.ProfileClient.maxUploadSize) {
+                withContext(Dispatchers.Main) { Toast.makeText(this@ThemePaletteActivity, getString(R.string.file_too_large), Toast.LENGTH_LONG).show() }
+                return@withContext ""
+            }
             
             val fileName = getFileName(uri) ?: "background.jpg"
             val body = MultipartBody.Part.createFormData("image", fileName, bytes.toRequestBody("image/jpeg".toMediaTypeOrNull()))
@@ -405,37 +409,37 @@ class ThemePaletteActivity : AppCompatActivity(),
         val newTheme = CustomThemeProto(
             id = finalId,
             name = themeName,
-            primaryColor = currentColors["primaryColor"]!!,
-            backgroundColor = currentColors["backgroundColor"]!!,
-            surfaceColor = currentColors["surfaceColor"]!!,
-            surfaceContainer = currentColors["surfaceContainer"]!!,
-            textPrimaryColor = currentColors["textPrimaryColor"]!!,
-            textSecondaryColor = currentColors["textSecondaryColor"]!!,
-            onPrimaryColor = currentColors["onPrimaryColor"]!!,
-            onSurfaceColor = currentColors["onSurfaceColor"]!!,
-            bottomPanelColor = currentColors["bottomPanelColor"]!!,
-            onBottomPanelColor = currentColors["onBottomPanelColor"]!!,
-            outgoingBubbleColor = currentColors["outgoingBubbleColor"]!!,
-            incomingBubbleColor = currentColors["incomingBubbleColor"]!!,
-            outgoingTextColor = currentColors["outgoingTextColor"]!!,
-            incomingTextColor = currentColors["incomingTextColor"]!!,
+            primaryColor = currentColors["primaryColor"] ?: defaultColors["primaryColor"] ?: "#5F9EA0",
+            backgroundColor = currentColors["backgroundColor"] ?: defaultColors["backgroundColor"] ?: "#1E1E1E",
+            surfaceColor = currentColors["surfaceColor"] ?: defaultColors["surfaceColor"] ?: "#2D2D2D",
+            surfaceContainer = currentColors["surfaceContainer"] ?: defaultColors["surfaceContainer"] ?: "#252525",
+            textPrimaryColor = currentColors["textPrimaryColor"] ?: defaultColors["textPrimaryColor"] ?: "#FFFFFF",
+            textSecondaryColor = currentColors["textSecondaryColor"] ?: defaultColors["textSecondaryColor"] ?: "#E0E0E0",
+            onPrimaryColor = currentColors["onPrimaryColor"] ?: defaultColors["onPrimaryColor"] ?: "#FFFFFF",
+            onSurfaceColor = currentColors["onSurfaceColor"] ?: defaultColors["onSurfaceColor"] ?: "#E0E0E0",
+            bottomPanelColor = currentColors["bottomPanelColor"] ?: defaultColors["bottomPanelColor"] ?: "#2D2D2D",
+            onBottomPanelColor = currentColors["onBottomPanelColor"] ?: defaultColors["onBottomPanelColor"] ?: "#5F9EA0",
+            outgoingBubbleColor = currentColors["outgoingBubbleColor"] ?: defaultColors["outgoingBubbleColor"] ?: "#2A2C6D",
+            incomingBubbleColor = currentColors["incomingBubbleColor"] ?: defaultColors["incomingBubbleColor"] ?: "#16173A",
+            outgoingTextColor = currentColors["outgoingTextColor"] ?: defaultColors["outgoingTextColor"] ?: "",
+            incomingTextColor = currentColors["incomingTextColor"] ?: defaultColors["incomingTextColor"] ?: "",
             chatListBackgroundImageUrl = listBgUrl,
             chatBackgroundImageUrl = chatBgUrl
         )
 
         val queryId = GrpcClient.getUserId() ?: username
         GrpcClient.saveTheme(queryId, newTheme) { success, error ->
-            runOnUiThread {
+            lifecycleScope.launch {
                 if (success) {
                     // Switch to the new theme on the server
                     GrpcClient.setCurrentTheme(queryId, finalId) { setSuccess ->
-                        runOnUiThread {
+                        lifecycleScope.launch {
                             uploadProgress.isVisible = false
                             if (setSuccess) {
                                 val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
                                 prefs.edit { putString("current_theme_id", finalId) }
                                 
-                                Toast.makeText(this, R.string.theme_saved, Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this@ThemePaletteActivity, R.string.theme_saved, Toast.LENGTH_SHORT).show()
                                 hasChanges = false
                                 themeId = finalId
                                 originalChatListBackgroundUri = listBgUrl.takeIf { it.isNotEmpty() }?.toUri()
@@ -448,14 +452,14 @@ class ThemePaletteActivity : AppCompatActivity(),
                                 setResult(RESULT_OK)
                             } else {
                                 saveButton.isVisible = true
-                                Toast.makeText(this, getString(R.string.theme_saved_failed_to_set), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this@ThemePaletteActivity, getString(R.string.theme_saved_failed_to_set), Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
                 } else {
                     uploadProgress.isVisible = false
                     saveButton.isVisible = true
-                    Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ThemePaletteActivity, error, Toast.LENGTH_SHORT).show()
                 }
             }
         }

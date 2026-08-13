@@ -1,7 +1,10 @@
 package lavender.client.android.ui.chatlist
+import android.util.Log
 
 import android.content.Intent
 import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.SplashLoadingActivity
 import lavender.client.android.data.session.CredentialStore
@@ -14,6 +17,8 @@ import lavender.client.android.ui.widget.ServerAuthBottomSheet
  * ChatListAuth — authentication dialogs for ChatListActivity.
  * Extracted from ChatListActivity to reduce its size.
  */
+
+private const val TAG = "ChatListAuth"
 
 internal fun showAuthChoiceDialog(activity: ChatListActivity) {
     var serverAddress = CredentialStore.getServerAddress(activity)
@@ -75,10 +80,10 @@ internal fun showLoginBottomSheet(activity: ChatListActivity, serverAddress: Str
         onLogin = { u: String, p: String ->
             try {
                 activity.startActivity(Intent(activity, SplashLoadingActivity::class.java))
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
 
             SessionManager.login(activity, u, p, serverAddress, register = false, email = "") { result ->
-                activity.runOnUiThread {
+                activity.lifecycleScope.launch {
                     SplashLoadingActivity.finishIfShowing()
                     when (result) {
                         "SUCCESS" -> {
@@ -103,6 +108,14 @@ internal fun showLoginBottomSheet(activity: ChatListActivity, serverAddress: Str
                         "AUTH_FAILED" -> {
                             loginSheet.setLoading(false)
                             Toast.makeText(activity, R.string.wrong_password, Toast.LENGTH_LONG).show()
+                        }
+                        "SERVER_ERROR" -> {
+                            loginSheet.setLoading(false)
+                            Toast.makeText(activity, R.string.server_error, Toast.LENGTH_LONG).show()
+                        }
+                        "CONNECTION_FAILED" -> {
+                            loginSheet.setLoading(false)
+                            Toast.makeText(activity, R.string.connection_failed, Toast.LENGTH_LONG).show()
                         }
                         else -> {
                             loginSheet.setLoading(false)
@@ -148,10 +161,10 @@ internal fun showRegisterBottomSheet(activity: ChatListActivity, serverAddress: 
         onRegister = { u: String, p: String, email: String ->
             try {
                 activity.startActivity(Intent(activity, SplashLoadingActivity::class.java))
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
 
             SessionManager.login(activity, u, p, serverAddress, register = true, email = email) { result ->
-                activity.runOnUiThread {
+                activity.lifecycleScope.launch {
                     SplashLoadingActivity.finishIfShowing()
                     when (result) {
                         "SUCCESS", "REGISTRATION_SUCCESS" -> {

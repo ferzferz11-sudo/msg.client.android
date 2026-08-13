@@ -39,6 +39,7 @@
         android:elevation="0dp"
         app:navigationIcon="@drawable/ic_back_arrow"
         app:navigationIconTint="?attr/colorOnPrimary"
+        app:titleTextColor="?attr/colorOnPrimary"
         app:layout_constraintTop_toTopOf="parent">
 
         <RelativeLayout
@@ -209,7 +210,7 @@
                 android:id="@+id/vReplyBar"
                 android:layout_width="4dp"
                 android:layout_height="match_parent"
-                android:background="?attr/colorPrimary"
+                android:background="?attr/colorOnSurfaceVariant"
                 android:layout_marginEnd="8dp" />
 
             <LinearLayout

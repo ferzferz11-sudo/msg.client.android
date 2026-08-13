@@ -4,6 +4,10 @@ import android.content.Context
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import android.annotation.SuppressLint
+import android.os.Looper
+import androidx.annotation.WorkerThread
+import lavender.client.android.data.models.ErrorHandler
 import androidx.core.content.edit
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CancellationException
@@ -12,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -30,6 +35,7 @@ import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.AuthResponseV2Proto
 import lavender.client.android.data.proto.RefreshTokenResponseProto
+import java.util.concurrent.atomic.AtomicBoolean
 
 object SessionManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -39,8 +45,6 @@ object SessionManager {
 
     private val _logoutEvent = MutableSharedFlow<Unit>(replay = 0)
     val logoutEvent: SharedFlow<Unit> = _logoutEvent.asSharedFlow()
-
-    private var deviceUpdateJob: Job? = null
 
     init {
         scope.launch {
@@ -74,6 +78,7 @@ object SessionManager {
         }
     }
 
+    @SuppressLint("HardwareIds") // ANDROID_ID is intentional — server requires device identifier
     fun getDeviceId(context: Context): String {
         return Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown_device"
     }
@@ -94,22 +99,26 @@ object SessionManager {
         _session.value = _session.value.copy(deviceId = deviceId, deviceName = deviceName)
     }
 
-    fun startPeriodicDeviceUpdate(context: Context) {
-        deviceUpdateJob?.cancel()
-        deviceUpdateJob = scope.launch {
-            while (isActive) {
-                syncDeviceToServer(context)
-                delay(3 * 60 * 1000)
-            }
-        }
-    }
-
-    fun stopPeriodicDeviceUpdate() {
-        deviceUpdateJob?.cancel()
-        deviceUpdateJob = null
-    }
-
     private var tokenRefreshJob: Job? = null
+    private val refreshGuard = AtomicBoolean(false)
+
+    /**
+     * Blocks until any in-progress refresh completes (max 10 seconds).
+     * Returns true if we waited, false if nothing was in progress.
+     */
+    private fun waitForRefreshComplete(): Boolean {
+        var waited = false
+        val deadline = System.currentTimeMillis() + 10_000
+        while (refreshGuard.get() && System.currentTimeMillis() < deadline) {
+            waited = true
+            Thread.sleep(100)
+        }
+        if (refreshGuard.get()) {
+            Log.w("SessionManager", "waitForRefreshComplete: timed out after 10s, forcing guard release")
+            refreshGuard.set(false)
+        }
+        return waited
+    }
 
     fun startTokenRefresh(context: Context) {
         tokenRefreshJob?.cancel()
@@ -122,9 +131,9 @@ object SessionManager {
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    Log.e("SessionManager", "Token refresh check error: ${e.message}")
+                    ErrorHandler.handle("SessionManager", "Token refresh check error: ${e.message}", e)
                 }
-                delay(60_000)
+                delay(60.seconds)
             }
         }
     }
@@ -135,146 +144,218 @@ object SessionManager {
     }
 
     /**
-     * Synchronous token refresh — called before chat stream to ensure fresh JWT.
-     * Blocks up to 5 seconds. Safe to call from non-suspend context.
+     * Synchronous token refresh — called before chat stream and gRPC calls to ensure fresh JWT.
+     * Blocks up to 10 seconds. MUST be called from Dispatchers.IO (never Main).
+     * Uses refreshGuard to prevent concurrent refresh token rotation.
      */
+    @WorkerThread
     fun ensureFreshToken(context: Context) {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            Log.e("SessionManager", "ensureFreshToken() called on Main thread — will cause ANR. Use Dispatchers.IO.")
+            return
+        }
         if (!AuthManager.isTokenExpiredOrExpiring(context)) return
-        val refreshToken = AuthManager.getRefreshToken(context) ?: return
-        Log.d("SessionManager", "Token expired, refreshing synchronously...")
 
-        val latch = java.util.concurrent.CountDownLatch(1)
-        var refreshed = false
-
-        GrpcClient.refreshToken(refreshToken) { response, error ->
-            if (response != null && response.accessToken.isNotEmpty()) {
-                val currentUsername = AuthManager.getUsername(context)
-                val currentUserId = AuthManager.getUserId(context)
-                val currentDeviceId = AuthManager.getDeviceId(context)
-
-                AuthManager.storeTokens(
-                    context = context,
-                    accessToken = response.accessToken,
-                    refreshToken = response.refreshToken,
-                    accessExpiresAt = response.accessExpiresAt,
-                    refreshExpiresAt = response.refreshExpiresAt,
-                    userId = currentUserId,
-                    username = currentUsername,
-                    deviceId = currentDeviceId
-                )
-                _session.value = _session.value.copy(
-                    accessToken = response.accessToken,
-                    refreshToken = response.refreshToken
-                )
-                refreshed = true
-            } else {
-                Log.w("SessionManager", "Sync token refresh failed: $error")
-            }
-            latch.countDown()
+        // Wait for any in-progress refresh to complete
+        if (waitForRefreshComplete()) {
+            Log.d("SessionManager", "Token refresh: waited for in-progress refresh")
+            // Re-check — the other refresh may have already refreshed our token
+            if (!AuthManager.isTokenExpiredOrExpiring(context)) return
         }
 
-        latch.await(5, java.util.concurrent.TimeUnit.SECONDS)
-        if (!refreshed) Log.w("SessionManager", "Sync token refresh timed out")
+        // Acquire the guard — only one refresh proceeds
+        if (!refreshGuard.compareAndSet(false, true)) {
+            // Race: another thread acquired the guard while we were re-checking
+            waitForRefreshComplete()
+            return
+        }
+
+        try {
+            val refreshToken = AuthManager.getRefreshToken(context) ?: return
+
+            Log.d("SessionManager", "Token expired, refreshing synchronously...")
+
+            // Wait for gRPC connection to be READY before attempting refresh
+            val connLatch = java.util.concurrent.CountDownLatch(1)
+            val connJob = scope.launch {
+                GrpcClient.connectionStatus.first { it == ConnectionStatus.READY || it == ConnectionStatus.FAILED }
+                connLatch.countDown()
+            }
+            connLatch.await(5, java.util.concurrent.TimeUnit.SECONDS)
+            connJob.cancel()
+
+            if (GrpcClient.connectionStatus.value != ConnectionStatus.READY) {
+                Log.w("SessionManager", "Sync token refresh: gRPC not ready, skipping")
+                return
+            }
+
+            val latch = java.util.concurrent.CountDownLatch(1)
+            var refreshed = false
+
+            GrpcClient.refreshToken(refreshToken) { response, error ->
+                if (response != null && response.accessToken.isNotEmpty()) {
+                    val currentUsername = AuthManager.getUsername(context)
+                    val currentUserId = AuthManager.getUserId(context)
+                    val currentDeviceId = AuthManager.getDeviceId(context)
+
+                    AuthManager.storeTokens(
+                        context = context,
+                        accessToken = response.accessToken,
+                        refreshToken = response.refreshToken,
+                        accessExpiresAt = response.accessExpiresAt,
+                        refreshExpiresAt = response.refreshExpiresAt,
+                        userId = currentUserId,
+                        username = currentUsername,
+                        deviceId = currentDeviceId
+                    )
+                    _session.value = _session.value.copy(
+                        accessToken = response.accessToken,
+                        refreshToken = response.refreshToken
+                    )
+                    refreshed = true
+                } else {
+                    Log.w("SessionManager", "Sync token refresh failed: $error")
+                }
+                latch.countDown()
+            }
+
+            latch.await(5, java.util.concurrent.TimeUnit.SECONDS)
+            if (!refreshed) Log.w("SessionManager", "Sync token refresh timed out")
+        } finally {
+            refreshGuard.set(false)
+        }
     }
 
     /**
      * Force token refresh — ignores expiration check.
      * Used by pull-to-refresh to guarantee fresh JWT.
+     * Waits for any in-progress refresh, then proceeds only if tokens are still stale.
+     * MUST be called from Dispatchers.IO (never Main).
      */
+    @WorkerThread
     fun forceTokenRefresh(context: Context) {
-        val refreshToken = AuthManager.getRefreshToken(context) ?: return
-        Log.d("SessionManager", "Force refreshing token...")
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            Log.e("SessionManager", "forceTokenRefresh() called on Main thread — will cause ANR. Use Dispatchers.IO.")
+            return
+        }
+        // Wait for any in-progress refresh
+        if (waitForRefreshComplete()) {
+            Log.d("SessionManager", "Force refresh: waited for in-progress refresh")
+        }
 
-        val latch = java.util.concurrent.CountDownLatch(1)
-        var refreshed = false
+        // If tokens are now fresh after waiting, no need to refresh again
+        if (!AuthManager.isTokenExpiredOrExpiring(context)) {
+            Log.d("SessionManager", "Force refresh: tokens already fresh")
+            return
+        }
 
-        GrpcClient.refreshToken(refreshToken) { response, error ->
-            if (response != null && response.accessToken.isNotEmpty()) {
+        // Acquire the guard
+        if (!refreshGuard.compareAndSet(false, true)) {
+            // Another refresh started while we were checking — wait and bail
+            waitForRefreshComplete()
+            return
+        }
+
+        try {
+            val refreshToken = AuthManager.getRefreshToken(context) ?: return
+            Log.d("SessionManager", "Force refreshing token...")
+
+            val latch = java.util.concurrent.CountDownLatch(1)
+            var refreshed = false
+
+            GrpcClient.refreshToken(refreshToken) { response, error ->
+                if (response != null && response.accessToken.isNotEmpty()) {
+                    val currentUsername = AuthManager.getUsername(context)
+                    val currentUserId = AuthManager.getUserId(context)
+                    val currentDeviceId = AuthManager.getDeviceId(context)
+
+                    AuthManager.storeTokens(
+                        context = context,
+                        accessToken = response.accessToken,
+                        refreshToken = response.refreshToken,
+                        accessExpiresAt = response.accessExpiresAt,
+                        refreshExpiresAt = response.refreshExpiresAt,
+                        userId = currentUserId,
+                        username = currentUsername,
+                        deviceId = currentDeviceId
+                    )
+                    _session.value = _session.value.copy(
+                        accessToken = response.accessToken,
+                        refreshToken = response.refreshToken
+                    )
+                    refreshed = true
+                    Log.d("SessionManager", "Force token refresh succeeded")
+                } else {
+                    Log.w("SessionManager", "Force token refresh failed: $error")
+                }
+                latch.countDown()
+            }
+
+            latch.await(5, java.util.concurrent.TimeUnit.SECONDS)
+            if (!refreshed) Log.w("SessionManager", "Force token refresh timed out")
+        } finally {
+            refreshGuard.set(false)
+        }
+    }
+
+    private suspend fun performTokenRefresh(context: Context) {
+        // Try to acquire the guard — skip if another refresh is in progress
+        if (!refreshGuard.compareAndSet(false, true)) {
+            Log.d("SessionManager", "Periodic refresh: another refresh in progress, skipping")
+            return
+        }
+
+        try {
+            val refreshToken = AuthManager.getRefreshToken(context) ?: return
+
+            val result = suspendCancellableCoroutine<RefreshTokenResponseProto?> { cont ->
+                GrpcClient.refreshToken(refreshToken) { response, error ->
+                    if (cont.isActive) {
+                        if (response != null && response.accessToken.isNotEmpty()) {
+                            cont.resumeWith(Result.success(response))
+                        } else {
+                            Log.w("SessionManager", "Token refresh failed: $error")
+                            cont.resumeWith(Result.success(null))
+                        }
+                    }
+                }
+            }
+
+            if (result != null && result.accessToken.isNotEmpty()) {
                 val currentUsername = AuthManager.getUsername(context)
                 val currentUserId = AuthManager.getUserId(context)
                 val currentDeviceId = AuthManager.getDeviceId(context)
 
                 AuthManager.storeTokens(
                     context = context,
-                    accessToken = response.accessToken,
-                    refreshToken = response.refreshToken,
-                    accessExpiresAt = response.accessExpiresAt,
-                    refreshExpiresAt = response.refreshExpiresAt,
+                    accessToken = result.accessToken,
+                    refreshToken = result.refreshToken,
+                    accessExpiresAt = result.accessExpiresAt,
+                    refreshExpiresAt = result.refreshExpiresAt,
                     userId = currentUserId,
                     username = currentUsername,
                     deviceId = currentDeviceId
                 )
+
                 _session.value = _session.value.copy(
-                    accessToken = response.accessToken,
-                    refreshToken = response.refreshToken
+                    accessToken = result.accessToken,
+                    refreshToken = result.refreshToken
                 )
-                refreshed = true
-                Log.d("SessionManager", "Force token refresh succeeded")
-            } else {
-                Log.w("SessionManager", "Force token refresh failed: $error")
-            }
-            latch.countDown()
-        }
-
-        latch.await(5, java.util.concurrent.TimeUnit.SECONDS)
-        if (!refreshed) Log.w("SessionManager", "Force token refresh timed out")
-    }
-
-    private suspend fun performTokenRefresh(context: Context) {
-        val refreshToken = AuthManager.getRefreshToken(context) ?: return
-
-        val result = suspendCancellableCoroutine<RefreshTokenResponseProto?> { cont ->
-            GrpcClient.refreshToken(refreshToken) { response, error ->
-                if (cont.isActive) {
-                    if (response != null && response.accessToken.isNotEmpty()) {
-                        cont.resumeWith(Result.success(response))
-                    } else {
-                        Log.w("SessionManager", "Token refresh failed: $error")
-                        cont.resumeWith(Result.success(null))
-                    }
+            } else if (AuthManager.isRefreshTokenExpired(context)) {
+                Log.w("SessionManager", "Refresh token expired — attempting re-login with saved password")
+                val username = AuthManager.getUsername(context)
+                val password = CredentialStore.getPassword(context)
+                val serverAddress = CredentialStore.getServerAddress(context)
+                if (username.isNotEmpty() && password.isNotEmpty() && serverAddress.isNotEmpty()) {
+                    loginV2(context, username, password, serverAddress, false, "", {})
+                } else {
+                    Log.w("SessionManager", "No saved credentials for re-login")
+                    _session.value = UserSession()
+                    _logoutEvent.emit(Unit)
                 }
             }
-        }
-
-        if (result != null && result.accessToken.isNotEmpty()) {
-            val currentUsername = AuthManager.getUsername(context)
-            val currentUserId = AuthManager.getUserId(context)
-            val currentDeviceId = AuthManager.getDeviceId(context)
-
-            AuthManager.storeTokens(
-                context = context,
-                accessToken = result.accessToken,
-                refreshToken = result.refreshToken,
-                accessExpiresAt = result.accessExpiresAt,
-                refreshExpiresAt = result.refreshExpiresAt,
-                userId = currentUserId,
-                username = currentUsername,
-                deviceId = currentDeviceId
-            )
-
-            _session.value = _session.value.copy(
-                accessToken = result.accessToken,
-                refreshToken = result.refreshToken
-            )
-        } else if (AuthManager.isRefreshTokenExpired(context)) {
-            Log.w("SessionManager", "Refresh token expired — attempting re-login with saved password")
-            val username = AuthManager.getUsername(context)
-            val password = CredentialStore.getPassword(context)
-            val serverAddress = CredentialStore.getServerAddress(context)
-            if (username.isNotEmpty() && password.isNotEmpty() && serverAddress.isNotEmpty()) {
-                loginV2(context, username, password, serverAddress, false, "", {})
-            } else {
-                Log.w("SessionManager", "No saved credentials for re-login")
-                _session.value = UserSession()
-                _logoutEvent.emit(Unit)
-            }
-        }
-    }
-
-    private fun syncDeviceToServer(context: Context) {
-        val currentSession = _session.value
-        if (currentSession.isLoggedIn) {
-            GrpcClient.startChatV2("") { /* ignore */ }
+        } finally {
+            refreshGuard.set(false)
         }
     }
 
@@ -328,10 +409,12 @@ object SessionManager {
             }
 
             if (serverAddress.isNotEmpty() && GrpcClient.connectionStatus.value == ConnectionStatus.DISCONNECTED) {
-                val parts = serverAddress.split(":")
-                val host = parts[0]
-                val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-                GrpcClient.connect(host, useTls = false, port = port, context = context)
+                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    val parts = serverAddress.split(":")
+                    val host = parts[0]
+                    val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+                    GrpcClient.connect(host, useTls = false, port = port, context = context)
+                }
 
                 ChatKeepAliveService.start(context)
 
@@ -346,7 +429,7 @@ object SessionManager {
 
     private fun waitForConnectionAndReLogin(context: Context, username: String, password: String, serverAddress: String) {
         scope.launch {
-            val status = withTimeoutOrNull(10000) {
+            val status = withTimeoutOrNull(10.seconds) {
                 GrpcClient.connectionStatus.filter {
                     it == ConnectionStatus.READY || it == ConnectionStatus.FAILED
                 }.first()
@@ -359,7 +442,6 @@ object SessionManager {
             Log.d("SessionManager", "Re-login: connection ready, refreshing tokens for $username")
             val refreshToken = AuthManager.getRefreshToken(context)
             if (!refreshToken.isNullOrEmpty()) {
-                val latch = java.util.concurrent.CountDownLatch(1)
                 GrpcClient.refreshToken(refreshToken) { response, error ->
                     if (response != null && response.accessToken.isNotEmpty()) {
                         val deviceId = AuthManager.getDeviceId(context)
@@ -388,9 +470,7 @@ object SessionManager {
                         GrpcClient.connect(host, false, port, context, forceReconnect = true)
                         loginV2(context, username, password, serverAddress, false, "", {})
                     }
-                    latch.countDown()
                 }
-                latch.await(8, java.util.concurrent.TimeUnit.SECONDS)
             } else {
                 Log.w("SessionManager", "Re-login: no refresh token, re-authenticating with password")
                 loginV2(context, username, password, serverAddress, false, "", {})
@@ -403,7 +483,7 @@ object SessionManager {
         val sendEnabled = prefs.getBoolean("push_send_enabled", true)
         val receiveEnabled = prefs.getBoolean("push_receive_enabled", true)
 
-        @Suppress("DEPRECATION") // No non-deprecated alternative for FCM token retrieval
+        @Suppress("DEPRECATION") // getToken()/token deprecated in Firebase but no alternative exists
         FirebaseMessaging.getInstance().getToken().addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 val token = if (receiveEnabled) task.result else "DISABLED"
@@ -420,7 +500,11 @@ object SessionManager {
         userId: String? = null,
         avatarUrl: String? = null,
         fullAvatarUrl: String? = null,
-        email: String? = null
+        email: String? = null,
+        companyId: String? = null,
+        companyName: String? = null,
+        positionTitle: String? = null,
+        positionLevel: Int? = null
     ) {
         _session.value = _session.value.copy(
             username = username ?: _session.value.username,
@@ -428,10 +512,15 @@ object SessionManager {
             userId = userId ?: _session.value.userId,
             avatarUrl = avatarUrl ?: _session.value.avatarUrl,
             fullAvatarUrl = fullAvatarUrl ?: _session.value.fullAvatarUrl,
-            email = email ?: _session.value.email
+            email = email ?: _session.value.email,
+            companyId = companyId ?: _session.value.companyId,
+            companyName = companyName ?: _session.value.companyName,
+            positionTitle = positionTitle ?: _session.value.positionTitle,
+            positionLevel = positionLevel ?: _session.value.positionLevel
         )
 
         userId?.let { GrpcClient.setUserId(it) }
+        username?.let { GrpcClient.setUsername(it) }
     }
 
     fun login(context: Context, username: String, pass: String, serverAddress: String, register: Boolean = false, email: String = "", onComplete: (String?) -> Unit) {
@@ -458,7 +547,7 @@ object SessionManager {
 
         scope.launch {
             try {
-                val status = withTimeoutOrNull(10000) {
+                val status = withTimeoutOrNull(10.seconds) {
                     GrpcClient.connectionStatus.filter {
                         (it == ConnectionStatus.READY) || (it == ConnectionStatus.FAILED)
                     }.first()
@@ -484,31 +573,32 @@ object SessionManager {
                     }
                 }
 
-                val authResult = withTimeoutOrNull(10000) {
-                    suspendCancellableCoroutine<AuthResponseV2Proto?> { cont ->
+                val authResult = withTimeoutOrNull(10.seconds) {
+                    suspendCancellableCoroutine<Pair<AuthResponseV2Proto?, String?>> { cont ->
                         v2Callback { response, error ->
                             if (cont.isActive) {
                                 if (response != null && response.success) {
-                                    cont.resumeWith(Result.success(response))
+                                    cont.resumeWith(Result.success(Pair(response, null)))
                                 } else {
-                                    cont.resumeWith(Result.success(null))
+                                    cont.resumeWith(Result.success(Pair(null, error ?: "Auth failed")))
                                 }
                             }
                         }
                     }
                 }
 
-                if (authResult != null && authResult.success) {
-                    Log.d("SessionManager", "V2 auth success for ${authResult.username}")
+                if (authResult != null && authResult.first != null && authResult.first!!.success) {
+                    val authResponse = authResult.first!!
+                    Log.d("SessionManager", "V2 auth success for ${authResponse.username}")
 
                     AuthManager.storeTokens(
                         context = context,
-                        accessToken = authResult.accessToken,
-                        refreshToken = authResult.refreshToken,
-                        accessExpiresAt = authResult.accessExpiresAt,
-                        refreshExpiresAt = authResult.refreshExpiresAt,
-                        userId = authResult.userId,
-                        username = authResult.username,
+                        accessToken = authResponse.accessToken,
+                        refreshToken = authResponse.refreshToken,
+                        accessExpiresAt = authResponse.accessExpiresAt,
+                        refreshExpiresAt = authResponse.refreshExpiresAt,
+                        userId = authResponse.userId,
+                        username = authResponse.username,
                         deviceId = deviceId
                     )
 
@@ -516,26 +606,26 @@ object SessionManager {
                         context = context,
                         username = username,
                         password = pass,
-                        userId = authResult.userId,
-                        email = authResult.email,
+                        userId = authResponse.userId,
+                        email = authResponse.email,
                         serverAddress = serverAddress
                     )
 
                     updateSession(
-                        username = authResult.username,
+                        username = authResponse.username,
                         password = pass,
-                        userId = authResult.userId,
-                        email = authResult.email
+                        userId = authResponse.userId,
+                        email = authResponse.email
                     )
                     _session.value = _session.value.copy(
-                        accessToken = authResult.accessToken,
-                        refreshToken = authResult.refreshToken,
+                        accessToken = authResponse.accessToken,
+                        refreshToken = authResponse.refreshToken,
                         authMethod = "v2_jwt"
                     )
 
                     CredentialStore.setJwtServerAddress(context, serverAddress)
 
-                    try { syncFcmToken(context, username) } catch (e: Exception) { }
+                    try { syncFcmToken(context, username) } catch (e: Exception) { Log.e("SessionManager", "FCM token sync failed", e) }
 
                     GrpcClient.getUserAvatar(username) { _ -> }
 
@@ -545,11 +635,19 @@ object SessionManager {
 
                     onComplete("SUCCESS")
                 } else {
-                    Log.w("SessionManager", "AUTH_FAILED")
-                    onComplete("AUTH_FAILED")
+                    val errorMsg = authResult?.second ?: "AUTH_FAILED"
+                    Log.w("SessionManager", "AUTH_FAILED: $errorMsg")
+                    if (errorMsg.contains("connection refused", ignoreCase = true) ||
+                        errorMsg.contains("database", ignoreCase = true) ||
+                        errorMsg.contains("internal", ignoreCase = true) ||
+                        errorMsg.contains("unavailable", ignoreCase = true)) {
+                        onComplete("SERVER_ERROR")
+                    } else {
+                        onComplete("AUTH_FAILED")
+                    }
                 }
             } catch (e: Exception) {
-                Log.e("SessionManager", "V2 login error: ${e.message}", e)
+                ErrorHandler.handle("SessionManager", "V2 login error: ${e.message}", e)
                 onComplete("ERROR")
             }
         }
@@ -574,8 +672,8 @@ object SessionManager {
             putString("last_username", currentUsername)
         }
 
-        context.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
-            .edit().remove("is_super_admin").remove("admin_user_id").apply()
+        context.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
+            .edit { remove("is_super_admin").remove("admin_user_id") }
 
         GrpcClient.disconnect()
     }

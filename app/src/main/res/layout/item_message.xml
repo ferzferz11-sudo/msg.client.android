@@ -76,6 +76,7 @@
         android:layout_alignBottom="@id/messageContainer"
         android:layout_alignParentStart="true"
         android:layout_marginStart="8dp"
+        android:contentDescription="@string/selection_indicator"
         android:src="@drawable/ic_unchecked"
         android:visibility="gone"
         tools:visibility="visible" />
@@ -117,7 +118,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:visibility="gone"
-                android:background="#15000000"
+                android:background="@color/bg_reply_container"
                 android:padding="4dp"
                 android:layout_marginBottom="4dp">
 
@@ -154,6 +155,17 @@
             </LinearLayout>
 
             <TextView
+                android:id="@+id/tvForwardedFrom"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="11sp"
+                android:textStyle="italic"
+                android:textColor="@color/tg_blue"
+                android:drawablePadding="4dp"
+                android:visibility="gone"
+                android:layout_marginBottom="2dp" />
+
+            <TextView
                 android:id="@+id/tvUserName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -180,23 +192,32 @@
                     android:visibility="gone"
                     android:contentDescription="@string/app_name" />
 
-                <TextView
-                    android:id="@+id/tvGalleryCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="bottom|end"
-                    android:layout_margin="8dp"
-                    android:background="@drawable/bg_gallery_count"
-                    android:minWidth="24dp"
-                    android:minHeight="24dp"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:gravity="center"
-                    android:textColor="@android:color/white"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
+                <com.airbnb.lottie.LottieAnimationView
+                    android:id="@+id/lottieStickerView"
+                    android:layout_width="150dp"
+                    android:layout_height="150dp"
                     android:visibility="gone"
-                    tools:text="+3" />
+                    android:clickable="true"
+                    android:focusable="true" />
+
+                <ImageView
+                    android:id="@+id/ivStickerImage"
+                    android:layout_width="150dp"
+                    android:layout_height="150dp"
+                    android:visibility="gone"
+                    android:scaleType="fitCenter"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:adjustViewBounds="true" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvGalleryThumbnails"
+                    android:layout_width="wrap_content"
+                    android:layout_height="64dp"
+                    android:clipToPadding="false"
+                    android:paddingHorizontal="2dp"
+                    android:visibility="gone" />
+
             </FrameLayout>
 
             <lavender.client.android.ui.audio.AudioMessageView

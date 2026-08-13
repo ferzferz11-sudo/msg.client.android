@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import lavender.client.android.data.proto.*
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Handles typing indicator via gRPC bidirectional stream.
@@ -24,10 +25,13 @@ class GrpcTypingClient(
 ) {
     companion object {
         private const val TAG = "GrpcTypingClient"
+        private const val MAX_TYPING_RETRIES = 10
+        private const val CANCEL_REASON = "Error"
     }
 
-    var typingRequestObserver: StreamObserver<TypingRequestProto>? = null
+    @Volatile var typingRequestObserver: StreamObserver<TypingRequestProto>? = null
         private set
+    @Volatile private var typingRetryCount = 0
 
     fun startTypingStream() {
         val currentChannel = getChannel() ?: return
@@ -40,6 +44,7 @@ class GrpcTypingClient(
 
         val call = currentChannel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
         typingRequestObserver = call.startTypingStream(typingUsers, scope)
+        typingRetryCount = 0
     }
 
     fun sendTypingSignal(username: String, isTyping: Boolean, roomId: String, userId: String) {
@@ -70,8 +75,13 @@ class GrpcTypingClient(
             }
             override fun onError(t: Throwable) {
                 Log.e(TAG, "Typing stream error", t)
+                typingRequestObserver = null
+                if (typingRetryCount >= MAX_TYPING_RETRIES) return
+                val channel = getChannel()
+                if (channel == null || channel.isShutdown || channel.isTerminated) return
+                typingRetryCount++
                 scope.launch {
-                    delay(5000)
+                    delay((1000L * (1 shl minOf(typingRetryCount, 5))).coerceAtMost(30_000L).milliseconds)
                     startTypingStream()
                 }
             }
@@ -86,7 +96,7 @@ class GrpcTypingClient(
 
         return object : StreamObserver<TypingRequestProto> {
             override fun onNext(value: TypingRequestProto) = this@startTypingStream.sendMessage(value)
-            override fun onError(t: Throwable) = this@startTypingStream.cancel("Error", t)
+            override fun onError(t: Throwable) = this@startTypingStream.cancel(CANCEL_REASON, t)
             override fun onCompleted() = this@startTypingStream.halfClose()
         }
     }

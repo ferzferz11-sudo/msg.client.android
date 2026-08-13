@@ -57,6 +57,17 @@ class AiV2AgentListActivity : AppCompatActivity() {
         setupSwipeRefresh()
         setupFab()
         setupSearch()
+
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (showingRemoteSettings) {
+                    hideRemoteAgentSettings()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
         setupFilters()
         observeMarketplace()
         ThemeUi.bind(this, SessionManager.session.value.username)
@@ -379,15 +390,7 @@ class AiV2AgentListActivity : AppCompatActivity() {
         toolbar.setNavigationOnClickListener { finish() }
     }
 
-    @Suppress("OVERRIDE_DEPRECATION")
-    override fun onBackPressed() {
-        if (showingRemoteSettings) {
-            hideRemoteAgentSettings()
-        } else {
-            @Suppress("DEPRECATION")
-            super.onBackPressed()
-        }
-    }
+
 
     private fun confirmDelete(agent: AiV2Agent) {
         AlertDialog.Builder(this)

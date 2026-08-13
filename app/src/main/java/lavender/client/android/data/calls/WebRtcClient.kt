@@ -57,11 +57,9 @@ class WebRtcClient(
             continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
         }
         peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : PeerConnection.Observer {
-            override fun onSignalingChange(state: PeerConnection.SignalingState?) {
-                Log.d("WebRtcClient", "Signaling state: $state")
-            }
+            override fun onSignalingChange(state: PeerConnection.SignalingState?) {}
             override fun onIceConnectionChange(state: PeerConnection.IceConnectionState?) {
-                Log.d("WebRtcClient", "Ice connection: $state")
+                Log.d("WebRtcClient", "ICE connection: $state")
                 state?.let { onIceConnectionStateChange?.invoke(it) }
             }
             override fun onIceConnectionReceivingChange(p0: Boolean) {}
@@ -157,6 +155,7 @@ class WebRtcClient(
         constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
         peerConnection?.createAnswer(object : SdpObserver {
             override fun onCreateSuccess(description: SessionDescription) {
+                Log.d("WebRtcClient", "ANSWER created, setting local description")
                 peerConnection?.setLocalDescription(this, description)
                 observer.onAnswerCreated(description)
             }
@@ -186,13 +185,11 @@ class WebRtcClient(
         if (isRemoteDescriptionSet) {
             peerConnection?.addIceCandidate(candidate)
         } else {
-            Log.d("WebRtcClient", "Queuing ICE candidate")
             iceCandidateQueue.add(candidate)
         }
     }
 
     private fun drainIceCandidateQueue() {
-        Log.d("WebRtcClient", "Draining ICE candidate queue: ${iceCandidateQueue.size}")
         for (candidate in iceCandidateQueue) {
             peerConnection?.addIceCandidate(candidate)
         }

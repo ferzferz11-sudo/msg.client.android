@@ -1,9 +1,12 @@
 package lavender.client.android.ui.chat.message
+import android.util.Log
 
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.view.View
+import android.graphics.Color
+import android.graphics.Typeface
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -15,6 +18,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.ConferenceLobbyActivity
 import lavender.client.android.ProfileActivity
+import lavender.client.android.ui.chatlist.ChatListActivity
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.theme.ThemeStore
@@ -35,7 +39,7 @@ class ChatToolbarDelegate(
     lateinit var toolbarAvatar: CircleImageView
     lateinit var groupParticipantsContainer: LinearLayout
     lateinit var toolbarContent: View
-    lateinit var btnLobby: ImageView
+    lateinit var btnLobby: View
 
     private var roomId: String = ""
     private var username: String = ""
@@ -47,6 +51,11 @@ class ChatToolbarDelegate(
     private var chatAvatarUrl: String = ""
     private var chatFullAvatarUrl: String = ""
     private var isSecret: Boolean = false
+    var isE2eeInProgress: Boolean = false
+
+    fun refreshSubtitle() {
+        updateSubtitle(lastOnlineUsers, lastIsConnected, lastTypists, lastOtherUserLastSeenAt, lastIsServerShuttingDown)
+    }
 
     fun initViews() {
         toolbar = activity.findViewById(R.id.toolbar)
@@ -77,105 +86,143 @@ class ChatToolbarDelegate(
     }
 
     fun setup() {
-        activity.setSupportActionBar(toolbar)
-        activity.supportActionBar?.setDisplayShowTitleEnabled(false)
+        try {
+            activity.setSupportActionBar(toolbar)
+            activity.supportActionBar?.setDisplayShowTitleEnabled(false)
+        } catch (e: Exception) {
+            android.util.Log.e("ChatToolbar", "setSupportActionBar failed: ${e.message}")
+        }
         setNavigationIcon(R.drawable.ic_back_arrow)
-        toolbar.setNavigationOnClickListener { activity.onBackPressedDispatcher.onBackPressed() }
-
-        if (isSecret) {
-            setupSecretChatToolbar()
-        } else if (roomId.startsWith("favorites_")) {
-            setupFavoritesToolbar()
-            return
-        } else {
-            setupNormalToolbar()
+        toolbar.setNavigationOnClickListener {
+            val intent = Intent(activity, ChatListActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            activity.startActivity(intent)
+            activity.finish()
         }
 
-        setupLobbyButton()
+        try {
+            if (isSecret) {
+                setupSecretChatToolbar()
+            } else if (roomId.startsWith("favorites_")) {
+                setupFavoritesToolbar()
+                return
+            } else {
+                setupNormalToolbar()
+            }
+            setupLobbyButton()
+        } catch (e: Exception) {
+            android.util.Log.e("ChatToolbar", "setup toolbar content failed: ${e.message}", e)
+        }
     }
 
     private fun setupSecretChatToolbar() {
-        toolbarAvatar.isVisible = true
-        groupParticipantsContainer.isVisible = false
-        toolbarAvatar.setImageResource(R.drawable.ic_lock)
-        val secretTheme = ThemeStore.currentTheme()
-        toolbarAvatar.imageTintList = ColorStateList.valueOf(secretTheme.primaryColor.toColorInt())
-        val secretBg = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(secretTheme.surfaceContainer.toColorInt())
+        try {
+            toolbarAvatar.isVisible = true
+            groupParticipantsContainer.isVisible = false
+            toolbarAvatar.setImageResource(R.drawable.ic_lock)
+            val secretTheme = ThemeStore.currentTheme()
+            toolbarAvatar.imageTintList = ColorStateList.valueOf(secretTheme.primaryColor.toColorInt())
+            val secretBg = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(secretTheme.surfaceContainer.toColorInt())
+            }
+            toolbarAvatar.background = secretBg
+            val secretPad = 4.dpToPx()
+            toolbarAvatar.setPadding(secretPad, secretPad, secretPad, secretPad)
+            toolbarSubtitle.text = activity.getString(R.string.e2ee_enabled)
+            toolbarSubtitle.setTextColor(secretTheme.primaryColor.toColorInt())
+        } catch (e: Exception) {
+            android.util.Log.e("ChatToolbar", "setupSecretChatToolbar failed: ${e.message}")
+            toolbarAvatar.isVisible = true
+            toolbarSubtitle.text = activity.getString(R.string.e2ee_enabled)
         }
-        toolbarAvatar.background = secretBg
-        val secretPad = 4.dpToPx()
-        toolbarAvatar.setPadding(secretPad, secretPad, secretPad, secretPad)
-        toolbarSubtitle.text = activity.getString(R.string.e2ee_enabled)
-        toolbarSubtitle.setTextColor(secretTheme.primaryColor.toColorInt())
     }
 
     private fun setupFavoritesToolbar() {
-        toolbarAvatar.isVisible = true
-        groupParticipantsContainer.isVisible = false
-        toolbarAvatar.setImageResource(R.drawable.ic_star)
-        val theme = ThemeStore.currentTheme()
-        val primColor = theme.primaryColor.toColorInt()
-        toolbarAvatar.imageTintList = ColorStateList.valueOf(theme.onPrimaryColor.toColorInt())
-        val bg = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(primColor)
+        try {
+            toolbarAvatar.isVisible = true
+            groupParticipantsContainer.isVisible = false
+            toolbarAvatar.setImageResource(R.drawable.ic_star)
+            val theme = ThemeStore.currentTheme()
+            val primColor = theme.primaryColor.toColorInt()
+            toolbarAvatar.imageTintList = ColorStateList.valueOf(theme.onPrimaryColor.toColorInt())
+            val bg = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(primColor)
+            }
+            toolbarAvatar.background = bg
+            val p = 8.dpToPx()
+            toolbarAvatar.setPadding(p, p, p, p)
+            toolbarTitle.text = activity.getString(R.string.favorites)
+            toolbarSubtitle.isVisible = true
+            toolbarSubtitle.text = activity.getString(R.string.favorites)
+            toolbarContent.setOnClickListener(null)
+        } catch (e: Exception) {
+            android.util.Log.e("ChatToolbar", "setupFavoritesToolbar failed: ${e.message}")
+            toolbarAvatar.isVisible = true
+            toolbarTitle.text = activity.getString(R.string.favorites)
         }
-        toolbarAvatar.background = bg
-        val p = 8.dpToPx()
-        toolbarAvatar.setPadding(p, p, p, p)
-        toolbarTitle.text = activity.getString(R.string.favorites)
-        toolbarSubtitle.isVisible = true
-        toolbarSubtitle.text = activity.getString(R.string.favorites)
-        toolbarContent.setOnClickListener(null)
     }
 
     private fun setupNormalToolbar() {
-        val effectiveAvatarUrl = if (chatAvatarUrl.isNotEmpty()) chatAvatarUrl else if (isDirect) {
-            try {
-                val arr = JSONArray(participantsJson)
-                var other = ""
-                for (i in 0 until arr.length()) {
-                    val p = arr.getString(i)
-                    if (p != username) { other = p; break }
+        try {
+            val effectiveAvatarUrl = if (chatAvatarUrl.isNotEmpty()) chatAvatarUrl else if (isDirect) {
+                try {
+                    val arr = JSONArray(participantsJson)
+                    var other = ""
+                    for (i in 0 until arr.length()) {
+                        val p = arr.getString(i)
+                        if (p != username) { other = p; break }
+                    }
+                    if (other.isNotEmpty()) {
+                        grpcClient.getAvatarCache()[other]
+                            ?: grpcClient.allUsers.value.firstOrNull { it.username == other }?.avatarUrl?.takeIf { it.isNotEmpty() }
+                    } else null
+                } catch (_: Exception) { null }
+            } else null
+
+            if (isDirect || chatAvatarUrl.isNotEmpty()) {
+                toolbarAvatar.isVisible = true
+                groupParticipantsContainer.isVisible = false
+                if (!effectiveAvatarUrl.isNullOrEmpty()) {
+                    com.bumptech.glide.Glide.with(activity).load(effectiveAvatarUrl)
+                        .placeholder(R.drawable.ic_default_avatar).circleCrop().into(toolbarAvatar)
+                } else {
+                    ThemeUtils.applyDefaultAvatar(toolbarAvatar, ThemeStore.currentTheme())
                 }
-                if (other.isNotEmpty()) grpcClient.getAvatarCache()[other] else null
-            } catch (_: Exception) { null }
-        } else null
-
-        if (isDirect || chatAvatarUrl.isNotEmpty()) {
-            toolbarAvatar.isVisible = true
-            groupParticipantsContainer.isVisible = false
-            if (!effectiveAvatarUrl.isNullOrEmpty()) {
-                com.bumptech.glide.Glide.with(activity).load(effectiveAvatarUrl)
-                    .placeholder(R.drawable.ic_default_avatar).circleCrop().into(toolbarAvatar)
             } else {
-                ThemeUtils.applyDefaultAvatar(toolbarAvatar, ThemeStore.currentTheme())
+                toolbarAvatar.isVisible = false
+                groupParticipantsContainer.isVisible = true
+                setupGroupAvatars()
             }
-        } else {
-            toolbarAvatar.isVisible = false
-            groupParticipantsContainer.isVisible = true
-            setupGroupAvatars()
-        }
 
-        toolbarTitle.text = chatName
-        val openProfile = View.OnClickListener {
-            openProfile()
+            toolbarTitle.text = chatName
+            val openProfile = View.OnClickListener {
+                openProfile()
+            }
+            toolbarContent.setOnClickListener(openProfile)
+            toolbarTitle.setOnClickListener(openProfile)
+            toolbarAvatar.setOnClickListener(openProfile)
+            groupParticipantsContainer.setOnClickListener(openProfile)
+        } catch (e: Exception) {
+            android.util.Log.e("ChatToolbar", "setupNormalToolbar failed: ${e.message}", e)
+            toolbarTitle.text = chatName
         }
-        toolbarContent.setOnClickListener(openProfile)
-        toolbarTitle.setOnClickListener(openProfile)
-        toolbarAvatar.setOnClickListener(openProfile)
-        groupParticipantsContainer.setOnClickListener(openProfile)
     }
 
     private fun openProfile() {
         if (chatType == "conference") {
-            val intent = Intent(activity, ConferenceLobbyActivity::class.java).apply {
-                putExtra("ROOM_ID", roomId)
-                putExtra("CHAT_NAME", chatName)
-                putExtra("PARTICIPANTS", participantsJson)
-                putExtra("CREATOR", creator)
+            val intent = Intent(activity, ProfileActivity::class.java).apply {
+                putExtra("username", chatName)
+                putExtra("is_group", true)
+                putExtra("room_id", roomId)
+                putExtra("avatar_url", chatAvatarUrl)
+                putExtra("full_avatar_url", chatFullAvatarUrl)
+                putExtra("participants", participantsJson)
+                putExtra("creator", creator)
+                putExtra("chat_name", chatName)
+                putExtra("chat_type", chatType)
             }
             activity.startActivity(intent)
             return
@@ -201,6 +248,7 @@ class ChatToolbarDelegate(
             putExtra("full_avatar_url", chatFullAvatarUrl)
             putExtra("participants", participantsJson)
             putExtra("creator", creator)
+            putExtra("chat_name", chatName)
         }
         activity.startActivity(intent)
     }
@@ -221,8 +269,8 @@ class ChatToolbarDelegate(
                         ContextCompat.getColor(activity, R.color.white)
                     }
                 }
-                val cache = grpcClient.getAvatarCache()
-                val url = cache[u]
+                val url = grpcClient.getAvatarCache()[u]
+                    ?: grpcClient.allUsers.value.firstOrNull { it.username == u }?.avatarUrl?.takeIf { it.isNotEmpty() }
                 if (!url.isNullOrEmpty()) {
                     com.bumptech.glide.Glide.with(activity).load(url)
                         .placeholder(R.drawable.ic_default_avatar).circleCrop().into(iv)
@@ -232,13 +280,12 @@ class ChatToolbarDelegate(
                 }
                 groupParticipantsContainer.addView(iv)
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     private fun setupLobbyButton() {
         if (chatType == "conference") {
-            val isMeAdmin = username.trim().equals(creator.trim(), ignoreCase = true) && creator.isNotEmpty()
-            btnLobby.isVisible = isMeAdmin
+            btnLobby.isVisible = true
             btnLobby.setOnClickListener {
                 val intent = Intent(activity, ConferenceLobbyActivity::class.java).apply {
                     putExtra("ROOM_ID", roomId)
@@ -251,6 +298,7 @@ class ChatToolbarDelegate(
         } else {
             btnLobby.isVisible = false
         }
+        btnLobby.requestLayout()
     }
 
     fun setNavigationIcon(iconResId: Int) {
@@ -267,7 +315,12 @@ class ChatToolbarDelegate(
         }
     }
 
-    fun updateSubtitle(onlineUsers: List<String>, isConnected: Boolean, typists: List<String>, otherUserLastSeenAt: com.google.protobuf.Timestamp? = null) {
+    fun updateSubtitle(onlineUsers: List<String>, isConnected: Boolean, typists: List<String>, otherUserLastSeenAt: com.google.protobuf.Timestamp? = null, isServerShuttingDown: Boolean = false) {
+        lastOnlineUsers = onlineUsers
+        lastIsConnected = isConnected
+        lastTypists = typists
+        lastOtherUserLastSeenAt = otherUserLastSeenAt
+        lastIsServerShuttingDown = isServerShuttingDown
         if (roomId.startsWith("favorites_")) {
             toolbarSubtitle.isVisible = true
             toolbarSubtitle.text = activity.getString(R.string.favorites)
@@ -275,13 +328,30 @@ class ChatToolbarDelegate(
             return
         }
         val cop = getThemeColor(com.google.android.material.R.attr.colorOnPrimary)
-        val cg = android.graphics.Color.parseColor("#32E672") // holo_green_light equivalent
+        val cg = Color.parseColor("#32E672") // holo_green_light equivalent
         toolbarSubtitle.isVisible = true
-        toolbarSubtitle.setTypeface(null, android.graphics.Typeface.NORMAL)
+        toolbarSubtitle.setTypeface(null, Typeface.NORMAL)
+
+        if (isSecret) {
+            if (!isConnected) {
+                toolbarSubtitle.text = if (isServerShuttingDown) activity.getString(R.string.server_restarting) else activity.getString(R.string.connecting)
+                toolbarSubtitle.setTextColor(cop)
+            } else if (isE2eeInProgress) {
+                toolbarSubtitle.text = activity.getString(R.string.e2ee_pending)
+                toolbarSubtitle.setTextColor(cop)
+            } else if (lavender.client.android.data.crypto.E2EEManager.isE2EEActive(activity, roomId)) {
+                toolbarSubtitle.text = activity.getString(R.string.e2ee_verified)
+                toolbarSubtitle.setTextColor(cg)
+            } else {
+                toolbarSubtitle.text = activity.getString(R.string.e2ee_enabled)
+                toolbarSubtitle.setTextColor(cop)
+            }
+            return
+        }
 
         when {
             !isConnected -> {
-                toolbarSubtitle.text = activity.getString(R.string.connecting)
+                toolbarSubtitle.text = if (isServerShuttingDown) activity.getString(R.string.server_restarting) else activity.getString(R.string.connecting)
                 toolbarSubtitle.setTextColor(cop)
             }
             typists.isNotEmpty() -> {
@@ -289,7 +359,7 @@ class ChatToolbarDelegate(
                     activity.getString(R.string.user_is_typing, typists.first())
                 else activity.getString(R.string.users_are_typing, typists.size)
                 toolbarSubtitle.setTextColor(cop)
-                toolbarSubtitle.setTypeface(null, android.graphics.Typeface.ITALIC)
+                toolbarSubtitle.setTypeface(null, Typeface.ITALIC)
             }
             isDirect -> {
                 val other = getOtherParticipant()
@@ -307,6 +377,11 @@ class ChatToolbarDelegate(
         }
     }
 
+    private var lastOnlineUsers: List<String> = emptyList()
+    private var lastIsConnected: Boolean = false
+    private var lastTypists: List<String> = emptyList()
+    private var lastOtherUserLastSeenAt: com.google.protobuf.Timestamp? = null
+    private var lastIsServerShuttingDown: Boolean = false
     private var cachedOtherUser: String? = null
 
     fun getOtherParticipant(): String? {
@@ -339,4 +414,8 @@ class ChatToolbarDelegate(
     }
 
     private fun Int.dpToPx(): Int = (this * activity.resources.displayMetrics.density).toInt()
+
+    companion object {
+        private const val TAG = "ChatToolbarDelegate"
+    }
 }

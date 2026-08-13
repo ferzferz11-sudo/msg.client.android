@@ -67,10 +67,16 @@ class AudioMessageView @JvmOverloads constructor(
     fun setAudioData(url: String, durationSeconds: Int) {
         this.audioUrl = url
         this.duration = durationSeconds
-        
+
         durationText.text = formatDuration(durationSeconds)
+
+        // Show random waveform instantly, then replace with real data
         waveformView.generateRandomWaveform()
-        
+        findViewTreeLifecycleOwner()?.lifecycleScope?.launch {
+            val data = WaveformExtractor.extract(url)
+            if (data.isNotEmpty()) waveformView.setWaveformData(data)
+        }
+
         updateUI()
     }
 

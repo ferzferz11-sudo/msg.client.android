@@ -76,19 +76,43 @@ class ChatMessageAdapter(
         }
     }
 
-    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        val item = getItem(position)
-        when (holder) {
-            is DateSeparatorHolder -> holder.bind(item)
-            is TypingHolder -> holder.bind(item)
-            is UserMessageHolder -> holder.bind(item)
-            is AgentMessageHolder -> holder.bind(item)
-        }
+    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+        super.onViewRecycled(holder)
+        if (holder is TypingHolder) holder.stopAnimation()
+        if (holder is AgentMessageHolder) holder.unbind()
+    }
 
-        // Fade-in + slide animation for new messages (not typing, not date separator)
-        if (!item.isTyping && !item.isDateSeparator && position !in animatedPositions) {
-            animatedPositions.add(position)
-            animateMessageIn(holder.itemView, item.isCurrentUser)
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        val item = try { getItem(position) } catch (e: Exception) {
+            android.util.Log.e("ChatMessageAdapter", "getItem($position) failed: ${e.message}", e)
+            return
+        }
+        try {
+            when (holder) {
+                is DateSeparatorHolder -> holder.bind(item)
+                is TypingHolder -> holder.bind(item)
+                is UserMessageHolder -> holder.bind(item)
+                is AgentMessageHolder -> holder.bind(item)
+            }
+
+            // Fade-in + slide animation for new messages (not typing, not date separator)
+            if (!item.isTyping && !item.isDateSeparator && position !in animatedPositions) {
+                animatedPositions.add(position)
+                animateMessageIn(holder.itemView, item.isCurrentUser)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("ChatMessageAdapter", "bind crashed at pos $position: ${e.message}", e)
+            try {
+                // Minimal fallback: show plain text
+                holder.itemView.findViewById<TextView>(R.id.agentMessageText)?.let {
+                    it.text = item.content.ifEmpty { "…" }
+                    it.isVisible = true
+                }
+                holder.itemView.findViewById<LinearLayout>(R.id.userMessageContainer)?.isVisible = false
+                holder.itemView.findViewById<LinearLayout>(R.id.agentMessageContainer)?.isVisible = true
+                holder.itemView.findViewById<LinearLayout>(R.id.typingContainer)?.isVisible = false
+                holder.itemView.findViewById<TextView>(R.id.tvDateSeparator)?.isVisible = false
+            } catch (_: Exception) {}
         }
     }
 
@@ -202,6 +226,11 @@ class ChatMessageAdapter(
         private val replyUser: TextView = itemView.findViewById(R.id.agentReplyUser)
         private val replyText: TextView = itemView.findViewById(R.id.agentReplyText)
 
+        fun unbind() {
+            com.bumptech.glide.Glide.with(itemView.context).clear(messageImage)
+            com.bumptech.glide.Glide.with(itemView.context).clear(avatar)
+        }
+
         fun bind(item: ChatMessageItem) {
             container.isVisible = true
             itemView.findViewById<LinearLayout>(R.id.userMessageContainer)?.isVisible = false
@@ -242,7 +271,12 @@ class ChatMessageAdapter(
             if (item.senderAvatarUrl.isNotEmpty()) {
                 avatar.isVisible = showAvatars
                 emoji.isVisible = false
-                // TODO: Load avatar with Glide
+                com.bumptech.glide.Glide.with(itemView.context)
+                    .load(item.senderAvatarUrl)
+                    .placeholder(R.drawable.ic_default_avatar)
+                    .error(R.drawable.ic_default_avatar)
+                    .circleCrop()
+                    .into(avatar)
             } else if (item.senderEmoji.isNotEmpty()) {
                 avatar.isVisible = false
                 emoji.isVisible = true

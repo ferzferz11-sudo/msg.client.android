@@ -27,8 +27,26 @@ import java.util.Locale
  */
 
 internal fun setupFABs(activity: ChatListActivity) {
-    activity.findViewById<View>(R.id.fabAi)?.setOnClickListener {
+    val fabAi = activity.findViewById<View>(R.id.fabAi)
+    fabAi?.setOnClickListener {
         showAIBottomSheet(activity)
+    }
+    // Position fabAi above fabAddChat using window insets
+    // fabAddChat (LavenderFab) gets bottomMargin = 32dp + systemBars.bottom
+    // fabAi needs to be above it: baseOffset(32dp) + fabHeight(56dp) + spacing(8dp) + systemBars.bottom
+    fabAi?.let { fab ->
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(fab) { view, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            val density = view.resources.displayMetrics.density
+            val fabAddChatHeight = (56 * density).toInt()
+            val spacing = (8 * density).toInt()
+            val baseOffset = (32 * density).toInt()
+            val lp = view.layoutParams as android.view.ViewGroup.MarginLayoutParams
+            lp.bottomMargin = baseOffset + fabAddChatHeight + spacing + systemBars.bottom
+            lp.marginEnd = (16 * density).toInt()
+            view.layoutParams = lp
+            insets
+        }
     }
     activity.findViewById<View>(R.id.fabAddChat)?.setOnClickListener {
         showChatActionSheet(activity)
@@ -50,7 +68,7 @@ internal fun showChatActionSheet(activity: ChatListActivity) {
             SheetAction(R.id.actionCreateSecretChat, R.drawable.ic_lock, activity.getString(R.string.secret_chat)) {
                 showCreateSecretChatDialog(activity)
             },
-            SheetAction(R.id.actionCreateConference, R.drawable.ic_videocam_on, activity.getString(R.string.conference_in_development)) {
+            SheetAction(R.id.actionCreateConference, R.drawable.ic_conference_lobby, activity.getString(R.string.group_conference)) {
                 showCreateConferenceDialog(activity)
             }
         )).showWithNavigation()
@@ -65,7 +83,7 @@ internal fun showAddContactDialog(activity: ChatListActivity) {
         .setActionButtonText(activity.getString(R.string.add))
         .setExtraInputVisible(false)
         .setLoading(true)
-        .setCreateChatCheckboxVisible(true, activity.getString(R.string.create_direct_chat_after))
+        .setCreateChatCheckboxVisible(true, activity.getString(R.string.create_chat_after))
 
     val currentContacts = mutableSetOf<String>()
 
@@ -84,19 +102,20 @@ internal fun showAddContactDialog(activity: ChatListActivity) {
 
     sheet.setAdapter(userAdapter)
 
+    var collectJob: kotlinx.coroutines.Job? = null
+
     GrpcClient.getContacts(username) { contacts ->
         currentContacts.clear()
         currentContacts.addAll(contacts)
 
-        activity.lifecycleScope.launch {
+        collectJob?.cancel()
+        collectJob = activity.lifecycleScope.launch {
             GrpcClient.allUsers.collect { allUsersList ->
                 val filtered = allUsersList
                     .map { it.username }
                     .filter { it != username && !currentContacts.contains(it) }
-                activity.runOnUiThread {
-                    sheet.setLoading(false)
-                    userAdapter.setUsers(filtered)
-                }
+                sheet.setLoading(false)
+                userAdapter.setUsers(filtered)
             }
         }
     }
@@ -111,17 +130,22 @@ internal fun showAddContactDialog(activity: ChatListActivity) {
 
         var added = 0
         val total = selected.size
+        val completed = java.util.concurrent.atomic.AtomicInteger(0)
         for (contact in selected) {
             GrpcClient.addContact(username, contact) { success, _ ->
-                if (success) added++
-                if (added == total || (added + (total - selected.indexOf(contact) - 1)) == total) {
-                    activity.runOnUiThread {
+                if (success) {
+                    added++
+                    currentContacts.add(contact)
+                }
+                if (completed.incrementAndGet() == total) {
+                    activity.lifecycleScope.launch {
+                        collectJob?.cancel()
                         sheet.dismiss()
                         if (sheet.isCreateChatChecked() && selected.isNotEmpty()) {
                             val firstContact = selected.first()
                             GrpcClient.createDirectChat(username, firstContact) { chatId ->
                                 if (chatId != null) {
-                                    activity.runOnUiThread {
+                                    activity.lifecycleScope.launch {
                                         val intent = Intent(activity, NewChatActivity::class.java).apply {
                                             putExtra("USERNAME", username)
                                             putExtra("ROOM_ID", chatId)
@@ -176,7 +200,7 @@ internal fun showCreateChatDialog(activity: ChatListActivity) {
                 val filtered = allUsersList
                     .map { it.username }
                     .filter { it != username && currentContacts.contains(it) }
-                activity.runOnUiThread {
+                activity.lifecycleScope.launch {
                     sheet.setLoading(false)
                     userAdapter.setUsers(filtered)
                 }
@@ -196,7 +220,7 @@ internal fun showCreateChatDialog(activity: ChatListActivity) {
             val targetUser = selected.first()
             GrpcClient.createDirectChat(username, targetUser) { chatId ->
                 if (chatId != null) {
-                    activity.runOnUiThread {
+                    activity.lifecycleScope.launch {
                         sheet.dismiss()
                         val intent = Intent(activity, NewChatActivity::class.java).apply {
                             putExtra("USERNAME", username)
@@ -208,7 +232,7 @@ internal fun showCreateChatDialog(activity: ChatListActivity) {
                         activity.startActivity(intent)
                     }
                 } else {
-                    activity.runOnUiThread {
+                    activity.lifecycleScope.launch {
                         Toast.makeText(activity, R.string.failed_to_create_chat, Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -220,7 +244,7 @@ internal fun showCreateChatDialog(activity: ChatListActivity) {
             val participants = selected + username
             GrpcClient.createGroupChat(groupName, participants, username) { chatId ->
                 if (chatId != null) {
-                    activity.runOnUiThread {
+                    activity.lifecycleScope.launch {
                         sheet.dismiss()
                         val intent = Intent(activity, NewChatActivity::class.java).apply {
                             putExtra("USERNAME", username)
@@ -233,7 +257,7 @@ internal fun showCreateChatDialog(activity: ChatListActivity) {
                         activity.startActivity(intent)
                     }
                 } else {
-                    activity.runOnUiThread {
+                    activity.lifecycleScope.launch {
                         Toast.makeText(activity, R.string.failed_to_create_chat, Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -277,15 +301,13 @@ internal fun showCreateSecretChatDialog(activity: ChatListActivity) {
                 val filtered = allUsersList
                     .map { it.username }
                     .filter { it != username && currentContacts.contains(it) }
-                activity.runOnUiThread {
-                    sheet.setLoading(false)
-                    if (filtered.isEmpty()) {
-                        sheet.setEmptyState(true, activity.getString(R.string.no_contacts))
-                        sheet.setActionButtonEnabled(false)
-                    } else {
-                        sheet.setEmptyState(false)
-                        userAdapter.setUsers(filtered)
-                    }
+                sheet.setLoading(false)
+                if (filtered.isEmpty()) {
+                    sheet.setEmptyState(true, activity.getString(R.string.no_contacts))
+                    sheet.setActionButtonEnabled(false)
+                } else {
+                    sheet.setEmptyState(false)
+                    userAdapter.setUsers(filtered)
                 }
             }
         }
@@ -305,7 +327,7 @@ internal fun showCreateSecretChatDialog(activity: ChatListActivity) {
         val publicKey = E2EEManager.getPublicKeyBase64(activity)
 
         GrpcClient.createSecretChat(targetUser, publicKey) { chatId, success, message, _ ->
-            activity.runOnUiThread {
+            activity.lifecycleScope.launch {
                 sheet.setLoading(false)
                 if (success && chatId.isNotEmpty()) {
                     sheet.dismiss()
@@ -360,10 +382,8 @@ internal fun showCreateConferenceDialog(activity: ChatListActivity) {
                 val filtered = allUsersList
                     .map { it.username }
                     .filter { it != username && currentContacts.contains(it) }
-                activity.runOnUiThread {
-                    sheet.setLoading(false)
-                    userAdapter.setUsers(filtered)
-                }
+                sheet.setLoading(false)
+                userAdapter.setUsers(filtered)
             }
         }
     }
@@ -384,7 +404,7 @@ internal fun showCreateConferenceDialog(activity: ChatListActivity) {
         val participants = selected + username
         GrpcClient.createGroupChat(topic, participants, username, "conference") { chatId ->
             if (chatId != null) {
-                activity.runOnUiThread {
+                activity.lifecycleScope.launch {
                     sheet.dismiss()
                     val intent = Intent(activity, NewChatActivity::class.java).apply {
                         putExtra("USERNAME", username)
@@ -397,7 +417,7 @@ internal fun showCreateConferenceDialog(activity: ChatListActivity) {
                     activity.startActivity(intent)
                 }
             } else {
-                activity.runOnUiThread {
+                activity.lifecycleScope.launch {
                     Toast.makeText(activity, R.string.failed_to_create_chat, Toast.LENGTH_SHORT).show()
                 }
             }

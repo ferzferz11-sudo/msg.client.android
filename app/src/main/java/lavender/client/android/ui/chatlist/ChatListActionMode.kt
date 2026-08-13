@@ -16,9 +16,9 @@ import lavender.client.android.data.grpc.*
 
 internal fun enterSelectionMode(activity: ChatListActivity) {
     activity.isSelectionMode = true
-    // Hide avatar container (FrameLayout wrapper), not just the ImageView
     activity.ivToolbarUserAvatar?.parent?.let { (it as? android.view.View)?.isVisible = false }
     activity.llToolbarTitleContainer?.isVisible = true
+    activity.ivFavorites?.isVisible = false
     activity.tvToolbarSubtitle?.isVisible = false
     activity.toolbar?.menu?.clear()
     activity.toolbar?.inflateMenu(R.menu.chat_list_action_mode)
@@ -31,11 +31,7 @@ internal fun enterSelectionMode(activity: ChatListActivity) {
         onMenuItemClicked(activity, item)
     }
     activity.toolbar?.setNavigationIcon(R.drawable.ic_back_arrow)
-    activity.toolbar?.navigationIcon?.let {
-        val wrapped = androidx.core.graphics.drawable.DrawableCompat.wrap(it)
-        androidx.core.graphics.drawable.DrawableCompat.setTint(wrapped, iconColor)
-        activity.toolbar?.navigationIcon = wrapped
-    }
+    activity.toolbar?.navigationIcon?.setTint(iconColor)
     activity.toolbar?.setNavigationOnClickListener { exitSelectionMode(activity) }
     activity.tvToolbarTitle?.setTextColor(iconColor)
     updateActionModeTitle(activity)
@@ -44,10 +40,11 @@ internal fun enterSelectionMode(activity: ChatListActivity) {
 
 internal fun exitSelectionMode(activity: ChatListActivity) {
     activity.isSelectionMode = false
-    activity.chatAdapter.clearSelection()
+    try { activity.chatAdapter.clearSelection() } catch (_: Exception) {}
     // Restore avatar container (FrameLayout wrapper)
     activity.ivToolbarUserAvatar?.parent?.let { (it as? android.view.View)?.isVisible = true }
     activity.llToolbarTitleContainer?.isVisible = true
+    activity.ivFavorites?.isVisible = true
     activity.tvToolbarTitle?.text = activity.getString(R.string.chats)
     // Restore title color from theme
     val typedValue = android.util.TypedValue()
@@ -61,13 +58,13 @@ internal fun exitSelectionMode(activity: ChatListActivity) {
 }
 
 internal fun updateActionModeTitle(activity: ChatListActivity) {
-    val count = activity.chatAdapter.getSelectedIds().size
+    val count = try { activity.chatAdapter.getSelectedIds().size } catch (_: Exception) { return }
     activity.tvToolbarTitle?.text = activity.getString(R.string.selected_count, count)
     updateActionModeIcons(activity)
 }
 
 private fun updateActionModeIcons(activity: ChatListActivity) {
-    val selectedChats = activity.chatAdapter.getSelectedChats()
+    val selectedChats = try { activity.chatAdapter.getSelectedChats() } catch (_: Exception) { return }
     if (selectedChats.isEmpty()) return
     val allMuted = selectedChats.all { it.isMuted }
     activity.toolbar?.menu?.findItem(R.id.action_mute)?.let { item ->
@@ -100,11 +97,11 @@ internal fun pinSelectedChats(activity: ChatListActivity, chats: List<ChatInfo>)
         for (chat in chats) {
             try {
                 if (chat.isPinned) {
-                    val result = GrpcClient.unpinChat(activity, chat.id)
+                    val result = GrpcClient.unpinChat(chat.id)
                     Log.d("ChatListActionMode", "unpinChat(${chat.id}) = $result")
                     if (result) unpinned++
                 } else {
-                    val result = GrpcClient.pinChat(activity, chat.id)
+                    val result = GrpcClient.pinChat(chat.id)
                     Log.d("ChatListActionMode", "pinChat(${chat.id}) = $result")
                     if (result) pinned++
                 }
@@ -135,9 +132,9 @@ internal fun archiveSelectedChats(activity: ChatListActivity, chats: List<ChatIn
         var unarchived = 0
         for (chat in chats) {
             if (chat.isArchived) {
-                if (GrpcClient.unarchiveChat(activity, chat.id)) unarchived++
+                if (GrpcClient.unarchiveChat(chat.id)) unarchived++
             } else {
-                if (GrpcClient.archiveChat(activity, chat.id)) archived++
+                if (GrpcClient.archiveChat(chat.id)) archived++
             }
         }
         if (archived > 0 || unarchived > 0) {
@@ -148,15 +145,68 @@ internal fun archiveSelectedChats(activity: ChatListActivity, chats: List<ChatIn
 }
 
 internal fun deleteSelectedChats(activity: ChatListActivity, chats: List<ChatInfo>) {
+    val groupChats = chats.filter { it.type == "group" || it.type == "conference" }
+    val nonGroupChats = chats.filter { it.type != "group" && it.type != "conference" }
+
+    if (groupChats.isNotEmpty()) {
+        val username = lavender.client.android.data.session.SessionManager.session.value.username
+        val creator = groupChats.first().creator
+        val isCreator = creator == username
+
+        if (isCreator || nonGroupChats.isEmpty()) {
+            // Creator or all group chats — show confirmation with creator info
+            val message = if (groupChats.size == 1) {
+                val chatName = groupChats.first().name
+                activity.getString(R.string.delete_group) + ": \"$chatName\"?\n" +
+                    activity.getString(R.string.group_creator) + ": $creator"
+            } else {
+                activity.getString(R.string.delete_group) + ": ${groupChats.size} " +
+                    activity.getString(R.string.chats) + "?"
+            }
+
+            androidx.appcompat.app.AlertDialog.Builder(activity)
+                .setTitle(R.string.delete_group)
+                .setMessage(message)
+                .setPositiveButton(R.string.delete) { _, _ ->
+                    doDeleteChats(activity, chats)
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
+        } else {
+            // Non-creator — show info about who can delete
+            val chatName = groupChats.first().name
+            val infoMessage = activity.getString(R.string.cannot_delete_group) + "\n" +
+                activity.getString(R.string.group_creator) + ": $creator"
+
+            androidx.appcompat.app.AlertDialog.Builder(activity)
+                .setTitle(chatName)
+                .setMessage(infoMessage)
+                .setPositiveButton(R.string.ok, null)
+                .show()
+            // Still delete non-group chats if any
+            if (nonGroupChats.isNotEmpty()) {
+                doDeleteChats(activity, nonGroupChats)
+            }
+        }
+    } else {
+        doDeleteChats(activity, chats)
+    }
+}
+
+private fun doDeleteChats(activity: ChatListActivity, chats: List<ChatInfo>) {
     activity.lifecycleScope.launch {
         var deleted = 0
         for (chat in chats) {
-            kotlinx.coroutines.suspendCancellableCoroutine<Unit> { cont ->
-                activity.viewModel.deleteChat(chat.id) {
-                    if (cont.isActive) cont.resumeWith(Result.success(Unit))
+            val errorMessage = kotlinx.coroutines.suspendCancellableCoroutine<String?> { cont ->
+                activity.viewModel.deleteChat(chat.id) { errorMsg ->
+                    if (cont.isActive) cont.resumeWith(Result.success(errorMsg))
                 }
             }
-            deleted++
+            if (errorMessage != null) {
+                android.widget.Toast.makeText(activity, errorMessage, android.widget.Toast.LENGTH_LONG).show()
+            } else {
+                deleted++
+            }
         }
         if (deleted > 0) {
             activity.viewModel.loadChats()

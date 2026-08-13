@@ -41,4 +41,24 @@
     
     <!-- Recording colors -->
     <color name="red">#FF4444</color>
+
+    <!-- Message bubble colors (dark theme) -->
+    <color name="bg_message_user">#5F9EA0</color>
+    <color name="bg_message_agent">#363636</color>
+    <color name="bg_date_separator">#33FFFFFF</color>
+    <color name="bg_input_stroke">#50FFFFFF</color>
+    <color name="bg_reply_container">#15FFFFFF</color>
+
+    <!-- Semantic colors (dark) -->
+    <color name="danger">#FF5252</color>
+    <color name="success">#4CAF50</color>
+    <color name="warning">#FFA000</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#AAAAAA</color>
+    <color name="text_hint">#80FFFFFF</color>
+    <color name="surface_elevated">#333333</color>
+    <color name="scrim_light">#80FFFFFF</color>
+    <color name="scrim_dark">#80000000</color>
+    <color name="scrim_heavy">#CC000000</color>
+    <color name="divider">#15FFFFFF</color>
 </resources>

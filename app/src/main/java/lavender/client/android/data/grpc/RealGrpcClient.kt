@@ -2,30 +2,49 @@ package lavender.client.android.data.grpc
 
 import android.content.Context
 import android.util.Log
-import io.grpc.ManagedChannel
-import io.grpc.stub.StreamObserver
+import androidx.core.content.edit
 import io.grpc.CallOptions
 import io.grpc.ClientCall
+import io.grpc.ManagedChannel
 import io.grpc.Metadata
 import io.grpc.MethodDescriptor
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
-import kotlinx.coroutines.*
+import io.grpc.stub.StreamObserver
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import lavender.client.android.BuildConfig
-import lavender.client.android.data.auth.AuthManager
-import lavender.client.android.data.session.SessionManager
-import lavender.client.android.data.db.*
-import lavender.client.android.data.models.Message
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import lavender.client.android.data.db.AppDatabase
+import lavender.client.android.data.db.toEntity
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.models.ErrorHandler
-import lavender.client.android.data.proto.*
-import kotlinx.coroutines.suspendCancellableCoroutine
-import androidx.core.content.edit
+import lavender.client.android.data.models.Message
+import lavender.client.android.data.proto.AuthResponseV2Proto
+import lavender.client.android.data.proto.CallMessageProto
+import lavender.client.android.data.proto.ChatV2MessageProto
+import lavender.client.android.data.proto.ChatV2TypingProto
+import lavender.client.android.data.proto.CustomThemeProto
+import lavender.client.android.data.proto.DeviceInfoProto
+import lavender.client.android.data.proto.FCMLogEntryProto
+import lavender.client.android.data.proto.GetAdminUserListResponseProto
+import lavender.client.android.data.proto.GetAdminUserSessionsResponseProto
+import lavender.client.android.data.proto.GetUserProfileResponseProto
+import lavender.client.android.data.proto.MarkReadRequestProto
+import lavender.client.android.data.proto.MarkReadResponseProto
+import lavender.client.android.data.proto.MessageProto
+import lavender.client.android.data.proto.MessageV2Proto
+import lavender.client.android.data.proto.RefreshTokenResponseProto
+import lavender.client.android.data.proto.ServerInfoProto
+import lavender.client.android.data.proto.UserInfoProto
+
+private const val DELETED_HASHES_MAX_SIZE = 10000
 
 enum class ConnectionStatus {
     DISCONNECTED,
@@ -99,21 +118,29 @@ object RealGrpcClient {
     private val _readReceiptEvent = MutableSharedFlow<Pair<String, String>>(extraBufferCapacity = 64)
     val readReceiptEvent: SharedFlow<Pair<String, String>> = _readReceiptEvent
 
-    var hasCheckedForUpdates = false
-    var isAppInBackground = false
+    @Volatile var hasCheckedForUpdates = false
+    @Volatile var isAppInBackground = false
         set(value) {
             field = value
             if (value) backgroundStartTime = System.currentTimeMillis()
         }
-    private var backgroundStartTime: Long = 0
+    @Volatile private var backgroundStartTime: Long = 0
 
     // ====== Avatar cache (must be declared before module initialization) ======
-    private val avatarCache = mutableMapOf<String, String>()
-    private val fullAvatarCache = mutableMapOf<String, String>()
+    private val avatarCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val fullAvatarCache = java.util.concurrent.ConcurrentHashMap<String, String>()
     val avatarCacheFlow = MutableStateFlow<Map<String, String>>(emptyMap())
 
-    private val deletedMessageHashes = mutableSetOf<String>()
-    private val pendingReads = mutableSetOf<String>()
+    private val deletedMessageHashes: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    private val pendingReads: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    private fun addDeletedHash(hash: String) {
+        deletedMessageHashes.add(hash)
+        if (deletedMessageHashes.size > DELETED_HASHES_MAX_SIZE) {
+            val toRemove = deletedMessageHashes.take(DELETED_HASHES_MAX_SIZE / 2)
+            deletedMessageHashes.removeAll(toRemove.toSet())
+        }
+    }
 
     // ====== Module: Connection Manager ======
     private val connectionManager = GrpcConnectionManager(
@@ -178,7 +205,8 @@ object RealGrpcClient {
         getChannel = { getChannel() },
         getUserId = { currentUserId },
         allUsers = _allUsers,
-        serverTime = _serverTime
+        serverTime = _serverTime,
+        reconnect = { connectionManager.reconnect() }
     )
 
     // ====== Module: Profile Client ======
@@ -221,7 +249,8 @@ object RealGrpcClient {
         appContext = { appContext },
         onReadReceipt = { roomId, reader ->
             scope.launch { _readReceiptEvent.emit(Pair(roomId, reader)) }
-        }
+        },
+        reconnect = { connectionManager.reconnect() }
     )
 
     // ====== Module: Server Discovery Client ======
@@ -238,15 +267,22 @@ object RealGrpcClient {
         scope = scope
     )
 
+    private val METHOD_MARK_READ = MethodDescriptor.newBuilder<MarkReadRequestProto, MarkReadResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("messenger.ChatService/MarkRead")
+        .setRequestMarshaller(MarkReadRequestMarshaller())
+        .setResponseMarshaller(MarkReadResponseMarshaller())
+        .build()
+
     // ====== State (kept in orchestrator) ======
-    internal var appContext: Context? = null
-    private var currentUsername: String? = null
-    private var currentUserId: String? = null
-    private var requestObserver: StreamObserver<MessageProto>? = null
-    private var chatV2RequestObserver: StreamObserver<ChatV2MessageProto>? = null
-    private var lastAuthWasJwt: Boolean = false
-    private var isRetrying = false
-    private var lastChatRequest: LastChatRequest? = null
+    @Volatile internal var appContext: Context? = null
+    @Volatile private var currentUsername: String? = null
+    @Volatile private var currentUserId: String? = null
+    @Volatile private var requestObserver: StreamObserver<MessageProto>? = null
+    @Volatile private var chatV2RequestObserver: StreamObserver<ChatV2MessageProto>? = null
+    @Volatile private var lastAuthWasJwt: Boolean = false
+    @Volatile private var isRetrying = false
+    @Volatile private var lastChatRequest: LastChatRequest? = null
     private data class LastChatRequest(
         val roomId: String, val cb: (Message) -> Unit
     )
@@ -278,7 +314,7 @@ object RealGrpcClient {
         lastChatRequest = null
     }
 
-    var currentRoomId = ""
+    @Volatile var currentRoomId = ""
         internal set
 
     // ====== Connection (delegated) ======
@@ -335,6 +371,13 @@ object RealGrpcClient {
                             putString("admin_user_id", profile.userId)
                         }
                     }
+                    // Store company info in session
+                    lavender.client.android.data.session.SessionManager.updateSession(
+                        companyId = profile.companyId,
+                        companyName = profile.companyName,
+                        positionTitle = profile.positionTitle,
+                        positionLevel = profile.positionLevel
+                    )
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "fetchAdminStatus failed: ${e.message}")
@@ -364,10 +407,19 @@ object RealGrpcClient {
 
     // ====== Chat Stream V2 ======
 
-    // ====== Typing (delegated) ======
-    private fun startTypingStream() { typingClient.startTypingStream() }
+    // ====== Typing (via ChatV2 stream) ======
     fun sendTypingSignal(username: String, isTyping: Boolean) {
-        typingClient.sendTypingSignal(username, isTyping, currentRoomId, currentUserId ?: "")
+        if (chatV2RequestObserver == null) {
+            Log.w(TAG, "sendTypingSignal: chatV2RequestObserver is null, dropping signal")
+            return
+        }
+        Log.d(TAG, "sendTypingSignal: roomId=$currentRoomId, isTyping=$isTyping")
+        chatV2RequestObserver?.onNext(
+            ChatV2MessageProto(
+                roomId = currentRoomId,
+                typing = ChatV2TypingProto(isTyping = isTyping)
+            )
+        )
     }
 
     // ====== ChatV2 Stream ======
@@ -380,7 +432,7 @@ object RealGrpcClient {
         val currentChannel = getChannel() ?: return
         if (chatV2RequestObserver != null) {
             val switchMsg = ChatV2MessageProto(roomId = roomId)
-            try { chatV2RequestObserver?.onNext(switchMsg) } catch (_: Exception) {}
+            try { chatV2RequestObserver?.onNext(switchMsg) } catch (e: Exception) { Log.e("RealGrpcClient", "Failed to send room switch message for $roomId", e) }
             return
         }
 
@@ -403,10 +455,9 @@ object RealGrpcClient {
         if (ctx != null) {
             lavender.client.android.data.auth.AuthManager.getAccessToken(ctx)?.let { accessToken ->
                 if (accessToken.isNotEmpty()) {
-                    val firstMsg = ChatV2MessageProto(jwtToken = accessToken, roomId = roomId)
+                    val firstMsg = ChatV2MessageProto(jwtToken = accessToken, roomId = roomId, clientVersion = lavender.client.android.BuildConfig.VERSION_NAME)
                     observer.onNext(firstMsg)
                     _authStatus.value = null
-                    startTypingStream()
                 } else {
                     Log.w(TAG, "ChatV2: no JWT token available")
                     _authStatus.value = "AUTH_FAILED"
@@ -434,7 +485,7 @@ object RealGrpcClient {
 
                     when (sysType) {
                         "DELETE_MESSAGE" -> {
-                            deletedMessageHashes.add("id:$sysMessage")
+                            addDeletedHash("id:$sysMessage")
                             scope.launch(Dispatchers.IO) { db()?.messageDao()?.deleteMessage(sysMessage) }
                             if (sysMessage.isNotEmpty()) {
                                 _messages.update { current -> current.filterNot { it.id == sysMessage } }
@@ -515,13 +566,94 @@ object RealGrpcClient {
                                 }
                             } catch (e: Exception) { Log.e(TAG, "Error parsing online users update", e) }
                         }
+                        "TYPING" -> {
+                            try {
+                                val parts = sysMessage.split("|", limit = 2)
+                                if (parts.size == 2) {
+                                    val typist = parts[0]
+                                    val isTyping = parts[1].toBooleanStrictOrNull() ?: false
+                                    val targetRoom = value.roomId.ifEmpty { currentRoomId }
+                                    Log.d(TAG, "TYPING received: typist=$typist, isTyping=$isTyping, targetRoom=$targetRoom, currentRoomId=$currentRoomId")
+                                    _typingUsers.update { current ->
+                                        val roomTyping = current[targetRoom]?.toMutableSet() ?: mutableSetOf()
+                                        if (isTyping) roomTyping.add(typist) else roomTyping.remove(typist)
+                                        current + (targetRoom to roomTyping)
+                                    }
+                                }
+                            } catch (e: Exception) { Log.e(TAG, "Error parsing typing signal", e) }
+                        }
+                        "REACTION_V2" -> {
+                            try {
+                                val parts = sysMessage.split("|", limit = 2)
+                                if (parts.size == 2) {
+                                    val messageId = parts[0]
+                                    val reactionsJson = parts[1]
+                                    val reactions = messageV2Client.parseReactions(reactionsJson.toByteArray())
+                                    val reactionsDbJson = org.json.JSONArray().apply {
+                                        reactions.forEach { r ->
+                                            put(org.json.JSONObject().apply {
+                                                put("user", r.user)
+                                                put("emoji", r.emoji)
+                                            })
+                                        }
+                                    }.toString()
+                                    _messages.update { current ->
+                                        val idx = current.indexOfFirst { it.id == messageId }
+                                        if (idx != -1) {
+                                            val list = current.toMutableList()
+                                            list[idx] = list[idx].copy(reactions = reactions)
+                                            scope.launch(Dispatchers.IO) {
+                                                db()?.messageDao()?.insertMessages(listOf(list[idx].toEntity()))
+                                            }
+                                            list
+                                        } else {
+                                            scope.launch(Dispatchers.IO) {
+                                                db()?.messageDao()?.updateReactions(messageId, reactionsDbJson)
+                                            }
+                                            current
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) { Log.e(TAG, "Error parsing reaction update", e) }
+                        }
                     }
                     return
                 }
                 // Handle message
                 if (value.message != null) {
                     val msg = messageV2Client.messageV2ToDomain(value.message)
+                    if (msg.roomId == currentRoomId) {
+                        _messages.update { current ->
+                            if (current.any { it.id == msg.id }) current
+                            else {
+                                val insertIndex = current.indexOfFirst { it.timestamp > msg.timestamp }
+                                val list = current.toMutableList()
+                                if (insertIndex == -1) list.add(msg) else list.add(insertIndex, msg)
+                                list
+                            }
+                        }
+                        scope.launch(Dispatchers.IO) {
+                            db()?.messageDao()?.insertMessages(listOf(msg.toEntity()))
+                        }
+                        val myUsername = currentUsername ?: ""
+                        if (msg.user.isNotEmpty() && msg.user != myUsername) {
+                            val isScreenOn = appContext?.let {
+                                val pm = it.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+                                pm.isInteractive
+                            } ?: true
+                            if (isScreenOn) {
+                                scheduleMarkRead(currentRoomId, myUsername)
+                            } else {
+                                appContext?.let { ctx ->
+                                    val title = msg.user.ifEmpty { "New message" }
+                                    val body = msg.text.take(200)
+                                    lavender.client.android.data.fcm.LavenderMessagingService.showNotificationFromStream(ctx, title, body, currentRoomId, msg.id)
+                                }
+                            }
+                        }
+                    }
                     onMessageReceived(msg)
+                    _newMessageEvent.tryEmit(msg)
                 }
             }
 
@@ -569,7 +701,17 @@ object RealGrpcClient {
     }
 
     fun editMessageV2(id: String, text: String, cb: (Boolean, String) -> Unit) {
-        messageV2Client.editMessageV2(id, text, cb)
+        messageV2Client.editMessageV2(id, text) { success, msg ->
+            if (success) {
+                _messages.update { current ->
+                    current.map { m -> if (m.id == id) m.copy(text = text, edited = true) else m }
+                }
+                scope.launch(Dispatchers.IO) {
+                    db()?.messageDao()?.updateMessageText(id, text, edited = true)
+                }
+            }
+            cb(success, msg)
+        }
     }
 
     fun deleteMessageV2(messageIds: List<String>, cb: (Boolean) -> Unit = {}) {
@@ -586,7 +728,9 @@ object RealGrpcClient {
 
     // ====== Messages V2 (delegated) ======
     fun addLocalMessage(message: Message) {
-        scope.launch(Dispatchers.IO) { db()?.messageDao()?.insertMessages(listOf(message.toEntity())) }
+        // Don't save to Room DB here — sendMessageV2 response handler saves with the correct server ID.
+        // Saving here creates a race condition where addLocalMessage's DB write
+        // overwrites sendMessageV2's DB write, leaving a stale UUID record.
         _messages.update { current ->
             val list = current.toMutableList()
             val existingIndex = list.indexOfFirst { it.id == message.id }
@@ -607,9 +751,45 @@ object RealGrpcClient {
         }
     }
     fun clearMessages() { _messages.value = emptyList() }
+
+    @Volatile private var markReadJob: kotlinx.coroutines.Job? = null
+    @Volatile private var pendingMarkReadRoom: String? = null
+    @Volatile private var pendingMarkReadUser: String? = null
+    private fun scheduleMarkRead(roomId: String, username: String) {
+        pendingMarkReadRoom = roomId
+        pendingMarkReadUser = username
+        markReadJob?.cancel()
+        markReadJob = scope.launch {
+            kotlinx.coroutines.delay(1000)
+            val rid = pendingMarkReadRoom ?: return@launch
+            val u = pendingMarkReadUser ?: return@launch
+            pendingMarkReadRoom = null
+            pendingMarkReadUser = null
+            markRead(rid, u, null)
+        }
+    }
+
     fun markRead(rid: String, u: String, onComp: (() -> Unit)?) {
         appContext?.let { lavender.client.android.data.fcm.LavenderMessagingService.dismissNotificationsForRoom(it, rid) }
-        onComp?.invoke()
+        val channel = getChannel()
+        if (channel == null) {
+            onComp?.invoke()
+            return
+        }
+        val userId = currentUserId ?: ""
+        val call = channel.newCall(METHOD_MARK_READ, CallOptions.DEFAULT)
+        call.start(object : ClientCall.Listener<MarkReadResponseProto>() {
+            override fun onMessage(response: MarkReadResponseProto) {}
+            override fun onClose(status: Status, trailers: Metadata) {
+                if (!status.isOk) {
+                    ErrorHandler.handle("$TAG.markRead", StatusRuntimeException(status))
+                }
+                onComp?.invoke()
+            }
+        }, Metadata())
+        call.sendMessage(MarkReadRequestProto(roomId = rid, username = u, userId = userId))
+        call.halfClose()
+        call.request(1)
     }
 
     // ====== Chat List (delegated) ======
@@ -619,6 +799,8 @@ object RealGrpcClient {
     fun registerToken(user: String, token: String, pushEnabled: Boolean) { chatAuxClient.registerToken(user, token, pushEnabled) }
     fun fetchUserId(username: String, callback: (String?, Boolean) -> Unit) { chatAuxClient.fetchUserId(username, callback) }
     fun loadAllUsers(cb: (List<UserInfoProto>) -> Unit) { chatAuxClient.loadAllUsers(cb) }
+    fun getAdminUserList(query: String, cursor: String, limit: Int, sortBy: String, callback: (GetAdminUserListResponseProto) -> Unit) { chatAuxClient.getAdminUserList(query, cursor, limit, sortBy, callback) }
+    fun getAdminUserSessions(userId: String, callback: (GetAdminUserSessionsResponseProto) -> Unit) { chatAuxClient.getAdminUserSessions(userId, callback) }
     fun getMutedChats(callback: (List<String>) -> Unit) { chatAuxClient.getMutedChats(callback) }
     fun setMutedChat(roomId: String, muted: Boolean, callback: (Boolean) -> Unit) { chatAuxClient.setMutedChat(roomId, muted, callback) }
     fun deleteChat(cid: String, requesterUsername: String, cb: (Boolean, String) -> Unit) { chatClient.deleteChat(cid, requesterUsername, cb) }
@@ -684,6 +866,7 @@ object RealGrpcClient {
     }
     fun clearSystemNotification() { _systemNotification.value = null }
     fun setUserId(userId: String) { currentUserId = userId }
+    fun setUsername(username: String) { currentUsername = username }
     fun getUserId(): String? = currentUserId
     fun getCurrentUsername(): String? = currentUsername
 
@@ -728,11 +911,13 @@ object RealGrpcClient {
         }
     }
 
-    private var database: AppDatabase? = null
-    private fun db() = database ?: appContext?.let {
-        val d = AppDatabase.getDatabase(it)
+    @Volatile private var database: AppDatabase? = null
+    private fun db(): AppDatabase? {
+        database?.let { return it }
+        val ctx = appContext ?: return null
+        val d = AppDatabase.getDatabase(ctx)
         database = d
-        d
+        return d
     }
 
     fun loadUsers() {

@@ -1,5 +1,7 @@
 package lavender.client.android.data.db
+import android.util.Log
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import lavender.client.android.data.ai.AiProviderType
@@ -8,13 +10,15 @@ import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.models.Reaction
 
+private const val TAG = "Entities"
+
 @Entity(tableName = "messages")
 data class MessageEntity(
     @PrimaryKey val id: String,
     val user: String,
     val text: String,
     val timestamp: Long,
-    val roomId: String,
+    @ColumnInfo(index = true) val roomId: String,
     val repliedToMessageId: String,
     val repliedToUser: String,
     val repliedToText: String,
@@ -27,7 +31,7 @@ data class MessageEntity(
     val voiceUrl: String,
     val duration: Int,
     val userId: String = "",
-    val isSent: Boolean = true,
+    @ColumnInfo(index = true) val isSent: Boolean = true,
     val reactionsJson: String // Serialized List<Reaction>
 )
 
@@ -35,7 +39,7 @@ data class MessageEntity(
 data class ChatEntity(
     @PrimaryKey val id: String,
     val name: String,
-    val type: String,
+    @ColumnInfo(index = true) val type: String,
     val participants: String,
     val createdAt: Long,
     val unreadCount: Int,
@@ -55,7 +59,10 @@ data class ChatEntity(
     val agentMode: String = "",
     val isPinned: Boolean = false,
     val isArchived: Boolean = false,
-    val pinnedAt: Long = 0L
+    val pinnedAt: Long = 0L,
+    val companyId: String = "",
+    val companyChatAccess: String = "",
+    val companyMinPositionLevel: Int = 0
 )
 
 fun Message.toEntity(): MessageEntity {
@@ -101,7 +108,7 @@ fun MessageEntity.toDomain(): Message {
             val obj = arr.getJSONObject(i)
             reactions.add(Reaction(obj.getString("user"), obj.getString("emoji")))
         }
-    } catch (_: Exception) {}
+    } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
 
     val imageUrls = mutableListOf<String>()
     try {
@@ -109,7 +116,7 @@ fun MessageEntity.toDomain(): Message {
         for (i in 0 until arr.length()) {
             imageUrls.add(arr.getString(i))
         }
-    } catch (_: Exception) {}
+    } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
 
     return Message(
         id = id,
@@ -138,7 +145,7 @@ fun ChatInfo.toEntity(): ChatEntity = ChatEntity(
     id, name, type, participants, createdAt, unreadCount, lastMessageTime,
     creator, lastMessageText, avatarUrl, fullAvatarUrl, lastMessageUsername, isMuted, lastMessageHasImage,
     allowMembersToAdd, isSecret, peerPublicKey, e2eeReady, activeAgentId, agentMode,
-    isPinned, isArchived, pinnedAt
+    isPinned, isArchived, pinnedAt, companyId, companyChatAccess, companyMinPositionLevel
 )
 
 fun ChatEntity.toDomain(): ChatInfo = ChatInfo(
@@ -146,7 +153,7 @@ fun ChatEntity.toDomain(): ChatInfo = ChatInfo(
     creator, lastMessageText, avatarUrl, fullAvatarUrl, lastMessageUsername, muted, lastMessageHasImage,
     allowMembersToAdd, conferenceStartTime = 0L,
     isSecret, peerPublicKey, e2eeReady, activeAgentId, agentMode,
-    isPinned, isArchived, pinnedAt
+    isPinned, isArchived, pinnedAt, companyId, companyChatAccess, companyMinPositionLevel
 )
 
 @Entity(tableName = "marketplace_agents")

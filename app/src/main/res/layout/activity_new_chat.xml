@@ -25,6 +25,7 @@
         android:elevation="0dp"
         app:navigationIcon="@drawable/ic_back_arrow"
         app:navigationIconTint="?attr/colorOnPrimary"
+        app:titleTextColor="?attr/colorOnPrimary"
         app:layout_constraintTop_toTopOf="parent">
 
         <RelativeLayout
@@ -114,23 +115,41 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <ImageView
+            <LinearLayout
                 android:id="@+id/btnLobby"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:layout_marginEnd="8dp"
-                android:padding="8dp"
-                android:src="@drawable/ic_groups_2"
-                android:background="@drawable/circle_button"
-                android:backgroundTint="?attr/colorPrimary"
-                app:tint="?attr/colorOnPrimary"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="4dp"
                 android:visibility="gone"
                 tools:visibility="visible"
                 android:clickable="true"
                 android:focusable="true"
-                android:contentDescription="@string/conference" />
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/open_lobby">
+
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_conference_lobby"
+                    android:background="@drawable/circle_button"
+                    android:backgroundTint="?attr/colorPrimary"
+                    app:tint="?attr/colorOnPrimary"
+                    android:padding="4dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/lobby"
+                    android:textSize="9sp"
+                    android:textColor="?attr/colorOnSurface"
+                    android:layout_marginTop="1dp" />
+
+            </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/selectionToolbar"
@@ -155,24 +174,6 @@
                     tools:text="1" />
 
                 <ImageButton
-                    android:id="@+id/starMessages"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_star"
-                    app:tint="?attr/colorOnPrimary"
-                    android:contentDescription="@string/save_theme" />
-
-                <ImageButton
-                    android:id="@+id/copyMessages"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_copy"
-                    app:tint="?attr/colorOnPrimary"
-                    android:contentDescription="@string/copy" />
-
-                <ImageButton
                     android:id="@+id/replyMessage"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
@@ -182,15 +183,6 @@
                     android:contentDescription="@string/reply" />
 
                 <ImageButton
-                    android:id="@+id/pinMessage"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_lock"
-                    app:tint="?attr/colorOnPrimary"
-                    android:contentDescription="@string/pin_message" />
-
-                <ImageButton
                     android:id="@+id/forwardMessages"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
@@ -198,6 +190,15 @@
                     android:src="@drawable/ic_forward"
                     app:tint="?attr/colorOnPrimary"
                     android:contentDescription="@string/forward" />
+
+                <ImageButton
+                    android:id="@+id/copyMessages"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_copy"
+                    app:tint="?attr/colorOnPrimary"
+                    android:contentDescription="@string/copy" />
 
                 <ImageButton
                     android:id="@+id/deleteMessages"
@@ -250,6 +251,7 @@
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/search_previous"
                     android:src="@android:drawable/arrow_up_float"
                     app:tint="?attr/colorOnPrimary" />
 
@@ -258,6 +260,7 @@
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/search_next"
                     android:src="@android:drawable/arrow_down_float"
                     app:tint="?attr/colorOnPrimary" />
 
@@ -378,6 +381,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cancel_reply"
                 android:src="@drawable/ic_close"
                 app:tint="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
@@ -507,7 +511,7 @@
                 android:id="@+id/uploadProgressText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Загрузка изображений..."
+                android:text="@string/uploading_images_label"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp"
                 android:layout_marginBottom="8dp" />

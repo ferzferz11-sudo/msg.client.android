@@ -4,9 +4,9 @@ import android.content.Context
 import android.util.Log
 import io.grpc.ManagedChannel
 import io.grpc.okhttp.OkHttpChannelBuilder
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
-import lavender.client.android.data.proto.*
 import java.util.concurrent.TimeUnit
 
 /**
@@ -27,23 +27,34 @@ class GrpcConnectionManager(
 ) {
     companion object {
         private const val TAG = "GrpcConnectionManager"
+
+        // Channel configuration
+        private const val KEEP_ALIVE_TIME_SECONDS = 30L
+        private const val KEEP_ALIVE_TIMEOUT_SECONDS = 20L
+        private const val MAX_INBOUND_MESSAGE_SIZE = 64 * 1024 * 1024 // 64 MB
+        private const val IDLE_TIMEOUT_MINUTES = 25L
+
+        // HTTP port mapping
+        private const val DEV_GRPC_PORT = 50052
+        private const val DEV_HTTP_PORT = 8083
+        private const val PROD_HTTP_PORT = 8082
     }
 
-    var channel: ManagedChannel? = null
+    @Volatile var channel: ManagedChannel? = null
         private set
 
-    var currentServerAddress: String? = null
+    @Volatile var currentServerAddress: String? = null
         private set
-    var currentServerPort: Int = 50051
+    @Volatile var currentServerPort: Int = 50051
         private set
 
-    private var reconnectJob: Job? = null
-    private var reconnectDelayMs = 5000L
-    private var appContext: Context? = null
+    @Volatile private var appContext: Context? = null
 
-    /** Guard: skip reconnect on auth failures. Set by GrpcAuthClient. */
-    @Volatile
-    var isAuthFailure: Boolean = false
+    val reconnectStrategy = GrpcReconnectStrategy(scope)
+
+    var isAuthFailure: Boolean
+        get() = reconnectStrategy.isAuthFailure
+        set(value) { reconnectStrategy.isAuthFailure = value }
 
     fun isConnectedTo(host: String, port: Int): Boolean {
         val ch = channel
@@ -60,78 +71,25 @@ class GrpcConnectionManager(
         forceReconnect: Boolean = false
     ) {
         Log.d(TAG, "connect() called: addr=$serverAddress:$port force=$forceReconnect status=${connectionStatus.value}")
-        if (forceReconnect) {
-            Log.d(TAG, "forceReconnect requested — stack: ${Thread.currentThread().stackTrace.take(8).joinToString(" -> ") { "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" }}")
-        }
 
-        val channelDead = channel?.isShutdown == true || channel?.isTerminated == true
-        val addressMatch = currentServerAddress == serverAddress
-        val channelAlive = channel != null && !channelDead && connectionStatus.value == ConnectionStatus.READY
-
-        if (addressMatch && channelAlive && !forceReconnect) {
-            Log.d(TAG, "Connection already READY, keeping active streams")
+        if (!shouldConnect(serverAddress, forceReconnect)) {
             return
         }
 
-        // CRITICAL: Do not reset channel if a call is in progress
-        if (lavender.client.android.data.calls.CallManager.currentCall.value != null) {
+        if (isCallInProgress()) {
             Log.w(TAG, "Call in progress, preventing channel reset")
             return
         }
 
-        appContext = context?.applicationContext
-        currentServerAddress = serverAddress
-        currentServerPort = port
+        updateServerAddress(serverAddress, port, context)
+        updateConnectionStatus(isReconnecting = connectionStatus.value == ConnectionStatus.READY ||
+                connectionStatus.value == ConnectionStatus.RECONNECTING)
 
-        Log.d(TAG, "Connecting to $serverAddress:$port (TLS: $useTls)")
-        val wasConnected = connectionStatus.value == ConnectionStatus.READY ||
-                connectionStatus.value == ConnectionStatus.RECONNECTING
-        connectionStatus.value = if (wasConnected) ConnectionStatus.RECONNECTING else ConnectionStatus.CONNECTING
-
-        try {
-            val builder = OkHttpChannelBuilder.forAddress(serverAddress, port)
-            if (useTls) {
-                builder.useTransportSecurity()
-            } else {
-                builder.usePlaintext()
-            }
-
-            builder.keepAliveTime(30, TimeUnit.SECONDS)
-            builder.keepAliveTimeout(10, TimeUnit.SECONDS)
-            builder.keepAliveWithoutCalls(true)
-            builder.maxInboundMessageSize(64 * 1024 * 1024)
-            builder.idleTimeout(25, TimeUnit.MINUTES)
-
-            val appCtx = context?.applicationContext
-            if (appCtx != null) {
-                builder.intercept(BearerTokenInterceptor(appCtx))
-            }
-
-            channel?.shutdownNow()
-            val newChannel = builder.build()
-            channel = newChannel
-
-            connectionStatus.value = ConnectionStatus.READY
-            resetReconnectBackoff()
-            Log.d(TAG, "Channel built — READY (optimistic): $serverAddress")
-            RealGrpcClient.clearServerShuttingDown()
-
-            if (context != null) {
-                val httpPort = if (port == 50052) 8083 else 8082
-                scope.launch {
-                    try {
-                        onFetchServerInfo(serverAddress, httpPort, context)
-                    } catch (e: Exception) {
-                        Log.w(TAG, "fetchServerInfo failed: ${e.message}")
-                    }
-                }
-            }
-
-            onAutoResumeChat()
-        } catch (e: Exception) {
-            Log.e(TAG, "Connection failed", e)
-            connectionStatus.value = ConnectionStatus.RECONNECTING
-            scheduleReconnect(serverAddress, useTls, port, context)
+        val newChannel = buildChannel(serverAddress, useTls, port, context)
+        if (newChannel != null) {
+            activateChannel(newChannel, serverAddress, port, context)
+        } else {
+            scheduleReconnect(serverAddress, useTls, port)
         }
     }
 
@@ -144,27 +102,118 @@ class GrpcConnectionManager(
     }
 
     fun disconnect() {
-        reconnectJob?.cancel()
-        reconnectJob = null
-        resetReconnectBackoff()
+        reconnectStrategy.cancel()
+        reconnectStrategy.resetBackoff()
         channel?.shutdown()
         channel = null
         connectionStatus.value = ConnectionStatus.DISCONNECTED
     }
 
-    private fun scheduleReconnect(serverAddress: String, useTls: Boolean, port: Int, context: Context?) {
-        reconnectJob?.cancel()
-        reconnectJob = scope.launch {
-            val delayMs = reconnectDelayMs.coerceAtMost(30000L)
-            Log.d(TAG, "Scheduling reconnect in ${delayMs}ms...")
-            delay(delayMs)
-            reconnectDelayMs = (reconnectDelayMs * 2).coerceAtMost(60000L)
-            Log.d(TAG, "Retrying connection to $serverAddress...")
-            connect(serverAddress, useTls, port, context)
+    fun resetReconnectBackoff() {
+        reconnectStrategy.resetBackoff()
+    }
+
+    // ====== Private helpers ======
+
+    private fun shouldConnect(serverAddress: String, forceReconnect: Boolean): Boolean {
+        val channelDead = channel?.isShutdown == true || channel?.isTerminated == true
+        val addressMatch = currentServerAddress == serverAddress
+        val channelAlive = channel != null && !channelDead && connectionStatus.value == ConnectionStatus.READY
+
+        if (addressMatch && channelAlive && !forceReconnect) {
+            Log.d(TAG, "Connection already READY, keeping active streams")
+            return false
+        }
+        return true
+    }
+
+    private fun isCallInProgress(): Boolean {
+        return lavender.client.android.data.calls.CallManager.currentCall.value != null
+    }
+
+    private fun updateServerAddress(serverAddress: String, port: Int, context: Context?) {
+        appContext = context?.applicationContext
+        currentServerAddress = serverAddress
+        currentServerPort = port
+    }
+
+    private fun updateConnectionStatus(isReconnecting: Boolean) {
+        Log.d(TAG, "Connecting to $currentServerAddress:$currentServerPort")
+        connectionStatus.value = if (isReconnecting) ConnectionStatus.RECONNECTING else ConnectionStatus.CONNECTING
+    }
+
+    private fun buildChannel(
+        serverAddress: String,
+        useTls: Boolean,
+        port: Int,
+        context: Context?
+    ): ManagedChannel? {
+        return try {
+            val builder = OkHttpChannelBuilder.forAddress(serverAddress, port)
+
+            if (useTls) {
+                builder.useTransportSecurity()
+            } else {
+                builder.usePlaintext()
+            }
+
+            builder.keepAliveTime(KEEP_ALIVE_TIME_SECONDS, TimeUnit.SECONDS)
+            builder.keepAliveTimeout(KEEP_ALIVE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            builder.keepAliveWithoutCalls(true)
+            builder.maxInboundMessageSize(MAX_INBOUND_MESSAGE_SIZE)
+            builder.idleTimeout(IDLE_TIMEOUT_MINUTES, TimeUnit.MINUTES)
+
+            val appCtx = context?.applicationContext
+            if (appCtx != null) {
+                builder.intercept(BearerTokenInterceptor(appCtx))
+            }
+
+            val newChannel = builder.build()
+            val oldChannel = channel
+            channel = newChannel
+            oldChannel?.shutdown()
+            Log.d(TAG, "Channel built: $serverAddress:$port")
+            newChannel
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to build channel", e)
+            null
         }
     }
 
-    fun resetReconnectBackoff() {
-        reconnectDelayMs = 5000L
+    private fun activateChannel(
+        newChannel: ManagedChannel,
+        serverAddress: String,
+        port: Int,
+        context: Context?
+    ) {
+        channel = newChannel
+        connectionStatus.value = ConnectionStatus.READY
+        reconnectStrategy.resetBackoff()
+        Log.d(TAG, "Channel activated — READY (optimistic): $serverAddress")
+        RealGrpcClient.clearServerShuttingDown()
+
+        fetchServerInfoIfNeeded(serverAddress, port, context)
+        onAutoResumeChat()
+    }
+
+    private fun fetchServerInfoIfNeeded(serverAddress: String, port: Int, context: Context?) {
+        if (context != null) {
+            val httpPort = if (port == DEV_GRPC_PORT) DEV_HTTP_PORT else PROD_HTTP_PORT
+            scope.launch {
+                try {
+                    onFetchServerInfo(serverAddress, httpPort, context)
+                } catch (e: Exception) {
+                    Log.w(TAG, "fetchServerInfo failed: ${e.message}")
+                }
+            }
+        }
+    }
+
+    private fun scheduleReconnect(serverAddress: String, useTls: Boolean, port: Int) {
+        connectionStatus.value = ConnectionStatus.RECONNECTING
+        reconnectStrategy.schedule {
+            val appCtx = appContext
+            connect(serverAddress, useTls, port, appCtx)
+        }
     }
 }

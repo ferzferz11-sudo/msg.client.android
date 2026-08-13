@@ -1,11 +1,7 @@
 package lavender.client.android.data.grpc
 
 import com.google.protobuf.Timestamp
-import io.grpc.MethodDescriptor
 import lavender.client.android.data.proto.*
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.InputStream
 
 // ======= MARSHALLERS =======
 // Extracted from RealGrpcClient v1.1.3.27 — all gRPC MethodDescriptor.Marshaller implementations.
@@ -147,9 +143,9 @@ class GetChatsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetChatsR
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
                 1 -> {
                     val len = cis.readUInt32(); val b = cis.readRawBytes(len); val cisis = com.google.protobuf.CodedInputStream.newInstance(b)
-                    var id = ""; var n = ""; var t = ""; var p = ""; var ca: Timestamp? = null; var uc = 0; var lmt: Timestamp? = null; var cr = ""; var lmtxt = ""; var au = ""; var fau = ""; var lmu = ""; var lmhi = false; var amta = false; var cst: Timestamp? = null; var isSecret = false; var peerKey = ""; var e2eeReady = false; var activeAgentId = ""; var agentMode = ""; var isPinned = false; var isMuted = false; var isArchived = false; var pinnedAt = 0L
-                    while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> n = cisis.readString(); 3 -> t = cisis.readString(); 4 -> p = cisis.readString(); 5 -> { val l = cisis.readUInt32(); ca = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 6 -> uc = cisis.readInt32(); 7 -> { val l = cisis.readUInt32(); lmt = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 8 -> cr = cisis.readString(); 9 -> lmtxt = cisis.readString(); 10 -> au = cisis.readString(); 11 -> fau = cisis.readString(); 12 -> lmu = cisis.readString(); 13 -> lmhi = cisis.readBool(); 14 -> amta = cisis.readBool(); 15 -> isSecret = cisis.readBool(); 16 -> peerKey = cisis.readString(); 17 -> e2eeReady = cisis.readBool(); 20 -> activeAgentId = cisis.readString(); 21 -> agentMode = cisis.readString(); 22 -> isPinned = cisis.readBool(); 23 -> isMuted = cisis.readBool(); 24 -> isArchived = cisis.readBool(); 25 -> pinnedAt = cisis.readInt64(); else -> cisis.skipField(t2) } }
-                    chats.add(ChatInfoProto(id, n, t, p, ca, uc, lmt, cr, lmtxt, au, fau, lmu, lmhi, amta, cst, isSecret, peerKey, e2eeReady, activeAgentId, agentMode, isPinned, isMuted, isArchived, pinnedAt))
+                    var id = ""; var n = ""; var t = ""; var p = ""; var ca: Timestamp? = null; var uc = 0; var lmt: Timestamp? = null; var cr = ""; var lmtxt = ""; var au = ""; var fau = ""; var lmu = ""; var lmhi = false; var amta = false; var cst: Timestamp? = null; var isSecret = false; var peerKey = ""; var e2eeReady = false; var activeAgentId = ""; var agentMode = ""; var isPinned = false; var isMuted = false; var isArchived = false; var pinnedAt = 0L; var companyId = ""; var companyChatAccess = ""; var companyMinPositionLevel = 0
+                    while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> n = cisis.readString(); 3 -> t = cisis.readString(); 4 -> p = cisis.readString(); 5 -> { val l = cisis.readUInt32(); ca = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 6 -> uc = cisis.readInt32(); 7 -> { val l = cisis.readUInt32(); lmt = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 8 -> cr = cisis.readString(); 9 -> lmtxt = cisis.readString(); 10 -> au = cisis.readString(); 11 -> fau = cisis.readString(); 12 -> lmu = cisis.readString(); 13 -> lmhi = cisis.readBool(); 14 -> amta = cisis.readBool(); 15 -> isSecret = cisis.readBool(); 16 -> peerKey = cisis.readString(); 17 -> e2eeReady = cisis.readBool(); 20 -> activeAgentId = cisis.readString(); 21 -> agentMode = cisis.readString(); 22 -> isPinned = cisis.readBool(); 23 -> isMuted = cisis.readBool(); 24 -> isArchived = cisis.readBool(); 25 -> pinnedAt = cisis.readInt64(); 26 -> companyId = cisis.readString(); 27 -> companyChatAccess = cisis.readString(); 28 -> companyMinPositionLevel = cisis.readInt32(); else -> cisis.skipField(t2) } }
+                    chats.add(ChatInfoProto(id, n, t, p, ca, uc, lmt, cr, lmtxt, au, fau, lmu, lmhi, amta, cst, isSecret, peerKey, e2eeReady, activeAgentId, agentMode, isPinned, isMuted, isArchived, pinnedAt, companyId, companyChatAccess, companyMinPositionLevel))
                 }
                 2 -> nextCursor = cis.readString()
                 3 -> hasMore = cis.readBool()
@@ -343,8 +339,24 @@ class GetFavoritesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetFa
     override fun stream(v: GetFavoritesResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
     override fun parse(s: java.io.InputStream): GetFavoritesResponseProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); val msgs = mutableListOf<MessageV2Proto>()
-        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) { val len = cis.readUInt32(); msgs.add(lavender.client.android.data.grpc.MessageV2ProtoMarshaller().parse(java.io.ByteArrayInputStream(cis.readRawBytes(len)))) } else cis.skipField(tag) }
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) { val len = cis.readUInt32(); val v1 = MessageProtoMarshaller().parse(java.io.ByteArrayInputStream(cis.readRawBytes(len))); msgs.add(v1ToV2(v1)) } else cis.skipField(tag) }
         return GetFavoritesResponseProto(msgs)
+    }
+    private fun v1ToV2(v1: MessageProto): MessageV2Proto {
+        if (v1.createdAt != null && v1.createdAt.seconds != 0L) { }
+        val senderId = v1.userId.ifEmpty { v1.user }
+        val media = when {
+            v1.imageUrl.isNotEmpty() -> MessageMediaProto(type = "image", url = v1.imageUrl, urls = v1.imageUrls)
+            v1.voiceUrl.isNotEmpty() -> MessageMediaProto(type = "voice", url = v1.voiceUrl, duration = v1.duration)
+            else -> null
+        }
+        val reply = if (v1.repliedToMessageId.isNotEmpty()) MessageReplyProto(messageId = v1.repliedToMessageId, preview = v1.repliedToText, senderId = v1.repliedToUser) else null
+        val reactionsJson = if (v1.reactions.isNotEmpty()) {
+            val obj = org.json.JSONObject()
+            for (r in v1.reactions) { if (r.user.isNotEmpty() && r.emoji.isNotEmpty()) obj.put(r.user, r.emoji) }
+            obj.toString().toByteArray()
+        } else byteArrayOf()
+        return MessageV2Proto(id = v1.id, senderId = senderId, roomId = v1.roomId, text = v1.text, media = media, reply = reply, edited = v1.edited, isRead = v1.isRead, createdAt = v1.createdAt, reactions = reactionsJson, isE2EE = v1.isE2Ee, e2eePayload = v1.e2EePayload)
     }
 }
 
@@ -643,7 +655,7 @@ class RemoveParticipantResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<
 class AddContactRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<AddContactRequestProto> {
     override fun stream(v: AddContactRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.contactUsername.isNotEmpty()) cos.writeString(2, v.contactUsername); if (v.username.isNotEmpty()) cos.writeString(3, v.username)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.contactUsername.isNotEmpty()) cos.writeString(2, v.contactUsername); if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): AddContactRequestProto = AddContactRequestProto()
@@ -661,7 +673,7 @@ class AddContactResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<AddCont
 class RemoveContactRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<RemoveContactRequestProto> {
     override fun stream(v: RemoveContactRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.contactUsername.isNotEmpty()) cos.writeString(2, v.contactUsername); if (v.username.isNotEmpty()) cos.writeString(3, v.username)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.contactUsername.isNotEmpty()) cos.writeString(2, v.contactUsername); if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): RemoveContactRequestProto = RemoveContactRequestProto()
@@ -679,7 +691,7 @@ class RemoveContactResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Remo
 class GetContactsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetContactsRequestProto> {
     override fun stream(v: GetContactsRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.username.isNotEmpty()) cos.writeString(2, v.username)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): GetContactsRequestProto = GetContactsRequestProto()
@@ -705,9 +717,9 @@ class GetAllChatsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAll
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); val chats = mutableListOf<ChatInfoProto>()
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
                 val len = cis.readUInt32(); val b = cis.readRawBytes(len); val cisis = com.google.protobuf.CodedInputStream.newInstance(b)
-                var id = ""; var n = ""; var t = ""; var p = ""; var ca: Timestamp? = null; var uc = 0; var lmt: Timestamp? = null; var cr = ""; var lmtxt = ""; var au = ""; var fau = ""; var lmu = ""; var lmhi = false; var amta = false; var cst: Timestamp? = null; var isSecret = false; var peerKey = ""; var e2eeReady = false; var activeAgentId = ""; var agentMode = ""; var isPinned = false; var isMuted = false; var isArchived = false; var pinnedAt = 0L
-                while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> n = cisis.readString(); 3 -> t = cisis.readString(); 4 -> p = cisis.readString(); 5 -> { val l = cisis.readUInt32(); ca = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 6 -> uc = cisis.readInt32(); 7 -> { val l = cisis.readUInt32(); lmt = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 8 -> cr = cisis.readString(); 9 -> lmtxt = cisis.readString(); 10 -> au = cisis.readString(); 11 -> fau = cisis.readString(); 12 -> lmu = cisis.readString(); 13 -> lmhi = cisis.readBool(); 14 -> amta = cisis.readBool(); 15 -> isSecret = cisis.readBool(); 16 -> peerKey = cisis.readString(); 17 -> e2eeReady = cisis.readBool(); 20 -> activeAgentId = cisis.readString(); 21 -> agentMode = cisis.readString(); 22 -> isPinned = cisis.readBool(); 23 -> isMuted = cisis.readBool(); 24 -> isArchived = cisis.readBool(); 25 -> pinnedAt = cisis.readInt64(); else -> cisis.skipField(t2) } }
-                chats.add(ChatInfoProto(id, n, t, p, ca, uc, lmt, cr, lmtxt, au, fau, lmu, lmhi, amta, cst, isSecret, peerKey, e2eeReady, activeAgentId, agentMode, isPinned, isMuted, isArchived, pinnedAt))
+                var id = ""; var n = ""; var t = ""; var p = ""; var ca: Timestamp? = null; var uc = 0; var lmt: Timestamp? = null; var cr = ""; var lmtxt = ""; var au = ""; var fau = ""; var lmu = ""; var lmhi = false; var amta = false; var cst: Timestamp? = null; var isSecret = false; var peerKey = ""; var e2eeReady = false; var activeAgentId = ""; var agentMode = ""; var isPinned = false; var isMuted = false; var isArchived = false; var pinnedAt = 0L; var companyId = ""; var companyChatAccess = ""; var companyMinPositionLevel = 0
+                while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> n = cisis.readString(); 3 -> t = cisis.readString(); 4 -> p = cisis.readString(); 5 -> { val l = cisis.readUInt32(); ca = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 6 -> uc = cisis.readInt32(); 7 -> { val l = cisis.readUInt32(); lmt = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 8 -> cr = cisis.readString(); 9 -> lmtxt = cisis.readString(); 10 -> au = cisis.readString(); 11 -> fau = cisis.readString(); 12 -> lmu = cisis.readString(); 13 -> lmhi = cisis.readBool(); 14 -> amta = cisis.readBool(); 15 -> isSecret = cisis.readBool(); 16 -> peerKey = cisis.readString(); 17 -> e2eeReady = cisis.readBool(); 20 -> activeAgentId = cisis.readString(); 21 -> agentMode = cisis.readString(); 22 -> isPinned = cisis.readBool(); 23 -> isMuted = cisis.readBool(); 24 -> isArchived = cisis.readBool(); 25 -> pinnedAt = cisis.readInt64(); 26 -> companyId = cisis.readString(); 27 -> companyChatAccess = cisis.readString(); 28 -> companyMinPositionLevel = cisis.readInt32(); else -> cisis.skipField(t2) } }
+                chats.add(ChatInfoProto(id, n, t, p, ca, uc, lmt, cr, lmtxt, au, fau, lmu, lmhi, amta, cst, isSecret, peerKey, e2eeReady, activeAgentId, agentMode, isPinned, isMuted, isArchived, pinnedAt, companyId, companyChatAccess, companyMinPositionLevel))
             } else cis.skipField(tag)
         }
         return GetAllChatsResponseProto(chats)
@@ -749,9 +761,9 @@ class GetThemesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetTheme
                 1 -> tid = cis.readString()
                 2 -> {
                     val len = cis.readUInt32(); val b = cis.readRawBytes(len); val cisis = com.google.protobuf.CodedInputStream.newInstance(b)
-                    var id = ""; var name = ""; var pc = ""; var opc = ""; var sc = ""; var osc = ""; var bc = ""; var tpc = ""; var tsc = ""; var clbu = ""; var cbu = ""; var bpc = ""; var obpc = ""; var sctr = ""; var obc = ""; var ibc = ""; var idark = false
-                    while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> name = cisis.readString(); 3 -> pc = cisis.readString(); 4 -> opc = cisis.readString(); 5 -> sc = cisis.readString(); 6 -> osc = cisis.readString(); 7 -> bc = cisis.readString(); 8 -> tpc = cisis.readString(); 9 -> tsc = cisis.readString(); 10 -> idark = cisis.readBool(); 11 -> cbu = cisis.readString(); 12 -> clbu = cisis.readString(); 13 -> bpc = cisis.readString(); 14 -> obpc = cisis.readString(); 15 -> sctr = cisis.readString(); 16 -> obc = cisis.readString(); 17 -> ibc = cisis.readString(); else -> cisis.skipField(t2) } }
-                    themes.add(CustomThemeProto(id, name, pc, opc, sc, osc, bc, tpc, tsc, clbu, cbu, bpc, obpc, sctr, obc, ibc))
+                    var id = ""; var name = ""; var pc = ""; var opc = ""; var sc = ""; var osc = ""; var bc = ""; var tpc = ""; var tsc = ""; var clbu = ""; var cbu = ""; var bpc = ""; var obpc = ""; var sctr = ""; var obc = ""; var ibc = ""; var idark = false; var otc = ""; var itc = ""
+                    while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> name = cisis.readString(); 3 -> pc = cisis.readString(); 4 -> opc = cisis.readString(); 5 -> sc = cisis.readString(); 6 -> osc = cisis.readString(); 7 -> bc = cisis.readString(); 8 -> tpc = cisis.readString(); 9 -> tsc = cisis.readString(); 10 -> idark = cisis.readBool(); 11 -> cbu = cisis.readString(); 12 -> clbu = cisis.readString(); 13 -> bpc = cisis.readString(); 14 -> obpc = cisis.readString(); 15 -> sctr = cisis.readString(); 16 -> obc = cisis.readString(); 17 -> ibc = cisis.readString(); 18 -> otc = cisis.readString(); 19 -> itc = cisis.readString(); else -> cisis.skipField(t2) } }
+                    themes.add(CustomThemeProto(id, name, pc, opc, sc, osc, bc, tpc, tsc, idark, clbu, cbu, bpc, obpc, sctr, obc, ibc, otc, itc))
                 }
                 else -> cis.skipField(tag)
             } }
@@ -764,7 +776,7 @@ class SaveThemeRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<SaveTheme
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.username.isNotEmpty()) cos.writeString(1, v.username)
         cos.writeTag(2, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED); val tbaos = java.io.ByteArrayOutputStream(); val tcos = com.google.protobuf.CodedOutputStream.newInstance(tbaos); val th = v.theme
-        if (th.id.isNotEmpty()) tcos.writeString(1, th.id); if (th.name.isNotEmpty()) tcos.writeString(2, th.name); if (th.primaryColor.isNotEmpty()) tcos.writeString(3, th.primaryColor); if (th.onPrimaryColor.isNotEmpty()) tcos.writeString(4, th.onPrimaryColor); if (th.surfaceColor.isNotEmpty()) tcos.writeString(5, th.surfaceColor); if (th.onSurfaceColor.isNotEmpty()) tcos.writeString(6, th.onSurfaceColor); if (th.backgroundColor.isNotEmpty()) tcos.writeString(7, th.backgroundColor); if (th.textPrimaryColor.isNotEmpty()) tcos.writeString(8, th.textPrimaryColor); if (th.textSecondaryColor.isNotEmpty()) tcos.writeString(9, th.textSecondaryColor); if (th.chatBackgroundImageUrl.isNotEmpty()) tcos.writeString(11, th.chatBackgroundImageUrl); if (th.chatListBackgroundImageUrl.isNotEmpty()) tcos.writeString(12, th.chatListBackgroundImageUrl); if (th.bottomPanelColor.isNotEmpty()) tcos.writeString(13, th.bottomPanelColor); if (th.onBottomPanelColor.isNotEmpty()) tcos.writeString(14, th.onBottomPanelColor); if (th.surfaceContainer.isNotEmpty()) tcos.writeString(15, th.surfaceContainer); if (th.outgoingBubbleColor.isNotEmpty()) tcos.writeString(16, th.outgoingBubbleColor); if (th.incomingBubbleColor.isNotEmpty()) tcos.writeString(17, th.incomingBubbleColor)
+        if (th.id.isNotEmpty()) tcos.writeString(1, th.id); if (th.name.isNotEmpty()) tcos.writeString(2, th.name); if (th.primaryColor.isNotEmpty()) tcos.writeString(3, th.primaryColor); if (th.onPrimaryColor.isNotEmpty()) tcos.writeString(4, th.onPrimaryColor); if (th.surfaceColor.isNotEmpty()) tcos.writeString(5, th.surfaceColor); if (th.onSurfaceColor.isNotEmpty()) tcos.writeString(6, th.onSurfaceColor); if (th.backgroundColor.isNotEmpty()) tcos.writeString(7, th.backgroundColor); if (th.textPrimaryColor.isNotEmpty()) tcos.writeString(8, th.textPrimaryColor); if (th.textSecondaryColor.isNotEmpty()) tcos.writeString(9, th.textSecondaryColor); if (th.isDark) tcos.writeBool(10, th.isDark); if (th.chatBackgroundImageUrl.isNotEmpty()) tcos.writeString(11, th.chatBackgroundImageUrl); if (th.chatListBackgroundImageUrl.isNotEmpty()) tcos.writeString(12, th.chatListBackgroundImageUrl); if (th.bottomPanelColor.isNotEmpty()) tcos.writeString(13, th.bottomPanelColor); if (th.onBottomPanelColor.isNotEmpty()) tcos.writeString(14, th.onBottomPanelColor); if (th.surfaceContainer.isNotEmpty()) tcos.writeString(15, th.surfaceContainer); if (th.outgoingBubbleColor.isNotEmpty()) tcos.writeString(16, th.outgoingBubbleColor); if (th.incomingBubbleColor.isNotEmpty()) tcos.writeString(17, th.incomingBubbleColor); if (th.outgoingTextColor.isNotEmpty()) tcos.writeString(18, th.outgoingTextColor); if (th.incomingTextColor.isNotEmpty()) tcos.writeString(19, th.incomingTextColor)
         tcos.flush(); val tb = tbaos.toByteArray(); cos.writeUInt32NoTag(tb.size); cos.writeRawBytes(tb)
         if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
@@ -1057,6 +1069,7 @@ class SignInRequestV2Marshaller : io.grpc.MethodDescriptor.Marshaller<SignInRequ
             val deviceCos = com.google.protobuf.CodedOutputStream.newInstance(deviceBytes)
             if (v.deviceId.isNotEmpty()) deviceCos.writeString(1, v.deviceId)
             if (v.deviceName.isNotEmpty()) deviceCos.writeString(2, v.deviceName)
+            if (v.clientVersion.isNotEmpty()) deviceCos.writeString(3, v.clientVersion)
             deviceCos.flush()
             cos.writeByteArray(3, deviceBytes.toByteArray())
         }
@@ -1104,9 +1117,9 @@ class AuthResponseV2Marshaller : io.grpc.MethodDescriptor.Marshaller<AuthRespons
                             1 -> userId = userCis.readString()
                             2 -> username = userCis.readString()
                             3 -> email = userCis.readString()
-                            5 -> avatarUrl = userCis.readString()
-                            6 -> bio = userCis.readString()
-                            7 -> status = userCis.readString()
+                            4 -> avatarUrl = userCis.readString()
+                            5 -> bio = userCis.readString()
+                            6 -> status = userCis.readString()
                             else -> userCis.skipField(utag)
                         }
                     }
@@ -1136,6 +1149,7 @@ class SignUpRequestV2Marshaller : io.grpc.MethodDescriptor.Marshaller<SignUpRequ
             val deviceCos = com.google.protobuf.CodedOutputStream.newInstance(deviceBytes)
             if (v.deviceId.isNotEmpty()) deviceCos.writeString(1, v.deviceId)
             if (v.deviceName.isNotEmpty()) deviceCos.writeString(2, v.deviceName)
+            if (v.clientVersion.isNotEmpty()) deviceCos.writeString(3, v.clientVersion)
             deviceCos.flush()
             cos.writeByteArray(4, deviceBytes.toByteArray())
         }
@@ -1230,7 +1244,7 @@ class RevokeDeviceRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Revoke
 class PinChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<PinChatRequestProto> {
     override fun stream(v: PinChatRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId); if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
+        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): PinChatRequestProto = PinChatRequestProto()
@@ -1239,7 +1253,7 @@ class PinChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<PinChatRequ
 class UnPinChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UnPinChatRequestProto> {
     override fun stream(v: UnPinChatRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId); if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
+        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): UnPinChatRequestProto = UnPinChatRequestProto()
@@ -1261,9 +1275,9 @@ class SearchChatsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Search
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); val chats = mutableListOf<ChatInfoProto>()
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
             val len = cis.readUInt32(); val b = cis.readRawBytes(len); val cisis = com.google.protobuf.CodedInputStream.newInstance(b)
-            var id = ""; var n = ""; var t = ""; var p = ""; var ca: Timestamp? = null; var uc = 0; var lmt: Timestamp? = null; var cr = ""; var lmtxt = ""; var au = ""; var fau = ""; var lmu = ""; var lmhi = false; var amta = false; var cst: Timestamp? = null; var isSecret = false; var peerKey = ""; var e2eeReady = false; var activeAgentId = ""; var agentMode = ""; var isPinned = false; var isMuted = false; var isArchived = false; var pinnedAt = 0L
-            while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> n = cisis.readString(); 3 -> t = cisis.readString(); 4 -> p = cisis.readString(); 5 -> { val l = cisis.readUInt32(); ca = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 6 -> uc = cisis.readInt32(); 7 -> { val l = cisis.readUInt32(); lmt = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 8 -> cr = cisis.readString(); 9 -> lmtxt = cisis.readString(); 10 -> au = cisis.readString(); 11 -> fau = cisis.readString(); 12 -> lmu = cisis.readString(); 13 -> lmhi = cisis.readBool(); 14 -> amta = cisis.readBool(); 15 -> isSecret = cisis.readBool(); 16 -> peerKey = cisis.readString(); 17 -> e2eeReady = cisis.readBool(); 20 -> activeAgentId = cisis.readString(); 21 -> agentMode = cisis.readString(); 22 -> isPinned = cisis.readBool(); 23 -> isMuted = cisis.readBool(); 24 -> isArchived = cisis.readBool(); 25 -> pinnedAt = cisis.readInt64(); else -> cisis.skipField(t2) } }
-            chats.add(ChatInfoProto(id, n, t, p, ca, uc, lmt, cr, lmtxt, au, fau, lmu, lmhi, amta, cst, isSecret, peerKey, e2eeReady, activeAgentId, agentMode, isPinned, isMuted, isArchived, pinnedAt))
+            var id = ""; var n = ""; var t = ""; var p = ""; var ca: Timestamp? = null; var uc = 0; var lmt: Timestamp? = null; var cr = ""; var lmtxt = ""; var au = ""; var fau = ""; var lmu = ""; var lmhi = false; var amta = false; var cst: Timestamp? = null; var isSecret = false; var peerKey = ""; var e2eeReady = false; var activeAgentId = ""; var agentMode = ""; var isPinned = false; var isMuted = false; var isArchived = false; var pinnedAt = 0L; var companyId = ""; var companyChatAccess = ""; var companyMinPositionLevel = 0
+            while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> n = cisis.readString(); 3 -> t = cisis.readString(); 4 -> p = cisis.readString(); 5 -> { val l = cisis.readUInt32(); ca = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 6 -> uc = cisis.readInt32(); 7 -> { val l = cisis.readUInt32(); lmt = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 8 -> cr = cisis.readString(); 9 -> lmtxt = cisis.readString(); 10 -> au = cisis.readString(); 11 -> fau = cisis.readString(); 12 -> lmu = cisis.readString(); 13 -> lmhi = cisis.readBool(); 14 -> amta = cisis.readBool(); 15 -> isSecret = cisis.readBool(); 16 -> peerKey = cisis.readString(); 17 -> e2eeReady = cisis.readBool(); 20 -> activeAgentId = cisis.readString(); 21 -> agentMode = cisis.readString(); 22 -> isPinned = cisis.readBool(); 23 -> isMuted = cisis.readBool(); 24 -> isArchived = cisis.readBool(); 25 -> pinnedAt = cisis.readInt64(); 26 -> companyId = cisis.readString(); 27 -> companyChatAccess = cisis.readString(); 28 -> companyMinPositionLevel = cisis.readInt32(); else -> cisis.skipField(t2) } }
+            chats.add(ChatInfoProto(id, n, t, p, ca, uc, lmt, cr, lmtxt, au, fau, lmu, lmhi, amta, cst, isSecret, peerKey, e2eeReady, activeAgentId, agentMode, isPinned, isMuted, isArchived, pinnedAt, companyId, companyChatAccess, companyMinPositionLevel))
         } else cis.skipField(tag) }
         return SearchChatsResponseProto(chats)
     }
@@ -1272,7 +1286,7 @@ class SearchChatsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Search
 class ArchiveChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<ArchiveChatRequestProto> {
     override fun stream(v: ArchiveChatRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId); if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
+        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): ArchiveChatRequestProto = ArchiveChatRequestProto()
@@ -1281,7 +1295,7 @@ class ArchiveChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Archive
 class UnarchiveChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UnarchiveChatRequestProto> {
     override fun stream(v: UnarchiveChatRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId); if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
+        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): UnarchiveChatRequestProto = UnarchiveChatRequestProto()
@@ -1290,7 +1304,7 @@ class UnarchiveChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Unarc
 class PinMessageRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<PinMessageRequestProto> {
     override fun stream(v: PinMessageRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.messageId.isNotEmpty()) cos.writeString(1, v.messageId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId); if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
+        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId); if (v.messageId.isNotEmpty()) cos.writeString(3, v.messageId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): PinMessageRequestProto = PinMessageRequestProto()
@@ -1299,7 +1313,7 @@ class PinMessageRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<PinMessa
 class UnPinMessageRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UnPinMessageRequestProto> {
     override fun stream(v: UnPinMessageRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.messageId.isNotEmpty()) cos.writeString(1, v.messageId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId); if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
+        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId); if (v.messageId.isNotEmpty()) cos.writeString(3, v.messageId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): UnPinMessageRequestProto = UnPinMessageRequestProto()
@@ -1308,7 +1322,8 @@ class UnPinMessageRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UnPinM
 class GetPinnedMessagesRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetPinnedMessagesRequestProto> {
     override fun stream(v: GetPinnedMessagesRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId); if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
+        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId)
+        if (v.limit != 0) cos.writeInt32(3, v.limit); if (v.offset != 0) cos.writeInt32(4, v.offset)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): GetPinnedMessagesRequestProto = GetPinnedMessagesRequestProto()
@@ -1336,6 +1351,7 @@ class GetProfileResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetProf
         val cis = com.google.protobuf.CodedInputStream.newInstance(s)
         var userId = ""; var username = ""; var email = ""; var avatarUrl = ""; var fullAvatarUrl = ""
         var bio = ""; var status = ""; var locale = "en"; var isSuperAdmin = false; var createdAt = ""; var lastSeenAt = ""
+        var companyId = ""; var companyName = ""; var positionTitle = ""; var positionLevel = 0
         while (!cis.isAtEnd) {
             val tag = cis.readTag(); if (tag == 0) break
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
@@ -1343,10 +1359,12 @@ class GetProfileResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetProf
                 4 -> avatarUrl = cis.readString(); 5 -> fullAvatarUrl = cis.readString()
                 6 -> bio = cis.readString(); 7 -> status = cis.readString(); 8 -> locale = cis.readString()
                 9 -> isSuperAdmin = cis.readBool(); 10 -> createdAt = cis.readString(); 11 -> lastSeenAt = cis.readString()
+                12 -> companyId = cis.readString(); 13 -> companyName = cis.readString()
+                14 -> positionTitle = cis.readString(); 15 -> positionLevel = cis.readInt32()
                 else -> cis.skipField(tag)
             }
         }
-        return GetProfileResponseProto(userId, username, email, avatarUrl, fullAvatarUrl, bio, status, locale, isSuperAdmin, createdAt, lastSeenAt)
+        return GetProfileResponseProto(userId, username, email, avatarUrl, fullAvatarUrl, bio, status, locale, isSuperAdmin, createdAt, lastSeenAt, companyId, companyName, positionTitle, positionLevel)
     }
 }
 
@@ -1531,5 +1549,136 @@ class GetPinnedMessagesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); val msgs = mutableListOf<MessageProto>(); val mm = MessageProtoMarshaller()
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) { val len = cis.readUInt32(); msgs.add(mm.parse(java.io.ByteArrayInputStream(cis.readRawBytes(len)))) } else cis.skipField(tag) }
         return GetPinnedMessagesResponseProto(msgs)
+    }
+}
+
+// ======= Admin User List marshallers =======
+
+class AdminUserInfoMarshaller : io.grpc.MethodDescriptor.Marshaller<AdminUserInfoProto> {
+    override fun stream(value: AdminUserInfoProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.userId.isNotEmpty()) cos.writeString(1, value.userId)
+        if (value.username.isNotEmpty()) cos.writeString(2, value.username)
+        if (value.avatarUrl.isNotEmpty()) cos.writeString(3, value.avatarUrl)
+        if (value.fullAvatarUrl.isNotEmpty()) cos.writeString(4, value.fullAvatarUrl)
+        if (value.email.isNotEmpty()) cos.writeString(5, value.email)
+        if (value.isSuperAdmin) cos.writeBool(6, value.isSuperAdmin)
+        if (value.lastClientVersion.isNotEmpty()) cos.writeString(7, value.lastClientVersion)
+        value.lastSeenAt?.let { cos.writeTag(8, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED); val b = it.toByteArray(); cos.writeUInt32NoTag(b.size); cos.writeRawBytes(b) }
+        if (value.isOnline) cos.writeBool(9, value.isOnline)
+        if (value.lastMessageText.isNotEmpty()) cos.writeString(10, value.lastMessageText)
+        value.lastMessageTime?.let { cos.writeTag(11, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED); val b = it.toByteArray(); cos.writeUInt32NoTag(b.size); cos.writeRawBytes(b) }
+        if (value.lastMessageUsername.isNotEmpty()) cos.writeString(12, value.lastMessageUsername)
+        if (value.chatCount != 0) cos.writeInt32(13, value.chatCount)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): AdminUserInfoProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var userId = ""; var username = ""; var avatarUrl = ""; var fullAvatarUrl = ""; var email = ""; var isSuperAdmin = false
+        var lastClientVersion = ""; var lastSeenAt: com.google.protobuf.Timestamp? = null; var isOnline = false
+        var lastMessageText = ""; var lastMessageTime: com.google.protobuf.Timestamp? = null; var lastMessageUsername = ""; var chatCount = 0
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+            1 -> userId = cis.readString(); 2 -> username = cis.readString(); 3 -> avatarUrl = cis.readString()
+            4 -> fullAvatarUrl = cis.readString(); 5 -> email = cis.readString(); 6 -> isSuperAdmin = cis.readBool()
+            7 -> lastClientVersion = cis.readString()
+            8 -> { val len = cis.readUInt32(); lastSeenAt = com.google.protobuf.Timestamp.parseFrom(java.io.ByteArrayInputStream(cis.readRawBytes(len))) }
+            9 -> isOnline = cis.readBool(); 10 -> lastMessageText = cis.readString()
+            11 -> { val len = cis.readUInt32(); lastMessageTime = com.google.protobuf.Timestamp.parseFrom(java.io.ByteArrayInputStream(cis.readRawBytes(len))) }
+            12 -> lastMessageUsername = cis.readString(); 13 -> chatCount = cis.readInt32()
+            else -> cis.skipField(tag)
+        } }
+        return AdminUserInfoProto(userId, username, avatarUrl, fullAvatarUrl, email, isSuperAdmin, lastClientVersion, lastSeenAt, isOnline, lastMessageText, lastMessageTime, lastMessageUsername, chatCount)
+    }
+}
+
+class GetAdminUserListRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAdminUserListRequestProto> {
+    override fun stream(value: GetAdminUserListRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.query.isNotEmpty()) cos.writeString(1, value.query)
+        if (value.cursor.isNotEmpty()) cos.writeString(2, value.cursor)
+        if (value.limit != 50) cos.writeInt32(3, value.limit)
+        if (value.sortBy.isNotEmpty() && value.sortBy != "last_message") cos.writeString(4, value.sortBy)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): GetAdminUserListRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var query = ""; var cursor = ""; var limit = 50; var sortBy = "last_message"
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+            1 -> query = cis.readString(); 2 -> cursor = cis.readString(); 3 -> limit = cis.readInt32(); 4 -> sortBy = cis.readString()
+            else -> cis.skipField(tag)
+        } }
+        return GetAdminUserListRequestProto(query, cursor, limit, sortBy)
+    }
+}
+
+class GetAdminUserListResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAdminUserListResponseProto> {
+    override fun stream(v: GetAdminUserListResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetAdminUserListResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); val users = mutableListOf<AdminUserInfoProto>(); val um = AdminUserInfoMarshaller()
+        var nextCursor = ""; var hasMore = false; var serverTime: com.google.protobuf.Timestamp? = null
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+            1 -> { val len = cis.readUInt32(); users.add(um.parse(java.io.ByteArrayInputStream(cis.readRawBytes(len)))) }
+            2 -> nextCursor = cis.readString(); 3 -> hasMore = cis.readBool()
+            4 -> { val len = cis.readUInt32(); serverTime = com.google.protobuf.Timestamp.parseFrom(java.io.ByteArrayInputStream(cis.readRawBytes(len))) }
+            else -> cis.skipField(tag)
+        } }
+        return GetAdminUserListResponseProto(users, nextCursor, hasMore, serverTime)
+    }
+}
+
+// ======= Admin User Sessions =======
+
+class AdminUserSessionMarshaller : io.grpc.MethodDescriptor.Marshaller<AdminUserSessionProto> {
+    override fun stream(v: AdminUserSessionProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.deviceId.isNotEmpty()) cos.writeString(1, v.deviceId)
+        if (v.deviceName.isNotEmpty()) cos.writeString(2, v.deviceName)
+        if (v.deviceType.isNotEmpty()) cos.writeString(3, v.deviceType)
+        if (v.clientVersion.isNotEmpty()) cos.writeString(4, v.clientVersion)
+        if (v.ipAddress.isNotEmpty()) cos.writeString(5, v.ipAddress)
+        if (v.lastSeenAt != null) { cos.writeTag(6, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED); cos.writeUInt32NoTag(v.lastSeenAt.toByteArray().size); cos.writeRawBytes(v.lastSeenAt.toByteArray()) }
+        if (v.isOnline) cos.writeBool(7, v.isOnline)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): AdminUserSessionProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var deviceId = ""; var deviceName = ""; var deviceType = ""; var clientVersion = ""; var ipAddress = ""; var lastSeenAt: com.google.protobuf.Timestamp? = null; var isOnline = false
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+            1 -> deviceId = cis.readString(); 2 -> deviceName = cis.readString(); 3 -> deviceType = cis.readString()
+            4 -> clientVersion = cis.readString(); 5 -> ipAddress = cis.readString()
+            6 -> { val len = cis.readUInt32(); lastSeenAt = com.google.protobuf.Timestamp.parseFrom(java.io.ByteArrayInputStream(cis.readRawBytes(len))) }
+            7 -> isOnline = cis.readBool()
+            else -> cis.skipField(tag)
+        } }
+        return AdminUserSessionProto(deviceId, deviceName, deviceType, clientVersion, ipAddress, lastSeenAt, isOnline)
+    }
+}
+
+class GetAdminUserSessionsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAdminUserSessionsRequestProto> {
+    override fun stream(v: GetAdminUserSessionsRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): GetAdminUserSessionsRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var userId = ""
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+            1 -> userId = cis.readString()
+            else -> cis.skipField(tag)
+        } }
+        return GetAdminUserSessionsRequestProto(userId)
+    }
+}
+
+class GetAdminUserSessionsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAdminUserSessionsResponseProto> {
+    override fun stream(v: GetAdminUserSessionsResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetAdminUserSessionsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); val sessions = mutableListOf<AdminUserSessionProto>(); val sm = AdminUserSessionMarshaller()
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+            1 -> { val len = cis.readUInt32(); sessions.add(sm.parse(java.io.ByteArrayInputStream(cis.readRawBytes(len)))) }
+            else -> cis.skipField(tag)
+        } }
+        return GetAdminUserSessionsResponseProto(sessions)
     }
 }

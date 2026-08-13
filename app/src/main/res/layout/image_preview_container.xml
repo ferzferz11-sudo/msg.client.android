@@ -1,33 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:padding="8dp"
-    android:background="?attr/colorSurface"
-    android:gravity="center_vertical">
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="88dp"
+    android:layout_height="88dp"
+    android:layout_margin="4dp">
+
+    <ImageView
+        android:id="@+id/previewImage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:background="?attr/colorSurfaceVariant" />
+
+    <ImageButton
+        android:id="@+id/removeImageButton"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="2dp"
+        android:background="@drawable/circle_button"
+        android:src="@drawable/ic_close"
+        android:contentDescription="@string/remove"
+        android:scaleType="centerInside" />
 
     <FrameLayout
-        android:layout_width="80dp"
-        android:layout_height="80dp"
-        android:layout_margin="4dp">
+        android:id="@+id/uploadOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/scrim_dark"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:id="@+id/uploadSpinner"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center" />
 
         <ImageView
-            android:id="@+id/previewImage"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="centerCrop"
-            android:background="?attr/colorSurfaceVariant" />
-
-        <ImageButton
-            android:id="@+id/removeImageButton"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_gravity="top|end"
-            android:layout_margin="4dp"
-            android:background="@drawable/circle_button"
+            android:id="@+id/uploadErrorIcon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center"
             android:src="@drawable/ic_close"
-            android:contentDescription="@string/remove"
-            android:scaleType="centerInside" />
+            android:padding="6dp"
+            android:background="@drawable/circle_button"
+            android:visibility="gone"
+            android:contentDescription="error" />
     </FrameLayout>
-</LinearLayout>
+
+    <ImageView
+        android:id="@+id/uploadSuccessIcon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_gravity="center"
+        android:src="@drawable/ic_checked_small"
+        android:visibility="gone"
+        android:contentDescription="uploaded" />
+</FrameLayout>

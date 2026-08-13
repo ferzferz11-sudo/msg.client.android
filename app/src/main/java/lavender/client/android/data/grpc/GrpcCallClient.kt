@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import lavender.client.android.data.proto.*
-import lavender.client.android.data.calls.CallManager
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Handles video call signaling via gRPC bidirectional stream.
@@ -27,14 +27,17 @@ class GrpcCallClient(
     private val connectionStatus: MutableStateFlow<ConnectionStatus>,
     private val requestObserverRef: () -> StreamObserver<*>?,
     private val scope: CoroutineScope,
-    private val onCallStreamError: (Throwable) -> Unit
+    @Suppress("UNUSED_PARAMETER") private val onCallStreamError: (Throwable) -> Unit
 ) {
     companion object {
         private const val TAG = "GrpcCallClient"
+        private const val MAX_CALL_RETRIES = 10
+        private const val CANCEL_REASON = "Error"
     }
 
-    var callRequestObserver: StreamObserver<CallMessageProto>? = null
+    @Volatile var callRequestObserver: StreamObserver<CallMessageProto>? = null
         private set
+    @Volatile private var callRetryCount = 0
 
     fun startCallSession() {
         val currentChannel = getChannel()
@@ -54,6 +57,7 @@ class GrpcCallClient(
 
         val call = currentChannel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
         callRequestObserver = call.startCallStream(scope, callSignals, connectionStatus, onCallStreamError)
+        callRetryCount = 0
 
         // Send identity signal to register with the hub
         val identityId = getUserId() ?: getUsername()
@@ -91,8 +95,12 @@ class GrpcCallClient(
                 Log.e(TAG, "Call session stream error", t)
                 callRequestObserver = null
                 lavender.client.android.data.calls.CallManager.clearCurrentCall()
+                if (callRetryCount >= MAX_CALL_RETRIES) return
+                val channel = getChannel()
+                if (channel == null || channel.isShutdown || channel.isTerminated) return
+                callRetryCount++
                 scope.launch {
-                    delay(5000)
+                    delay((1000L * (1 shl minOf(callRetryCount, 5))).coerceAtMost(30_000L).milliseconds)
                     startCallSession()
                 }
             }
@@ -118,7 +126,7 @@ class GrpcCallClient(
 
         return object : StreamObserver<CallMessageProto> {
             override fun onNext(value: CallMessageProto) = this@startCallStream.sendMessage(value)
-            override fun onError(t: Throwable) = this@startCallStream.cancel("Error", t)
+            override fun onError(t: Throwable) = this@startCallStream.cancel(CANCEL_REASON, t)
             override fun onCompleted() = this@startCallStream.halfClose()
         }
     }

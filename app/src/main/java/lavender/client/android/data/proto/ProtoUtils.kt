@@ -105,6 +105,7 @@ object ProtoUtils {
             .build()
 
         val media = when {
+            message.stickerUrl.isNotEmpty() -> MessageMediaProto(type = "sticker", url = message.stickerUrl, urls = listOf(message.stickerThumbnailUrl).filter { it.isNotEmpty() })
             message.voiceUrl.isNotEmpty() -> MessageMediaProto(type = "voice", url = message.voiceUrl, duration = message.duration)
             message.imageUrl.isNotEmpty() -> MessageMediaProto(
                 type = "image",
@@ -135,7 +136,8 @@ object ProtoUtils {
             createdAt = timestamp,
             reactions = reactionsBytes,
             isE2EE = message.isE2EE,
-            e2eePayload = message.e2eePayload
+            e2eePayload = message.e2eePayload,
+            forwardedFrom = message.forwardedFrom
         )
     }
 
@@ -146,27 +148,47 @@ object ProtoUtils {
 
         val username = resolveUsername(proto.senderId)
 
+        // Forward attribution from proto field (with fallback to text prefix for old messages)
+        var isForwarded = proto.forwardedFrom.isNotEmpty()
+        var forwardedFrom = proto.forwardedFrom
+        var messageText = proto.text
+        // Legacy fallback: parse text prefix for messages sent before proto field support
+        val forwardPrefix = "\u200B\u2709"
+        if (!isForwarded && messageText.startsWith(forwardPrefix)) {
+            val endIdx = messageText.indexOf('\u200B', forwardPrefix.length)
+            if (endIdx > forwardPrefix.length) {
+                forwardedFrom = messageText.substring(forwardPrefix.length, endIdx)
+                val afterPrefix = messageText.substring(endIdx + 1)
+                messageText = if (afterPrefix.startsWith("\n")) afterPrefix.substring(1) else afterPrefix
+                isForwarded = true
+            }
+        }
+
         var imageUrl = ""; var imageUrls = emptyList<String>()
         var voiceUrl = ""; var duration = 0
         var repliedToMessageId = ""; var repliedToText = ""
+        var stickerUrl = ""; var stickerThumbnailUrl = ""
 
-        when {
-            proto.media != null -> {
-                when (proto.media.type) {
-                    "image" -> {
-                        imageUrl = proto.media.url
-                        imageUrls = proto.media.urls.ifEmpty { listOf(proto.media.url).filter { it.isNotEmpty() } }
-                    }
-                    "voice" -> {
-                        voiceUrl = proto.media.url
-                        duration = proto.media.duration
-                    }
+        if (proto.media != null) {
+            when (proto.media.type) {
+                "image" -> {
+                    imageUrl = proto.media.url
+                    imageUrls = proto.media.urls.ifEmpty { listOf(proto.media.url).filter { it.isNotEmpty() } }
+                }
+                "voice" -> {
+                    voiceUrl = proto.media.url
+                    duration = proto.media.duration
+                }
+                "sticker" -> {
+                    stickerUrl = proto.media.url
+                    stickerThumbnailUrl = proto.media.urls.firstOrNull() ?: ""
                 }
             }
-            proto.reply != null -> {
-                repliedToMessageId = proto.reply.messageId
-                repliedToText = proto.reply.preview
-            }
+        }
+
+        if (proto.reply != null) {
+            repliedToMessageId = proto.reply.messageId
+            repliedToText = proto.reply.preview
         }
 
         val reactions = if (proto.reactions.isNotEmpty()) {
@@ -184,7 +206,7 @@ object ProtoUtils {
         return Message(
             id = proto.id,
             user = username,
-            text = proto.text,
+            text = messageText,
             timestamp = timestamp,
             reactions = reactions,
             repliedToMessageId = repliedToMessageId,
@@ -198,7 +220,11 @@ object ProtoUtils {
             duration = duration,
             userId = proto.senderId,
             isE2EE = proto.isE2EE,
-            e2eePayload = proto.e2eePayload
+            e2eePayload = proto.e2eePayload,
+            stickerUrl = stickerUrl,
+            stickerThumbnailUrl = stickerThumbnailUrl,
+            isForwarded = isForwarded,
+            forwardedFrom = forwardedFrom
         )
     }
 

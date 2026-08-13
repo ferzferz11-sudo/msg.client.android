@@ -38,7 +38,6 @@ class LogViewerActivity : AppCompatActivity() {
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = getString(R.string.error_logs)
         toolbar.setNavigationOnClickListener { finish() }
 

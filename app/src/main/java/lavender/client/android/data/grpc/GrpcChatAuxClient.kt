@@ -8,7 +8,8 @@ class GrpcChatAuxClient(
     private val getChannel: () -> io.grpc.ManagedChannel?,
     private val getUserId: () -> String?,
     private val allUsers: kotlinx.coroutines.flow.MutableStateFlow<List<UserInfoProto>>,
-    private val serverTime: kotlinx.coroutines.flow.MutableStateFlow<com.google.protobuf.Timestamp?>
+    private val serverTime: kotlinx.coroutines.flow.MutableStateFlow<com.google.protobuf.Timestamp?>,
+    private val reconnect: (() -> Unit)? = null
 ) {
     companion object {
         private const val TAG = "GrpcChatAuxClient"
@@ -33,7 +34,12 @@ class GrpcChatAuxClient(
                 callback(message.users)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) ErrorHandler.handle("GrpcChatAuxClient.getAllUsers", "Status: ${status.code} — ${status.description}")
+                if (!status.isOk) {
+                    ErrorHandler.handle("GrpcChatAuxClient.getAllUsers", "Status: ${status.code} — ${status.description}")
+                    if (status.code == io.grpc.Status.Code.UNAVAILABLE) {
+                        reconnect?.invoke()
+                    }
+                }
             }
         }, io.grpc.Metadata())
         call.sendMessage(GetAllUsersRequestProto())
@@ -114,6 +120,56 @@ class GrpcChatAuxClient(
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
         call.sendMessage(SetMutedChatRequestProto(getUserId() ?: "", roomId, muted))
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun getAdminUserList(query: String, cursor: String, limit: Int, sortBy: String, callback: (GetAdminUserListResponseProto) -> Unit) {
+        val currentChannel = getChannel() ?: return
+        val call = currentChannel.newCall(
+            io.grpc.MethodDescriptor.newBuilder<GetAdminUserListRequestProto, GetAdminUserListResponseProto>()
+                .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+                .setFullMethodName("messenger.ChatService/GetAdminUserList")
+                .setRequestMarshaller(GetAdminUserListRequestMarshaller())
+                .setResponseMarshaller(GetAdminUserListResponseMarshaller())
+                .build(),
+            io.grpc.CallOptions.DEFAULT
+        )
+        call.start(object : io.grpc.ClientCall.Listener<GetAdminUserListResponseProto>() {
+            override fun onMessage(message: GetAdminUserListResponseProto) {
+                Log.d(TAG, "GetAdminUserList: received ${message.users.size} users, hasMore=${message.hasMore}")
+                callback(message)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) ErrorHandler.handle("GrpcChatAuxClient.getAdminUserList", "Status: ${status.code} — ${status.description}")
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(GetAdminUserListRequestProto(query, cursor, limit, sortBy))
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun getAdminUserSessions(userId: String, callback: (GetAdminUserSessionsResponseProto) -> Unit) {
+        val currentChannel = getChannel() ?: return
+        val call = currentChannel.newCall(
+            io.grpc.MethodDescriptor.newBuilder<GetAdminUserSessionsRequestProto, GetAdminUserSessionsResponseProto>()
+                .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+                .setFullMethodName("messenger.ChatService/GetAdminUserSessions")
+                .setRequestMarshaller(GetAdminUserSessionsRequestMarshaller())
+                .setResponseMarshaller(GetAdminUserSessionsResponseMarshaller())
+                .build(),
+            io.grpc.CallOptions.DEFAULT
+        )
+        call.start(object : io.grpc.ClientCall.Listener<GetAdminUserSessionsResponseProto>() {
+            override fun onMessage(message: GetAdminUserSessionsResponseProto) {
+                Log.d(TAG, "GetAdminUserSessions: received ${message.sessions.size} sessions")
+                callback(message)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) ErrorHandler.handle("GrpcChatAuxClient.getAdminUserSessions", "Status: ${status.code} — ${status.description}")
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(GetAdminUserSessionsRequestProto(userId))
         call.halfClose()
         call.request(1)
     }

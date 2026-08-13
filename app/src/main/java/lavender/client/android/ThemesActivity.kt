@@ -6,29 +6,37 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.edit
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.grpc.RealGrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
-import lavender.client.android.theme.BuiltInThemes
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
-import lavender.client.android.theme.data.ThemeMappers
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.ThemeAdapter
+import lavender.client.android.ui.themes.ThemesViewModel
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 class ThemesActivity : AppCompatActivity() {
 
-    private lateinit var themesRecyclerView: RecyclerView
+    private lateinit var viewModel: ThemesViewModel
     private lateinit var adapter: ThemeAdapter
-    private val grpcClient = GrpcClient
+    private lateinit var toolbar: com.google.android.material.appbar.MaterialToolbar
+    private lateinit var toolbarTitle: android.widget.TextView
+    private lateinit var actionApply: android.widget.ImageView
+    private lateinit var actionEdit: android.widget.ImageView
+    private lateinit var actionDelete: android.widget.ImageView
+    private lateinit var themesRecyclerView: androidx.recyclerview.widget.RecyclerView
+
     private var username: String = ""
-    private var activeThemeId: String = "dark"
-    private var currentThemeId: String = "dark"
-    private var customThemes = mutableListOf<CustomThemeProto>()
 
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
@@ -42,29 +50,43 @@ class ThemesActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
-
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_themes)
 
+        viewModel = ViewModelProvider(this)[ThemesViewModel::class.java]
         username = intent.getStringExtra("username") ?: ""
 
-        val themePrefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        currentThemeId = themePrefs.getString("current_theme_id", "dark") ?: "dark"
-        activeThemeId = currentThemeId
+        initViews()
+        setupToolbar()
+        setupRecyclerView()
+        setupFab()
+        setupWindowInsets()
+        setupObservers()
+        ThemeUi.bind(this, username)
 
-        val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        supportActionBar?.apply {
-            title = ""
-            setDisplayHomeAsUpEnabled(true)
+        viewModel.loadThemes(username)
+    }
+
+    private fun initViews() {
+        toolbar = findViewById(R.id.toolbar)
+        toolbarTitle = findViewById(R.id.toolbarTitle)
+        actionApply = findViewById(R.id.actionApply)
+        actionEdit = findViewById(R.id.actionEdit)
+        actionDelete = findViewById(R.id.actionDelete)
+        themesRecyclerView = findViewById(R.id.themesRecyclerView)
+
+        val switchSystemDarkMode = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchSystemDarkMode)
+        switchSystemDarkMode.isChecked = ThemeStore.isFollowSystemDarkMode()
+        switchSystemDarkMode.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.setFollowSystemDarkMode(this, isChecked)
+            adapter.setCurrentThemeId(ThemeStore.currentTheme().id)
         }
-        
-        val actionApply = findViewById<android.widget.ImageView>(R.id.actionApply)
-        val actionEdit = findViewById<android.widget.ImageView>(R.id.actionEdit)
-        val actionDelete = findViewById<android.widget.ImageView>(R.id.actionDelete)
-        val toolbarTitle = findViewById<android.widget.TextView>(R.id.toolbarTitle)
+    }
 
+    private fun setupToolbar() {
+        toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
+        toolbar.navigationIcon?.setTint(getColorOnPrimary())
         toolbar.setNavigationOnClickListener {
             if (adapter.getSelectedThemes().isNotEmpty()) {
                 adapter.clearSelection()
@@ -72,16 +94,15 @@ class ThemesActivity : AppCompatActivity() {
                 finish()
             }
         }
+    }
 
-        themesRecyclerView = findViewById(R.id.themesRecyclerView)
+    private fun setupRecyclerView() {
         adapter = ThemeAdapter(
-            onThemeClick = { _ ->
-                // No immediate switch
-            },
+            onThemeClick = { },
             onSelectionChanged = { count ->
                 val hasSelection = count > 0
                 val selectedThemes = adapter.getSelectedThemes()
-                
+
                 val canDelete = selectedThemes.isNotEmpty() && selectedThemes.all { !it.id.startsWith("builtin_") && it.id != "dark" }
                 val canApply = count == 1
                 val canViewPalette = count == 1
@@ -89,64 +110,100 @@ class ThemesActivity : AppCompatActivity() {
                 actionApply.visibility = if (canApply) android.view.View.VISIBLE else android.view.View.GONE
                 actionEdit.visibility = if (canViewPalette) android.view.View.VISIBLE else android.view.View.GONE
                 actionDelete.visibility = if (canDelete) android.view.View.VISIBLE else android.view.View.GONE
-                
+
                 if (hasSelection) {
                     toolbarTitle.text = getString(R.string.selected_count, count)
-                    supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
+                    setBackIcon(true)
                 } else {
                     toolbarTitle.text = getString(R.string.themes)
-                    supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_back_arrow)
+                    setBackIcon(false)
                 }
             },
-            currentThemeId = currentThemeId
+            currentThemeId = ThemeStore.currentTheme().id
         )
         themesRecyclerView.layoutManager = LinearLayoutManager(this)
         themesRecyclerView.adapter = adapter
 
-        val addThemeFab = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.addThemeFab)
-        addThemeFab.setOnClickListener { openThemePaletteForNewTheme() }
-        
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
-            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            themesRecyclerView.updatePadding(bottom = systemBars.bottom)
-            insets
-        }
-
         actionApply.setOnClickListener {
             val selected = adapter.getSelectedThemes()
             if (selected.size == 1) {
-                applyThemeImmediate(selected.first().id)
+                viewModel.applyTheme(username, selected.first().id)
             }
         }
-        
+
         actionEdit.setOnClickListener {
             val selected = adapter.getSelectedThemes()
             if (selected.size == 1) {
-                val theme = selected.first()
-                openThemePaletteWithTheme(theme)
+                openThemePaletteWithTheme(selected.first())
             }
         }
-        
+
         actionDelete.setOnClickListener {
             val selected = adapter.getSelectedThemes()
-            if (selected.isNotEmpty()) {
-                confirmDeleteThemes(selected)
+            if (selected.isNotEmpty()) confirmDeleteThemes(selected)
+        }
+    }
+
+    private fun setupFab() {
+        val addThemeFab = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.addThemeFab)
+        addThemeFab.setOnClickListener { openThemePaletteForNewTheme() }
+    }
+
+    private fun setupWindowInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            themesRecyclerView.updatePadding(bottom = systemBars.bottom)
+            insets
+        }
+    }
+
+    private fun setupObservers() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state ->
+                    adapter.setCurrentThemeId(state.currentThemeId)
+                    adapter.setThemes(state.themes)
+
+                    if (state.themeApplied) {
+                        viewModel.consumeThemeApplied()
+                        ThemeUi.bind(this@ThemesActivity, username)
+                        adapter.clearSelection()
+                        updateToolbarAvatar()
+                        Toast.makeText(this@ThemesActivity, getString(R.string.theme_applied), Toast.LENGTH_SHORT).show()
+                    }
+
+                    if (state.themesDeleted) {
+                        viewModel.consumeThemesDeleted()
+                        adapter.clearSelection()
+                        viewModel.loadThemes(username)
+                    }
+
+                    state.error?.let { error ->
+                        viewModel.consumeError()
+                        Toast.makeText(this@ThemesActivity, error, Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
+    }
 
-        ThemeUi.bind(this, username)
-        adapter.setCurrentThemeId(ThemeStore.theme.value.id)
-        updateToolbarAvatar()
+    override fun onResume() {
+        super.onResume()
+        RealGrpcClient.isAppInBackground = false
+        viewModel.loadThemes(username)
+    }
 
-        loadThemes()
+    override fun onPause() {
+        super.onPause()
+        RealGrpcClient.isAppInBackground = true
     }
 
     private fun updateToolbarAvatar() {
         val avatarView = findViewById<de.hdodenhof.circleimageview.CircleImageView>(R.id.toolbarUserAvatar) ?: return
-        val avatarCache = grpcClient.getAvatarCache()
+        val avatarCache = viewModel.getAvatarCache()
         val myAvatarUrl = avatarCache[username]
         val currentTheme = ThemeStore.currentTheme()
-        
+
         avatarView.visibility = android.view.View.VISIBLE
         if (!myAvatarUrl.isNullOrEmpty()) {
             com.bumptech.glide.Glide.with(this).load(myAvatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(avatarView)
@@ -156,93 +213,15 @@ class ThemesActivity : AppCompatActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
-        loadThemes()
+    private fun getColorOnPrimary(): Int {
+        val theme = ThemeStore.currentTheme()
+        return ThemeUtils.parseSafeColor(theme.onPrimaryColor, android.graphics.Color.WHITE)
     }
 
-    override fun onPause() {
-        super.onPause()
-        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = true
-    }
-
-    private fun loadThemes() {
-        val queryId = grpcClient.getUserId() ?: username
-        grpcClient.getThemes(queryId) { currentId, list ->
-            customThemes = list.toMutableList()
-            
-            var remoteId = currentId
-            // Handle migration from graphite to default dark
-            if (remoteId == "builtin_dark_graphite") {
-                remoteId = "dark"
-            }
-
-            val localThemeId = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("current_theme_id", null)
-            if (localThemeId == null || localThemeId == "builtin_dark_graphite") {
-                activeThemeId = remoteId
-                currentThemeId = remoteId
-            } else {
-                activeThemeId = localThemeId
-                currentThemeId = localThemeId
-            }
-
-            runOnUiThread {
-                updateUI()
-            }
-        }
-    }
-
-    private fun updateUI() {
-        val allThemes = mutableListOf<CustomThemeProto>()
-
-        BuiltInThemes.all.map { ThemeMappers.toProto(it) }.forEach { theme ->
-            val localizedName = when (theme.id) {
-                "dark"                  -> getString(R.string.dark_theme)
-                "builtin_lavender_dark" -> getString(R.string.theme_lavender_night)
-                "builtin_dark_graphite" -> getString(R.string.theme_dark_graphite)
-                "builtin_green"         -> getString(R.string.theme_template_green)
-                "builtin_blue"          -> getString(R.string.theme_template_blue)
-                "builtin_graphite"      -> getString(R.string.theme_template_graphite)
-                "builtin_mint"          -> getString(R.string.theme_template_mint)
-                else -> theme.name
-            }
-            allThemes.add(theme.copy(name = localizedName))
-        }
-
-        allThemes.addAll(customThemes)
-        
-        adapter.setCurrentThemeId(currentThemeId)
-        adapter.setThemes(allThemes)
-    }
-
-    private fun applyThemeImmediate(themeId: String) {
-        currentThemeId = themeId
-        val queryId = grpcClient.getUserId() ?: username
-        
-        if (queryId.isEmpty()) {
-            Toast.makeText(this, getString(R.string.error_user_id_not_found), Toast.LENGTH_LONG).show()
-            return
-        }
-
-        grpcClient.setCurrentTheme(queryId, themeId) { success ->
-            runOnUiThread {
-                if (success) {
-                    val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-                    prefs.edit {
-                        putString("current_theme_id", themeId)
-                        commit()
-                    }
-
-                    ThemeUi.bind(this, username)
-                    adapter.setCurrentThemeId(themeId)
-                    adapter.clearSelection()
-                    updateToolbarAvatar()
-                    Toast.makeText(this, getString(R.string.theme_applied), Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this@ThemesActivity, getString(R.string.failed_to_apply_theme), Toast.LENGTH_SHORT).show()
-                }
-            }
+    private fun setBackIcon(isClose: Boolean) {
+        val iconRes = if (isClose) R.drawable.ic_close else R.drawable.ic_back_arrow
+        toolbar.navigationIcon = androidx.core.content.ContextCompat.getDrawable(this, iconRes)?.apply {
+            setTint(getColorOnPrimary())
         }
     }
 
@@ -250,33 +229,16 @@ class ThemesActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setMessage(getString(R.string.delete_theme_confirm))
             .setPositiveButton(R.string.delete) { _, _ ->
-                val themeIds = themes.map { it.id }
-                val queryId = grpcClient.getUserId() ?: username
-                
-                var deletedCount = 0
-                themeIds.forEach { id ->
-                    grpcClient.deleteTheme(queryId, id) { success ->
-                        if (success) {
-                            deletedCount++
-                            if (deletedCount == themeIds.size) {
-                                runOnUiThread {
-                                    adapter.clearSelection()
-                                    loadThemes()
-                                }
-                            }
-                        }
-                    }
-                }
+                viewModel.deleteThemes(username, themes.map { it.id })
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
     private fun openThemePaletteForNewTheme() {
-        val intent = Intent(this, ThemePaletteActivity::class.java).apply {
+        startActivity(Intent(this, ThemePaletteActivity::class.java).apply {
             putExtra("theme_id", "custom_new_${System.currentTimeMillis()}")
             putExtra("username", username)
-            // Use dark theme as base
             putExtra("primary_color", "#5F9EA0")
             putExtra("background_color", "#1E1E1E")
             putExtra("surface_color", "#2D2D2D")
@@ -288,12 +250,11 @@ class ThemesActivity : AppCompatActivity() {
             putExtra("on_bottom_panel_color", "#5F9EA0")
             putExtra("outgoing_bubble_color", "#2A2C6D")
             putExtra("incoming_bubble_color", "#16173A")
-        }
-        startActivity(intent)
+        })
     }
 
     private fun openThemePaletteWithTheme(theme: CustomThemeProto) {
-        val intent = Intent(this, ThemePaletteActivity::class.java).apply {
+        startActivity(Intent(this, ThemePaletteActivity::class.java).apply {
             putExtra("theme_id", theme.id)
             putExtra("username", username)
             putExtra("primary_color", theme.primaryColor)
@@ -307,13 +268,8 @@ class ThemesActivity : AppCompatActivity() {
             putExtra("on_bottom_panel_color", theme.onBottomPanelColor)
             putExtra("outgoing_bubble_color", theme.outgoingBubbleColor)
             putExtra("incoming_bubble_color", theme.incomingBubbleColor)
-            if (theme.chatListBackgroundImageUrl.isNotEmpty()) {
-                putExtra("chat_list_background", theme.chatListBackgroundImageUrl)
-            }
-            if (theme.chatBackgroundImageUrl.isNotEmpty()) {
-                putExtra("chat_background", theme.chatBackgroundImageUrl)
-            }
-        }
-        startActivity(intent)
+            if (theme.chatListBackgroundImageUrl.isNotEmpty()) putExtra("chat_list_background", theme.chatListBackgroundImageUrl)
+            if (theme.chatBackgroundImageUrl.isNotEmpty()) putExtra("chat_background", theme.chatBackgroundImageUrl)
+        })
     }
 }

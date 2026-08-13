@@ -59,7 +59,9 @@ class GrpcChatListV2Client(
                 lastMessageHasImage = proto.lastMessageHasImage,
                 allowMembersToAdd = proto.allowMembersToAdd,
                 isPinned = proto.isPinned, isMuted = proto.isMuted,
-                isArchived = proto.isArchived, pinnedAt = proto.pinnedAt
+                isArchived = proto.isArchived, pinnedAt = proto.pinnedAt,
+                companyId = proto.companyId, companyChatAccess = proto.companyChatAccess,
+                companyMinPositionLevel = proto.companyMinPositionLevel
             )
         } ?: emptyList()
     }

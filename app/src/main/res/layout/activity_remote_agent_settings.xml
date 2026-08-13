@@ -120,7 +120,7 @@
                         android:layout_height="wrap_content"
                         android:text="⚠️ Введите IP адрес (напр. 13.140.25.249), а не SSH alias"
                         android:textSize="11sp"
-                        android:textColor="#FFA000"
+                        android:textColor="@color/warning"
                         android:layout_marginBottom="8dp" />
 
                     <!-- SSH Port + SSH User -->
@@ -298,7 +298,7 @@
                         android:layout_marginBottom="12dp"
                         app:cardCornerRadius="12dp"
                         app:cardElevation="2dp"
-                        app:strokeColor="#4CAF50"
+                        app:strokeColor="@color/success"
                         app:strokeWidth="2dp">
 
                         <LinearLayout
@@ -314,7 +314,7 @@
                             android:text="@string/remote_agent_connected"
                             android:textSize="16sp"
                             android:textStyle="bold"
-                            android:textColor="#4CAF50"
+                            android:textColor="@color/success"
                             android:layout_marginBottom="4dp" />
 
                                     <TextView

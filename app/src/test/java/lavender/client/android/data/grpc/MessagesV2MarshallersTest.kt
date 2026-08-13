@@ -753,4 +753,110 @@ class MessagesV2MarshallersTest {
         assertNotNull(parsed.media)
         assertEquals("voice", parsed.media?.type)
     }
+
+    // ======= when-bug fix tests: text+reply and text+media must serialize independently =======
+
+    @Test
+    fun messageV2ProtoMarshaller_roundTrip_textAndReply() {
+        val reply = MessageReplyProto(messageId = "orig-1", preview = "quoted text", senderId = "uuid-sender")
+        val original = MessageV2Proto(
+            id = "m1", roomId = "r1", senderId = "uuid-1",
+            text = "My reply", reply = reply
+        )
+        val marshaller = MessageV2ProtoMarshaller()
+        val bytes = marshaller.stream(original).readBytes()
+        val parsed = marshaller.parse(java.io.ByteArrayInputStream(bytes))
+        assertEquals("m1", parsed.id)
+        assertEquals("My reply", parsed.text)
+        assertNotNull(parsed.reply)
+        assertEquals("orig-1", parsed.reply?.messageId)
+        assertEquals("quoted text", parsed.reply?.preview)
+        assertEquals("uuid-sender", parsed.reply?.senderId)
+    }
+
+    @Test
+    fun messageV2ProtoMarshaller_roundTrip_textAndMedia() {
+        val media = MessageMediaProto(type = "image", url = "photo.jpg", urls = listOf("thumb.jpg"))
+        val original = MessageV2Proto(
+            id = "m2", roomId = "r1", senderId = "uuid-1",
+            text = "Check this out", media = media
+        )
+        val marshaller = MessageV2ProtoMarshaller()
+        val bytes = marshaller.stream(original).readBytes()
+        val parsed = marshaller.parse(java.io.ByteArrayInputStream(bytes))
+        assertEquals("m2", parsed.id)
+        assertEquals("Check this out", parsed.text)
+        assertNotNull(parsed.media)
+        assertEquals("image", parsed.media?.type)
+        assertEquals("photo.jpg", parsed.media?.url)
+        assertEquals(1, parsed.media?.urls?.size)
+    }
+
+    @Test
+    fun messageV2ProtoMarshaller_roundTrip_allContentFields() {
+        val media = MessageMediaProto(type = "voice", url = "voice.ogg", duration = 10)
+        val reply = MessageReplyProto(messageId = "orig-2", preview = "previous message")
+        val original = MessageV2Proto(
+            id = "m3", roomId = "r2", senderId = "uuid-2",
+            text = "Reply with media", media = media, reply = reply,
+            edited = true, isRead = true, isE2EE = false
+        )
+        val marshaller = MessageV2ProtoMarshaller()
+        val bytes = marshaller.stream(original).readBytes()
+        val parsed = marshaller.parse(java.io.ByteArrayInputStream(bytes))
+        assertEquals("m3", parsed.id)
+        assertEquals("Reply with media", parsed.text)
+        assertNotNull(parsed.media)
+        assertEquals("voice", parsed.media?.type)
+        assertEquals(10, parsed.media?.duration)
+        assertNotNull(parsed.reply)
+        assertEquals("orig-2", parsed.reply?.messageId)
+        assertEquals("previous message", parsed.reply?.preview)
+        assertTrue(parsed.edited)
+        assertTrue(parsed.isRead)
+    }
+
+    @Test
+    fun messageV2ProtoMarshaller_roundTrip_replyOnly() {
+        val reply = MessageReplyProto(messageId = "orig-3", preview = "just a reply")
+        val original = MessageV2Proto(
+            id = "m4", roomId = "r1", senderId = "uuid-1",
+            reply = reply
+        )
+        val marshaller = MessageV2ProtoMarshaller()
+        val bytes = marshaller.stream(original).readBytes()
+        val parsed = marshaller.parse(java.io.ByteArrayInputStream(bytes))
+        assertEquals("m4", parsed.id)
+        assertTrue(parsed.text.isEmpty())
+        assertNull(parsed.media)
+        assertNotNull(parsed.reply)
+        assertEquals("orig-3", parsed.reply?.messageId)
+    }
+
+    @Test
+    fun sendMessageV2RequestMarshaller_roundTrip_textAndMedia() {
+        val media = MessageMediaProto(type = "image", url = "photo.jpg")
+        val original = SendMessageV2RequestProto(
+            roomId = "r1", text = "Caption", media = media
+        )
+        val marshaller = SendMessageV2RequestMarshaller()
+        val bytes = marshaller.stream(original).readBytes()
+        // Parse manually since request marshaller parse() returns default
+        val cis = com.google.protobuf.CodedInputStream.newInstance(java.io.ByteArrayInputStream(bytes))
+        var parsedRoomId = ""; var parsedText = ""; var parsedMedia: MessageMediaProto? = null
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> parsedRoomId = cis.readString()
+                2 -> parsedText = cis.readString()
+                3 -> parsedMedia = MessageMediaProtoMarshaller.parse(cis)
+                else -> cis.skipField(tag)
+            }
+        }
+        assertEquals("r1", parsedRoomId)
+        assertEquals("Caption", parsedText)
+        assertNotNull(parsedMedia)
+        assertEquals("image", parsedMedia?.type)
+        assertEquals("photo.jpg", parsedMedia?.url)
+    }
 }

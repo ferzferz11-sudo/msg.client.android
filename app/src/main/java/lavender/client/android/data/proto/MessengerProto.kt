@@ -232,7 +232,10 @@ data class ChatInfoProto(
     val isPinned: Boolean = false,    // ChatList v2: pinned status
     val isMuted: Boolean = false,     // ChatList v2: muted status
     val isArchived: Boolean = false,  // ChatList v2: archived status
-    val pinnedAt: Long = 0L           // ChatList v2: timestamp when pinned (for sort order)
+    val pinnedAt: Long = 0L,          // ChatList v2: timestamp when pinned (for sort order)
+    val companyId: String = "",       // Company chat: company ID
+    val companyChatAccess: String = "", // Company chat: access level
+    val companyMinPositionLevel: Int = 0 // Company chat: min position level
 )
 
 // Mark Read Request/Response
@@ -556,6 +559,7 @@ data class CustomThemeProto(
     val backgroundColor: String = "",
     val textPrimaryColor: String = "",
     val textSecondaryColor: String = "",
+    val isDark: Boolean = false,
     val chatListBackgroundImageUrl: String = "",
     val chatBackgroundImageUrl: String = "",
     val bottomPanelColor: String = "",
@@ -1236,7 +1240,11 @@ data class GetProfileResponseProto(
     val locale: String = "en",
     val isSuperAdmin: Boolean = false,
     val createdAt: String = "",
-    val lastSeenAt: String = ""
+    val lastSeenAt: String = "",
+    val companyId: String = "",
+    val companyName: String = "",
+    val positionTitle: String = "",
+    val positionLevel: Int = 0
 )
 
 data class UpdateProfileV2RequestProto(
@@ -1340,7 +1348,9 @@ data class UnPinMessageResponseProto(
 
 data class GetPinnedMessagesRequestProto(
     val userId: String = "",
-    val chatId: String = ""
+    val chatId: String = "",
+    val limit: Int = 0,
+    val offset: Int = 0
 )
 
 data class GetPinnedMessagesResponseProto(
@@ -1378,4 +1388,56 @@ data class UnarchiveChatRequestProto(
 
 data class UnarchiveChatResponseProto(
     val success: Boolean = false
+)
+
+// ======= Admin User List =======
+
+data class AdminUserInfoProto(
+    val userId: String = "",
+    val username: String = "",
+    val avatarUrl: String = "",
+    val fullAvatarUrl: String = "",
+    val email: String = "",
+    val isSuperAdmin: Boolean = false,
+    val lastClientVersion: String = "",
+    val lastSeenAt: Timestamp? = null,
+    val isOnline: Boolean = false,
+    val lastMessageText: String = "",
+    val lastMessageTime: Timestamp? = null,
+    val lastMessageUsername: String = "",
+    val chatCount: Int = 0
+)
+
+data class GetAdminUserListRequestProto(
+    val query: String = "",
+    val cursor: String = "",
+    val limit: Int = 50,
+    val sortBy: String = "last_message"
+)
+
+data class GetAdminUserListResponseProto(
+    val users: List<AdminUserInfoProto> = emptyList(),
+    val nextCursor: String = "",
+    val hasMore: Boolean = false,
+    val serverTime: Timestamp? = null
+)
+
+// ======= Admin User Sessions =======
+
+data class AdminUserSessionProto(
+    val deviceId: String = "",
+    val deviceName: String = "",
+    val deviceType: String = "",
+    val clientVersion: String = "",
+    val ipAddress: String = "",
+    val lastSeenAt: Timestamp? = null,
+    val isOnline: Boolean = false
+)
+
+data class GetAdminUserSessionsRequestProto(
+    val userId: String = ""
+)
+
+data class GetAdminUserSessionsResponseProto(
+    val sessions: List<AdminUserSessionProto> = emptyList()
 )

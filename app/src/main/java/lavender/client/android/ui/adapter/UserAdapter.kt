@@ -1,4 +1,5 @@
 package lavender.client.android.ui.adapter
+import android.util.Log
 
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -126,7 +127,7 @@ class UserAdapter(
                 if (wasOnline != isOnline) {
                     try {
                         notifyItemChanged(index, "status")
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
                 }
             }
         }
@@ -162,6 +163,11 @@ class UserAdapter(
 
     override fun onBindViewHolder(holder: UserViewHolder, position: Int) {
         holder.bind(users[position], selectedUsers.contains(users[position]))
+    }
+
+    override fun onViewRecycled(holder: UserViewHolder) {
+        super.onViewRecycled(holder)
+        holder.clearAvatar()
     }
 
     override fun onBindViewHolder(holder: UserViewHolder, position: Int, payloads: MutableList<Any>) {
@@ -228,16 +234,27 @@ class UserAdapter(
                 currentTheme?.let { ThemeUtils.applyDefaultAvatar(userAvatar, it) }
             }
 
+            checkBox.setOnClickListener {
+                onUserClick(username)
+            }
             itemView.setOnClickListener { onUserClick(username) }
             itemView.setOnLongClickListener {
                 onUserLongClick?.invoke(username)
                 true
             }
         }
+
+        fun clearAvatar() {
+            userAvatar.setImageDrawable(null)
+        }
     }
 
     private fun adjustAlpha(color: Int, factor: Float): Int {
         val alpha = (Color.alpha(color) * factor).toInt()
         return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color))
+    }
+
+    companion object {
+        private const val TAG = "UserAdapter"
     }
 }

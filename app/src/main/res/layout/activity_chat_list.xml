@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/transparent"
-    tools:context=".ui.chatlist.ChatListActivityV2">
+    tools:context=".ui.chatlist.ChatListActivity">
 
     <ImageView
         android:id="@+id/chatListBackground"
@@ -36,20 +36,19 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingVertical="8dp">
+                android:gravity="center_vertical">
 
                 <FrameLayout
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
                     android:layout_marginEnd="12dp"
                     android:clickable="true"
                     android:focusable="true">
 
                     <de.hdodenhof.circleimageview.CircleImageView
                         android:id="@+id/ivToolbarUserAvatar"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
                         android:src="@drawable/ic_default_avatar"
                         android:padding="6dp" />
 
@@ -129,6 +128,20 @@
 
                 </LinearLayout>
 
+                <ImageView
+                    android:id="@+id/ivFavorites"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="4dp"
+                    android:padding="8dp"
+                    android:src="@drawable/ic_star"
+                    android:contentDescription="@string/favorites"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    app:tint="?attr/colorOnPrimary" />
+
             </LinearLayout>
 
         </com.google.android.material.appbar.MaterialToolbar>
@@ -162,14 +175,14 @@
             android:id="@+id/rvChatList"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:scrollbars="vertical"
+            android:scrollbars="none"
             android:padding="8dp"
             android:clipToPadding="false" />
 
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <!-- FABs -->
-    <lavender.client.android.ui.widget.LavenderFab
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabAi"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -177,7 +190,7 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="80dp"
         android:src="@drawable/ic_ai"
-        android:contentDescription="AI" />
+        android:contentDescription="@string/ai" />
 
     <lavender.client.android.ui.widget.LavenderFab
         android:id="@+id/fabAddChat"

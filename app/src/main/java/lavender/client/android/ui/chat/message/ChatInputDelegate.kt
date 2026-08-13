@@ -1,18 +1,18 @@
 package lavender.client.android.ui.chat.message
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.TypedValue
 import android.view.View
 import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -20,25 +20,28 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.MapPickerActivity
 import lavender.client.android.R
+import lavender.client.android.StickerPackCreateActivity
 import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.grpc.ProfileClient
 import lavender.client.android.data.models.Message
+import lavender.client.android.network.HttpClient
+import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.data.ThemeMappers
 import lavender.client.android.ui.adapter.MentionAdapter
 import lavender.client.android.ui.audio.AudioRecordingView
 import lavender.client.android.ui.widget.ActionBottomSheet
 import lavender.client.android.ui.widget.SheetAction
 import lavender.client.android.ui.widget.StandardBottomSheet
-import lavender.client.android.ui.widget.WidgetManager
-import lavender.client.android.theme.ThemeStore
-import lavender.client.android.theme.data.ThemeMappers
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.Request
-import lavender.client.android.network.HttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
@@ -51,6 +54,10 @@ class ChatInputDelegate(
     private val activity: AppCompatActivity,
     private val grpcClient: GrpcClient
 ) {
+    companion object {
+        private const val TAG = "ChatInputDelegate"
+    }
+
     lateinit var messageInput: EditText
     lateinit var sendButton: ImageButton
     lateinit var attachButton: ImageButton
@@ -76,6 +83,7 @@ class ChatInputDelegate(
     var onSendMessage: ((text: String, imageUrl: String) -> Unit)? = null
     var onTypingSignal: ((isTyping: Boolean) -> Unit)? = null
     var onReplyChanged: ((Message?) -> Unit)? = null
+    var onStickerSent: (() -> Unit)? = null
 
     private val pickImageLauncher = activity.registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -124,6 +132,26 @@ class ChatInputDelegate(
         if (success) currentPhotoUri?.let {
             selectedImageUris.addAll(listOf(it))
             showImagePreview()
+        }
+    }
+
+    private val cameraPermissionLauncher = activity.registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            try {
+                currentPhotoUri = createImageUri()
+                if (currentPhotoUri != null) {
+                    takePhotoLauncher.launch(currentPhotoUri!!)
+                } else {
+                    showToast("Failed to create image file")
+                }
+            } catch (e: Exception) {
+                showToast("Could not open camera app")
+                android.util.Log.e("ChatInput", "Camera launch error", e)
+            }
+        } else {
+            showToast("Camera permission denied")
         }
     }
 
@@ -222,7 +250,7 @@ class ChatInputDelegate(
             override fun afterTextChanged(s: Editable?) {}
         })
 
-        activity.findViewById<ImageButton>(R.id.emojiButton).setOnClickListener { showEmojiPicker() }
+        activity.findViewById<ImageButton>(R.id.emojiButton).setOnClickListener { showMediaPicker() }
     }
 
     fun resetInput() {
@@ -295,58 +323,80 @@ class ChatInputDelegate(
 
     // ======= Emoji Picker =======
 
-    fun showEmojiPicker() {
-        val sheet = StandardBottomSheet(activity, R.layout.dialog_emoji_picker)
-        val emojiGrid = sheet.findViewById<android.widget.GridLayout>(R.id.emojiGrid)
-        val emojis = listOf(
-            "😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚",
-            "😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🤩","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣",
-            "😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤔",
-            "🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴",
-            "🤢","🤮","🤧","🥵","🥶","😷","🤒","🤕","🤑","🤠","😈","👿","👹","👺","🤡","💩","👻","💀","☠️","👽",
-            "👾","🤖","🎃","😺","😸","😹","😻","😼","😽","🙀","😿","😾","👋","🤚","🖐","✋","🖖","👌","🤏","✌️",
-            "🤞","🤟","🤘","🤙","👈","👉","👆","🖕","👇","☝️","👍","👎","✊","👊","🤛","🤜","👏","🙌","👐","🤲",
-            "🤝","🙏","✍️","💅","🤳","💪","🦾","🦵","🦿","🦶"
-        )
-        val size = (48 * activity.resources.displayMetrics.density).toInt()
-        for (emoji in emojis) {
-            val tv = TextView(activity).apply {
-                text = emoji
-                textSize = 24f
-                gravity = android.view.Gravity.CENTER
-                layoutParams = android.view.ViewGroup.LayoutParams(size, size)
-                val v = TypedValue()
-                activity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, v, true)
-                setBackgroundResource(v.resourceId)
-                setOnClickListener {
-                    val cp = messageInput.selectionStart
-                    val ct = messageInput.text.toString()
-                    messageInput.setText(ct.substring(0, cp) + emoji + ct.substring(cp))
-                    messageInput.setSelection(cp + emoji.length)
-                    sheet.dismiss()
-                }
+    fun showMediaPicker() {
+        val sheet = MediaPickerSheet(
+            activity = activity,
+            onEmojiSelected = { emoji ->
+                val cp = messageInput.selectionStart
+                val ct = messageInput.text.toString()
+                messageInput.setText(ct.substring(0, cp) + emoji + ct.substring(cp))
+                messageInput.setSelection(cp + emoji.length)
+            },
+            onStickerSelected = { sticker -> sendStickerMessage(sticker) },
+            onCreateStickerPack = {
+                activity.startActivity(Intent(activity, StickerPackCreateActivity::class.java))
+            },
+            onEditStickerPack = { packId ->
+                val intent = Intent(activity, StickerPackCreateActivity::class.java)
+                intent.putExtra("PACK_ID", packId)
+                activity.startActivity(intent)
             }
-            emojiGrid?.addView(tv)
+        )
+        sheet.showPicker()
+    }
+
+    fun showEmojiPicker() {
+        showMediaPicker()
+    }
+
+    private fun sendStickerMessage(sticker: lavender.client.android.data.models.Sticker) {
+        try {
+            val msg = Message(
+                id = java.util.UUID.randomUUID().toString(),
+                user = username,
+                text = "",
+                timestamp = System.currentTimeMillis(),
+                roomId = roomId,
+                userId = grpcClient.getUserId() ?: "",
+                isSent = false,
+                stickerUrl = sticker.lottieUrl,
+                stickerThumbnailUrl = sticker.thumbnailUrl,
+                repliedToMessageId = replyingTo?.id ?: "",
+                repliedToUser = replyingTo?.user ?: "",
+                repliedToText = replyingTo?.text ?: ""
+            )
+            grpcClient.addLocalMessage(msg)
+            grpcClient.sendMessageV2(msg)
+            grpcClient.deleteDraft(roomId)
+            resetInput()
+            onStickerSent?.invoke()
+        } catch (e: Exception) {
+            android.util.Log.e("ChatInput", "Failed to send sticker", e)
+            android.widget.Toast.makeText(activity, activity.getString(R.string.failed) + ": ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
         }
-        sheet.show()
     }
 
     // ======= Attachments =======
 
     fun showAttachmentSheet() {
-        WidgetManager.getOrCreate("attachment_sheet") { ActionBottomSheet(activity) }
+        if (activity.isFinishing || activity.isDestroyed) return
+        ActionBottomSheet(activity)
             .setActions(listOf(
                 SheetAction(R.id.attachCamera, R.drawable.ic_mic, activity.getString(R.string.attach_camera)) {
-                    try {
-                        currentPhotoUri = createImageUri()
-                        if (currentPhotoUri != null) {
-                            takePhotoLauncher.launch(currentPhotoUri!!)
-                        } else {
-                            showToast("Failed to create image file")
+                    if (androidx.core.content.ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                        try {
+                            currentPhotoUri = createImageUri()
+                            if (currentPhotoUri != null) {
+                                takePhotoLauncher.launch(currentPhotoUri!!)
+                            } else {
+                                showToast("Failed to create image file")
+                            }
+                        } catch (e: Exception) {
+                            showToast("Could not open camera app")
+                            android.util.Log.e("ChatInput", "Camera launch error", e)
                         }
-                    } catch (e: Exception) {
-                        showToast("Could not open camera app")
-                        android.util.Log.e("ChatInput", "Camera launch error", e)
+                    } else {
+                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                     }
                 },
                 SheetAction(R.id.attachGallery, R.drawable.ic_gallery, activity.getString(R.string.attach_gallery)) {
@@ -399,51 +449,93 @@ class ChatInputDelegate(
     private fun sendSelectedImages() {
         val text = messageInput.text.toString().trim()
         val urls = mutableListOf<String>()
-        var count = 0
         val total = selectedImageUris.size
-        val uploadProgressContainer = activity.findViewById<View>(R.id.uploadProgressContainer)
-        val uploadProgressText = activity.findViewById<TextView>(R.id.uploadProgressText)
-        val uploadProgressBar = activity.findViewById<android.widget.ProgressBar>(R.id.uploadProgressBar)
+        if (total == 0) return
 
-        uploadProgressContainer.isVisible = true
-        uploadProgressText.text = activity.getString(R.string.uploading_images, 0, total)
-        uploadProgressBar.progress = 0
+        sendButton.isEnabled = false
+        attachButton.isEnabled = false
 
-        selectedImageUris.forEach { uri ->
-            val bytes = activity.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            if (bytes != null) {
-                val body = MultipartBody.Part.createFormData("image", getFileName(uri) ?: "image.jpg",
-                    bytes.toRequestBody("application/octet-stream".toMediaTypeOrNull()))
-                val req = Request.Builder()
-                    .url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(activity)}/upload-image")
-                    .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build()).build()
-                HttpClient.client.newCall(req).enqueue(object : okhttp3.Callback {
-                    override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
-                        activity.runOnUiThread { uploadProgressContainer.isVisible = false; showToast("Upload failed") }
-                    }
-                    override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
-                        val rb = response.body.string()
-                        if (!response.isSuccessful || rb.contains("404")) {
-                            activity.runOnUiThread { uploadProgressContainer.isVisible = false; showToast("Server error: 404") }
-                            return
-                        }
-                        val url = if (rb.contains("\"url\"")) try { JSONObject(rb).getString("url") } catch (_: Exception) { "" }
-                        else if (rb.startsWith("http")) rb else ""
-                        if (url.isNotEmpty() && !url.contains("404")) urls.add(url)
-                        count++
-                        activity.runOnUiThread {
-                            uploadProgressBar.progress = ((count.toFloat() / total) * 100).toInt()
-                            uploadProgressText.text = activity.getString(R.string.uploading_images, count, total)
-                            if (count == total) {
-                                uploadProgressContainer.isVisible = false
-                                if (urls.isNotEmpty()) sendGalleryMessage(text, urls)
-                                else showToast("Upload failed")
+        activity.lifecycleScope.launch {
+            for ((index, uri) in selectedImageUris.withIndex()) {
+                val itemView = imagePreviewContainer.getChildAt(index)
+                val overlay = itemView?.findViewById<View>(R.id.uploadOverlay)
+                val spinner = itemView?.findViewById<View>(R.id.uploadSpinner)
+                val errorIcon = itemView?.findViewById<View>(R.id.uploadErrorIcon)
+                val successIcon = itemView?.findViewById<View>(R.id.uploadSuccessIcon)
+                val removeBtn = itemView?.findViewById<View>(R.id.removeImageButton)
+
+                withContext(Dispatchers.Main) {
+                    overlay?.visibility = View.VISIBLE
+                    spinner?.visibility = View.VISIBLE
+                    errorIcon?.visibility = View.GONE
+                    successIcon?.visibility = View.GONE
+                    removeBtn?.visibility = View.GONE
+                }
+
+                val result = withContext(Dispatchers.IO) {
+                    try {
+                        val bytes = activity.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                        if (bytes == null) {
+                            UploadResult.Error("Cannot read file")
+                        } else if (bytes.size > ProfileClient.maxUploadSize) {
+                            UploadResult.Error(activity.getString(R.string.file_too_large))
+                        } else {
+                            val fn = getFileName(uri) ?: "image.jpg"
+                            val body = MultipartBody.Part.createFormData("image", fn,
+                                bytes.toRequestBody("application/octet-stream".toMediaTypeOrNull()))
+                            val req = Request.Builder()
+                                .url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(activity)}/upload-image")
+                                .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build()).build()
+                            val response = HttpClient.client.newCall(req).execute()
+                            val rb = response.body.string()
+                            response.close()
+                            if (response.code == 400 && rb.contains("too large")) {
+                                UploadResult.Error(activity.getString(R.string.file_too_large))
+                            } else if (!response.isSuccessful || rb.contains("404")) {
+                                UploadResult.Error(activity.getString(R.string.failed_to_upload_file))
+                            } else {
+                                val url = if (rb.contains("\"url\"")) try { org.json.JSONObject(rb).getString("url") } catch (_: Exception) { "" }
+                                else if (rb.startsWith("http")) rb else ""
+                                if (url.isNotEmpty() && !url.contains("404")) UploadResult.Success(url)
+                                else UploadResult.Error("Upload failed")
                             }
                         }
+                    } catch (e: Exception) {
+                        UploadResult.Error(e.message ?: "Unknown error")
                     }
-                })
+                }
+
+                withContext(Dispatchers.Main) {
+                    when (result) {
+                        is UploadResult.Success -> {
+                            urls.add(result.url)
+                            spinner?.visibility = View.GONE
+                            successIcon?.visibility = View.VISIBLE
+                        }
+                        is UploadResult.Error -> {
+                            spinner?.visibility = View.GONE
+                            errorIcon?.visibility = View.VISIBLE
+                            removeBtn?.visibility = View.VISIBLE
+                        }
+                    }
+                }
+            }
+
+            withContext(Dispatchers.Main) {
+                sendButton.isEnabled = true
+                attachButton.isEnabled = true
+                if (urls.isNotEmpty()) {
+                    sendGalleryMessage(text, urls)
+                } else {
+                    showToast(activity.getString(R.string.failed_to_upload_file))
+                }
             }
         }
+    }
+
+    private sealed class UploadResult {
+        data class Success(val url: String) : UploadResult()
+        data class Error(val message: String) : UploadResult()
     }
 
     private fun sendGalleryMessage(text: String, imageUrls: List<String>) {
@@ -470,6 +562,11 @@ class ChatInputDelegate(
             uploadProgressBar.isVisible = true
             val bytes = activity.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             if (bytes != null) {
+                if (bytes.size > ProfileClient.maxUploadSize) {
+                    uploadProgressBar.isVisible = false
+                    showToast(activity.getString(R.string.file_too_large))
+                    return@forEach
+                }
                 val fn = getFileName(uri) ?: (if (isImage) "image.jpg" else "file")
                 val body = MultipartBody.Part.createFormData(if (isImage) "image" else "file", fn,
                     bytes.toRequestBody("application/octet-stream".toMediaTypeOrNull()))
@@ -478,17 +575,21 @@ class ChatInputDelegate(
                     .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build()).build()
                 HttpClient.client.newCall(req).enqueue(object : okhttp3.Callback {
                     override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
-                        activity.runOnUiThread { uploadProgressBar.isVisible = false; showToast("Upload failed") }
+                        activity.lifecycleScope.launch { uploadProgressBar.isVisible = false; showToast(activity.getString(R.string.failed_to_upload_file)) }
                     }
                     override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
                         val rb = response.body.string()
+                        if (response.code == 400 && rb.contains("too large")) {
+                            activity.lifecycleScope.launch { uploadProgressBar.isVisible = false; showToast(activity.getString(R.string.file_too_large)) }
+                            return
+                        }
                         if (!response.isSuccessful || rb.contains("404")) {
-                            activity.runOnUiThread { uploadProgressBar.isVisible = false; showToast("Server error: 404") }
+                            activity.lifecycleScope.launch { uploadProgressBar.isVisible = false; showToast(activity.getString(R.string.failed_to_upload_file)) }
                             return
                         }
                         val url = if (rb.contains("\"url\"")) try { JSONObject(rb).getString("url") } catch (_: Exception) { "" }
                         else if (rb.startsWith("http")) rb else ""
-                        activity.runOnUiThread {
+                        activity.lifecycleScope.launch {
                             uploadProgressBar.isVisible = false
                             if (url.isNotEmpty() && !url.contains("404")) {
                                 if (isImage) sendGalleryMessage("", listOf(url))
@@ -518,8 +619,8 @@ class ChatInputDelegate(
     // ======= Audio Recording =======
 
     fun showAudioRecordingView(onRecordingFinished: (File, Int) -> Unit) {
-        if (activity.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            activity.requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 1001)
+        if (activity.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            activity.requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 1001)
             return
         }
         val sheet = StandardBottomSheet(activity)

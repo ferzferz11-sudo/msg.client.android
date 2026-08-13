@@ -47,6 +47,7 @@ class MessageReplyProtoMarshaller {
             val inner = com.google.protobuf.CodedOutputStream.newInstance(baos)
             if (value.messageId.isNotEmpty()) inner.writeString(1, value.messageId)
             if (value.preview.isNotEmpty()) inner.writeString(2, value.preview)
+            if (value.senderId.isNotEmpty()) inner.writeString(3, value.senderId)
             inner.flush()
             val bytes = baos.toByteArray()
             cos.writeTag(fieldNumber, WireFormat.WIRETYPE_LENGTH_DELIMITED)
@@ -55,16 +56,18 @@ class MessageReplyProtoMarshaller {
         }
 
         fun parse(cis: com.google.protobuf.CodedInputStream): MessageReplyProto {
-            var messageId = ""; var preview = ""
+            var messageId = ""; var preview = ""; var senderId = ""
             val inner = com.google.protobuf.CodedInputStream.newInstance(cis.readRawBytes(cis.readUInt32()))
             while (!inner.isAtEnd) {
                 val tag = inner.readTag(); if (tag == 0) break
                 when (WireFormat.getTagFieldNumber(tag)) {
-                    1 -> messageId = inner.readString(); 2 -> preview = inner.readString()
+                    1 -> messageId = inner.readString()
+                    2 -> preview = inner.readString()
+                    3 -> senderId = inner.readString()
                     else -> inner.skipField(tag)
                 }
             }
-            return MessageReplyProto(messageId, preview)
+            return MessageReplyProto(messageId, preview, senderId)
         }
     }
 }
@@ -76,11 +79,9 @@ class MessageV2ProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageV2Pr
         if (value.id.isNotEmpty()) cos.writeString(1, value.id)
         if (value.roomId.isNotEmpty()) cos.writeString(2, value.roomId)
         if (value.senderId.isNotEmpty()) cos.writeString(3, value.senderId)
-        when {
-            value.text.isNotEmpty() -> cos.writeString(10, value.text)
-            value.media != null -> MessageMediaProtoMarshaller.serialize(value.media, cos, 11)
-            value.reply != null -> MessageReplyProtoMarshaller.serialize(value.reply, cos, 12)
-        }
+        if (value.text.isNotEmpty()) cos.writeString(10, value.text)
+        if (value.media != null) MessageMediaProtoMarshaller.serialize(value.media, cos, 11)
+        if (value.reply != null) MessageReplyProtoMarshaller.serialize(value.reply, cos, 12)
         if (value.edited) cos.writeBool(20, value.edited)
         if (value.isRead) cos.writeBool(21, value.isRead)
         value.createdAt?.let {
@@ -96,6 +97,17 @@ class MessageV2ProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageV2Pr
         }
         if (value.isE2EE) cos.writeBool(30, value.isE2EE)
         if (value.e2eePayload.isNotEmpty()) cos.writeString(31, value.e2eePayload)
+        if (value.mentions.isNotEmpty()) {
+            cos.writeTag(40, WireFormat.WIRETYPE_LENGTH_DELIMITED)
+            val baosInner = ByteArrayOutputStream()
+            val cosInner = com.google.protobuf.CodedOutputStream.newInstance(baosInner)
+            for (m in value.mentions) cosInner.writeString(1, m)
+            cosInner.flush()
+            val bytes = baosInner.toByteArray()
+            cos.writeUInt32NoTag(bytes.size)
+            cos.writeRawBytes(bytes)
+        }
+        if (value.forwardedFrom.isNotEmpty()) cos.writeString(50, value.forwardedFrom)
         cos.flush()
         return ByteArrayInputStream(baos.toByteArray())
     }
@@ -106,6 +118,8 @@ class MessageV2ProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageV2Pr
         var text = ""; var media: MessageMediaProto? = null; var reply: MessageReplyProto? = null
         var edited = false; var isRead = false; var createdAt: com.google.protobuf.Timestamp? = null
         var reactions = byteArrayOf(); var isE2EE = false; var e2eePayload = ""
+        val mentions = mutableListOf<String>()
+        var forwardedFrom = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag(); if (tag == 0) break
             when (WireFormat.getTagFieldNumber(tag)) {
@@ -121,10 +135,22 @@ class MessageV2ProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageV2Pr
                 23 -> { val len = cis.readUInt32(); reactions = cis.readRawBytes(len) }
                 30 -> isE2EE = cis.readBool()
                 31 -> e2eePayload = cis.readString()
+                40 -> {
+                    val len = cis.readUInt32()
+                    val inner = com.google.protobuf.CodedInputStream.newInstance(cis.readRawBytes(len))
+                    while (!inner.isAtEnd) {
+                        val innerTag = inner.readTag(); if (innerTag == 0) break
+                        when (WireFormat.getTagFieldNumber(innerTag)) {
+                            1 -> mentions.add(inner.readString())
+                            else -> inner.skipField(innerTag)
+                        }
+                    }
+                }
+                50 -> forwardedFrom = cis.readString()
                 else -> cis.skipField(tag)
             }
         }
-        return MessageV2Proto(id, roomId, senderId, text, media, reply, edited, isRead, createdAt, reactions, isE2EE, e2eePayload)
+        return MessageV2Proto(id, roomId, senderId, text, media, reply, edited, isRead, createdAt, reactions, isE2EE, e2eePayload, mentions, forwardedFrom)
     }
 }
 
@@ -134,6 +160,7 @@ class ChatV2MessageMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatV2Messag
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (value.jwtToken.isNotEmpty()) cos.writeString(1, value.jwtToken)
         if (value.roomId.isNotEmpty()) cos.writeString(2, value.roomId)
+        if (value.clientVersion.isNotEmpty()) cos.writeString(3, value.clientVersion)
         if (value.message != null) {
             val msgBytes = MessageV2ProtoMarshaller().stream(value.message).readBytes()
             cos.writeTag(10, WireFormat.WIRETYPE_LENGTH_DELIMITED)
@@ -167,13 +194,14 @@ class ChatV2MessageMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatV2Messag
 
     override fun parse(stream: java.io.InputStream): ChatV2MessageProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
-        var jwtToken = ""; var roomId = ""
+        var jwtToken = ""; var roomId = ""; var clientVersion = ""
         var message: MessageV2Proto? = null; var typing: ChatV2TypingProto? = null; var system: ChatV2SystemProto? = null
         while (!cis.isAtEnd) {
             val tag = cis.readTag(); if (tag == 0) break
             when (WireFormat.getTagFieldNumber(tag)) {
                 1 -> jwtToken = cis.readString()
                 2 -> roomId = cis.readString()
+                3 -> clientVersion = cis.readString()
                 10 -> { val len = cis.readUInt32(); message = MessageV2ProtoMarshaller().parse(ByteArrayInputStream(cis.readRawBytes(len))) }
                 11 -> {
                     val len = cis.readUInt32()
@@ -192,7 +220,7 @@ class ChatV2MessageMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatV2Messag
                 else -> cis.skipField(tag)
             }
         }
-        return ChatV2MessageProto(jwtToken, roomId, message, typing, system)
+        return ChatV2MessageProto(jwtToken, roomId, clientVersion, message, typing, system)
     }
 }
 
@@ -230,13 +258,22 @@ class SendMessageV2RequestMarshaller : io.grpc.MethodDescriptor.Marshaller<SendM
     override fun stream(v: SendMessageV2RequestProto): java.io.InputStream {
         val baos = ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.roomId.isNotEmpty()) cos.writeString(1, v.roomId)
-        when {
-            v.text.isNotEmpty() -> cos.writeString(2, v.text)
-            v.media != null -> MessageMediaProtoMarshaller.serialize(v.media, cos, 3)
-        }
+        if (v.text.isNotEmpty()) cos.writeString(2, v.text)
+        if (v.media != null) MessageMediaProtoMarshaller.serialize(v.media, cos, 3)
         if (v.replyToId.isNotEmpty()) cos.writeString(4, v.replyToId)
         if (v.isE2EE) cos.writeBool(5, v.isE2EE)
         if (v.e2eePayload.isNotEmpty()) cos.writeString(6, v.e2eePayload)
+        if (v.mentions.isNotEmpty()) {
+            cos.writeTag(7, WireFormat.WIRETYPE_LENGTH_DELIMITED)
+            val baosInner = ByteArrayOutputStream()
+            val cosInner = com.google.protobuf.CodedOutputStream.newInstance(baosInner)
+            for (m in v.mentions) cosInner.writeString(1, m)
+            cosInner.flush()
+            val bytes = baosInner.toByteArray()
+            cos.writeUInt32NoTag(bytes.size)
+            cos.writeRawBytes(bytes)
+        }
+        if (v.forwardedFrom.isNotEmpty()) cos.writeString(8, v.forwardedFrom)
         cos.flush(); return ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): SendMessageV2RequestProto = SendMessageV2RequestProto()

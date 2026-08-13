@@ -49,16 +49,26 @@
                 android:textColor="?attr/colorOnSurface"
                 android:alpha="0.8"
                 android:gravity="center"
-                android:layout_marginBottom="24dp" />
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/appVersionText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="13sp"
+                android:textColor="?attr/colorOnSurface"
+                android:alpha="0.6"
+                android:gravity="center"
+                android:layout_marginBottom="4dp" />
 
             <TextView
                 android:id="@+id/serverVersionText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Server Version: --"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:textColor="?attr/colorOnSurface"
-                android:alpha="0.8"
+                android:alpha="0.6"
                 android:layout_marginBottom="24dp" />
 
             <View

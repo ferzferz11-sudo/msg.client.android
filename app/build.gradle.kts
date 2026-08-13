@@ -74,6 +74,13 @@ android {
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
+
+    packaging {
+        jniLibs {
+            keepDebugSymbols.add("**/libdatastore_shared_counter.so")
+            keepDebugSymbols.add("**/libjingle_peerconnection_so.so")
+        }
+    }
 }
 
 
@@ -135,6 +142,9 @@ dependencies {
 
     // JSch for SSH tunnel (Hermes Gateway)
     implementation(libs.jsch)
+
+    // Lottie for sticker animations
+    implementation(libs.lottie)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

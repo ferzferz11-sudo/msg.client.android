@@ -12,6 +12,7 @@
     <!-- Standard colors -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="amber_500">#FFC107</color>
 
     <!-- Message colors (default for light theme) -->
     <color name="message_background">@color/white</color>
@@ -66,6 +67,26 @@
 
     <color name="ic_launcher_background">#1E1E1E</color>
 
+    <!-- Message bubble colors -->
+    <color name="bg_message_user">#FF6200EE</color>
+    <color name="bg_message_agent">#FF373737</color>
+    <color name="bg_date_separator">#4D000000</color>
+    <color name="bg_input_stroke">#DDDDDD</color>
+    <color name="bg_reply_container">#15000000</color>
+
     <!-- Notification colors -->
     <color name="notification_unread_bg">#1A5F9EA0</color> <!-- Semi-transparent primary -->
+
+    <!-- Semantic colors -->
+    <color name="danger">#FF5252</color>
+    <color name="success">#4CAF50</color>
+    <color name="warning">#FFA000</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#888888</color>
+    <color name="text_hint">#80FFFFFF</color>
+    <color name="surface_elevated">#333333</color>
+    <color name="scrim_light">#80FFFFFF</color>
+    <color name="scrim_dark">#80000000</color>
+    <color name="scrim_heavy">#CC000000</color>
+    <color name="divider">#0D000000</color>
 </resources>

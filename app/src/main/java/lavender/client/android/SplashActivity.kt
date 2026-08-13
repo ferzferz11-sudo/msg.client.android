@@ -2,6 +2,8 @@ package lavender.client.android
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.graphics.Typeface
+import android.util.Log
 import lavender.client.android.ui.chatlist.ChatListActivity
 import android.os.Bundle
 import android.view.animation.AccelerateDecelerateInterpolator
@@ -25,14 +27,26 @@ class SplashActivity : AppCompatActivity() {
 
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
 
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            try {
+                prefs.edit {
+                    putString("last_crash", "${throwable.javaClass.simpleName}: ${throwable.message}\n${throwable.stackTraceToString().take(2000)}")
+                    putLong("last_crash_time", System.currentTimeMillis())
+                }
+            } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
+            Thread.getDefaultUncaughtExceptionHandler()?.uncaughtException(thread, throwable)
+        }
+
         // Initialize language to Russian on first launch
         if (!prefs.contains("language")) {
             prefs.edit { putString("language", "ru") }
         }
 
         SessionManager.initFromPrefs(this)
+        lavender.client.android.network.HttpClient.init(this)
         lavender.client.android.theme.ThemeStore.init(this)
         lavender.client.android.data.calls.CallManager.init(this)
+        lavender.client.android.ui.audio.WaveformExtractor.init(this)
 
         // Sync language from server if logged in
         val session = SessionManager.session.value
@@ -60,6 +74,14 @@ class SplashActivity : AppCompatActivity() {
         val callIdFromPush = intent.getStringExtra("CALL_ID") ?: intent.getStringExtra("call_id")
 
         animateAndNavigate(shouldProceed, roomIdFromPush, callIdFromPush, session, prefs)
+
+        lifecycleScope.launch {
+            delay(5000)
+            if (!isFinishing && !isDestroyed) {
+                Log.w("SplashActivity", "Splash timeout — force navigating")
+                navigateToTarget(shouldProceed, roomIdFromPush, callIdFromPush, session, prefs)
+            }
+        }
     }
 
     private fun animateAndNavigate(
@@ -96,7 +118,7 @@ class SplashActivity : AppCompatActivity() {
         val appNameText = TextView(this).apply {
             text = getString(R.string.lavender_messenger)
             textSize = 28f
-            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTypeface(null, Typeface.BOLD)
             setTextColor(resources.getColor(R.color.lavender_mist, null))
             gravity = android.view.Gravity.CENTER
             alpha = 0f
@@ -270,10 +292,23 @@ class SplashActivity : AppCompatActivity() {
             .build()
 
         biometricPrompt.authenticate(promptInfo)
+
+        lifecycleScope.launch {
+            delay(15000)
+            if (!isFinishing && !isDestroyed) {
+                Log.w("SplashActivity", "Biometric timeout — navigating anyway")
+                startActivity(Intent(this@SplashActivity, ChatListActivity::class.java))
+                finish()
+            }
+        }
     }
 
     /** Clear all local cache silently on successful login. */
     private fun clearAllCache() {
         lavender.client.android.data.cache.CacheUtils.clearAllSync(this)
+    }
+
+    companion object {
+        private const val TAG = "SplashActivity"
     }
 }

@@ -5,14 +5,14 @@ import android.content.ClipboardManager
 import android.util.TypedValue
 import android.view.View
 import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.appcompat.app.AppCompatActivity
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import lavender.client.android.ui.widget.StandardBottomSheet
 
 /**
@@ -30,13 +30,23 @@ class ChatMessageMenuDelegate(
 
     fun showReactionsDialog(m: Message, onReply: (Message) -> Unit) {
         val sheet = StandardBottomSheet(activity, R.layout.dialog_reactions)
-        val container = sheet.findViewById<LinearLayout>(R.id.reactionsContainer)
+        val container = sheet.findViewById<android.widget.GridLayout>(R.id.reactionsContainer)
 
-        listOf("👍", "💯", "🔥", "✅", "❤️", "😂", "😮", "😢", "🙏").forEach { e ->
-            val tv = TextView(activity).apply {
+        val emojis = listOf(
+            "👍", "👎", "❤️", "🔥", "😮", "😢", "😂", "🎉",
+            "💯", "✅", "❌", "🙏", "💪", "👏", "🤝", "🤔",
+            "😍", "🥳", "😎", "🤯", "💀", "👻", "🤡", "💩",
+            "👀", "🫡", "🫶", "🤷", "💬", "📎", "⭐", "💡"
+        )
+
+        val size = (40 * activity.resources.displayMetrics.density).toInt()
+        emojis.forEach { e ->
+            val tv = android.widget.TextView(activity).apply {
                 text = e
-                textSize = 30f
-                setPadding(16, 8, 16, 8)
+                textSize = 24f
+                width = size
+                height = size
+                gravity = android.view.Gravity.CENTER
                 val v2 = TypedValue()
                 activity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, v2, true)
                 setBackgroundResource(v2.resourceId)
@@ -95,7 +105,7 @@ class ChatMessageMenuDelegate(
             val nt = edit?.text.toString().trim()
             if (nt.isNotEmpty() && nt != m.text) {
                 grpcClient.editMessageV2(m.id, nt) { s, msg ->
-                    if (!s) activity.runOnUiThread {
+                    if (!s) activity.lifecycleScope.launch {
                         Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show()
                     }
                 }

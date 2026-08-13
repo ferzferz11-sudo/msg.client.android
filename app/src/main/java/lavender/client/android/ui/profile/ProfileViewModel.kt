@@ -29,7 +29,13 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         val bio: String = "",
         val status: String = "",
         val isOnline: Boolean = false,
-        val lastSeenAt: com.google.protobuf.Timestamp? = null
+        val lastSeenAt: com.google.protobuf.Timestamp? = null,
+        val companyId: String = "",
+        val companyName: String = "",
+        val positionTitle: String = "",
+        val positionLevel: Int = 0,
+        val userId: String = "",
+        val email: String = ""
     )
 
     data class GroupData(
@@ -69,13 +75,19 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     bio = profile?.bio ?: "",
                     status = profile?.status ?: "",
                     isOnline = isOnline,
-                    lastSeenAt = null
+                    lastSeenAt = null,
+                    companyId = profile?.companyId ?: "",
+                    companyName = profile?.companyName ?: "",
+                    positionTitle = profile?.positionTitle ?: "",
+                    positionLevel = profile?.positionLevel ?: 0,
+                    userId = profile?.userId ?: "",
+                    email = profile?.email ?: ""
                 )
                 if (profile != null && profile.avatarUrl.isNotEmpty()) {
                     GrpcClient.updateAvatarCache(username, profile.avatarUrl, profile.fullAvatarUrl.ifEmpty { profile.avatarUrl })
                 }
             } else {
-                // Other users — ChatService (no v2 replacement for viewing other profiles)
+                // Other users — use GetUserInfo for company info
                 GrpcClient.fetchUserId(username) { userId, success ->
                     if (!success || userId.isNullOrEmpty()) {
                         _profileData.value = _profileData.value.copy(username = username, bio = "", status = "")
@@ -90,10 +102,25 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                             bio = profile?.bio ?: "",
                             status = profile?.status ?: "",
                             isOnline = isOnline,
-                            lastSeenAt = profile?.lastSeenAt
+                            lastSeenAt = profile?.lastSeenAt,
+                            userId = userId
                         )
                         if (profile != null && profile.avatarUrl.isNotEmpty()) {
                             GrpcClient.updateAvatarCache(username, profile.avatarUrl, profile.fullAvatarUrl.ifEmpty { profile.avatarUrl })
+                        }
+                        // Load company info via GetUserInfo
+                        viewModelScope.launch {
+                            val companyInfo = withContext(Dispatchers.IO) {
+                                lavender.client.android.data.grpc.GrpcCompanyClient.getUserInfo(userId)
+                            }
+                            if (companyInfo?.info != null) {
+                                _profileData.value = _profileData.value.copy(
+                                    companyId = companyInfo.info.companyId,
+                                    companyName = companyInfo.info.companyName,
+                                    positionTitle = companyInfo.info.positionTitle,
+                                    positionLevel = companyInfo.info.positionLevel
+                                )
+                            }
                         }
                     }
                 }
@@ -101,20 +128,40 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun loadGroupData(roomId: String) {
+    fun loadGroupData(
+        roomId: String,
+        intentParticipants: String = "",
+        intentCreator: String = "",
+        intentAvatarUrl: String = "",
+        intentFullAvatarUrl: String = "",
+        intentName: String = ""
+    ) {
+        val participants = try {
+            val arr = JSONArray(intentParticipants)
+            (0 until arr.length()).map { arr.getString(it) }
+        } catch (_: Exception) { emptyList() }
+
+        if (participants.isNotEmpty() || intentCreator.isNotEmpty()) {
+            _groupData.value = GroupData(
+                name = intentName, avatarUrl = intentAvatarUrl,
+                fullAvatarUrl = intentFullAvatarUrl, creator = intentCreator,
+                participants = participants, allowMembersToAdd = false
+            )
+        }
+
         viewModelScope.launch {
             val username = GrpcClient.getCurrentUsername() ?: return@launch
             GrpcClient.getChats(username) { page ->
                 val chat = page.chats.find { it.id == roomId }
                 if (chat != null) {
-                    val participants = try {
+                    val chatParticipants = try {
                         val arr = JSONArray(chat.participants)
                         (0 until arr.length()).map { arr.getString(it) }
                     } catch (_: Exception) { emptyList() }
                     _groupData.value = GroupData(
                         name = chat.name, avatarUrl = chat.avatarUrl,
                         fullAvatarUrl = chat.fullAvatarUrl, creator = chat.creator,
-                        participants = participants, allowMembersToAdd = chat.allowMembersToAdd
+                        participants = chatParticipants, allowMembersToAdd = chat.allowMembersToAdd
                     )
                 }
             }

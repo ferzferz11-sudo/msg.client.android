@@ -1,5 +1,7 @@
 package lavender.client.android.data.ai
 
+import org.json.JSONObject
+
 // ======= AI Services v2 — Domain Models =======
 
 enum class AiProviderType(val value: String) {
@@ -15,6 +17,30 @@ enum class AiProviderType(val value: String) {
     companion object {
         fun fromString(value: String): AiProviderType {
             return entries.find { it.value == value } ?: OPENROUTER
+        }
+    }
+}
+
+enum class AgentStatus {
+    AVAILABLE,
+    SERVER_KEY,
+    NEEDS_KEY;
+
+    companion object {
+        fun fromProviderConfig(providerConfig: String): AgentStatus {
+            return try {
+                if (providerConfig.isEmpty()) return NEEDS_KEY
+                val config = JSONObject(providerConfig)
+                val key = config.optString("api_key", "").ifEmpty { config.optString("apiKey", "") }
+                val keySource = config.optString("api_key_source", "")
+                when {
+                    key.isNotEmpty() -> AVAILABLE
+                    keySource == "server" -> SERVER_KEY
+                    else -> NEEDS_KEY
+                }
+            } catch (_: Exception) {
+                NEEDS_KEY
+            }
         }
     }
 }

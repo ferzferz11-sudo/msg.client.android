@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
+import androidx.core.graphics.toColorInt
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.*
@@ -14,19 +15,17 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.tabs.TabLayout
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import lavender.client.android.R
-import lavender.client.android.data.grpc.GrpcClient
-import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 
 class RemoteAgentSettingsActivity : AppCompatActivity(),
     RemoteAgentManager.RemoteAgentStateListener {
+
+    private lateinit var viewModel: RemoteAgentSettingsViewModel
 
     // Toolbar
     private lateinit var toolbar: MaterialToolbar
@@ -61,28 +60,15 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
     private lateinit var btnStopAgent: MaterialButton
     private lateinit var agentStatusText: TextView
 
-    private var userId: String = ""
-    private val tokens = mutableListOf<TokenInfo>()
-    private var selectedAgentId: String = ""
-    private var selectedAgentName: String = ""
-    private var selectedToken: String = ""
     private var serviceBound = false
-    private val activityScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private lateinit var gatewayManager: HermesGatewayManager
-
-    companion object {
-        private const val PREF_AGENT_ID = "remote_agent_id"
-        private const val PREF_AGENT_NAME = "remote_agent_name"
-        private const val PREF_AGENT_TOKEN = "remote_agent_token"
-        private const val PREF_AGENT_SCRIPT_PATH = "remote_agent_script_path"
-        private val DEFAULT_AGENT_SCRIPT_PATH = "/root/msg.remote.agent/hermes_remote_agent.py"
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_remote_agent_settings)
 
-        userId = SessionManager.session.value.userId
+        viewModel = ViewModelProvider(this)[RemoteAgentSettingsViewModel::class.java]
+
         RemoteAgentManager.init(applicationContext)
         gatewayManager = HermesGatewayManager(this)
 
@@ -93,9 +79,10 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
         applyTheme()
 
         restoreGatewaySettings()
-        restoreSelectedAgent()
-        loadTokens()
-        checkAgentStatus()
+        observeViewModel()
+
+        viewModel.loadTokens()
+        viewModel.checkAgentStatus()
 
         updateTunnelStatusUI()
     }
@@ -162,8 +149,8 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
 
     private fun setupTokenTab() {
         btnGenerateToken.setOnClickListener { showTokenDialog() }
-        btnStartAgent.setOnClickListener { startAgentOnServer() }
-        btnStopAgent.setOnClickListener { stopAgentOnServer() }
+        btnStartAgent.setOnClickListener { viewModel.startAgentOnServer() }
+        btnStopAgent.setOnClickListener { viewModel.stopAgentOnServer() }
     }
 
     private fun applyTheme() {
@@ -187,17 +174,37 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
         }
 
         // Theme labels
-        tvGatewayStatus?.setTextColor(txtColor)
-        tvTunnelAddress?.setTextColor(txtColor)
+        tvGatewayStatus.setTextColor(txtColor)
+        tvTunnelAddress.setTextColor(txtColor)
 
         btnGenerateToken.setBackgroundColor(primColor)
         btnGenerateToken.setTextColor(ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE))
         btnStartAgent.setBackgroundColor(primColor)
         btnStartAgent.setTextColor(ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE))
-        btnStopAgent.setBackgroundColor(Color.parseColor("#F44336"))
+        btnStopAgent.setBackgroundColor("#F44336".toColorInt())
         btnStopAgent.setTextColor(Color.WHITE)
 
         agentStatusText.setTextColor(txtColor)
+    }
+
+    private fun observeViewModel() {
+        lifecycleScope.launch {
+            viewModel.uiState.collect { state ->
+                renderTokens(state.tokens)
+                updateAgentStatus(state.agentStatus)
+                updateTunnelStatusUI()
+
+                state.successMessage?.let { message ->
+                    Toast.makeText(this@RemoteAgentSettingsActivity, message, Toast.LENGTH_SHORT).show()
+                    viewModel.clearSuccess()
+                }
+
+                state.error?.let { error ->
+                    Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.error_colon, error), Toast.LENGTH_LONG).show()
+                    viewModel.clearError()
+                }
+            }
+        }
     }
 
     private fun createTunnel() {
@@ -226,14 +233,15 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
             serverPort = serverPort,
             localPort = localPort
         ) { success, error, type ->
-            runOnUiThread {
+            lifecycleScope.launch {
                 btnCreateTunnel.isEnabled = true
                 btnCreateTunnel.text = getString(R.string.connect)
                 if (success) {
-                    Toast.makeText(this, R.string.gateway_connected, Toast.LENGTH_SHORT).show()
-                    updateTunnelStatusUI()
+                    Toast.makeText(this@RemoteAgentSettingsActivity, R.string.gateway_connected, Toast.LENGTH_SHORT).show()
+                    viewModel.setTunnelActive(true, RemoteAgentManager.getTunnelAddress())
+                    gatewayManager.saveSettings(sshHost, sshPort, sshUser, serverHost, serverPort, localPort)
                 } else {
-                    Toast.makeText(this, error, Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@RemoteAgentSettingsActivity, error, Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -241,7 +249,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
 
     private fun closeTunnel() {
         RemoteAgentManager.closeTunnel()
-        updateTunnelStatusUI()
+        viewModel.setTunnelActive(false)
         Toast.makeText(this, R.string.gateway_disconnected, Toast.LENGTH_SHORT).show()
     }
 
@@ -254,11 +262,6 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
             tvGatewayStatus.text = getString(R.string.gateway_format, settings.sshHost, settings.sshPort)
             tvTunnelAddress.text = getString(R.string.tunnel_format, RemoteAgentManager.getTunnelAddress())
             btnCloseTunnel.isEnabled = true
-
-            // Persist connected agent
-            selectedAgentId = "gateway_agent"
-            selectedAgentName = getString(R.string.agent_via_gateway, settings.sshHost)
-            saveSelectedAgent()
         } else {
             gatewayForm.visibility = View.VISIBLE
             gatewayConnectedStatus.visibility = View.GONE
@@ -277,53 +280,22 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
         cbAutoConnect.isChecked = gatewayManager.isAutoConnect()
     }
 
-    private fun restoreSelectedAgent() {
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        selectedAgentId = prefs.getString(PREF_AGENT_ID, "") ?: ""
-        selectedAgentName = prefs.getString(PREF_AGENT_NAME, "") ?: ""
-        selectedToken = prefs.getString(PREF_AGENT_TOKEN, "") ?: ""
-    }
+    private fun updateAgentStatus(status: String) {
+        val theme = ThemeStore.currentTheme()
+        val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+        agentStatusText.setTextColor(txtColor)
 
-    private fun saveSelectedAgent() {
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        prefs.edit()
-            .putString(PREF_AGENT_ID, selectedAgentId)
-            .putString(PREF_AGENT_NAME, selectedAgentName)
-            .putString(PREF_AGENT_TOKEN, selectedToken)
-            .apply()
+        when (status) {
+            "connected" -> agentStatusText.text = getString(R.string.status_connected)
+            "not_running" -> agentStatusText.text = getString(R.string.status_not_running)
+            "error" -> agentStatusText.text = getString(R.string.status_check_error)
+            else -> agentStatusText.text = getString(R.string.status_disconnected, status)
+        }
     }
 
     // ===== Token tab =====
 
-    private fun loadTokens() {
-        activityScope.launch {
-            try {
-                val response = GrpcClient.listAgentTokens(userId)
-                tokens.clear()
-                if (response.success) {
-                    tokens.addAll(response.tokens.map { proto ->
-                        TokenInfo(
-                            id = proto.id,
-                            agentId = proto.agentId,
-                            agentName = proto.agentName,
-                            tokenHash = proto.tokenHash,
-                            capabilities = proto.capabilities,
-                            createdAt = proto.createdAt,
-                            expiresAt = proto.expiresAt,
-                            revoked = proto.revoked,
-                            createdBy = proto.createdBy
-                        )
-                    })
-                }
-                renderTokens()
-            } catch (e: Exception) {
-                // Token list load failed — not critical, log silently
-                android.util.Log.e("RemoteAgentSettings", "Failed to load tokens: ${e.message}")
-            }
-        }
-    }
-
-    private fun renderTokens() {
+    private fun renderTokens(tokens: List<TokenInfo>) {
         val theme = ThemeStore.currentTheme()
         val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
         val txtSecondary = ThemeUtils.parseSafeColor(theme.textSecondaryColor, Color.GRAY)
@@ -355,8 +327,8 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
                 agentName.text = token.agentName
                 agentName.setTextColor(txtColor)
                 status.text = getString(R.string.active)
-                status.setTextColor(Color.parseColor("#4CAF50"))
-                status.setBackgroundColor(Color.parseColor("#1A4CAF50"))
+                status.setTextColor("#4CAF50".toColorInt())
+                status.setBackgroundColor("#1A4CAF50".toColorInt())
                 status.setPadding(12, 4, 12, 4)
                 hash.text = getString(R.string.token_hash_format, token.tokenHash.take(16))
                 hash.setTextColor(txtSecondary)
@@ -368,7 +340,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
                 val copyTokenBtn = view.findViewById<MaterialButton>(R.id.btnCopyToken)
                 val copyCmdBtn = view.findViewById<MaterialButton>(R.id.btnCopyCmd)
 
-                revokeBtn.setTextColor(Color.parseColor("#F44336"))
+                revokeBtn.setTextColor("#F44336".toColorInt())
                 revokeBtn.setOnClickListener { confirmRevoke(token) }
 
                 copyTokenBtn.setTextColor(primColor)
@@ -397,205 +369,21 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
             context = this,
             theme = ThemeStore.currentTheme(),
             onGenerate = { agentName, capabilities, ttlHours ->
-                val agentId = "agent_${System.currentTimeMillis()}"
-                generateToken(agentId, agentName, capabilities, ttlHours)
+                viewModel.generateToken(agentName, capabilities, ttlHours)
             }
         )
         dialog.show()
     }
 
-    private fun generateToken(agentId: String, agentName: String, capabilities: List<String>, ttlHours: Int) {
-        activityScope.launch {
-            try {
-                val resp = GrpcClient.generateAgentToken(
-                    agentId = agentId, agentName = agentName,
-                    capabilities = capabilities, ttlHours = ttlHours, adminUserId = userId
-                )
-                if (resp.success) {
-                    selectedAgentId = agentId
-                    selectedAgentName = agentName
-                    selectedToken = resp.token
-                    saveSelectedAgent()
-                    selectedToken = resp.token
-
-                    val expiresAt = if (resp.expiresAt > 0) {
-                        java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US)
-                            .format(java.util.Date(resp.expiresAt * 1000))
-                    } else ""
-
-                    val agentCmd = "python3 $DEFAULT_AGENT_SCRIPT_PATH --server <server:port> --token ${resp.token}"
-
-                    tokens.add(TokenInfo(
-                        id = 0, agentId = agentId, agentName = agentName,
-                        tokenHash = resp.token.take(16), capabilities = capabilities,
-                        createdAt = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(java.util.Date()),
-                        expiresAt = expiresAt, revoked = false, createdBy = userId,
-                        fullToken = resp.token, command = agentCmd
-                    ))
-                    renderTokens()
-                    showTokenResultDialog(resp.token, agentId, agentName)
-                } else {
-                    Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.error_colon, resp.error), Toast.LENGTH_LONG).show()
-                }
-            } catch (e: Exception) {
-                Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.error_colon, e.message), Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
-    private fun showTokenResultDialog(token: String, agentId: String, agentName: String) {
-        val theme = ThemeStore.currentTheme()
-        val bgColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
-        val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
-        val primColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
-
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(48, 24, 48, 16)
-            setBackgroundColor(bgColor)
-            id = View.generateViewId()
-        }
-
-        val label = TextView(this).apply {
-            text = getString(R.string.token_generated_hint)
-            setTextColor(txtColor); textSize = 14f
-            id = View.generateViewId()
-        }
-        val tokenView = TextView(this).apply {
-            text = token; setTextColor(txtColor); textSize = 13f
-            setPadding(0, 16, 0, 16); setTextIsSelectable(true)
-            typeface = android.graphics.Typeface.MONOSPACE
-            id = View.generateViewId()
-        }
-        container.addView(label)
-        container.addView(tokenView)
-
-        val agentCmd = "python3 $DEFAULT_AGENT_SCRIPT_PATH --server <server:port> --token $token"
-        val cmdLabel = TextView(this).apply {
-            text = getString(R.string.agent_command_hint); setTextColor(txtColor); textSize = 14f; setPadding(0, 16, 0, 0)
-            id = View.generateViewId()
-        }
-        val cmdView = TextView(this).apply {
-            text = agentCmd; setTextColor(txtColor); textSize = 11f
-            setPadding(0, 8, 0, 8); setTextIsSelectable(true)
-            typeface = android.graphics.Typeface.MONOSPACE
-            setBackgroundColor(ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK))
-            id = View.generateViewId()
-        }
-        container.addView(cmdLabel)
-        container.addView(cmdView)
-
-        val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-            .setTitle(getString(R.string.token_generated_title))
-            .setView(container)
-            .setPositiveButton(getString(R.string.copy_token), null)
-            .setNeutralButton(getString(R.string.copy_command), null)
-            .setNegativeButton(getString(R.string.close), null)
-            .create()
-
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText("Agent Token", token))
-                Toast.makeText(this, R.string.token_copied, Toast.LENGTH_SHORT).show()
-            }
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText("Agent Command", agentCmd))
-                Toast.makeText(this, R.string.command_copied, Toast.LENGTH_SHORT).show()
-            }
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener { dialog.dismiss() }
-        }
-        dialog.show()
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(primColor)
-        dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setTextColor(primColor)
-        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(txtColor)
-    }
-
     private fun confirmRevoke(token: TokenInfo) {
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        AlertDialog.Builder(this)
             .setTitle(getString(R.string.revoke_token_title))
             .setMessage(getString(R.string.revoke_token_message, token.agentName))
             .setPositiveButton(getString(R.string.revoke)) { _, _ ->
-                activityScope.launch {
-                    try {
-                        val resp = GrpcClient.revokeAgentToken(token.agentId, userId)
-                        if (resp.success) { loadTokens() }
-                    } catch (e: Exception) {
-                        Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.error_colon, e.message), Toast.LENGTH_SHORT).show()
-                    }
-                }
+                viewModel.revokeToken(token)
             }
             .setNegativeButton(getString(R.string.cancel), null)
             .show()
-    }
-
-    private fun startAgentOnServer() {
-        if (selectedToken.isEmpty()) {
-            Toast.makeText(this, getString(R.string.generate_token_first), Toast.LENGTH_SHORT).show()
-            return
-        }
-        activityScope.launch {
-            try {
-                val resp = GrpcClient.startAgentOnServer(
-                    agentId = selectedAgentId, agentName = selectedAgentName,
-                    token = selectedToken, serverAddress = "", adminUserId = userId
-                )
-                if (resp.success) {
-                    Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.agent_started, resp.pid), Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.error_colon, resp.error), Toast.LENGTH_LONG).show()
-                }
-            } catch (e: Exception) {
-                Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.error_colon, e.message), Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
-    private fun stopAgentOnServer() {
-        if (selectedAgentId.isEmpty()) {
-            Toast.makeText(this, getString(R.string.agent_not_selected), Toast.LENGTH_SHORT).show()
-            return
-        }
-        activityScope.launch {
-            try {
-                val resp = GrpcClient.stopAgentOnServer(selectedAgentId, userId)
-                if (resp.success) {
-                    Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.agent_stopped), Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.error_colon, resp.error), Toast.LENGTH_LONG).show()
-                }
-            } catch (e: Exception) {
-                Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.error_colon, e.message), Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
-    private fun checkAgentStatus() {
-        activityScope.launch {
-            try {
-                if (selectedAgentId.isNotEmpty()) {
-                    val status = GrpcClient.getRemoteAgentStatus(selectedAgentId)
-                    runOnUiThread {
-                        val txtColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().textPrimaryColor, Color.WHITE)
-                        agentStatusText.setTextColor(txtColor)
-                        if (status.status == "connected") {
-                            agentStatusText.text = getString(R.string.status_connected)
-                        } else {
-                            agentStatusText.text = getString(R.string.status_disconnected, status.status)
-                        }
-                    }
-                } else {
-                    runOnUiThread {
-                        agentStatusText.text = getString(R.string.status_not_running)
-                    }
-                }
-            } catch (e: Exception) {
-                runOnUiThread {
-                    agentStatusText.text = getString(R.string.status_check_error)
-                }
-            }
-        }
     }
 
     override fun onResume() {
@@ -603,7 +391,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
         RemoteAgentManager.bind(this)
         serviceBound = true
         updateTunnelStatusUI()
-        checkAgentStatus()
+        viewModel.checkAgentStatus()
     }
 
     override fun onPause() {
@@ -614,13 +402,8 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        activityScope.cancel()
-    }
-
     override fun onStateChanged(state: RemoteAgentManager.AgentConnectionState) {
-        runOnUiThread {
+        lifecycleScope.launch {
             updateTunnelStatusUI()
         }
     }

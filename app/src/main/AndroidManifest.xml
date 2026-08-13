@@ -69,12 +69,21 @@
             android:exported="true"
             android:label="@string/share_to_lavender"
             android:icon="@drawable/ic_share_logo"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.MsgClientAndroid">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="video/*" />
             </intent-filter>
         </activity>
@@ -87,15 +96,17 @@
             android:name=".NewChatActivity"
             android:exported="false"
             android:launchMode="singleTop"
-            android:windowSoftInputMode="adjustResize" />
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <activity android:name=".ProfileActivity" android:exported="false" />
         <activity android:name=".EditProfileActivity" android:exported="false" />
+        <activity android:name=".CompanyProfileActivity" android:exported="false" />
+        <activity android:name=".AddMemberActivity" android:exported="false" />
         <activity android:name=".ContactsActivity" android:exported="false" />
         <activity android:name=".ThemePaletteActivity" android:exported="false" />
         <activity android:name=".SuperAdminActivity" android:exported="false" />
         <activity android:name=".ui.notification.NotificationActivity" android:exported="false" />
-        <activity android:name=".NotificationActivity" android:exported="false" />
         <activity android:name=".NotificationLogActivity" android:exported="false" />
         <activity android:name=".SecurityActivity" android:exported="false" />
         <activity android:name=".ServersActivity" android:exported="false" />
@@ -118,6 +129,11 @@
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <activity android:name=".ui.LogViewerActivity" android:exported="false" />
+
+        <activity android:name=".StickerLibraryActivity" android:exported="false" />
+        <activity android:name=".StickerPackCreateActivity" android:exported="false" />
+        <activity android:name=".StickerEditorActivity" android:exported="false" />
+        <activity android:name=".JoinCompanyActivity" android:exported="false" />
 
         <activity
             android:name=".MapPickerActivity"
@@ -154,6 +170,10 @@
         </service>
 
         <service
+            android:name=".data.fcm.CallActionService"
+            android:exported="false" />
+
+        <service
             android:name=".ui.remote.RemoteAgentService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
@@ -167,6 +187,14 @@
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"
             tools:node="merge" />
+
+        <receiver
+            android:name=".data.fcm.NotificationReplyReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".data.fcm.NotificationMarkReadReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

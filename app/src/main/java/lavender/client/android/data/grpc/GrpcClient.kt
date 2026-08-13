@@ -1,9 +1,7 @@
 package lavender.client.android.data.grpc
 
 import android.content.Context
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import lavender.client.android.data.models.Message
@@ -17,14 +15,13 @@ import lavender.client.android.data.proto.*
  */
 object GrpcClient {
     private val realGrpcClient = RealGrpcClient
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     // ====== Connection State ======
     val connectionStatus: StateFlow<ConnectionStatus> = realGrpcClient.connectionStatus
 
     val connectionState: StateFlow<Boolean> = realGrpcClient.connectionStatus
         .map { it == ConnectionStatus.READY }
-        .stateIn(scope, SharingStarted.Eagerly, realGrpcClient.connectionStatus.value == ConnectionStatus.READY)
+        .stateIn(realGrpcClient.scope, SharingStarted.Eagerly, realGrpcClient.connectionStatus.value == ConnectionStatus.READY)
 
     // ====== Data Flows ======
     val messages: StateFlow<List<Message>> = realGrpcClient.messages
@@ -40,6 +37,8 @@ object GrpcClient {
     val chatDeletedEvent: StateFlow<String?> = realGrpcClient.chatDeletedEvent
     val serverShuttingDown: StateFlow<Boolean> = realGrpcClient.serverShuttingDown
     val callSignals: SharedFlow<CallMessageProto> = realGrpcClient.callSignals
+
+    fun setSuperAdmin(value: Boolean) { realGrpcClient._isSuperAdmin.value = value }
     val newMessageEvent: SharedFlow<Message> = realGrpcClient.newMessageEvent
     val readReceiptEvent: SharedFlow<Pair<String, String>> = realGrpcClient.readReceiptEvent
     val avatarCacheFlow = realGrpcClient.avatarCacheFlow
@@ -92,6 +91,14 @@ object GrpcClient {
 
     fun loadAllUsers(callback: ((List<UserInfoProto>) -> Unit)? = null) {
         realGrpcClient.loadAllUsers(callback ?: {})
+    }
+
+    fun getAdminUserList(query: String, cursor: String, limit: Int, sortBy: String, callback: (GetAdminUserListResponseProto) -> Unit) {
+        realGrpcClient.getAdminUserList(query, cursor, limit, sortBy, callback)
+    }
+
+    fun getAdminUserSessions(userId: String, callback: (GetAdminUserSessionsResponseProto) -> Unit) {
+        realGrpcClient.getAdminUserSessions(userId, callback)
     }
 
     // ======= AuthService V2 (JWT) =======
@@ -178,30 +185,30 @@ object GrpcClient {
 
     // ======= ChatList V2 (suspend) =======
 
-    suspend fun pinChat(context: Context, chatId: String): Boolean =
+    suspend fun pinChat(chatId: String): Boolean =
         realGrpcClient.pinChat(chatId)
 
-    suspend fun unpinChat(context: Context, chatId: String): Boolean =
+    suspend fun unpinChat(chatId: String): Boolean =
         realGrpcClient.unpinChat(chatId)
 
-    suspend fun searchChats(context: Context, query: String, limit: Int = 20, offset: Int = 0): List<ChatInfo> =
+    suspend fun searchChats(query: String, limit: Int = 20, offset: Int = 0): List<ChatInfo> =
         realGrpcClient.searchChats(query, limit, offset)
 
-    suspend fun archiveChat(context: Context, chatId: String): Boolean =
+    suspend fun archiveChat(chatId: String): Boolean =
         realGrpcClient.archiveChat(chatId)
 
-    suspend fun unarchiveChat(context: Context, chatId: String): Boolean =
+    suspend fun unarchiveChat(chatId: String): Boolean =
         realGrpcClient.unarchiveChat(chatId)
 
     // ======= Pin Message =======
 
-    suspend fun pinMessage(context: Context, chatId: String, messageId: String): Boolean =
+    suspend fun pinMessage(chatId: String, messageId: String): Boolean =
         realGrpcClient.pinMessage(chatId, messageId)
 
-    suspend fun unpinMessage(context: Context, chatId: String, messageId: String): Boolean =
+    suspend fun unpinMessage(chatId: String, messageId: String): Boolean =
         realGrpcClient.unpinMessage(chatId, messageId)
 
-    suspend fun getPinnedMessages(context: Context, chatId: String): List<Message> =
+    suspend fun getPinnedMessages(chatId: String): List<Message> =
         realGrpcClient.getPinnedMessages(chatId)
 
     // ======= Message Operations V2 =======
@@ -416,7 +423,7 @@ object GrpcClient {
 
     // ======= Server Discovery =======
 
-    fun getServers(context: Context, cb: (List<ServerInfoProto>) -> Unit) =
+    fun getServers(cb: (List<ServerInfoProto>) -> Unit) =
         realGrpcClient.fetchServersList(cb)
 
     // ======= Avatar Cache =======
@@ -438,6 +445,8 @@ object GrpcClient {
     fun getCurrentUsername(): String? = realGrpcClient.getCurrentUsername()
 
     fun setUserId(userId: String) = realGrpcClient.setUserId(userId)
+
+    fun setUsername(username: String) = realGrpcClient.setUsername(username)
 
     fun getUserId(): String? = realGrpcClient.getUserId()
 
@@ -629,4 +638,19 @@ object GrpcClient {
 
     suspend fun updateAIChatSettings(sessionId: String, apiKey: String = "", model: String = "") =
         realGrpcClient.aiV2Client.updateChatSettings(sessionId, apiKey, model)
+
+    // ======= Stickers =======
+    suspend fun createStickerPack(title: String, name: String) = GrpcStickerClient.createStickerPack(title, name)
+    suspend fun addSticker(packId: String, lottieUrl: String, thumbnailUrl: String, emoji: String, width: Int, height: Int) = GrpcStickerClient.addSticker(packId, lottieUrl, thumbnailUrl, emoji, width, height)
+    suspend fun removeSticker(packId: String, stickerId: String) = GrpcStickerClient.removeSticker(packId, stickerId)
+    suspend fun deleteStickerPack(packId: String) = GrpcStickerClient.deleteStickerPack(packId)
+    suspend fun getUserStickerPacks() = GrpcStickerClient.getUserStickerPacks()
+    suspend fun getPublicStickerPacks(cursor: String = "", limit: Int = 30) = GrpcStickerClient.getPublicStickerPacks(cursor, limit)
+    suspend fun getStickerPack(packId: String) = GrpcStickerClient.getStickerPack(packId)
+    suspend fun submitStickerPackForApproval(packId: String) = GrpcStickerClient.submitForApproval(packId)
+    suspend fun approveStickerPack(packId: String, approved: Boolean, reason: String = "") = GrpcStickerClient.approveStickerPack(packId, approved, reason)
+    suspend fun getPendingStickerPacks(cursor: String = "", limit: Int = 30) = GrpcStickerClient.getPendingStickerPacks(cursor, limit)
+    suspend fun searchStickerPacks(query: String, limit: Int = 20) = GrpcStickerClient.searchStickerPacks(query, limit)
+    suspend fun updateStickerPack(packId: String, title: String = "", coverStickerId: String = "") = GrpcStickerClient.updateStickerPack(packId, title, coverStickerId)
+    suspend fun setFeaturedStickerPack(packId: String, featured: Boolean) = GrpcStickerClient.setFeaturedStickerPack(packId, featured)
 }

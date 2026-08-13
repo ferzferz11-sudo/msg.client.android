@@ -2,6 +2,7 @@ package lavender.client.android.data.updates
 
 import android.content.Context
 import android.util.Log
+import lavender.client.android.data.models.ErrorHandler
 import androidx.core.content.edit
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +22,7 @@ import java.net.URL
 class UpdateManager(private val context: Context) {
     private val TAG = "UpdateManager"
     private val prefs = context.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     companion object {
         @Volatile
@@ -63,19 +65,36 @@ class UpdateManager(private val context: Context) {
                     val currentVersion = BuildConfig.VERSION_NAME
                     val isAvailable = UpdateUtils.isUpdateAvailable(currentVersion, latestVersion)
 
+                    // If new version available, check if downloaded APK matches
+                    if (isAvailable) {
+                        val downloadedVersion = prefs.getString("downloaded_version", null)
+                        if (downloadedVersion != null && downloadedVersion != latestVersion) {
+                            Log.d(TAG, "Downloaded APK version ($downloadedVersion) != latest ($latestVersion), clearing stale download")
+                            val apkPath = prefs.getString("apk_path", null)
+                            if (apkPath != null) File(apkPath).delete()
+                            prefs.edit {
+                                putBoolean("update_downloaded", false)
+                                remove("apk_path")
+                                remove("downloaded_version")
+                            }
+                            _isDownloaded.value = false
+                        }
+                    }
+
                     prefs.edit {
                         putBoolean("update_available", isAvailable)
                         putString("latest_version", latestVersion)
                         if (!isAvailable) {
                             putBoolean("update_downloaded", false)
                             remove("apk_path")
+                            remove("downloaded_version")
                         }
                     }
                     onResult(isAvailable, latestVersion)
                 }
                 connection.disconnect()
             } catch (e: Exception) {
-                Log.e(TAG, "Update check failed", e)
+                ErrorHandler.handle(TAG, "Update check failed", e)
                 onResult(false, "")
             }
         }.start()
@@ -99,7 +118,7 @@ class UpdateManager(private val context: Context) {
             putBoolean("update_downloaded", false)
         }
 
-        downloadJob = CoroutineScope(Dispatchers.IO).launch {
+        downloadJob = scope.launch {
             Log.d(TAG, "Starting download, isAuto=$isAuto")
             val file = File(context.getExternalFilesDir(null), "lavender_update.apk")
 
@@ -176,6 +195,7 @@ class UpdateManager(private val context: Context) {
                 prefs.edit {
                     putBoolean("update_downloaded", true)
                     putString("apk_path", file.absolutePath)
+                    putString("downloaded_version", prefs.getString("latest_version", null))
                 }
                 _isDownloaded.value = true
                 _downloadProgress.value = 100
@@ -192,7 +212,7 @@ class UpdateManager(private val context: Context) {
                 finishDownload(false)
                 return@launch
             } catch (e: Exception) {
-                Log.e(TAG, "Download failed", e)
+                ErrorHandler.handle(TAG, "Download failed", e)
                 file.delete()
                 finishDownload(false)
             }

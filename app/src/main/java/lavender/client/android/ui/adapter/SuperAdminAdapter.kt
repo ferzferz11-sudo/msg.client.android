@@ -1,10 +1,12 @@
 package lavender.client.android.ui.adapter
+import android.util.Log
 
 import android.content.Context
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
@@ -15,6 +17,8 @@ import com.google.android.material.card.MaterialCardView
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.R
 import lavender.client.android.data.models.ChatInfo
+import lavender.client.android.data.proto.AdminUserInfoProto
+import lavender.client.android.data.proto.AdminUserSessionProto
 import lavender.client.android.data.proto.UserInfoProto
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
@@ -22,8 +26,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class SuperAdminAdapter(
-    private val onUserClick: (UserInfoProto) -> Unit,
-    private val onUserLongClick: (UserInfoProto) -> Unit,
+    private val onUserClick: (Any) -> Unit,
+    private val onUserLongClick: (Any) -> Unit,
     private val onChatClick: (ChatInfo) -> Unit,
     private val onChatLongClick: (ChatInfo) -> Unit,
     private val onlineUsers: Set<String>
@@ -43,7 +47,11 @@ class SuperAdminAdapter(
     companion object {
         private const val TYPE_USER = 0
         private const val TYPE_CHAT = 1
+        private const val TYPE_SESSION = 2
     }
+
+    private val expandedUsers = mutableSetOf<String>()
+    private val userSessions = mutableMapOf<String, List<AdminUserSessionProto>>()
 
     init {
         updateTheme()
@@ -67,19 +75,64 @@ class SuperAdminAdapter(
                 val old = items[oldPos]
                 val new = newItems[newPos]
                 return if (old is UserInfoProto && new is UserInfoProto) old.username == new.username
+                else if (old is AdminUserInfoProto && new is AdminUserInfoProto) old.username == new.username
                 else if (old is ChatInfo && new is ChatInfo) old.id == new.id
                 else false
             }
             override fun areContentsTheSame(oldPos: Int, newPos: Int): Boolean {
                 val old = items[oldPos]
                 val new = newItems[newPos]
-                val oldId = if (old is UserInfoProto) old.username else (old as ChatInfo).id
-                val newId = if (new is UserInfoProto) new.username else (new as ChatInfo).id
+                val oldId = when (old) {
+                    is UserInfoProto -> old.username
+                    is AdminUserInfoProto -> old.username
+                    else -> (old as ChatInfo).id
+                }
+                val newId = when (new) {
+                    is UserInfoProto -> new.username
+                    is AdminUserInfoProto -> new.username
+                    else -> (new as ChatInfo).id
+                }
                 return old == new && selectedIds.contains(oldId) == selectedIds.contains(newId)
             }
         })
         items = newItems
         diffResult.dispatchUpdatesTo(this)
+    }
+
+    fun setAdminItems(newItems: List<AdminUserInfoProto>) {
+        val mixed = mutableListOf<Any>()
+        for (user in newItems) {
+            mixed.add(user)
+            if (expandedUsers.contains(user.username)) {
+                userSessions[user.username]?.forEach { mixed.add(it) }
+            }
+        }
+        items = mixed
+        notifyDataSetChanged()
+    }
+
+    fun toggleSessions(user: AdminUserInfoProto) {
+        val username = user.username
+        if (expandedUsers.contains(username)) {
+            expandedUsers.remove(username)
+        } else {
+            expandedUsers.add(username)
+        }
+        setAdminItems(items.filterIsInstance<AdminUserInfoProto>())
+    }
+
+    fun setSessions(username: String, sessions: List<AdminUserSessionProto>) {
+        userSessions[username] = sessions
+        if (expandedUsers.contains(username)) {
+            setAdminItems(items.filterIsInstance<AdminUserInfoProto>())
+        }
+    }
+
+    fun isExpanded(username: String): Boolean = expandedUsers.contains(username)
+
+    fun clearExpanded() {
+        expandedUsers.clear()
+        userSessions.clear()
     }
 
     fun toggleSelection(id: String) {
@@ -89,7 +142,11 @@ class SuperAdminAdapter(
             selectedIds.add(id)
         }
         val index = items.indexOfFirst { 
-            if (it is UserInfoProto) it.username == id else (it as ChatInfo).id == id 
+            when (it) {
+                is UserInfoProto -> it.username == id
+                is AdminUserInfoProto -> it.username == id
+                else -> (it as ChatInfo).id == id
+            }
         }
         if (index != -1) {
             notifyItemChanged(index)
@@ -101,31 +158,50 @@ class SuperAdminAdapter(
         selectedIds.clear()
         oldSelected.forEach { id ->
             val index = items.indexOfFirst { 
-                if (it is UserInfoProto) it.username == id else (it as ChatInfo).id == id 
+                when (it) {
+                    is UserInfoProto -> it.username == id
+                    is AdminUserInfoProto -> it.username == id
+                    else -> (it as ChatInfo).id == id
+                }
             }
             if (index != -1) notifyItemChanged(index)
         }
     }
 
     override fun getItemViewType(position: Int): Int {
-        return if (items[position] is UserInfoProto) TYPE_USER else TYPE_CHAT
+        return when (items[position]) {
+            is UserInfoProto, is AdminUserInfoProto -> TYPE_USER
+            is AdminUserSessionProto -> TYPE_SESSION
+            else -> TYPE_CHAT
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
-        return if (viewType == TYPE_USER) {
-            UserViewHolder(inflater.inflate(R.layout.item_user_super_admin, parent, false))
-        } else {
-            ChatViewHolder(inflater.inflate(R.layout.item_chat, parent, false))
+        return when (viewType) {
+            TYPE_USER -> UserViewHolder(inflater.inflate(R.layout.item_user_super_admin, parent, false))
+            TYPE_SESSION -> SessionViewHolder(inflater.inflate(R.layout.item_admin_session, parent, false))
+            else -> ChatViewHolder(inflater.inflate(R.layout.item_chat, parent, false))
         }
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val item = items[position]
-        if (holder is UserViewHolder) {
-            holder.bind(item as UserInfoProto)
-        } else if (holder is ChatViewHolder) {
-            holder.bind(item as ChatInfo)
+        when (holder) {
+            is UserViewHolder -> when (item) {
+                is UserInfoProto -> holder.bind(item)
+                is AdminUserInfoProto -> holder.bindAdmin(item)
+            }
+            is SessionViewHolder -> holder.bind(item as AdminUserSessionProto)
+            is ChatViewHolder -> holder.bind(item as ChatInfo)
+        }
+    }
+
+    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+        super.onViewRecycled(holder)
+        when (holder) {
+            is UserViewHolder -> holder.clearAvatar()
+            is SessionViewHolder -> holder.clearIcon()
         }
     }
 
@@ -138,6 +214,9 @@ class SuperAdminAdapter(
         private val timeAgoText = view.findViewById<TextView>(R.id.timeAgoText)
         private val avatarView = view.findViewById<CircleImageView>(R.id.participantAvatar)
         private val statusDot = view.findViewById<View>(R.id.statusIndicator)
+        private val lastMessageText: TextView? = view.findViewById(R.id.lastMessageText)
+        private val chatCountText: TextView? = view.findViewById(R.id.chatCountText)
+        private val adminBadge: View? = view.findViewById(R.id.adminBadge)
 
         fun bind(user: UserInfoProto) {
             val isSelected = selectedIds.contains(user.username)
@@ -157,6 +236,10 @@ class SuperAdminAdapter(
             statusDot.isVisible = !isSelected
             statusDot.setBackgroundResource(if (isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot)
 
+            lastMessageText?.isVisible = false
+            chatCountText?.isVisible = false
+            adminBadge?.isVisible = false
+
             if (user.avatarUrl.isNotEmpty()) {
                 Glide.with(itemView.context).load(user.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(avatarView)
                 avatarView.clearColorFilter()
@@ -169,6 +252,105 @@ class SuperAdminAdapter(
                 onUserLongClick(user)
                 true
             }
+        }
+
+        fun bindAdmin(user: AdminUserInfoProto) {
+            val isSelected = selectedIds.contains(user.username)
+            card.setCardBackgroundColor(if (isSelected) primaryColor else surfaceColor)
+            nameText.text = user.username
+            nameText.setTextColor(if (isSelected) onPrimary else textPrimary)
+            
+            val versionStr = if (user.lastClientVersion.isNotEmpty()) "v${user.lastClientVersion}" else ""
+            versionText.text = versionStr
+            versionText.setTextColor(if (isSelected) onPrimary else textSecondary)
+            
+            val timeAgoStr = user.lastSeenAt?.let { getTimeAgo(it.seconds * 1000, itemView.context) } ?: ""
+            timeAgoText.text = timeAgoStr
+            timeAgoText.setTextColor(if (isSelected) onPrimary else textSecondary)
+            
+            statusDot.isVisible = !isSelected
+            statusDot.setBackgroundResource(if (user.isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot)
+
+            if (user.lastMessageText.isNotEmpty()) {
+                lastMessageText?.text = translateMediaPreview(user.lastMessageText)
+                lastMessageText?.isVisible = true
+                lastMessageText?.setTextColor(if (isSelected) onPrimary else textSecondary)
+            } else {
+                lastMessageText?.isVisible = false
+            }
+
+            if (user.chatCount > 0) {
+                chatCountText?.text = itemView.context.resources.getQuantityString(R.plurals.chats_count, user.chatCount, user.chatCount)
+                chatCountText?.isVisible = true
+                chatCountText?.setTextColor(if (isSelected) onPrimary else textSecondary)
+            } else {
+                chatCountText?.isVisible = false
+            }
+
+            adminBadge?.isVisible = user.isSuperAdmin && !isSelected
+
+            if (user.avatarUrl.isNotEmpty()) {
+                Glide.with(itemView.context).load(user.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(avatarView)
+                avatarView.clearColorFilter()
+            } else {
+                ThemeUtils.applyDefaultAvatar(avatarView, ThemeStore.currentTheme())
+            }
+
+            itemView.setOnClickListener { onUserClick(user) }
+            itemView.setOnLongClickListener {
+                onUserLongClick(user)
+                true
+            }
+        }
+
+        private fun translateMediaPreview(text: String): String {
+            return when (text) {
+                "Image" -> itemView.context.getString(R.string.chat_preview_image)
+                "Voice message" -> itemView.context.getString(R.string.chat_preview_voice)
+                else -> text
+            }
+        }
+
+        fun clearAvatar() {
+            avatarView.setImageDrawable(null)
+        }
+    }
+
+    inner class SessionViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        private val deviceTypeIcon: ImageView = view.findViewById(R.id.deviceTypeIcon)
+        private val deviceNameText: TextView = view.findViewById(R.id.deviceNameText)
+        private val versionText: TextView = view.findViewById(R.id.sessionVersionText)
+        private val ipText: TextView = view.findViewById(R.id.ipText)
+        private val lastSeenText: TextView = view.findViewById(R.id.lastSeenText)
+        private val onlineDot: View = view.findViewById(R.id.sessionOnlineDot)
+
+        fun bind(session: AdminUserSessionProto) {
+            val iconRes = when (session.deviceType.lowercase()) {
+                "web" -> R.drawable.ic_web
+                "android" -> R.drawable.ic_android
+                else -> R.drawable.ic_device
+            }
+            deviceTypeIcon.setImageResource(iconRes)
+            deviceTypeIcon.setColorFilter(textSecondary)
+
+            deviceNameText.text = session.deviceName.ifEmpty { session.deviceType }
+            deviceNameText.setTextColor(textPrimary)
+
+            versionText.text = if (session.clientVersion.isNotEmpty()) "v${session.clientVersion}" else ""
+            versionText.setTextColor(textSecondary)
+
+            ipText.text = if (session.ipAddress.isNotEmpty() && session.ipAddress != "unknown") session.ipAddress else ""
+            ipText.setTextColor(textSecondary)
+
+            val lastSeenStr = session.lastSeenAt?.let { getTimeAgo(it.seconds * 1000, itemView.context) } ?: ""
+            lastSeenText.text = lastSeenStr
+            lastSeenText.setTextColor(textSecondary)
+
+            onlineDot.setBackgroundResource(if (session.isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot)
+        }
+
+        fun clearIcon() {
+            deviceTypeIcon.setImageDrawable(null)
         }
     }
 

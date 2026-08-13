@@ -14,8 +14,10 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
+import kotlinx.coroutines.launch
 import lavender.client.android.theme.ui.ThemeUi
 import java.util.Locale
 
@@ -193,7 +195,7 @@ class MapPickerActivity : AppCompatActivity() {
     inner class AndroidInterface {
         @JavascriptInterface
         fun onLocationSelected(lat: Double, lng: Double) {
-            runOnUiThread {
+            lifecycleScope.launch {
                 selectedLat = lat
                 selectedLng = lng
                 locationText.text = String.format(Locale.US, "Lat: %.5f, Lng: %.5f", lat, lng)

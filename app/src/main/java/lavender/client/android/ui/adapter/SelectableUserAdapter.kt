@@ -1,4 +1,5 @@
 package lavender.client.android.ui.adapter
+import android.util.Log
 
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -48,7 +49,7 @@ class SelectableUserAdapter(
             cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
             cachedSurface = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
             colorsInitialized = true
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     fun setUsers(newUsers: List<String>) {
@@ -198,5 +199,9 @@ class SelectableUserAdapter(
             updateAvatar(avatarUrl, theme)
             updateStatus(isOnline)
         }
+    }
+
+    companion object {
+        private const val TAG = "SelectableUserAdapter"
     }
 }

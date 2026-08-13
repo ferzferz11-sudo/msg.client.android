@@ -5,6 +5,7 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import lavender.client.android.R
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -41,6 +42,10 @@ class CallController(
         observeSignals()
     }
 
+    fun cancel() {
+        scope.cancel()
+    }
+
     private fun observeSignals() {
         scope.launch {
             CallManager.incomingSignals.collectLatest { signal ->
@@ -58,7 +63,12 @@ class CallController(
                 when (signal.type) {
                     CallMessageProto.Type.ACCEPT -> {
                         if (!isIncoming) {
-                            webRtcClient?.createOffer()
+                            if (webRtcClient != null) {
+                                webRtcClient?.createOffer()
+                            } else {
+                                Log.w(TAG, "ACCEPT received but WebRTC not ready yet")
+                                listener.onStatusUpdate(context.getString(R.string.call_status_connecting))
+                            }
                             listener.onCallAccepted()
                         }
                     }
@@ -97,17 +107,17 @@ class CallController(
     }
 
     private fun handleConferencePresence(signal: CallMessageProto) {
-        if (signal.type == CallMessageProto.Type.JOIN_CONFERENCE) {
+        if (signal.type == CallMessageProto.Type.JOIN_CONFERENCE || signal.type == CallMessageProto.Type.LEAVE_CONFERENCE) {
             try {
                 val response = JSONObject(signal.payload)
-                val participantsJson = response.getJSONObject("participants")
+                val participantsJson = response.optJSONObject("participants") ?: return
                 val creatorId = response.optString("creator_id", "")
                 val names = mutableListOf<String>()
                 val keys = participantsJson.keys()
                 while (keys.hasNext()) names.add(participantsJson.getString(keys.next()))
                 listener.onConferencePresenceUpdated(names, creatorId)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to parse participants", e)
+                Log.e(TAG, "Failed to parse conference presence", e)
             }
         }
     }

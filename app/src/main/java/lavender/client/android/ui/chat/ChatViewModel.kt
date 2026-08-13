@@ -1,4 +1,5 @@
 package lavender.client.android.ui.chat
+import android.util.Log
 
 import android.content.Context
 import androidx.core.content.edit
@@ -88,7 +89,12 @@ class ChatViewModel : ViewModel() {
                     userId = grpcClient.getUserId() ?: ""
                 ))
             } else {
-                onError("Failed to upload audio: ${if (result.url.contains("404")) "Server error 404" else result.error}")
+                val errorMsg = when {
+                    result.error == "FILE_TOO_LARGE" -> context.getString(lavender.client.android.R.string.file_too_large)
+                    result.url.contains("404") -> context.getString(lavender.client.android.R.string.failed_to_upload_file)
+                    else -> "Failed to upload audio: ${result.error}"
+                }
+                onError(errorMsg)
             }
         }
     }
@@ -127,9 +133,9 @@ class ChatViewModel : ViewModel() {
     fun loadPinnedMessages(context: Context) {
         viewModelScope.launch {
             try {
-                val pinned = GrpcClient.getPinnedMessages(context, currentRoomId)
+                val pinned = GrpcClient.getPinnedMessages(currentRoomId)
                 _pinnedMessageIds.value = pinned.map { it.id }.toSet()
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
         }
     }
 
@@ -203,6 +209,15 @@ class ChatViewModel : ViewModel() {
         }
     }
 
+    fun forceLoadHistory() {
+        _isLoading.value = true
+        viewModelScope.launch {
+            grpcClient.loadHistoryV2(currentRoomId) { _, _ ->
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun markRead(username: String, onCompletion: (() -> Unit)? = null) {
         if (currentRoomId.startsWith("favorites_")) {
             onCompletion?.invoke()
@@ -231,7 +246,11 @@ class ChatViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 AppDatabase.getDatabase(context).messageDao().clearRoom(currentRoomId)
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
         }
+    }
+
+    companion object {
+        private const val TAG = "ChatViewModel"
     }
 }

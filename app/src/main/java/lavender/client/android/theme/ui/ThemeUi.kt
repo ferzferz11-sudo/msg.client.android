@@ -8,11 +8,16 @@ import lavender.client.android.theme.ThemeStore
 
 object ThemeUi {
     fun bind(activity: AppCompatActivity, username: String) {
+        ThemeStore.init(activity)
         ThemeStore.refresh(activity, username)
         activity.lifecycleScope.launch {
             activity.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 ThemeStore.theme.collect { theme ->
-                    ThemeApplier.apply(activity, theme)
+                    try {
+                        ThemeApplier.apply(activity, theme)
+                    } catch (e: Exception) {
+                        android.util.Log.e("ThemeUi", "ThemeApplier.apply crashed: ${e.message}", e)
+                    }
                 }
             }
         }

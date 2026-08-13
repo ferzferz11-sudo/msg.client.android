@@ -11,6 +11,7 @@ import android.widget.TextView
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 import lavender.client.android.R
@@ -22,45 +23,39 @@ class ThemeAdapter(
     private val onThemeClick: (CustomThemeProto) -> Unit,
     private val onSelectionChanged: (Int) -> Unit,
     private var currentThemeId: String
-) : RecyclerView.Adapter<ThemeAdapter.ThemeViewHolder>() {
+) : ListAdapter<CustomThemeProto, ThemeAdapter.ThemeViewHolder>(ThemeDiffCallback()) {
 
-    private var themes = listOf<CustomThemeProto>()
     private val selectedThemes = mutableSetOf<CustomThemeProto>()
 
     fun setThemes(newThemes: List<CustomThemeProto>) {
-        val diffResult = DiffUtil.calculateDiff(ThemeDiffCallback(themes, newThemes))
-        themes = newThemes
-        diffResult.dispatchUpdatesTo(this)
+        submitList(newThemes)
     }
 
-    @SuppressLint("NotifyDataSetChanged")
     fun setCurrentThemeId(id: String) {
         if (currentThemeId == id) return
         currentThemeId = id
-        notifyDataSetChanged()
+        notifyItemRangeChanged(0, itemCount)
     }
 
     fun getSelectedThemes(): List<CustomThemeProto> = selectedThemes.toList()
 
-    @SuppressLint("NotifyDataSetChanged")
     fun clearSelection() {
         selectedThemes.clear()
-        notifyDataSetChanged()
+        notifyItemRangeChanged(0, itemCount)
         onSelectionChanged(0)
     }
 
-    @SuppressLint("NotifyDataSetChanged")
     fun toggleSelection(theme: CustomThemeProto) {
         if (selectedThemes.contains(theme)) {
             selectedThemes.remove(theme)
         } else {
             selectedThemes.add(theme)
         }
-        notifyDataSetChanged()
+        val index = currentList.indexOf(theme)
+        if (index != -1) notifyItemChanged(index)
         onSelectionChanged(selectedThemes.size)
     }
 
-    @SuppressLint("NotifyDataSetChanged")
     fun selectSingle(theme: CustomThemeProto) {
         if (selectedThemes.size == 1 && selectedThemes.contains(theme)) {
             selectedThemes.clear()
@@ -68,7 +63,7 @@ class ThemeAdapter(
             selectedThemes.clear()
             selectedThemes.add(theme)
         }
-        notifyDataSetChanged()
+        notifyItemRangeChanged(0, itemCount)
         onSelectionChanged(selectedThemes.size)
     }
 
@@ -78,11 +73,9 @@ class ThemeAdapter(
     }
 
     override fun onBindViewHolder(holder: ThemeViewHolder, position: Int) {
-        val theme = themes[position]
+        val theme = getItem(position)
         holder.bind(theme, currentThemeId, selectedThemes.contains(theme))
     }
-
-    override fun getItemCount(): Int = themes.size
 
     inner class ThemeViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val cardView: MaterialCardView = itemView as MaterialCardView
@@ -173,15 +166,10 @@ class ThemeAdapter(
         return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color))
     }
 
-    private class ThemeDiffCallback(
-        private val oldList: List<CustomThemeProto>,
-        private val newList: List<CustomThemeProto>
-    ) : DiffUtil.Callback() {
-        override fun getOldListSize(): Int = oldList.size
-        override fun getNewListSize(): Int = newList.size
-        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean = 
-            oldList[oldItemPosition].id == newList[newItemPosition].id
-        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean =
-            oldList[oldItemPosition] == newList[newItemPosition]
+    class ThemeDiffCallback : DiffUtil.ItemCallback<CustomThemeProto>() {
+        override fun areItemsTheSame(oldItem: CustomThemeProto, newItem: CustomThemeProto): Boolean =
+            oldItem.id == newItem.id
+        override fun areContentsTheSame(oldItem: CustomThemeProto, newItem: CustomThemeProto): Boolean =
+            oldItem == newItem
     }
 }

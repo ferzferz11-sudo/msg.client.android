@@ -1,4 +1,5 @@
 package lavender.client.android.ui.chat.message
+import android.util.Log
 
 import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
@@ -13,16 +14,25 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.core.graphics.toColorInt
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.R
+import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.ui.adapter.MessageAdapter
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 
 /**
  * Search bar: text input, next/prev navigation, results count, theming.
+ * Uses server-side SearchMessages RPC for full chat history search.
  */
 class ChatSearchDelegate(
-    private val activity: AppCompatActivity
+    private val activity: AppCompatActivity,
+    private val scope: CoroutineScope
 ) {
     lateinit var searchBar: LinearLayout
     lateinit var searchInput: EditText
@@ -34,6 +44,8 @@ class ChatSearchDelegate(
     private var adapter: MessageAdapter? = null
     private var searchResults = listOf<Int>()
     private var currentSearchIndex = -1
+    private var searchJob: Job? = null
+    var roomId: String = ""
 
     var getToolbarDelegate: (() -> ChatToolbarDelegate)? = null
 
@@ -54,7 +66,7 @@ class ChatSearchDelegate(
         searchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                performSearch(s.toString())
+                searchDebounced(s.toString())
             }
             override fun afterTextChanged(s: Editable?) {}
         })
@@ -83,7 +95,7 @@ class ChatSearchDelegate(
             val tint = ColorStateList.valueOf(onPrim)
             activity.findViewById<ImageButton>(R.id.searchPrev)?.imageTintList = tint
             activity.findViewById<ImageButton>(R.id.searchNext)?.imageTintList = tint
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
         searchInput.requestFocus()
         (activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager)
             .showSoftInput(searchInput, 0)
@@ -93,6 +105,7 @@ class ChatSearchDelegate(
         searchBar.isVisible = false
         toolbarContent.isVisible = true
         searchInput.text.clear()
+        searchJob?.cancel()
         searchResults = emptyList()
         currentSearchIndex = -1
         searchResultsCount.text = ""
@@ -104,11 +117,50 @@ class ChatSearchDelegate(
 
     fun isVisible(): Boolean = searchBar.isVisible
 
-    private fun performSearch(query: String) {
-        adapter?.setSearchHighlight(query)
+    private fun searchDebounced(query: String) {
+        searchJob?.cancel()
         if (query.isEmpty()) {
-            searchResults = emptyList(); currentSearchIndex = -1; searchResultsCount.text = ""; return
+            adapter?.setSearchHighlight(null)
+            searchResults = emptyList()
+            currentSearchIndex = -1
+            searchResultsCount.text = ""
+            return
         }
+        adapter?.setSearchHighlight(query)
+        searchJob = scope.launch {
+            delay(300)
+            performServerSearch(query)
+        }
+    }
+
+    private suspend fun performServerSearch(query: String) {
+        val results = withContext(Dispatchers.IO) {
+            try {
+                GrpcClient.searchMessages(roomId = roomId, query = query, limit = 50)
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+        if (results.isEmpty()) {
+            performClientSearch(query)
+            return
+        }
+        val messages = adapter?.currentList ?: emptyList()
+        val positions = mutableListOf<Int>()
+        for (result in results) {
+            val idx = messages.indexOfFirst { it.id == result.messageId }
+            if (idx != -1) positions.add(idx)
+        }
+        if (positions.isNotEmpty()) {
+            searchResults = positions
+            currentSearchIndex = positions.size - 1
+            withContext(Dispatchers.Main) { navigateSearch(0) }
+        } else {
+            performClientSearch(query)
+        }
+    }
+
+    private fun performClientSearch(query: String) {
         val results = mutableListOf<Int>()
         val messages = adapter?.currentList ?: emptyList()
         for (i in messages.indices) {
@@ -132,5 +184,9 @@ class ChatSearchDelegate(
         val messagesRecyclerView = activity.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.messagesRecyclerView)
         messagesRecyclerView.scrollToPosition(searchResults[currentSearchIndex])
         searchResultsCount.text = activity.getString(R.string.search_results_format, currentSearchIndex + 1, searchResults.size)
+    }
+
+    companion object {
+        private const val TAG = "ChatSearchDelegate"
     }
 }

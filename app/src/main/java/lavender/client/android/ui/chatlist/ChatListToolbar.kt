@@ -1,4 +1,5 @@
 package lavender.client.android.ui.chatlist
+import android.util.Log
 
 import android.content.Context
 import android.content.Intent
@@ -15,7 +16,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import lavender.client.android.EditProfileActivity
 import lavender.client.android.ContactsActivity
 import lavender.client.android.R
@@ -32,6 +33,8 @@ import lavender.client.android.ui.widget.StandardBottomSheet
  * Toolbar setup and settings sheet logic for ChatListActivity.
  * Extracted to reduce ChatListActivity from 1470 to ~800 lines.
  */
+
+private const val TAG = "ChatListToolbar"
 
 internal fun setupToolbarActions(activity: ChatListActivity, @Suppress("UNUSED_PARAMETER") username: String) {
     activity.ivToolbarUserAvatar?.setOnClickListener {
@@ -61,6 +64,24 @@ internal fun showSettingsSheet(activity: ChatListActivity, onBack: (() -> Unit)?
     }
 
     sheet.findViewById<TextView>(R.id.menuUsername)?.text = username
+
+    // Fetch admin status if not yet known (fallback for old version upgrades)
+    if (!SessionManager.session.value.isSuperAdmin) {
+        activity.lifecycleScope.launch {
+            try {
+                val profile = lavender.client.android.data.grpc.ProfileClient.getProfile(activity)
+                if (profile != null && profile.isSuperAdmin) {
+                    withContext(Dispatchers.Main) {
+                        lavender.client.android.data.grpc.GrpcClient.setSuperAdmin(true)
+                        activity.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
+                            .edit { putBoolean("is_super_admin", true) }
+                        // Update admin panel visibility if sheet is still showing
+                        sheet.findViewById<View>(R.id.actionAdmin)?.isVisible = true
+                    }
+                }
+            } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
+        }
+    }
 
     sheet.findViewById<View>(R.id.actionShareHeader)?.setOnClickListener {
         sheet.dismiss()
@@ -96,6 +117,39 @@ internal fun showSettingsSheet(activity: ChatListActivity, onBack: (() -> Unit)?
         activity.navigateToChat(favoritesChat, username)
     }
 
+    // Admin panel — show for super admins
+    val isSuperAdmin = SessionManager.session.value.isSuperAdmin
+    val adminPanel = sheet.findViewById<View>(R.id.actionAdmin)
+    if (adminPanel != null) {
+        adminPanel.isVisible = isSuperAdmin
+        adminPanel.setOnClickListener {
+            activity.isNavigatingDeeper = true
+            sheet.dismiss()
+            activity.settingsActivityLauncher.launch(
+                Intent(activity, lavender.client.android.SuperAdminActivity::class.java)
+            )
+        }
+    }
+
+    // Clear cache — admin only
+    val clearCache = sheet.findViewById<View>(R.id.actionClearCache)
+    if (clearCache != null) {
+        clearCache.isVisible = isSuperAdmin
+        clearCache.setOnClickListener {
+            sheet.dismiss()
+            activity.lifecycleScope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        CacheUtils.clearAllWithGlide(activity)
+                    }
+                    Toast.makeText(activity, R.string.cache_cleared, Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Log.e("ChatListToolbar", "Error clearing cache", e)
+                }
+            }
+        }
+    }
+
     sheet.findViewById<View>(R.id.actionThemes)?.setOnClickListener {
         sheet.dismiss()
         activity.startActivity(Intent(activity, ThemesActivity::class.java).apply {
@@ -121,7 +175,6 @@ internal fun showSettingsSheet(activity: ChatListActivity, onBack: (() -> Unit)?
 
     sheet.setOnDismissListener {
         if (!activity.isNavigatingDeeper) onBack?.invoke()
-        activity.isNavigatingDeeper = false
     }
 
     sheet.show()
@@ -133,10 +186,7 @@ internal fun showAdditionalSettingsSheet(activity: ChatListActivity) {
 
 internal fun showAdditionalSettingsSheet(activity: ChatListActivity, onBack: (() -> Unit)?) {
     val username = SessionManager.session.value.username
-    val isSuperAdmin = SessionManager.session.value.isSuperAdmin
     val sheet = StandardBottomSheet(activity, R.layout.bottom_sheet_additional_settings)
-
-    sheet.findViewById<View>(R.id.actionAdmin)?.isVisible = isSuperAdmin
 
     sheet.findViewById<View>(R.id.actionSecurity)?.setOnClickListener {
         activity.isNavigatingDeeper = true
@@ -148,38 +198,10 @@ internal fun showAdditionalSettingsSheet(activity: ChatListActivity, onBack: (()
         )
     }
 
-    sheet.findViewById<View>(R.id.actionNotifications)?.setOnClickListener {
-        activity.isNavigatingDeeper = true
-        sheet.dismiss()
-        activity.settingsActivityLauncher.launch(
-            Intent(activity, lavender.client.android.NotificationActivity::class.java)
-        )
-    }
-
-    sheet.findViewById<View>(R.id.actionClearCache)?.setOnClickListener {
-        sheet.dismiss()
-        try {
-            runBlocking(Dispatchers.IO) {
-                CacheUtils.clearAllWithGlide(activity)
-            }
-            Toast.makeText(activity, R.string.cache_cleared, Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            android.util.Log.e("ChatListActivity", "Error clearing cache", e)
-        }
-    }
-
     sheet.findViewById<View>(R.id.actionAbout)?.setOnClickListener {
         activity.isNavigatingDeeper = true
         sheet.dismiss()
         showAboutDialog(activity) { showAdditionalSettingsSheet(activity, onBack) }
-    }
-
-    sheet.findViewById<View>(R.id.actionAdmin)?.setOnClickListener {
-        activity.isNavigatingDeeper = true
-        sheet.dismiss()
-        activity.settingsActivityLauncher.launch(
-            Intent(activity, lavender.client.android.SuperAdminActivity::class.java)
-        )
     }
 
     sheet.findViewById<View>(R.id.actionServers)?.setOnClickListener {
@@ -207,7 +229,6 @@ internal fun showAdditionalSettingsSheet(activity: ChatListActivity, onBack: (()
 
     sheet.setOnDismissListener {
         if (!activity.isNavigatingDeeper) onBack?.invoke()
-        activity.isNavigatingDeeper = false
     }
 
     sheet.show()
@@ -220,7 +241,7 @@ internal fun confirmDeleteProfile(activity: ChatListActivity) {
         .setMessage(R.string.delete_profile_confirm)
         .setPositiveButton(R.string.delete) { _, _ ->
             GrpcClient.deleteProfile(username) { success, _ ->
-                activity.runOnUiThread {
+                activity.lifecycleScope.launch {
                     if (success) {
                         Toast.makeText(activity, R.string.profile_deleted, Toast.LENGTH_LONG).show()
                         GrpcClient.disconnect()
@@ -245,6 +266,15 @@ internal fun showAboutDialog(activity: ChatListActivity) {
 
 internal fun showAboutDialog(activity: ChatListActivity, onBack: (() -> Unit)?) {
     val sheet = StandardBottomSheet(activity, R.layout.dialog_about)
+    val appVersion = try {
+        activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: ""
+    } catch (_: Exception) { "" }
+    val appVersionText = sheet.findViewById<TextView>(R.id.appVersionText)
+    if (appVersion.isNotEmpty()) {
+        appVersionText?.text = activity.getString(R.string.app_version_format, appVersion)
+    } else {
+        appVersionText?.visibility = View.GONE
+    }
     val serverVersion = GrpcClient.serverVersion.value
     val serverVersionText = sheet.findViewById<TextView>(R.id.serverVersionText)
     if (serverVersion.isNotEmpty()) {
@@ -273,8 +303,8 @@ internal fun showAboutDialog(activity: ChatListActivity, onBack: (() -> Unit)?) 
     sheet.findViewById<View>(R.id.btnClose)?.setOnClickListener { sheet.dismiss() }
     sheet.setOnDismissListener {
         if (!activity.isNavigatingDeeper) onBack?.invoke()
-        activity.isNavigatingDeeper = false
     }
+
     sheet.show()
 }
 
@@ -299,14 +329,14 @@ private fun openFeedbackChat(activity: ChatListActivity) {
 private fun doOpenFeedbackChat(activity: ChatListActivity, adminUserId: String) {
     val username = lavender.client.android.data.session.SessionManager.session.value.username
     if (adminUserId == lavender.client.android.data.session.SessionManager.session.value.userId) {
-        activity.runOnUiThread {
+        activity.lifecycleScope.launch {
             android.widget.Toast.makeText(activity, R.string.admin_not_found, android.widget.Toast.LENGTH_SHORT).show()
         }
         return
     }
     val adminUsername = GrpcClient.allUsers.value.firstOrNull { it.userId == adminUserId }?.username
     if (adminUsername.isNullOrEmpty()) {
-        activity.runOnUiThread {
+        activity.lifecycleScope.launch {
             android.widget.Toast.makeText(activity, R.string.admin_not_found, android.widget.Toast.LENGTH_SHORT).show()
         }
         return
@@ -317,9 +347,9 @@ private fun doOpenFeedbackChat(activity: ChatListActivity, adminUserId: String) 
                 id = chatId, name = adminUsername, type = "direct",
                 participants = "[\"$username\",\"$adminUsername\"]"
             )
-            activity.runOnUiThread { activity.navigateToChat(chatInfo, username) }
+            activity.lifecycleScope.launch { activity.navigateToChat(chatInfo, username) }
         } else {
-            activity.runOnUiThread {
+            activity.lifecycleScope.launch {
                 android.widget.Toast.makeText(activity, R.string.connection_failed, android.widget.Toast.LENGTH_SHORT).show()
             }
         }

@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.view.View
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -24,7 +25,9 @@ import com.bumptech.glide.Glide
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import de.hdodenhof.circleimageview.CircleImageView
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.ProtoUtils
 import lavender.client.android.theme.ThemeStore
@@ -56,6 +59,12 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var viewModel: ProfileViewModel
     private var isGroup: Boolean = false
     private var roomId: String = ""
+    private var intentParticipants: String = ""
+    private var intentCreator: String = ""
+    private var intentAvatarUrl: String = ""
+    private var intentFullAvatarUrl: String = ""
+    private var intentChatName: String = ""
+    private var chatType: String = ""
     private var selectedAvatarUri: Uri? = null
     private var currentProfileAvatar: CircleImageView? = null
     private var participantsAdapter: ParticipantAdapter? = null
@@ -76,6 +85,7 @@ class ProfileActivity : AppCompatActivity() {
         setContentView(R.layout.activity_profile)
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val currentMe = prefs.getString("username", "") ?: ""
+        ThemeStore.init(this)
         ThemeUi.bind(this, currentMe)
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
@@ -90,15 +100,27 @@ class ProfileActivity : AppCompatActivity() {
         val username = intent.getStringExtra("username") ?: ""
         isGroup = intent.getBooleanExtra("is_group", false)
         roomId = intent.getStringExtra("room_id") ?: ""
+        intentParticipants = intent.getStringExtra("participants") ?: ""
+        intentCreator = intent.getStringExtra("creator") ?: ""
+        intentAvatarUrl = intent.getStringExtra("avatar_url") ?: ""
+        intentFullAvatarUrl = intent.getStringExtra("full_avatar_url") ?: ""
+        intentChatName = intent.getStringExtra("chat_name") ?: ""
+        chatType = intent.getStringExtra("chat_type") ?: ""
 
-        setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = if (isGroup) getString(R.string.group_info) else getString(R.string.profile)
+        toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
+        toolbar.navigationIcon?.setTint(getColorOnPrimary())
+        toolbar.title = when {
+            chatType == "conference" -> getString(R.string.conference_info)
+            isGroup -> getString(R.string.group_info)
+            else -> getString(R.string.profile)
+        }
+        toolbar.setTitleTextColor(getColorOnPrimary())
         toolbar.setNavigationOnClickListener { finish() }
 
         if (isGroup) {
-            viewModel.loadGroupData(roomId)
+            viewModel.loadGroupData(roomId, intentParticipants, intentCreator, intentAvatarUrl, intentFullAvatarUrl, intentChatName)
             setupGroupObservers()
+            setupGroupFab()
         } else {
             viewModel.loadUserProfile(username)
             setupProfileObservers()
@@ -106,14 +128,24 @@ class ProfileActivity : AppCompatActivity() {
         viewModel.observeOnlineUsers()
 
         lifecycleScope.launch {
-            grpcClient.users.collect { runOnUiThread { refreshCurrentView() } }
+            grpcClient.users.collect { refreshCurrentView() }
         }
     }
 
     override fun onResume() {
         super.onResume()
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
-        if (isGroup && roomId.isNotEmpty()) viewModel.loadGroupData(roomId)
+        if (isGroup && roomId.isNotEmpty()) {
+            val data = viewModel.groupData.value
+            viewModel.loadGroupData(
+                roomId,
+                intentParticipants.ifEmpty { try { org.json.JSONArray(data.participants).toString() } catch (_: Exception) { "" } },
+                intentCreator.ifEmpty { data.creator },
+                intentAvatarUrl.ifEmpty { data.avatarUrl },
+                intentFullAvatarUrl.ifEmpty { data.fullAvatarUrl },
+                intentChatName.ifEmpty { data.name }
+            )
+        }
     }
 
     override fun onPause() {
@@ -124,10 +156,8 @@ class ProfileActivity : AppCompatActivity() {
     private fun setupProfileObservers() {
         lifecycleScope.launch {
             viewModel.profileData.collect { data ->
-                runOnUiThread {
-                    if (isFinishing || isDestroyed || data.username.isEmpty()) return@runOnUiThread
-                    updateProfileUI(data)
-                }
+                if (isFinishing || isDestroyed || data.username.isEmpty()) return@collect
+                updateProfileUI(data)
             }
         }
     }
@@ -135,12 +165,97 @@ class ProfileActivity : AppCompatActivity() {
     private fun setupGroupObservers() {
         lifecycleScope.launch {
             viewModel.groupData.collect { data ->
-                runOnUiThread {
-                    if (isFinishing || isDestroyed) return@runOnUiThread
-                    updateGroupUI(data)
+                if (isFinishing || isDestroyed) return@collect
+                updateGroupUI(data)
+            }
+        }
+    }
+
+    private fun setupGroupFab() {
+        val fab = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fabAddMember)
+        fab?.isVisible = true
+        fab?.setOnClickListener {
+            if (chatType == "conference") {
+                showConferenceActionSheet()
+            } else {
+                showAddParticipantSheet()
+            }
+        }
+    }
+
+    private fun showConferenceActionSheet() {
+        lavender.client.android.ui.widget.ActionBottomSheet(this)
+            .setTitle(getString(R.string.conference))
+            .setActions(listOf(
+                lavender.client.android.ui.widget.SheetAction(
+                    1, android.R.drawable.ic_menu_add, getString(R.string.add_participants)
+                ) { showAddParticipantSheet() },
+                lavender.client.android.ui.widget.SheetAction(
+                    2, R.drawable.ic_conference_lobby, getString(R.string.open_lobby)
+                ) {
+                    val intent = Intent(this, ConferenceLobbyActivity::class.java).apply {
+                        putExtra("ROOM_ID", roomId)
+                        putExtra("CHAT_NAME", intentChatName)
+                        putExtra("PARTICIPANTS", intentParticipants)
+                        putExtra("CREATOR", intentCreator)
+                    }
+                    startActivity(intent)
+                }
+            )).showWithNavigation()
+    }
+
+    private fun showAddParticipantSheet() {
+        val sheet = SearchableListBottomSheet(this)
+            .setTitle(getString(R.string.add_participants))
+            .setActionButtonText(getString(R.string.add))
+            .setExtraInputVisible(false)
+            .setLoading(true)
+
+        val userAdapter = SelectableUserAdapter(lifecycleScope, avatarCache = GrpcClient.getAvatarCache()) { count ->
+            sheet.setActionButtonEnabled(count > 0)
+            sheet.setActionButtonText(if (count > 0) "${getString(R.string.add)} ($count)" else getString(R.string.add))
+        }
+        sheet.setAdapter(userAdapter)
+
+        val currentParticipants = try {
+            val arr = org.json.JSONArray(intentParticipants)
+            val set = mutableSetOf<String>()
+            for (i in 0 until arr.length()) set.add(arr.getString(i))
+            set
+        } catch (_: Exception) { emptySet() }
+
+        GrpcClient.getContacts(grpcClient.getCurrentUsername() ?: "") { contacts ->
+            val currentContacts = contacts.toSet()
+            lifecycleScope.launch {
+                GrpcClient.allUsers.collect { allUsersList ->
+                    val filtered = allUsersList
+                        .map { it.username }
+                        .filter { it != grpcClient.getCurrentUsername() && !currentParticipants.contains(it) && currentContacts.contains(it) }
+                    sheet.setLoading(false)
+                    userAdapter.setUsers(filtered)
+                    if (filtered.isEmpty()) {
+                        sheet.setEmptyState(true, getString(R.string.all_contacts_already_in_group))
+                    }
                 }
             }
         }
+
+        sheet.onSearchTextChanged { query -> userAdapter.filter(query) }
+
+        sheet.onActionClick {
+            val selected = userAdapter.getSelectedUsers()
+            if (selected.isEmpty()) return@onActionClick
+            GrpcClient.addParticipants(roomId, selected) { success, msg ->
+                lifecycleScope.launch {
+                    sheet.dismiss()
+                    Toast.makeText(this@ProfileActivity, if (success) getString(R.string.member_added) else msg, Toast.LENGTH_SHORT).show()
+                    if (success) {
+                        viewModel.loadGroupData(roomId, intentParticipants, intentCreator, intentAvatarUrl, intentFullAvatarUrl, intentChatName)
+                    }
+                }
+            }
+        }
+        sheet.show()
     }
 
     @SuppressLint("SetTextI18n")
@@ -151,6 +266,15 @@ class ProfileActivity : AppCompatActivity() {
         val profileStatus = findViewById<TextView>(R.id.profileStatus) ?: return
         val bioCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.bioCard)
         val groupSettingsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.groupSettingsCard)
+        val companyCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.companyCard)
+        val tvProfileCompanyName = findViewById<TextView>(R.id.tvProfileCompanyName)
+        val tvProfileCompanyPosition = findViewById<TextView>(R.id.tvProfileCompanyPosition)
+        val ivProfileCompanyLogo = findViewById<de.hdodenhof.circleimageview.CircleImageView>(R.id.ivProfileCompanyLogo)
+        val profileActionsRow = findViewById<LinearLayout>(R.id.profileActionsRow)
+        val actionMessage = findViewById<View>(R.id.actionMessage)
+        val actionVoiceCall = findViewById<View>(R.id.actionVoiceCall)
+        val actionVideoCall = findViewById<View>(R.id.actionVideoCall)
+        val actionEmail = findViewById<View>(R.id.actionEmail)
 
         currentProfileAvatar = profileAvatar
         profileName.text = data.username
@@ -178,6 +302,90 @@ class ProfileActivity : AppCompatActivity() {
         }
         profileStatus.isVisible = true
 
+        // Action icons row (Telegram-style) — only for other users' profiles
+        val isOwnProfile = data.username == grpcClient.getCurrentUsername()
+        if (!isOwnProfile && profileActionsRow != null) {
+            profileActionsRow.isVisible = true
+
+            actionMessage?.setOnClickListener {
+                val currentUsername = grpcClient.getCurrentUsername() ?: return@setOnClickListener
+                grpcClient.createDirectChat(currentUsername, data.username) { chatId ->
+                    if (chatId != null) {
+                        lifecycleScope.launch {
+                            val intent = Intent(this@ProfileActivity, NewChatActivity::class.java).apply {
+                                putExtra("USERNAME", currentUsername)
+                                putExtra("ROOM_ID", chatId)
+                                putExtra("CHAT_NAME", data.username)
+                                putExtra("IS_DIRECT", true)
+                                putExtra("PARTICIPANTS", "[\"$currentUsername\", \"${data.username}\"]")
+                            }
+                            startActivity(intent)
+                        }
+                    }
+                }
+            }
+
+            actionVoiceCall?.setOnClickListener {
+                val otherUserId = data.userId.ifEmpty { data.username }
+                lavender.client.android.data.calls.CallManager.initiateCall(data.username)
+                lavender.client.android.data.calls.CallNavigator.startCall(this, otherUserId, data.username, isVideo = false)
+            }
+
+            actionVideoCall?.setOnClickListener {
+                val otherUserId = data.userId.ifEmpty { data.username }
+                lavender.client.android.data.calls.CallManager.initiateCall(data.username)
+                lavender.client.android.data.calls.CallNavigator.startCall(this, otherUserId, data.username, isVideo = true)
+            }
+
+            if (data.email.isNotEmpty()) {
+                actionEmail?.isVisible = true
+                val emailAddr = data.email
+                actionEmail?.setOnClickListener {
+                    val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
+                        this.data = Uri.parse("mailto:$emailAddr")
+                    }
+                    try {
+                        startActivity(emailIntent)
+                    } catch (e: Exception) {
+                        Toast.makeText(this, R.string.no_email_app, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else {
+                actionEmail?.isVisible = false
+            }
+        } else {
+            profileActionsRow?.isVisible = false
+        }
+
+        // Company section
+        if (data.companyId.isNotEmpty() && companyCard != null) {
+            companyCard.isVisible = true
+            tvProfileCompanyName?.text = data.companyName
+            tvProfileCompanyPosition?.text = formatCompanyPosition(data.positionTitle, data.positionLevel)
+            ivProfileCompanyLogo?.isVisible = false
+            lifecycleScope.launch {
+                val companyResp = withContext(Dispatchers.IO) {
+                    lavender.client.android.data.grpc.GrpcCompanyClient.getCompany(data.companyId)
+                }
+                val logoUrl = companyResp?.company?.avatarUrl
+                if (!logoUrl.isNullOrEmpty()) {
+                    ivProfileCompanyLogo?.isVisible = true
+                    Glide.with(this@ProfileActivity)
+                        .load(logoUrl)
+                        .placeholder(R.drawable.ic_default_avatar)
+                        .into(ivProfileCompanyLogo!!)
+                }
+            }
+            companyCard.setOnClickListener {
+                val intent = Intent(this, CompanyProfileActivity::class.java).apply {
+                    putExtra("COMPANY_ID", data.companyId)
+                }
+                startActivity(intent)
+            }
+        } else if (companyCard != null) {
+            companyCard.isVisible = false
+        }
+
         if (data.avatarUrl.isNotEmpty()) {
             Glide.with(this).load(data.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
             profileAvatar.imageTintList = null
@@ -190,6 +398,14 @@ class ProfileActivity : AppCompatActivity() {
         bioCard?.setCardBackgroundColor(ColorStateList.valueOf(currentTheme.surfaceColor.toColorInt()))
         bioCard?.strokeColor = ThemeUtils.adjustAlpha(currentTheme.onSurfaceColor.toColorInt(), 0.2f)
         applyThemeToView(findViewById(android.R.id.content), currentTheme)
+        val bioTitle = findViewById<TextView>(R.id.bioTitle)
+        bioTitle?.setTextColor(primaryColor)
+        findViewById<TextView>(R.id.companyTitleLabel)?.setTextColor(primaryColor)
+        val positionBubble = findViewById<com.google.android.material.card.MaterialCardView>(R.id.positionBubble)
+        val primaryContainerBg = ThemeUtils.adjustAlpha(primaryColor, 0.15f)
+        positionBubble?.setCardBackgroundColor(ColorStateList.valueOf(primaryContainerBg))
+        findViewById<TextView>(R.id.tvProfileCompanyPosition)?.setTextColor(ThemeUtils.parseSafeColor(currentTheme.textPrimaryColor, android.graphics.Color.BLACK))
+        findViewById<MaterialToolbar>(R.id.toolbar)?.navigationIcon?.setTint(getColorOnPrimary())
     }
 
     @SuppressLint("SetTextI18n")
@@ -232,10 +448,10 @@ class ProfileActivity : AppCompatActivity() {
                     val progressOverlay = findViewById<View>(R.id.progressOverlay)
                     progressOverlay?.isVisible = true
                     viewModel.updateChatSettings(roomId, isChecked) { success, msg ->
-                        runOnUiThread {
+                        lifecycleScope.launch {
                             progressOverlay?.isVisible = false
-                            if (success) Toast.makeText(this, R.string.theme_saved, Toast.LENGTH_SHORT).show()
-                            else { switchAllowAdd.isChecked = !isChecked; Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                            if (success) Toast.makeText(this@ProfileActivity, R.string.theme_saved, Toast.LENGTH_SHORT).show()
+                            else { switchAllowAdd.isChecked = !isChecked; Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show() }
                         }
                     }
                 }
@@ -254,7 +470,7 @@ class ProfileActivity : AppCompatActivity() {
                             val progressOverlay = findViewById<View>(R.id.progressOverlay)
                             progressOverlay.isVisible = true
                             viewModel.updateChatName(roomId, newName) { success, msg ->
-                                runOnUiThread { progressOverlay.isVisible = false; if (!success) Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                                lifecycleScope.launch { progressOverlay.isVisible = false; if (!success) Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show() }
                             }
                         }
                     }.setNegativeButton(R.string.cancel, null).show()
@@ -299,6 +515,7 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         applyThemeToView(findViewById(android.R.id.content), currentTheme)
+        findViewById<MaterialToolbar>(R.id.toolbar)?.navigationIcon?.setTint(getColorOnPrimary())
     }
 
     private fun setupAvatarClickListener(profileAvatar: CircleImageView, fullImageUrl: String) {
@@ -342,8 +559,8 @@ class ProfileActivity : AppCompatActivity() {
 
         sheet.onActionClick {
             viewModel.getAvailableContacts { available ->
-                runOnUiThread {
-                    if (available.isEmpty()) Toast.makeText(this, R.string.no_users_available, Toast.LENGTH_SHORT).show()
+                lifecycleScope.launch {
+                    if (available.isEmpty()) Toast.makeText(this@ProfileActivity, R.string.no_users_available, Toast.LENGTH_SHORT).show()
                     else showAddParticipantDialog(available)
                 }
             }
@@ -363,7 +580,7 @@ class ProfileActivity : AppCompatActivity() {
                 val progressOverlay = findViewById<View>(R.id.progressOverlay)
                 progressOverlay?.isVisible = true
                 viewModel.removeParticipant(roomId, user) { success, msg ->
-                    runOnUiThread { progressOverlay?.isVisible = false; if (!success) Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                    lifecycleScope.launch { progressOverlay?.isVisible = false; if (!success) Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show() }
                 }
             }.setNegativeButton(R.string.cancel, null).show()
     }
@@ -381,7 +598,7 @@ class ProfileActivity : AppCompatActivity() {
             val progressOverlay = findViewById<View>(R.id.progressOverlay)
             sheet.dismiss(); progressOverlay.isVisible = true
             viewModel.addParticipants(roomId, selected) { success, msg ->
-                runOnUiThread { progressOverlay.isVisible = false; if (!success) Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                lifecycleScope.launch { progressOverlay.isVisible = false; if (!success) Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show() }
             }
         }
         sheet.show()
@@ -395,10 +612,10 @@ class ProfileActivity : AppCompatActivity() {
         val progressOverlay = findViewById<View>(R.id.progressOverlay)
         progressOverlay?.isVisible = true
         viewModel.uploadGroupAvatar(this, roomId, uri) { result ->
-            runOnUiThread {
+            lifecycleScope.launch {
                 progressOverlay?.isVisible = false
-                if (result.thumbUrl.isNotEmpty()) Toast.makeText(this, R.string.theme_saved, Toast.LENGTH_SHORT).show()
-                else if (result.error.isNotEmpty()) Toast.makeText(this, result.error, Toast.LENGTH_SHORT).show()
+                if (result.thumbUrl.isNotEmpty()) Toast.makeText(this@ProfileActivity, R.string.theme_saved, Toast.LENGTH_SHORT).show()
+                else if (result.error.isNotEmpty()) Toast.makeText(this@ProfileActivity, result.error, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -409,6 +626,26 @@ class ProfileActivity : AppCompatActivity() {
             if (data.participants.isNotEmpty()) {
                 participantsAdapter?.updateData(data.participants, grpcClient.users.value.toSet(), grpcClient.getAvatarCache())
             }
+        }
+    }
+
+    private fun formatCompanyPosition(positionTitle: String, positionLevel: Int): String {
+        val englishNames = mapOf(0 to "Employee", 1 to "Manager", 2 to "Top Manager", 3 to "Owner")
+        val levelName = when (positionLevel) {
+            0 -> getString(R.string.employee)
+            1 -> getString(R.string.manager)
+            2 -> getString(R.string.top_manager)
+            3 -> getString(R.string.owner)
+            else -> positionTitle
+        }
+        if (positionTitle.isEmpty()) return levelName
+        val englishName = englishNames[positionLevel]
+        return if (englishName != null && positionTitle.equals(englishName, ignoreCase = true)) {
+            levelName
+        } else if (positionTitle != levelName) {
+            "$positionTitle ($levelName)"
+        } else {
+            levelName
         }
     }
 
@@ -441,8 +678,9 @@ class ProfileActivity : AppCompatActivity() {
             }
             is CircleImageView -> { view.borderColor = primary; view.borderWidth = (2 * resources.displayMetrics.density).toInt() }
             is android.widget.CheckBox -> view.buttonTintList = ColorStateList.valueOf(primary)
+            is android.widget.ImageView -> view.imageTintList = ColorStateList.valueOf(primary)
             is TextView -> {
-                if (view.id == R.id.participantsTitle || view.id == R.id.profileName || view.id == R.id.bioTitle || view.id == R.id.settingsTitle) view.setTextColor(primary)
+                if (view.id == R.id.participantsTitle || view.id == R.id.profileName || view.id == R.id.bioTitle || view.id == R.id.settingsTitle || view.id == R.id.companyTitleLabel) view.setTextColor(primary)
                 else view.setTextColor(textPrimary)
             }
             is com.google.android.material.card.MaterialCardView -> {
@@ -451,5 +689,10 @@ class ProfileActivity : AppCompatActivity() {
             }
             is android.view.ViewGroup -> { for (i in 0 until view.childCount) applyThemeToView(view.getChildAt(i), theme) }
         }
+    }
+
+    private fun getColorOnPrimary(): Int {
+        val theme = ThemeStore.currentTheme()
+        return ThemeUtils.parseSafeColor(theme.onPrimaryColor, android.graphics.Color.WHITE)
     }
 }

@@ -2,72 +2,64 @@ package lavender.client.android
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
+import android.text.InputType
 import android.widget.Button
 import android.widget.EditText
-import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.edit
-import androidx.core.graphics.scale
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import de.hdodenhof.circleimageview.CircleImageView
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.Request
-import lavender.client.android.network.HttpClient
-import okhttp3.RequestBody.Companion.toRequestBody
+import lavender.client.android.ui.profile.EditProfileViewModel
 import java.util.Locale
 
 import lavender.client.android.ui.widget.StandardBottomSheet
 
 class EditProfileActivity : AppCompatActivity() {
 
-    private val grpcClient = GrpcClient
+    private lateinit var viewModel: EditProfileViewModel
     private var username: String = ""
     private var password: String = ""
     private var selectedAvatarUri: Uri? = null
     private var currentAvatarImageView: CircleImageView? = null
-    private var currentAvatarProgressBar: ProgressBar? = null
-    private var currentFullAvatarUrl: String = ""
-    private var initialBio: String = ""
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             result.data?.data?.let { uri ->
                 selectedAvatarUri = uri
-                uploadAvatarToServer(uri)
+                viewModel.uploadAvatar(uri)
             }
+        }
+    }
+
+    private val companyLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            reloadProfile()
         }
     }
 
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val languageCode = prefs.getString("language", "ru") ?: "ru" // Default to Russian for first launch
+        val languageCode = prefs.getString("language", "ru") ?: "ru"
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
         val config = newBase.resources.configuration
@@ -80,12 +72,15 @@ class EditProfileActivity : AppCompatActivity() {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
 
+        viewModel = ViewModelProvider(this)[EditProfileViewModel::class.java]
+
         username = intent.getStringExtra("USERNAME") ?: ""
         password = intent.getStringExtra("PASSWORD") ?: ""
 
         setContentView(R.layout.activity_edit_profile)
         ThemeUi.bind(this, username)
         setupUI()
+        observeViewModel()
     }
 
     private fun setupUI() {
@@ -98,12 +93,14 @@ class EditProfileActivity : AppCompatActivity() {
         }
         val avatarImageView = findViewById<CircleImageView>(R.id.ivProfileAvatar)
         val editTextBio = findViewById<EditText>(R.id.editTextBio)
-        val btnChangeUsername = findViewById<Button>(R.id.btnChangeUsername)
+        val usernameCard = findViewById<android.view.View>(R.id.usernameCard)
+        val tvInlineUsername = findViewById<android.widget.TextView>(R.id.tvInlineUsername)
         val btnChangeBio = findViewById<Button>(R.id.btnChangeBio)
         val btnChangePassword = findViewById<Button>(R.id.btnChangePassword)
         val btnChangeAvatar = findViewById<Button>(R.id.btnChangeAvatar)
-        val avatarProgressBar = findViewById<ProgressBar>(R.id.avatarProgressBar)
         val btnDeleteProfile = findViewById<Button>(R.id.btnDeleteProfile)
+        val companyCard = findViewById<android.view.View>(R.id.companyCard)
+        val btnCompanyAction = findViewById<android.widget.ImageButton>(R.id.btnCompanyAction)
 
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -111,47 +108,16 @@ class EditProfileActivity : AppCompatActivity() {
             finish()
         }
 
-        // Store references
         currentAvatarImageView = avatarImageView
-        currentAvatarProgressBar = avatarProgressBar
+        tvInlineUsername.text = getString(R.string.username_at, username)
 
-        // Load current profile (bio) — v2: user_id from JWT
-        Log.d("EditProfile", "Loading profile for user: $username")
-        lifecycleScope.launch {
-            val profile = lavender.client.android.data.grpc.ProfileClient.getProfile(this@EditProfileActivity)
-            Log.d("EditProfile", "Profile received: bio='${profile?.bio}', status='${profile?.status}', avatarUrl='${profile?.avatarUrl}'")
-            runOnUiThread {
-                if (profile != null) {
-                    initialBio = profile.bio
-                    editTextBio.setText(profile.bio)
-                    btnChangeBio.isVisible = false
-                }
-            }
-        }
-
-        // Load current avatar and full avatar URL
-        grpcClient.getUserAvatar(username, grpcClient.getUserId() ?: "") { avatarUrl ->
-            runOnUiThread {
-                val currentTheme = ThemeStore.currentTheme()
-                if (avatarUrl.isNotEmpty()) {
-                    Glide.with(this)
-                        .load(avatarUrl)
-                        .placeholder(R.drawable.ic_default_avatar_white)
-                        .error(R.drawable.ic_default_avatar_white)
-                        .into(avatarImageView)
-                    avatarImageView.imageTintList = null
-                    // Get full avatar URL from cache
-                    currentFullAvatarUrl = grpcClient.getFullAvatarUrl(username) ?: avatarUrl
-                } else {
-                    ThemeUtils.applyDefaultAvatar(avatarImageView, currentTheme)
-                }
-            }
-        }
+        // Load profile
+        viewModel.loadProfile(username)
+        viewModel.loadAvatar(username)
 
         // Open full screen avatar on click
         avatarImageView.setOnClickListener {
-            val fullUrl = currentFullAvatarUrl.takeIf { it.isNotEmpty() }
-                ?: grpcClient.getAvatarCache()[username]
+            val fullUrl = viewModel.uiState.value.fullAvatarUrl.takeIf { it.isNotEmpty() }
                 ?: return@setOnClickListener
             val intent = Intent(this, FullScreenImageActivity::class.java).apply {
                 putExtra("image_url", fullUrl)
@@ -159,11 +125,10 @@ class EditProfileActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-
         btnDeleteProfile.setOnClickListener {
             val passwordInput = EditText(this).apply {
                 hint = getString(R.string.enter_password)
-                inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             }
             AlertDialog.Builder(this)
                 .setTitle(R.string.delete_profile)
@@ -175,18 +140,7 @@ class EditProfileActivity : AppCompatActivity() {
                         Toast.makeText(this, getString(R.string.enter_both_passwords), Toast.LENGTH_SHORT).show()
                         return@setPositiveButton
                     }
-                    lifecycleScope.launch {
-                        val success = lavender.client.android.data.grpc.ProfileClient.deleteProfile(this@EditProfileActivity, pwd)
-                        runOnUiThread {
-                            if (success) {
-                                Toast.makeText(this@EditProfileActivity, getString(R.string.profile_deleted), Toast.LENGTH_SHORT).show()
-                                grpcClient.disconnect()
-                                finish()
-                            } else {
-                                Toast.makeText(this@EditProfileActivity, getString(R.string.failed_to_delete_profile), Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    }
+                    viewModel.deleteProfile(pwd)
                 }
                 .setNegativeButton(R.string.cancel_dialog, null)
                 .show()
@@ -196,45 +150,161 @@ class EditProfileActivity : AppCompatActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 val newBio = s?.toString()?.trim() ?: ""
-                // Show save button if bio is different from initial (or if initial was empty and user typed something)
-                btnChangeBio.isVisible = newBio != initialBio.trim()
+                btnChangeBio.isVisible = newBio != viewModel.initialBio.value.trim()
             }
             override fun afterTextChanged(s: Editable?) {}
         })
 
         btnChangeAvatar.setOnClickListener {
-            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+            val intent = Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
             pickImageLauncher.launch(intent)
         }
 
-        btnChangeUsername.setOnClickListener {
+        usernameCard.setOnClickListener {
             showChangeUsernameDialog()
         }
 
         btnChangeBio.setOnClickListener {
             val newBio = editTextBio.text.toString().trim()
-            Log.d("EditProfile", "Updating bio: '$newBio' for user: $username")
-            lifecycleScope.launch {
-                val success = lavender.client.android.data.grpc.ProfileClient.updateProfile(
-                    context = this@EditProfileActivity,
-                    bio = newBio,
-                    status = ""
-                )
-                Log.d("EditProfile", "Update bio result: success=$success")
-                runOnUiThread {
-                    if (success) {
-                        Toast.makeText(this@EditProfileActivity, getString(R.string.bio_saved), Toast.LENGTH_SHORT).show()
-                        initialBio = newBio
-                        btnChangeBio.isVisible = false
-                    } else {
-                        Toast.makeText(this@EditProfileActivity, getString(R.string.error_colon, "Failed"), Toast.LENGTH_LONG).show()
-                    }
-                }
-            }
+            viewModel.updateBio(newBio)
         }
 
         btnChangePassword.setOnClickListener {
             showChangePasswordDialog()
+        }
+
+        companyCard.setOnClickListener {
+            if (viewModel.uiState.value.companyId.isNotEmpty()) {
+                val intent = Intent(this, CompanyProfileActivity::class.java).apply {
+                    putExtra("COMPANY_ID", viewModel.uiState.value.companyId)
+                }
+                companyLauncher.launch(intent)
+            } else {
+                showCreateCompanyDialog()
+            }
+        }
+
+        btnCompanyAction.setOnClickListener {
+            if (viewModel.uiState.value.hasMultipleCompanies) {
+                showCompanySwitcher()
+            } else if (viewModel.uiState.value.companyId.isNotEmpty()) {
+                val intent = Intent(this, CompanyProfileActivity::class.java).apply {
+                    putExtra("COMPANY_ID", viewModel.uiState.value.companyId)
+                }
+                companyLauncher.launch(intent)
+            } else {
+                showCreateCompanyDialog()
+            }
+        }
+
+        btnCompanyAction.setOnLongClickListener {
+            if (viewModel.uiState.value.hasMultipleCompanies) {
+                showCompanySwitcher()
+                true
+            } else {
+                false
+            }
+        }
+    }
+
+    private fun observeViewModel() {
+        lifecycleScope.launch {
+            viewModel.uiState.collect { state ->
+                updateUI(state)
+            }
+        }
+
+        lifecycleScope.launch {
+            viewModel.avatarState.collect { state ->
+                val avatarProgressBar = findViewById<android.widget.ProgressBar>(R.id.avatarProgressBar)
+                avatarProgressBar?.isVisible = state.isUploading
+                state.error?.let { error ->
+                    Toast.makeText(this@EditProfileActivity, getString(R.string.error_colon, error), Toast.LENGTH_SHORT).show()
+                    viewModel.clearError()
+                }
+            }
+        }
+
+        lifecycleScope.launch {
+            viewModel.initialBio.collect { bio ->
+                val editTextBio = findViewById<EditText>(R.id.editTextBio)
+                if (editTextBio.text.toString().trim() != bio) {
+                    editTextBio.setText(bio)
+                }
+                findViewById<Button>(R.id.btnChangeBio)?.isVisible = false
+            }
+        }
+    }
+
+    private fun updateUI(state: lavender.client.android.ui.profile.ProfileUiState) {
+        val tvInlineUsername = findViewById<android.widget.TextView>(R.id.tvInlineUsername)
+        val companyCard = findViewById<android.view.View>(R.id.companyCard)
+        val tvCompanyName = findViewById<android.widget.TextView>(R.id.tvCompanyName)
+        val tvCompanyPosition = findViewById<android.widget.TextView>(R.id.tvCompanyPosition)
+        val ivCompanyLogo = findViewById<CircleImageView>(R.id.ivCompanyLogo)
+        val avatarImageView = findViewById<CircleImageView>(R.id.ivProfileAvatar)
+
+        state.profile?.let { profile ->
+            tvInlineUsername.text = getString(R.string.username_at, profile.username.ifEmpty { this@EditProfileActivity.username })
+        }
+
+        // Update avatar
+        if (state.avatarUrl.isNotEmpty()) {
+            Glide.with(this)
+                .load(state.avatarUrl)
+                .placeholder(R.drawable.ic_default_avatar_white)
+                .error(R.drawable.ic_default_avatar_white)
+                .into(avatarImageView)
+            avatarImageView.imageTintList = null
+        }
+
+        // Update company section
+        if (state.companyId.isNotEmpty()) {
+            companyCard.isVisible = true
+            tvCompanyName.text = state.companyName
+            tvCompanyPosition.text = state.companyPosition
+            tvCompanyPosition.isVisible = true
+
+            val posBubble = findViewById<com.google.android.material.card.MaterialCardView>(R.id.positionBubble)
+            val currentTheme = ThemeStore.currentTheme()
+            val primaryColor = ThemeUtils.parseSafeColor(currentTheme.primaryColor, android.graphics.Color.BLUE)
+            val primaryContainerBg = ThemeUtils.adjustAlpha(primaryColor, 0.15f)
+            posBubble?.setCardBackgroundColor(ColorStateList.valueOf(primaryContainerBg))
+            val textPrimary = ThemeUtils.parseSafeColor(currentTheme.textPrimaryColor, android.graphics.Color.BLACK)
+            tvCompanyPosition.setTextColor(textPrimary)
+
+            if (state.companyLogoUrl.isNotEmpty()) {
+                ivCompanyLogo.isVisible = true
+                Glide.with(this)
+                    .load(state.companyLogoUrl)
+                    .placeholder(R.drawable.ic_default_avatar)
+                    .into(ivCompanyLogo)
+            } else {
+                ivCompanyLogo.isVisible = false
+            }
+
+            if (state.hasMultipleCompanies) {
+                tvCompanyPosition.text = getString(R.string.company_position_with_count, state.companyPosition, state.companyCount)
+            }
+        } else {
+            companyCard.isVisible = true
+            ivCompanyLogo.isVisible = false
+            tvCompanyName.text = getString(R.string.create_company)
+            tvCompanyPosition.isVisible = false
+        }
+
+        // Handle messages
+        state.successMessage?.let { message ->
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            viewModel.clearSuccess()
+            if (message.contains("deleted")) {
+                finish()
+            }
+        }
+
+        state.error?.let { error ->
+            Toast.makeText(this, getString(R.string.error_colon, error), Toast.LENGTH_LONG).show()
+            viewModel.clearError()
         }
     }
 
@@ -246,185 +316,6 @@ class EditProfileActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = true
-    }
-
-    private fun uploadAvatarToServer(uri: Uri) {
-        currentAvatarProgressBar?.isVisible = true
-
-        lifecycleScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    val mimeType = contentResolver.getType(uri)
-                    val isGif = mimeType == "image/gif"
-
-                    val thumbBytes: ByteArray
-                    val fullBytes: ByteArray?
-                    val mediaType: String
-
-                    if (isGif) {
-                        // Для GIF загружаем оригинал без изменений
-                        val inputStream = contentResolver.openInputStream(uri)
-                        thumbBytes = inputStream?.readBytes() ?: byteArrayOf()
-                        fullBytes = null // GIF не нужна отдельная полная версия
-                        inputStream?.close()
-                        mediaType = "image/gif"
-                    } else {
-                        // Создаем миниатюру 256x256
-                        val resizedBytes = resizeImage(uri)
-                        // Создаем полную версию 1920x1920
-                        val fullResizedBytes = resizeImageFull(uri)
-
-                        if (resizedBytes == null) {
-                            runOnUiThread {
-                                currentAvatarProgressBar?.isVisible = false
-                                Toast.makeText(this@EditProfileActivity, getString(R.string.failed_to_resize_image), Toast.LENGTH_SHORT).show()
-                            }
-                            return@withContext
-                        }
-
-                        thumbBytes = resizedBytes
-                        fullBytes = fullResizedBytes
-                        mediaType = "image/jpeg"
-                    }
-
-                    if (thumbBytes.isEmpty()) {
-                        runOnUiThread {
-                            currentAvatarProgressBar?.isVisible = false
-                            Toast.makeText(this@EditProfileActivity, getString(R.string.failed_to_read_image), Toast.LENGTH_SHORT).show()
-                        }
-                        return@withContext
-                    }
-
-                    // Upload to HTTP server with multipart/form-data
-                    val requestBodyBuilder = MultipartBody.Builder()
-                        .setType(MultipartBody.FORM)
-                        .addFormDataPart("avatar", if (isGif) "avatar.gif" else "avatar.jpg", thumbBytes.toRequestBody(mediaType.toMediaTypeOrNull()))
-
-                    // Добавляем полную версию если есть
-                    if ((fullBytes != null) && fullBytes.isNotEmpty()) {
-                        requestBodyBuilder.addFormDataPart("avatar_full", "avatar_full.jpg", fullBytes.toRequestBody(mediaType.toMediaTypeOrNull()))
-                    }
-
-                    val requestBody = requestBodyBuilder.build()
-
-                    val request = Request.Builder()
-                        .url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(this@EditProfileActivity)}/upload-avatar")
-                        .post(requestBody)
-                        .build()
-
-                    val response = HttpClient.client.newCall(request).execute()
-
-                    if (response.isSuccessful) {
-                        val responseBody = response.body.string()
-                        val (url, fullUrl) = extractUrlsFromResponse(responseBody)
-
-                        if (url.isNotEmpty()) {
-                            // Update avatar via ProfileService v2
-                            lifecycleScope.launch {
-                                val success = lavender.client.android.data.grpc.ProfileClient.updateAvatar(
-                                    context = this@EditProfileActivity,
-                                    avatarUrl = url,
-                                    fullAvatarUrl = fullUrl
-                                )
-                                runOnUiThread {
-                                    currentAvatarProgressBar?.isVisible = false
-                                    if (success) {
-                                        Toast.makeText(this@EditProfileActivity, getString(R.string.avatar_updated), Toast.LENGTH_SHORT).show()
-                                        currentFullAvatarUrl = fullUrl.ifEmpty { url }
-                                        grpcClient.updateAvatarCache(username, url, currentFullAvatarUrl)
-                                        currentAvatarImageView?.let {
-                                            Glide.with(this@EditProfileActivity)
-                                                .load(url)
-                                                .placeholder(R.drawable.ic_default_avatar_white)
-                                                .error(R.drawable.ic_default_avatar_white)
-                                                .into(it)
-                                        }
-                                        setResult(RESULT_OK)
-                                    } else {
-                                        Toast.makeText(this@EditProfileActivity, getString(R.string.failed_to_parse_response), Toast.LENGTH_LONG).show()
-                                    }
-                                }
-                            }
-                        } else {
-                            runOnUiThread {
-                                currentAvatarProgressBar?.isVisible = false
-                                Toast.makeText(this@EditProfileActivity, getString(R.string.failed_to_parse_response), Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    } else {
-                        runOnUiThread {
-                            currentAvatarProgressBar?.isVisible = false
-                            Toast.makeText(this@EditProfileActivity, "Upload failed: ${response.code}", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                runOnUiThread {
-                    currentAvatarProgressBar?.isVisible = false
-                    Toast.makeText(this@EditProfileActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
-
-    private fun extractUrlsFromResponse(response: String): Pair<String, String> {
-        // Try to extract both URLs from JSON response
-        val urlPattern = """"url"\s*:\s*"([^"]+)"""".toRegex()
-        val fullUrlPattern = """"full_url"\s*:\s*"([^"]+)"""".toRegex()
-
-        val urlMatch = urlPattern.find(response)
-        val fullUrlMatch = fullUrlPattern.find(response)
-
-        val url = urlMatch?.groupValues?.get(1) ?: ""
-        val fullUrl = fullUrlMatch?.groupValues?.get(1) ?: ""
-
-        // Fallback: если сервер вернул только один URL
-        if (url.isEmpty() && response.startsWith("http")) {
-            return Pair(response.trim(), "")
-        }
-
-        return Pair(url, fullUrl)
-    }
-
-    private fun resizeImage(uri: Uri): ByteArray? {
-        return resizeImageWithMax(uri, 256, 256)
-    }
-
-    private fun resizeImageFull(uri: Uri): ByteArray? {
-        return resizeImageWithMax(uri, 1920, 1920)
-    }
-
-    private fun resizeImageWithMax(uri: Uri, maxWidth: Int, maxHeight: Int): ByteArray? {
-        val inputStream = contentResolver.openInputStream(uri) ?: return null
-        val options = BitmapFactory.Options().apply {
-            inJustDecodeBounds = true
-        }
-        BitmapFactory.decodeStream(inputStream, null, options)
-        inputStream.close()
-
-        val imageStream = contentResolver.openInputStream(uri) ?: return null
-        val bitmap = BitmapFactory.decodeStream(imageStream)
-        imageStream.close()
-
-        if (bitmap == null) return null
-
-        val width = bitmap.width
-        val height = bitmap.height
-        val scale = minOf(maxWidth.toFloat() / width, maxHeight.toFloat() / height)
-
-        val scaledBitmap = if (scale < 1) {
-            bitmap.scale((width * scale).toInt(), (height * scale).toInt())
-        } else {
-            bitmap
-        }
-
-        val outputStream = java.io.ByteArrayOutputStream()
-        scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
-        val bytes = outputStream.toByteArray()
-        scaledBitmap.recycle()
-        bitmap.recycle()
-
-        return bytes
     }
 
     private fun showChangeUsernameDialog() {
@@ -453,38 +344,8 @@ class EditProfileActivity : AppCompatActivity() {
             }
 
             btnSave.isEnabled = false
-
-            grpcClient.updateUsername(username, newUsername) { success, message ->
-                runOnUiThread {
-                    btnSave.isEnabled = true
-                    if (success) {
-                        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-                        
-                        // Update username in secure storage
-                        lavender.client.android.data.session.CredentialStore.setCredentials(
-                            context = this,
-                            username = newUsername,
-                            password = SessionManager.session.value.password,
-                            userId = SessionManager.session.value.userId,
-                            email = SessionManager.session.value.email,
-                            serverAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this)
-                        )
-                        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-                        prefs.edit {
-                            putString("last_logged_username", newUsername)
-                        }
-                        
-                        SessionManager.updateSession(username = newUsername)
-                        username = newUsername
-                        sheet.dismiss()
-                        
-                        setResult(RESULT_OK)
-                        finish() 
-                    } else {
-                        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-                    }
-                }
-            }
+            viewModel.updateUsername(username, newUsername, password)
+            sheet.dismiss()
         }
 
         sheet.show()
@@ -493,7 +354,7 @@ class EditProfileActivity : AppCompatActivity() {
     private fun showChangePasswordDialog() {
         val sheet = StandardBottomSheet(this, R.layout.dialog_change_password)
         sheet.setTitle(getString(R.string.change_password))
-        
+
         val oldPassword = sheet.findViewById<EditText>(R.id.editTextOldPassword)
         val newPassword = sheet.findViewById<EditText>(R.id.editTextNewPassword)
         val btnCancel = sheet.findViewById<MaterialButton>(R.id.btnCancel)
@@ -504,26 +365,78 @@ class EditProfileActivity : AppCompatActivity() {
         btnSave?.setOnClickListener {
             val oldPass = oldPassword?.text.toString().trim()
             val newPass = newPassword?.text.toString().trim()
-            
+
             if (oldPass.isNotEmpty() && newPass.isNotEmpty()) {
                 btnSave.isEnabled = false
-                grpcClient.updatePassword(username, oldPass, newPass) { success, message ->
-                    runOnUiThread {
-                        btnSave.isEnabled = true
-                        if (success) {
-                            Toast.makeText(this@EditProfileActivity, message, Toast.LENGTH_SHORT).show()
-                            password = newPass
-                            sheet.dismiss()
-                        } else {
-                            Toast.makeText(this@EditProfileActivity, message, Toast.LENGTH_LONG).show()
-                        }
-                    }
-                }
+                viewModel.updatePassword(username, oldPass, newPass)
+                sheet.dismiss()
             } else {
-                Toast.makeText(this@EditProfileActivity, getString(R.string.enter_both_passwords), Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.enter_both_passwords), Toast.LENGTH_SHORT).show()
             }
         }
 
         sheet.show()
+    }
+
+    private fun showCreateCompanyDialog() {
+        val sheet = StandardBottomSheet(this, R.layout.dialog_edit_username)
+        val inputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.usernameInputLayout)
+        val editNewUsername = sheet.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.editNewUsername)
+        val btnCancel = sheet.findViewById<MaterialButton>(R.id.btnCancel)
+        val btnSave = sheet.findViewById<MaterialButton>(R.id.btnSave)
+
+        sheet.setTitle(getString(R.string.create_company))
+        inputLayout?.hint = getString(R.string.create_company_name_hint)
+        inputLayout?.startIconDrawable = null
+        editNewUsername?.hint = getString(R.string.create_company_name_hint)
+        editNewUsername?.text?.clear()
+        editNewUsername?.requestFocus()
+
+        btnCancel?.setOnClickListener { sheet.dismiss() }
+
+        btnSave?.setOnClickListener {
+            val companyName = editNewUsername?.text.toString().trim()
+            if (companyName.isEmpty()) {
+                Toast.makeText(this, getString(R.string.create_company_name_hint), Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            btnSave.isEnabled = false
+            viewModel.createCompany(companyName)
+            sheet.dismiss()
+        }
+
+        sheet.show()
+    }
+
+    private fun showCompanySwitcher() {
+        lifecycleScope.launch {
+            val companiesResponse = lavender.client.android.data.grpc.GrpcCompanyClient.getUserCompanies() ?: return@launch
+            val companies = companiesResponse.companies
+
+            val titles = companies.map { company ->
+                val member = company.member
+                val position = member?.position?.title ?: ""
+                val primary = if (company.isPrimary) " ★" else ""
+                "${company.company?.name ?: "?"} — $position$primary"
+            }.toTypedArray()
+
+            val currentCompanyId = SessionManager.session.value.companyId
+            val currentIndex = companies.indexOfFirst { it.company?.id == currentCompanyId }.coerceAtLeast(0)
+
+            AlertDialog.Builder(this@EditProfileActivity)
+                .setTitle(R.string.company_badge)
+                .setSingleChoiceItems(titles, currentIndex) { dialog, which ->
+                    val selected = companies[which]
+                    viewModel.setPrimaryCompany(selected.company?.id ?: "")
+                    dialog.dismiss()
+                }
+                .setNegativeButton(R.string.cancel_dialog, null)
+                .show()
+        }
+    }
+
+    private fun reloadProfile() {
+        viewModel.loadProfile(username)
     }
 }

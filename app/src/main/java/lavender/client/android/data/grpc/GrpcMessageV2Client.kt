@@ -1,6 +1,7 @@
 package lavender.client.android.data.grpc
 
 import android.content.Context
+import android.util.Log
 import io.grpc.CallOptions
 import io.grpc.ClientCall
 import io.grpc.Metadata
@@ -29,17 +30,20 @@ import org.json.JSONObject
 class GrpcMessageV2Client(
     private val getChannel: () -> io.grpc.ManagedChannel?,
     private val getUserId: () -> String?,
-    private val getUsername: () -> String?,
+    @Suppress("UNUSED_PARAMETER") private val getUsername: () -> String?,
     private val messages: MutableStateFlow<List<Message>>,
     private val allUsers: () -> List<UserInfoProto>,
     private val deletedMessageHashes: MutableSet<String>,
     private val scope: CoroutineScope,
     private val appContext: () -> Context?,
-    private val onReadReceipt: ((String, String) -> Unit)? = null
+    @Suppress("UNUSED_PARAMETER") private val onReadReceipt: ((String, String) -> Unit)? = null,
+    private val reconnect: (() -> Unit)? = null
 ) {
     companion object {
         private const val TAG = "GrpcMsgV2"
         private const val MAX_HISTORY_LIMIT = 100
+        private const val DELETED_HASHES_MAX_SIZE = 10000
+        private const val DEFAULT_ERROR = "gRPC error"
 
         private val METHOD_GET_HISTORY_V2 = MethodDescriptor.newBuilder<GetHistoryV2RequestProto, GetHistoryV2ResponseProto>()
             .setType(MethodDescriptor.MethodType.UNARY)
@@ -84,7 +88,15 @@ class GrpcMessageV2Client(
             .build()
     }
 
-    private var database: AppDatabase? = null
+    private fun addDeletedHash(hash: String) {
+        deletedMessageHashes.add(hash)
+        if (deletedMessageHashes.size > DELETED_HASHES_MAX_SIZE) {
+            val toRemove = deletedMessageHashes.take(DELETED_HASHES_MAX_SIZE / 2)
+            deletedMessageHashes.removeAll(toRemove.toSet())
+        }
+    }
+
+    @Volatile private var database: AppDatabase? = null
     private fun db() = database ?: appContext()?.let {
         val d = AppDatabase.getDatabase(it)
         database = d
@@ -98,9 +110,14 @@ class GrpcMessageV2Client(
         return allUsers().firstOrNull { it.userId == senderId }?.username ?: ""
     }
 
+    private fun resolveAvatarUrl(senderId: String): String {
+        if (senderId.isEmpty()) return ""
+        return allUsers().firstOrNull { it.userId == senderId }?.avatarUrl ?: ""
+    }
+
     // ====== Parse reactions JSON bytes → List<Reaction> ======
 
-    private fun parseReactions(reactionsBytes: ByteArray): List<Reaction> {
+    internal fun parseReactions(reactionsBytes: ByteArray): List<Reaction> {
         if (reactionsBytes.isEmpty()) return emptyList()
         return try {
             val obj = JSONObject(String(reactionsBytes))
@@ -111,8 +128,10 @@ class GrpcMessageV2Client(
                     result.add(Reaction(user = key, emoji = emoji))
                 }
             }
+            Log.d(TAG, "parseReactions: ${reactionsBytes.size} bytes → ${result.size} reactions: $result")
             result
         } catch (e: Exception) {
+            Log.e(TAG, "parseReactions error: ${String(reactionsBytes)}", e)
             ErrorHandler.handle("$TAG.parseReactions", e)
             emptyList()
         }
@@ -126,10 +145,12 @@ class GrpcMessageV2Client(
         } ?: System.currentTimeMillis()
 
         val username = resolveUsername(proto.senderId)
+        val avatarUrl = resolveAvatarUrl(proto.senderId)
 
         var imageUrl = ""; var imageUrls = emptyList<String>()
         var voiceUrl = ""; var duration = 0
-        var repliedToMessageId = ""; var repliedToText = ""
+        var stickerUrl = ""; var stickerThumbnailUrl = ""
+        var repliedToMessageId = ""; var repliedToText = ""; var repliedToUser = ""
 
         when {
             proto.media != null -> {
@@ -142,21 +163,36 @@ class GrpcMessageV2Client(
                         voiceUrl = proto.media.url
                         duration = proto.media.duration
                     }
+                    "sticker" -> {
+                        stickerUrl = proto.media.url
+                        stickerThumbnailUrl = proto.media.urls.firstOrNull() ?: ""
+                    }
                 }
             }
-            proto.reply != null -> {
-                repliedToMessageId = proto.reply.messageId
-                repliedToText = proto.reply.preview
-            }
+        }
+
+        if (proto.reply != null) {
+            repliedToMessageId = proto.reply.messageId
+            repliedToText = proto.reply.preview
+            repliedToUser = resolveUsername(proto.reply.senderId)
+        }
+
+        // Workaround: server overwrites Content=Text with Content=Reply in oneof,
+        // losing the text. Use reply.preview as text when text is empty.
+        val displayText = if (proto.text.isEmpty() && proto.reply != null && proto.reply.preview.isNotEmpty()) {
+            proto.reply.preview
+        } else {
+            proto.text
         }
 
         return Message(
             id = proto.id,
             user = username,
-            text = proto.text,
+            text = displayText,
             timestamp = timestamp,
             reactions = parseReactions(proto.reactions),
             repliedToMessageId = repliedToMessageId,
+            repliedToUser = repliedToUser,
             repliedToText = repliedToText,
             roomId = proto.roomId,
             isRead = proto.isRead,
@@ -166,14 +202,21 @@ class GrpcMessageV2Client(
             voiceUrl = voiceUrl,
             duration = duration,
             userId = proto.senderId,
+            avatarUrl = avatarUrl,
             isE2EE = proto.isE2EE,
-            e2eePayload = proto.e2eePayload
+            e2eePayload = proto.e2eePayload,
+            mentions = proto.mentions,
+            stickerUrl = stickerUrl,
+            stickerThumbnailUrl = stickerThumbnailUrl,
+            isForwarded = proto.forwardedFrom.isNotEmpty(),
+            forwardedFrom = proto.forwardedFrom
         )
     }
 
     // ====== Convert domain Message → SendMessageV2RequestProto ======
 
     fun domainToSendRequest(message: Message): SendMessageV2RequestProto {
+        val safeText = message.text.stripInvalidUtf8()
         val media = when {
             message.voiceUrl.isNotEmpty() -> MessageMediaProto(type = "voice", url = message.voiceUrl, duration = message.duration)
             message.imageUrl.isNotEmpty() -> MessageMediaProto(
@@ -181,27 +224,83 @@ class GrpcMessageV2Client(
                 url = message.imageUrl,
                 urls = message.imageUrls.ifEmpty { listOf(message.imageUrl).filter { it.isNotEmpty() } }
             )
+            message.stickerUrl.isNotEmpty() -> MessageMediaProto(
+                type = "sticker",
+                url = message.stickerUrl,
+                urls = listOf(message.stickerThumbnailUrl).filter { it.isNotEmpty() }
+            )
             else -> null
+        }
+
+        val mentions = if (message.mentions.isNotEmpty()) {
+            message.mentions
+        } else {
+            extractMentions(safeText)
         }
 
         return SendMessageV2RequestProto(
             roomId = message.roomId,
-            text = message.text,
+            text = safeText,
             media = media,
             replyToId = message.repliedToMessageId,
             isE2EE = message.isE2EE,
-            e2eePayload = message.e2eePayload
+            e2eePayload = message.e2eePayload,
+            mentions = mentions,
+            forwardedFrom = message.forwardedFrom
         )
+    }
+
+    fun extractMentions(text: String): List<String> {
+        val mentions = mutableListOf<String>()
+        val regex = Regex("@(\\w+)")
+        for (match in regex.findAll(text)) {
+            val username = match.groupValues[1]
+            if (username.isNotEmpty() && username !in mentions) {
+                mentions.add(username)
+            }
+        }
+        return mentions
     }
 
     // ====== Get History V2 (cursor-based pagination) ======
 
+    @Volatile private var loadHistoryServerCompleted = false
+    private var currentHistoryCall: ClientCall<*, *>? = null
+
     fun loadHistoryV2(roomId: String, cursor: String = "", limit: Int = MAX_HISTORY_LIMIT, onCompletion: (String, Boolean) -> Unit = { _, _ -> }) {
+        // Cancel previous in-flight call to prevent CANCELLED cascade
+        currentHistoryCall?.cancel("Superseded by new loadHistoryV2", null)
+        currentHistoryCall = null
+        loadHistoryServerCompleted = false
         // Always load from cache first (offline-first)
         scope.launch(Dispatchers.IO) {
-            val cached = db()?.messageDao()?.getMessagesForRoom(roomId)?.map { it.toDomain() } ?: emptyList()
-            if (cached.isNotEmpty() && messages.value.isEmpty()) {
-                messages.update { cached }
+            val cached = db()?.messageDao()?.getMessagesForRoom(roomId)?.map { it.toDomain() }
+                ?: emptyList()
+            val dedupedCache = deduplicateByContent(cached)
+            Log.d(TAG, "loadHistoryV2 cache: loaded ${cached.size} msgs (${dedupedCache.size} after dedup) from Room DB, ${dedupedCache.count { it.reactions.isNotEmpty() }} with reactions")
+            if (dedupedCache.isNotEmpty()) {
+                messages.update { current ->
+                    if (loadHistoryServerCompleted) return@update current
+                    if (current.isEmpty()) {
+                        dedupedCache
+                    } else {
+                        val currentMap = current.associateBy { getMessageHash(it) }
+                        dedupedCache.map { cachedMsg ->
+                            val localMsg = currentMap[getMessageHash(cachedMsg)]
+                            if (localMsg != null) {
+                                val mergedReactions = if (cachedMsg.reactions.isEmpty() && localMsg.reactions.isNotEmpty()) {
+                                    localMsg.reactions
+                                } else if (cachedMsg.reactions.isNotEmpty() && localMsg.reactions.isNotEmpty()) {
+                                    val cachedUserIds = cachedMsg.reactions.map { it.user }.toSet()
+                                    cachedMsg.reactions + localMsg.reactions.filter { it.user !in cachedUserIds }
+                                } else {
+                                    cachedMsg.reactions
+                                }
+                                cachedMsg.copy(isRead = localMsg.isRead || cachedMsg.isRead, reactions = mergedReactions)
+                            } else cachedMsg
+                        } + current.filterNot { msg -> dedupedCache.any { getMessageHash(it) == getMessageHash(msg) } }
+                    }
+                }
             }
         }
 
@@ -212,36 +311,66 @@ class GrpcMessageV2Client(
         }
 
         val call = currentChannel.newCall(METHOD_GET_HISTORY_V2, CallOptions.DEFAULT)
+        currentHistoryCall = call
         call.start(object : ClientCall.Listener<GetHistoryV2ResponseProto>() {
             override fun onMessage(message: GetHistoryV2ResponseProto) {
+                loadHistoryServerCompleted = true
                 val history = message.messages
                     .map { messageV2ToDomain(it) }
                     .filterNot { deletedMessageHashes.contains(getMessageHash(it)) }
 
+                Log.d(TAG, "loadHistoryV2: server returned ${message.messages.size} msgs, ${history.count { it.reactions.isNotEmpty() }} with reactions, room=$roomId")
+
                 messages.update { current ->
                     val currentMap = current.associateBy { getMessageHash(it) }
+                    val currentByContent = current.associateBy { getContentHash(it) }
                     val mergedHistory = history.map { serverMsg ->
                         val localMsg = currentMap[getMessageHash(serverMsg)]
-                        if (localMsg != null) serverMsg.copy(isRead = localMsg.isRead || serverMsg.isRead)
-                        else serverMsg
+                            ?: currentByContent[getContentHash(serverMsg)]
+                        if (localMsg != null) {
+                            val mergedReactions = if (serverMsg.reactions.isEmpty() && localMsg.reactions.isNotEmpty()) {
+                                localMsg.reactions
+                            } else if (serverMsg.reactions.isNotEmpty() && localMsg.reactions.isNotEmpty()) {
+                                val serverUserIds = serverMsg.reactions.map { it.user }.toSet()
+                                serverMsg.reactions + localMsg.reactions.filter { it.user !in serverUserIds }
+                            } else {
+                                serverMsg.reactions
+                            }
+                            serverMsg.copy(isRead = localMsg.isRead || serverMsg.isRead, reactions = mergedReactions)
+                        } else serverMsg
                     }
+                    val historyContentHashes = mergedHistory.map { getContentHash(it) }.toSet()
                     val historyHashes = mergedHistory.map { getMessageHash(it) }.toSet()
-                    val optimisticOnly = current.filterNot { getMessageHash(it) in historyHashes }
-                    (mergedHistory + optimisticOnly).sortedBy { it.timestamp }
+                    val optimisticOnly = current.filterNot { msg ->
+                        getMessageHash(msg) in historyHashes || getContentHash(msg) in historyContentHashes
+                    }
+                    val result = deduplicateByContent(mergedHistory + optimisticOnly).sortedBy { it.timestamp }
+                    Log.d(TAG, "loadHistoryV2: merged ${result.size} msgs, ${result.count { it.reactions.isNotEmpty() }} with reactions")
+                    result
                 }
 
                 scope.launch(Dispatchers.IO) {
                     val toCache = messages.value.filter { it.roomId == roomId }
                     if (toCache.isNotEmpty()) {
                         db()?.messageDao()?.insertMessages(toCache.map { it.toEntity() })
+                        Log.d(TAG, "loadHistoryV2: saved ${toCache.size} msgs to cache, ${toCache.count { it.reactions.isNotEmpty() }} with reactions")
                     }
                 }
 
                 onCompletion(message.nextCursor, message.hasMore)
             }
             override fun onClose(status: Status, trailers: Metadata) {
+                currentHistoryCall = null
                 if (!status.isOk) {
-                    ErrorHandler.handle("$TAG.loadHistoryV2", StatusRuntimeException(status))
+                    // Don't log CANCELLED as error if we cancelled it ourselves
+                    if (status.code == Status.Code.CANCELLED) {
+                        Log.d(TAG, "loadHistoryV2: cancelled (superseded or channel closed)")
+                    } else {
+                        ErrorHandler.handle("$TAG.loadHistoryV2", StatusRuntimeException(status))
+                    }
+                    if (status.code == Status.Code.UNAVAILABLE) {
+                        reconnect?.invoke()
+                    }
                     onCompletion("", false)
                 }
             }
@@ -261,20 +390,37 @@ class GrpcMessageV2Client(
             return
         }
 
+        val safeText = message.text.stripInvalidUtf8()
+        val safeMessage = if (safeText != message.text) {
+            Log.w(TAG, "stripped invalid UTF-8 bytes from text before sending")
+            message.copy(text = safeText)
+        } else message
+
         val call = currentChannel.newCall(METHOD_SEND_MESSAGE_V2, CallOptions.DEFAULT)
         call.start(object : ClientCall.Listener<SendMessageV2ResponseProto>() {
             override fun onMessage(response: SendMessageV2ResponseProto) {
                 if (response.success && response.message != null) {
                     val serverMsg = response.message
                     val serverId = serverMsg.id
-                    if (serverId.isNotEmpty() && serverId != message.id) {
-                        messages.update { current ->
-                            current.map { if (it.id == message.id) it.copy(id = serverId) else it }
+                    messages.update { current ->
+                        val updated = current.map {
+                            if (it.id == message.id) {
+                                val newId = if (serverId.isNotEmpty() && serverId != message.id) serverId else it.id
+                                it.copy(id = newId, isSent = true)
+                            } else it
                         }
+                        val seen = mutableSetOf<String>()
+                        updated.filter { msg -> msg.id !in seen && seen.add(msg.id) }
+                    }
+                    if (serverId.isNotEmpty() && serverId != message.id) {
                         scope.launch(Dispatchers.IO) {
                             db()?.messageDao()?.deleteMessage(message.id)
-                            val updated = message.copy(id = serverId)
+                            val updated = message.copy(id = serverId, isSent = true)
                             db()?.messageDao()?.insertMessages(listOf(updated.toEntity()))
+                        }
+                    } else {
+                        scope.launch(Dispatchers.IO) {
+                            db()?.messageDao()?.insertMessages(listOf(message.copy(isSent = true).toEntity()))
                         }
                     }
                     onResult?.invoke(serverMsg)
@@ -290,9 +436,19 @@ class GrpcMessageV2Client(
                 }
             }
         }, Metadata())
-        call.sendMessage(domainToSendRequest(message))
+        call.sendMessage(domainToSendRequest(safeMessage))
         call.halfClose()
         call.request(1)
+    }
+
+    private fun String.stripInvalidUtf8(): String {
+        return try {
+            val bytes = toByteArray(Charsets.UTF_8)
+            String(bytes, Charsets.UTF_8)
+        } catch (e: Exception) {
+            Log.w(TAG, "stripInvalidUtf8 failed: ${e.message}")
+            this
+        }
     }
 
     // ====== Edit Message V2 ======
@@ -303,7 +459,10 @@ class GrpcMessageV2Client(
         call.start(object : ClientCall.Listener<EditMessageV2ResponseProto>() {
             override fun onMessage(msg: EditMessageV2ResponseProto) { cb(msg.success, msg.message) }
             override fun onClose(status: Status, trailers: Metadata) {
-                if (!status.isOk) cb(false, status.description ?: "Error")
+                if (!status.isOk) {
+                    ErrorHandler.handle("$TAG.editMessageV2", StatusRuntimeException(status))
+                    cb(false, status.description ?: DEFAULT_ERROR)
+                }
             }
         }, Metadata())
         call.sendMessage(EditMessageV2RequestProto(messageId, text))
@@ -316,7 +475,7 @@ class GrpcMessageV2Client(
     fun deleteMessageV2(messageIds: List<String>, cb: (Boolean) -> Unit = {}) {
         // Optimistic UI: remove from local list before server confirms
         messageIds.forEach { id ->
-            deletedMessageHashes.add("id:$id")
+            addDeletedHash("id:$id")
         }
         messages.update { current -> current.filterNot { it.id in messageIds } }
         scope.launch(Dispatchers.IO) {
@@ -328,7 +487,10 @@ class GrpcMessageV2Client(
         call.start(object : ClientCall.Listener<DeleteMessageV2ResponseProto>() {
             override fun onMessage(msg: DeleteMessageV2ResponseProto) { cb(msg.success) }
             override fun onClose(status: Status, trailers: Metadata) {
-                if (!status.isOk) cb(false)
+                if (!status.isOk) {
+                    ErrorHandler.handle("$TAG.deleteMessageV2", StatusRuntimeException(status))
+                    cb(false)
+                }
             }
         }, Metadata())
         call.sendMessage(DeleteMessageV2RequestProto(messageIds, getUserId() ?: ""))
@@ -351,8 +513,11 @@ class GrpcMessageV2Client(
                 newReactions.removeAll { it.user == username }
                 newReactions.add(Reaction(username, emoji))
                 list[index] = msg.copy(reactions = newReactions)
+                Log.d(TAG, "setReactionV2 optimistic: msg $messageId now has ${newReactions.size} reactions")
+                val msgToSave = list[index]
                 scope.launch(Dispatchers.IO) {
-                    db()?.messageDao()?.insertMessages(listOf(list[index].toEntity()))
+                    db()?.messageDao()?.insertMessages(listOf(msgToSave.toEntity()))
+                    Log.d(TAG, "setReactionV2: saved optimistic reaction to Room DB")
                 }
             }
             list
@@ -361,19 +526,33 @@ class GrpcMessageV2Client(
         val call = currentChannel.newCall(METHOD_SET_REACTION_V2, CallOptions.DEFAULT)
         call.start(object : ClientCall.Listener<SetReactionV2ResponseProto>() {
             override fun onMessage(response: SetReactionV2ResponseProto) {
-                if (response.success && response.reactions.isNotEmpty()) {
-                    val serverReactions = parseReactions(response.reactions)
+                if (response.success) {
+                    val serverReactions = if (response.reactions.isNotEmpty()) {
+                        parseReactions(response.reactions)
+                    } else {
+                        emptyList()
+                    }
+                    var updatedMsg: Message? = null
                     messages.update { current ->
                         val list = current.toMutableList()
                         val idx = list.indexOfFirst { it.id == messageId }
                         if (idx != -1) {
                             list[idx] = list[idx].copy(reactions = serverReactions)
+                            updatedMsg = list[idx]
                         }
                         list
                     }
+                    if (updatedMsg != null) {
+                        val msgToSave = updatedMsg!!
+                        scope.launch(Dispatchers.IO) {
+                            db()?.messageDao()?.insertMessages(listOf(msgToSave.toEntity()))
+                        }
+                    }
                 }
             }
-            override fun onClose(status: Status, trailers: Metadata) {}
+            override fun onClose(status: Status, trailers: Metadata) {
+                if (!status.isOk) ErrorHandler.handle("$TAG.setReactionV2", StatusRuntimeException(status))
+            }
         }, Metadata())
         call.sendMessage(SetReactionV2RequestProto(messageId, emoji))
         call.halfClose()
@@ -407,7 +586,33 @@ class GrpcMessageV2Client(
 
     private fun getMessageHash(message: Message): String =
         if (message.id.isNotEmpty()) "id:${message.id}"
-        else "${message.user}:${message.text}:${message.timestamp / 1000}"
+        else "${message.userId}:${message.text}:${message.timestamp / 1000}"
+
+    private fun getContentHash(message: Message): String =
+        "${message.userId}:${message.text}:${message.timestamp / 1000}"
+
+    private fun getContentHashForDedup(message: Message): String {
+        val idPart = message.id.takeIf { it.isNotEmpty() } ?: "no_id"
+        return "${message.userId}:${message.text}:${message.timestamp / 1000}:$idPart"
+    }
+
+    private fun deduplicateByContent(messages: List<Message>): List<Message> {
+        val seen = mutableMapOf<String, Message>()
+        for (msg in messages) {
+            val key = getContentHashForDedup(msg)
+            val existing = seen[key]
+            if (existing == null) {
+                seen[key] = msg
+            } else {
+                val existingIsTemp = existing.id.startsWith("temp_")
+                val currentIsTemp = msg.id.startsWith("temp_")
+                if (existingIsTemp && !currentIsTemp) {
+                    seen[key] = msg
+                }
+            }
+        }
+        return seen.values.toList()
+    }
 
     private class StatusRuntimeException(status: Status) :
         Exception("gRPC error: ${status.code} - ${status.description}")

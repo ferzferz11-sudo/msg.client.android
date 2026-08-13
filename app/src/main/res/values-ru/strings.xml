@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">Лава</string>
+    <string name="error">Ошибка</string>
     
     <!-- Settings Menu -->
     <string name="action_settings">Настройки</string>
@@ -25,7 +26,7 @@
     <string name="about_description">Лава: платформа защищенных бизнес-коммуникаций</string>
     <string name="server_address">%s</string>
     <string name="server_address_local">192.168.1.135:50051</string>
-    <string name="download_update">обновить</string>
+    <string name="download_update">Скачать %1$s</string>
     <string name="downloading_update">Загрузка обновления Лавы</string>
     <string name="update">Обновить</string>
     <string name="connection_logs">Логи соединения:</string>
@@ -171,8 +172,10 @@
     <string name="no_users_available">Нет доступных пользователей</string>
     <string name="select_user">Выберите пользователя</string>
     <string name="online_users">Пользователи онлайн</string>
-    <string name="update_available">Доступно обновление</string>
-    <string name="install_update">Установить обновление</string>
+    <string name="update_available">Доступна версия %1$s</string>
+    <string name="install_update">Установить %1$s</string>
+    <string name="update_download_prompt">Доступна новая версия. Скачать?</string>
+    <string name="downloading">Загрузка…</string>
     <string name="delete_chats">Удалить чаты</string>
     <string name="delete_chats_confirmation">Вы уверены, что хотите удалить %d выбранных чатов? Все сообщения и изображения будут удалены навсегда.</string>
     <string name="deleted_count">Удалено чатов: %d</string>
@@ -181,8 +184,8 @@
     <string name="mute_chats_confirmation">Отключить уведомления для %d выбранных чатов? Вы не будете получать push-уведомления из этих чатов.</string>
     <string name="unmute_chats">Включить уведомления</string>
     <string name="unmute_chats_confirmation">Включить уведомления для %d выбранных чатов? Вы снова будете получать push-уведомления из этих чатов.</string>
-    <string name="mute">Отключить</string>
-    <string name="unmute">Включить</string>
+    <string name="mute">Заглушить Пуш-уведомления</string>
+    <string name="unmute">Включить Пуш-уведомления</string>
     <string name="muted_count">Уведомления отключены в %d чатах</string>
     <string name="unmuted_count">Уведомления включены в %d чатах</string>
     <string name="add_chat">Добавить чат</string>
@@ -202,6 +205,13 @@
     <string name="participants_online_count">%1$d участников (%2$d онлайн)</string>
     <string name="search">Поиск</string>
     <string name="video_call">Видеозвонок</string>
+    <string name="voice_call">Звонок</string>
+    <string name="message">Написать</string>
+    <string name="email">Почта</string>
+    <string name="send_email">Отправить письмо</string>
+    <string name="action_voice_call">Голосовой звонок</string>
+    <string name="action_video_call">Видеозвонок</string>
+    <string name="no_email_app">Почтовое приложение не найдено</string>
     <string name="no_results">Нет результатов</string>
     <string name="search_results_format">%1$d/%2$d</string>
     <string name="edit_message">Редактировать сообщение</string>
@@ -212,8 +222,11 @@
     <string name="message_edited">Сообщение отредактировано</string>
     <string name="edited_label">изменено</string>
     <string name="group_info">Информация о группе</string>
+    <string name="conference_info">Информация о конференции</string>
     <string name="delete_group">Удалить группу</string>
     <string name="delete_group_confirm">Вы уверены, что хотите удалить эту группу?</string>
+    <string name="group_creator">Создатель группы</string>
+    <string name="cannot_delete_group">У вас нет прав для удаления этой группы. Только создатель группы или администратор может её удалить.</string>
     <string name="no_bio">О себе не заполнено</string>
     <string name="offline">офлайн</string>
     <string name="group_chat">Групповой чат</string>
@@ -232,11 +245,14 @@
     <string name="failed_to_get_token">Не удалось получить токен</string>
     <string name="test_notification_added">Тестовое уведомление добавлено</string>
     <string name="notifications">Нотификации</string>
+    <string name="notifications_all">Все</string>
+    <string name="notifications_company">Компания</string>
     <string name="clear">Очистить</string>
     <string name="history_cleared">История очищена</string>
     <string name="loading">Загрузка…</string>
     <string name="change_bio">Сохранить</string>
     <string name="bio_label">Кратко о себе</string>
+    <string name="username_label">Имя</string>
     <string name="tell_about_yourself">Расскажите о себе</string>
     <string name="edit_profile_title">Редактировать профиль</string>
     <string name="fcm_token_label">Токен FCM:</string>
@@ -251,9 +267,10 @@
     <string name="add_emoji">Добавить эмодзи</string>
     <string name="contacts">Контакты</string>
     <string name="add_contact">Добавить контакт</string>
-    <string name="create_direct_chat_after">Создать чат сразу</string>
+    <string name="create_chat_after">Создать чат сразу</string>
         <string name="contacts_added">Добавлено контактов: %d</string>
-        <string name="contact_added">Контакт успешно добавлен</string>
+        <string name="contacts_add_failed">Не удалось добавить %d контактов</string>
+        <string name="all_contacts_already_in_group">Все ваши контакты уже добавлены в эту группу</string>
     <string name="already_in_contacts">Пользователь уже в контактах</string>
     <string name="no_contacts">Контактов пока нет. Добавьте кого-нибудь, чтобы начать общение!</string>
     <string name="remove_contact">Удалить контакт</string>
@@ -286,7 +303,13 @@
     <string name="theme_template_mint">Кибер Мята</string>
     <string name="theme_dark_graphite">Графит темный</string>
     <string name="admin_label">(Админ)</string>
+    <string name="admin_indicator">Админ</string>
     <string name="muted_label">Без звука</string>
+    <string name="uploading_images_label">Загрузка изображений…</string>
+    <string name="select_message">Выбрать сообщение</string>
+    <string name="cancel_reply">Отменить ответ</string>
+    <string name="search_previous">Предыдущее</string>
+    <string name="search_next">Следующее</string>
     <string name="super_admin">Админ панель</string>
     <string name="about">О программе</string>
     <string name="about_program">О программе</string>
@@ -339,7 +362,7 @@
     <string name="checking_for_updates">Проверка обновлений…</string>
     <string name="chat_last_message_format">%1$s%2$s</string>
     <string name="plus_count_format">+%1$d</string>
-    <string name="percent_format">%1$d%%</string>
+    <string name="percent_format">Загрузка: %1$d%%</string>
     <string name="online_count_format">%1$d/%2$d онлайн</string>
     <string name="download_complete">Загрузка завершена!</string>
     <string name="manual_install_hint">Если установка не началась автоматически, пожалуйста, нажмите на кнопку ниже.</string>
@@ -351,7 +374,7 @@
     <string name="users_are_typing">%1$d чел. печатают…</string>
     <string name="action_update">Проверка обновлений</string>
     <string name="action_about">О программе</string>
-    <string name="action_super_admin">Админ панель</string>
+    <string name="admin_panel">Админ панель</string>
     <string name="favorites">Избранное</string>
     <string name="no_favorites_yet">Избранного пока нет</string>
     <string name="added_to_favorites">Добавлено в Избранное</string>
@@ -399,6 +422,8 @@
     <string name="no">Нет</string>
     <string name="user_not_found">Пользователь не найден</string>
     <string name="wrong_password">Неверное имя пользователя или пароль</string>
+    <string name="server_error">Сервер временно недоступен. Попробуйте позже</string>
+    <string name="session_expired">Сессия истекла. Войдите заново</string>
     <string name="register_confirm">Пользователь \"%s\" не зарегистрирован. Хотите создать новую учетную запись?</string>
     <string name="preset_colors">Готовые цвета</string>
     <string name="custom_color">Свой цвет</string>
@@ -622,6 +647,12 @@
         <item quantity="many">%d дней назад</item>
         <item quantity="other">%d дней назад</item>
     </plurals>
+    <plurals name="chats_count">
+        <item quantity="one">%d чат</item>
+        <item quantity="few">%d чата</item>
+        <item quantity="many">%d чатов</item>
+        <item quantity="other">%d чатов</item>
+    </plurals>
     <string name="resending">Повторная отправка…</string>
     <string name="message_already_sent">Сообщение уже на сервере</string>
     <string name="today">Сегодня</string>
@@ -643,6 +674,11 @@
     <string name="participants_already_joined">%d участников уже в звонке</string>
     <string name="join_conference_action">Присоединиться к конференции</string>
     <string name="lobby_title">Лобби конференции</string>
+    <string name="open_lobby">Открыть лобби</string>
+    <string name="lobby">Лобби</string>
+    <string name="delete_conference">Удалить конференцию</string>
+    <string name="leave_conference">Покинуть конференцию</string>
+    <string name="invited_participants">Приглашённые участники</string>
     <string name="new_conference_format">Конференция %s</string>
     <string name="edit_topic">Редактировать тему</string>
     <string name="plus_5_min">+5 мин</string>
@@ -671,6 +707,7 @@
     <string name="changelog_open_github">Открыть на GitHub</string>
     <string name="open">Открыть</string>
 
+    <string name="ai">ИИ</string>
     <string name="ai_v2_chat_title">ИИ Чат</string>
     <string name="ai_v2_agents">ИИ Агенты</string>
     <string name="presets">Пресеты</string>
@@ -702,6 +739,10 @@
     <string name="ai_agent_max_tokens">Макс. токенов</string>
     <string name="ai_agent_saved">Агент сохранён</string>
     <string name="ai_v2_agent_name_required">Имя обязательно</string>
+    <string name="ai_api_key_copied">API ключ скопирован</string>
+    <string name="ai_status_available">Доступен</string>
+    <string name="ai_status_server_key">Серверный ключ</string>
+    <string name="ai_status_needs_key">Нужен API ключ</string>
 
     <!-- Marketplace -->
     <string name="marketplace">Маркетплейс</string>
@@ -812,8 +853,11 @@
     <!-- i18n: FCM notifications -->
     <string name="new_message">Новое сообщение</string>
     <string name="incoming_call">Входящий звонок</string>
+    <string name="notification_permission_denied">Для получения уведомлений необходимо разрешение. Включите уведомления в настройках приложения.</string>
+    <string name="open_settings">Открыть настройки</string>
     <string name="call_from">Звонит %s</string>
     <string name="lavender_calls_channel">Звонки Лава</string>
+    <string name="decline_call">Отклонить</string>
     <string name="lavender_messages_channel">Сообщения Лава</string>
     <string name="lavender_messages_channel_desc">Входящие сообщения чатов</string>
 
@@ -889,6 +933,8 @@
     <string name="tab_all">Все</string>
     <string name="tab_ai">ИИ чаты</string>
     <string name="tab_groups">Группы</string>
+    <string name="tab_company">Компания</string>
+    <string name="tab_archive">Архив</string>
     <string name="section_pinned">Закреплённые</string>
     <string name="section_favorites">Избранное</string>
     <string name="section_all_chats">Все чаты</string>
@@ -904,9 +950,11 @@
 
     <!-- Pin Message -->
     <string name="pinned_message">Закреплённое сообщение</string>
-    <string name="pin_message">Закрепить</string>
-    <string name="unpin_message">Открепить</string>
+    <string name="pin_message">Закрепить сообщение</string>
+    <string name="unpin_message">Открепить сообщение</string>
     <string name="pinned_message_format">📌 %s</string>
+    <string name="pinned_messages">Закреплённые сообщения</string>
+    <string name="no_pinned_messages">Нет закреплённых сообщений</string>
 
     <!-- i18n: English hardcoded strings -->
     <string name="failed_to_resize_image">Не удалось изменить размер изображения</string>
@@ -917,6 +965,7 @@
     <string name="error_user_id_not_found">Ошибка: ID пользователя не найден. Подождите или войдите снова.</string>
     <string name="failed_to_terminate_session">Не удалось завершить сессию</string>
     <string name="failed_to_upload_file">Не удалось загрузить файл</string>
+    <string name="file_too_large">Файл слишком большой (макс. 30 МБ)</string>
     <string name="download_started">Загрузка начата</string>
     <string name="theme_saved_failed_to_set">Тема сохранена, но не установлена как текущая</string>
     <string name="failed_to_start_recording">Не удалось начать запись</string>
@@ -925,11 +974,199 @@
     <!-- ChatList v2: connection status -->
     <string name="connection_online">В сети</string>
     <string name="connection_offline">Не в сети</string>
-    <string name="server_restarting">Сервер перезапускается…</string>
+    <string name="server_restarting">Сервер обновляется…</string>
+
+    <!-- Chat list media previews -->
+    <string name="chat_preview_image">Изображение</string>
+    <string name="chat_preview_voice">Голосовое сообщение</string>
+
+    <!-- Company System -->
+    <string name="company">Компания</string>
+    <string name="my_company">Моя компания</string>
+    <string name="create_company">Создать компанию</string>
+    <string name="create_company_name_hint">Название компании</string>
+    <string name="company_created">Компания создана</string>
+    <string name="company_updated">Компания обновлена</string>
+    <string name="company_deleted">Компания удалена</string>
+    <string name="leave_company">Покинуть компанию</string>
+    <string name="leave_company_confirm">Вы уверены, что хотите покинуть эту компанию?</string>
+    <string name="delete_company">Удалить компанию</string>
+    <string name="delete_company_confirm">Вы уверены, что хотите удалить эту компанию? Это действие необратимо.</string>
+    <string name="members">Участники</string>
+    <string name="positions">Должности</string>
+    <string name="company_chats">Корпоративные чаты</string>
+    <string name="add_member">Добавить участника</string>
+    <string name="remove_member">Удалить участника</string>
+    <string name="remove_member_confirm">Удалить %s из компании?</string>
+    <string name="owner_cannot_remove_self">Владелец не может покинуть компанию, как единственный её участник. Но вы можете удалить компанию.</string>
+    <string name="member_added">Участник добавлен</string>
+    <string name="member_removed">Участник удалён</string>
+    <string name="position_created">Должность создана</string>
+    <string name="position_updated">Должность обновлена</string>
+    <string name="position_deleted">Должность удалена</string>
+    <string name="create_position">Создать должность</string>
+    <string name="position_title_hint">Название должности</string>
+    <string name="position_level">Уровень</string>
+    <string name="chat_access">Доступ к чатам</string>
+    <string name="create_company_chat">Создать корпоративный чат</string>
+    <string name="chat_name_hint">Название чата</string>
+    <string name="company_chat_created">Корпоративный чат создан</string>
+    <string name="employee">Сотрудник</string>
+    <string name="manager">Менеджер</string>
+    <string name="top_manager">Топ-менеджер</string>
+    <string name="owner">Владелец</string>
+    <string name="access_member">Сотрудники</string>
+    <string name="access_management">Руководство</string>
+    <string name="access_owner_only">Только владелец</string>
+    <string name="no_company">Нет компании</string>
+    <string name="company_position">Должность: %1$s (Уровень %2$d)</string>
+    <string name="company_badge">Компания</string>
+
+    <!-- Company Invite -->
+    <string name="share_invite_code">Поделиться кодом приглашения</string>
+    <string name="join_by_code">Вступить по коду</string>
+    <string name="invite_code_copied">Код приглашения скопирован</string>
+    <string name="enter_invite_code">Введите код приглашения</string>
+    <string name="invite_code_hint">ID компании или код приглашения</string>
+    <string name="join_company">Вступить в компанию</string>
+    <string name="joined_company">Успешно вступили в компанию</string>
+    <string name="join_failed">Не удалось вступить в компанию</string>
+
+    <!-- Company Settings -->
+    <string name="company_settings">Настройки компании</string>
+    <string name="company_notifications">Уведомления</string>
+    <string name="mute_company_chats">Отключить уведомления company чатов</string>
+    <string name="company_settings_saved">Настройки сохранены</string>
+    <string name="more_options">Ещё</string>
+    <string name="edit_position">Редактировать</string>
+    <string name="delete_position">Удалить должность</string>
+    <string name="change_position">Изменить должность</string>
 
     <!-- File/Feedback -->
     <string name="filename_prefix">Лава</string>
     <string name="share_app_description">Лава: платформа защищенных бизнес-коммуникаций\nhttp://13.140.25.249</string>
     <string name="feedback_subject">Лава Обратная связь</string>
+
+    <!-- Stickers -->
+    <string name="sticker_empty">Пока нет стикеров</string>
+    <string name="sticker_create_pack">Создать пакет</string>
+    <string name="sticker_library">Библиотека стикеров</string>
+    <string name="sticker_my_packs">Мои пакеты</string>
+    <string name="sticker_public_packs">Публичные</string>
+    <string name="sticker_pending_packs">Ожидающие</string>
+    <string name="sticker_pack_title">Название пакета</string>
+    <string name="sticker_pack_title_required">Название пакета *</string>
+    <string name="sticker_default_pack_name">Стикеры от %s</string>
+    <string name="sticker_set_cover">Сделать обложкой</string>
+    <string name="sticker_cover_set">Обложка установлена</string>
+    <string name="sticker_save_disabled">Добавьте хотя бы один стикер для сохранения</string>
+    <string name="sticker_pack_name">Имя пакета</string>
+    <string name="sticker_submit_for_approval">Отправить на согласование</string>
+    <string name="sticker_approved">Одобрен</string>
+    <string name="sticker_pending">Ожидает</string>
+    <string name="sticker_rejected">Отклонён</string>
+    <string name="sticker_draft">Черновик</string>
+    <string name="sticker_add_sticker">Добавить стикер</string>
+    <string name="sticker_remove">Удалить</string>
+    <string name="sticker_removed">Стикер удалён</string>
+    <string name="sticker_delete_pack">Удалить пакет</string>
+    <string name="sticker_edit_pack">Редактировать пакет</string>
+    <string name="sticker_added">Стикер добавлен</string>
+    <string name="sticker_pack_created">Пакет создан</string>
+    <string name="sticker_pack_updated">Пакет обновлён</string>
+    <string name="sticker_upload_failed">Ошибка загрузки</string>
+    <string name="sticker_title_required">Введите название</string>
+    <string name="sticker_submitted">Отправлено на согласование</string>
+    <string name="sticker_pick_image">Выбрать изображение</string>
+    <string name="sticker_max_size_hint">Макс. размер файла: 2 МБ (изображения сжимаются автоматически)</string>
+    <string name="sticker_file_too_large">Файл слишком большой (макс. 2 МБ)</string>
+    <plurals name="sticker_count">
+        <item quantity="one">%d стикер</item>
+        <item quantity="few">%d стикера</item>
+        <item quantity="many">%d стикеров</item>
+        <item quantity="other">%d стикеров</item>
+    </plurals>
+
+    <!-- Sticker Editor -->
+    <string name="sticker_editor_title">Редактировать стикер</string>
+    <string name="sticker_editor_crop">Обрезать</string>
+    <string name="sticker_editor_text">Текст</string>
+    <string name="sticker_editor_filters">Фильтры</string>
+    <string name="sticker_editor_done">Готово</string>
+    <string name="sticker_editor_enter_text">Введите текст…</string>
+    <string name="sticker_editor_add">Добавить</string>
+    <string name="sticker_editor_save_failed">Не удалось сохранить стикер</string>
+    <string name="sticker_filter_original">Оригинал</string>
+    <string name="sticker_filter_grayscale">Ч/Б</string>
+    <string name="sticker_filter_sepia">Сепия</string>
+    <string name="sticker_filter_warm">Тёплый</string>
+    <string name="sticker_filter_cool">Холодный</string>
+    <string name="sticker_filter_bright">Яркий</string>
+    <string name="sticker_search_hint">Поиск стикеров…</string>
+    <string name="sticker_search_failed">Ошибка поиска. Проверьте соединение и попробуйте снова.</string>
+    <string name="sticker_no_results">Стикеры не найдены</string>
+    <string name="sticker_added_to_favorites">Добавлено в избранное</string>
+    <string name="sticker_removed_from_favorites">Удалено из избранного</string>
+    <string name="sticker_favorites_header">Избранное (%d)</string>
+    <string name="sticker_recent_header">Недавние</string>
+    <string name="sticker_no_favorites">В избранном пока пусто.\nНажмите и удерживайте стикер, чтобы добавить.</string>
+    <string name="follow_system_dark_mode">Следовать системной тёмной теме</string>
+    <string name="follow_system_dark_mode_desc">Автоматическое переключение между светлой и тёмной темой в зависимости от системных настроек</string>
+    <string name="archive">Архивировать</string>
+    <string name="archived">Архивировано</string>
+    <string name="muted">Заглушено</string>
+    <string name="unmuted">Включено</string>
+    <string name="delete_chat">Удалить чат</string>
+    <string name="failed">Ошибка</string>
+
+    <!-- Hardcoded string extraction -->
+    <string name="photo">Фото</string>
+    <string name="user">Пользователь</string>
+    <string name="chat_init_error">Ошибка инициализации чата</string>
+    <string name="e2ee_encryption_failed">Ошибка E2EE шифрования</string>
+    <string name="failed_to_load_packs">Не удалось загрузить пакеты</string>
+    <string name="submitted_for_approval">Отправлено на одобрение</string>
+    <string name="failed_to_delete">Не удалось удалить</string>
+    <string name="please_enter_share_code">Введите код дляshared</string>
+    <string name="unknown_error">Неизвестная ошибка</string>
+    <string name="error_uploading_backgrounds">Ошибка загрузки фонов: %s</string>
+    <string name="upload_failed_code">Ошибка загрузки: %d</string>
+
+    <!-- gRPC callback strings -->
+    <string name="grpc_error">Ошибка</string>
+    <string name="favorite_removed">Удалено</string>
+    <string name="favorite_remove_failed">Не удалось удалить</string>
+    <string name="channel_dead">Канал недоступен</string>
+    <string name="stream_failed">Ошибка потока</string>
+    <string name="stream_error">Ошибка потока</string>
+
+    <!-- Forward message UI -->
+    <plurals name="forward_message_count">
+        <item quantity="one">%d сообщение</item>
+        <item quantity="few">%d сообщения</item>
+        <item quantity="many">%d сообщений</item>
+        <item quantity="other">%d сообщений</item>
+    </plurals>
+    <string name="forward_more_messages">и ещё %d…</string>
+    <string name="forward_send">Переслать</string>
+    <string name="forward_send_count">Переслать в %d</string>
+    <string name="forwarded_from">Переслано от %s</string>
+    <string name="selected">Выбрано</string>
+
+    <!-- Delete confirmation -->
+    <string name="delete_confirmation_users">%1$s: %2$d %3$s?</string>
+    <string name="delete_confirmation_chats">%1$s: %2$d %3$s?</string>
+
+    <!-- Username format -->
+    <string name="username_at">@%1$s</string>
+    <string name="company_position_with_count">%1$s (%2$d)</string>
+
+    <!-- Accessibility -->
+    <string name="selection_indicator">Выбрать сообщение</string>
+    <string name="sticker_image">Стикер</string>
+    <string name="status_pending">Отправляется</string>
+    <string name="status_sent">Отправлено</string>
+    <string name="status_read">Прочитано</string>
+    <string name="status_error">Ошибка отправки</string>
 
 </resources>

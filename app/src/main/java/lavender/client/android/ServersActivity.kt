@@ -250,7 +250,7 @@ class ServersActivity : AppCompatActivity() {
             context = this,
             onLogin = { u: String, p: String ->
                 SessionManager.login(this, u, p, serverAddress, register = false, email = "") { result: String? ->
-                    runOnUiThread {
+                    lifecycleScope.launch {
                         when (result) {
                             "SUCCESS" -> {
                                 CredentialStore.setServerAddress(this@ServersActivity, serverAddress)
@@ -271,9 +271,17 @@ class ServersActivity : AppCompatActivity() {
                                 loginSheet.setLoading(false)
                                 Toast.makeText(this@ServersActivity, R.string.wrong_password, Toast.LENGTH_LONG).show()
                             }
+                            "SERVER_ERROR" -> {
+                                loginSheet.setLoading(false)
+                                Toast.makeText(this@ServersActivity, R.string.server_error, Toast.LENGTH_LONG).show()
+                            }
+                            "CONNECTION_FAILED" -> {
+                                loginSheet.setLoading(false)
+                                Toast.makeText(this@ServersActivity, R.string.connection_failed, Toast.LENGTH_LONG).show()
+                            }
                             else -> {
                                 loginSheet.setLoading(false)
-                                Toast.makeText(this@ServersActivity, result ?: "Unknown error", Toast.LENGTH_LONG).show()
+                                Toast.makeText(this@ServersActivity, result ?: getString(R.string.unknown_error), Toast.LENGTH_LONG).show()
                             }
                         }
                     }
@@ -302,7 +310,7 @@ class ServersActivity : AppCompatActivity() {
             context = this,
             onRegister = { u: String, p: String, email: String ->
                 SessionManager.login(this, u, p, serverAddress, register = true, email = email) { result: String? ->
-                    runOnUiThread {
+                    lifecycleScope.launch {
                         when (result) {
                             "SUCCESS", "REGISTRATION_SUCCESS" -> {
                                 CredentialStore.setServerAddress(this@ServersActivity, serverAddress)
@@ -317,7 +325,7 @@ class ServersActivity : AppCompatActivity() {
                             }
                             else -> {
                                 registerSheet.setLoading(false)
-                                Toast.makeText(this@ServersActivity, result ?: "Unknown error", Toast.LENGTH_LONG).show()
+                                Toast.makeText(this@ServersActivity, result ?: getString(R.string.unknown_error), Toast.LENGTH_LONG).show()
                             }
                         }
                     }

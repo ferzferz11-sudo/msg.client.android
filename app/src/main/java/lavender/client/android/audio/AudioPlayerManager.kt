@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
@@ -31,6 +32,7 @@ class AudioPlayerManager private constructor(private val context: Context) {
     
     private var playbackPositionListener: (() -> Unit)? = null
     private var positionUpdateJob: Job? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     
     companion object {
         @Volatile
@@ -125,7 +127,7 @@ class AudioPlayerManager private constructor(private val context: Context) {
     private fun startPositionUpdates() {
         stopPositionUpdates()
         
-        positionUpdateJob = CoroutineScope(Dispatchers.Main).launch {
+        positionUpdateJob = scope.launch {
             while (true) {
                 exoPlayer?.let { player ->
                     _currentPosition.value = player.currentPosition

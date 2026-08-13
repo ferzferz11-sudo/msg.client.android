@@ -1,4 +1,5 @@
 package lavender.client.android.ui.widget
+import android.util.Log
 
 import android.content.Context
 import android.content.res.ColorStateList
@@ -108,6 +109,10 @@ open class StandardBottomSheet(
     protected var backButton: ImageView? = null
     protected var hasBackStack = false
 
+    companion object {
+        private const val TAG = "StandardBottomSheet"
+    }
+
     init {
         initViews(layoutId)
         applyTheme(theme)
@@ -131,21 +136,23 @@ open class StandardBottomSheet(
     }
 
     override fun applyTheme(theme: Theme) {
-        dialog?.let { ThemeApplier.applyToDialog(it, theme) }
-        
+        try {
+            dialog?.let { ThemeApplier.applyToDialog(it, theme) }
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
+
         try {
             val bgColor = ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK)
             val primaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
             val onSurfaceColor = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.WHITE)
             val textPrimaryColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
-            
+
             root?.setBackgroundColor(bgColor)
             dragHandle?.backgroundTintList = ColorStateList.valueOf(primaryColor)
             titleView?.setTextColor(primaryColor)
 
             // Theme any InputLayouts and EditTexts
             root?.let { findAndThemeInputs(it, theme, primaryColor, onSurfaceColor, textPrimaryColor) }
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     protected fun findAndThemeInputs(view: View, theme: Theme, primaryColor: Int, onSurfaceColor: Int, textPrimaryColor: Int) {
@@ -190,8 +197,8 @@ open class StandardBottomSheet(
                              view.id == R.id.btnReset || view.id == android.R.id.button2 ||
                              view.id == R.id.deleteGroupButton
             
-            val isActionType = view.id == R.id.btnJoin || view.id == R.id.btnRegister || 
-                              view.id == R.id.btnLogin || view.id == R.id.btnSave ||
+            val isActionType = view.id == R.id.btnJoin || view.id == R.id.btnRegister ||
+                              view.id == R.id.btnSave ||
                               view.id == R.id.actionButton || view.id == R.id.btnUpdate ||
                               view.id == R.id.btnSend || view.id == R.id.changeAvatarButton
             
@@ -233,7 +240,7 @@ open class StandardBottomSheet(
         } else if (view is ImageView && view !is de.hdodenhof.circleimageview.CircleImageView) {
             view.imageTintList = ColorStateList.valueOf(primaryColor)
         } else if (view is TextView) {
-            if (view.id == R.id.forgotPasswordButton || view.id == R.id.actionShareHeader) {
+            if (view.id == R.id.actionShareHeader) {
                 view.setTextColor(primaryColor)
             } else if (view.id != R.id.titleText) {
                 view.setTextColor(textPrimaryColor)
@@ -286,9 +293,11 @@ open class StandardBottomSheet(
             window?.let { window ->
                 androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
             }
-            behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
         }
         dialog?.show()
+        try {
+            dialog?.behavior?.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     fun showWithNavigation() {

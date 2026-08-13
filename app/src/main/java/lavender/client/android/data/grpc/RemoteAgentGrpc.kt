@@ -8,8 +8,16 @@ import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import lavender.client.android.data.proto.*
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import kotlin.time.Duration.Companion.seconds
+
+private const val TAG = "RemoteAgentGrpc"
+private const val DEBUG = false // Set to BuildConfig.DEBUG when available
 
 // ======= Remote Agent =======
+
+private const val CHANNEL_DEAD = "Channel dead"
+private const val STREAM_FAILED = "failed"
+private const val STREAM_ERROR = "Stream error"
 
 suspend fun listRemoteAgents(filterStatus: String = ""): List<RemoteAgentInfoProto> = withContext(Dispatchers.IO) {
     val channel = RealGrpcClient.getChannel()
@@ -17,8 +25,8 @@ suspend fun listRemoteAgents(filterStatus: String = ""): List<RemoteAgentInfoPro
         Log.w("RemoteAgentGrpc", "listRemoteAgents: channel dead")
         return@withContext emptyList()
     }
-    if (lavender.client.android.BuildConfig.DEBUG) {
-    Log.d("RemoteAgentGrpc", "listRemoteAgents: calling messenger.ChatService/ListRemoteAgents")
+    if (DEBUG) {
+        Log.d(TAG, "listRemoteAgents: calling messenger.ChatService/ListRemoteAgents")
     }
     val methodDesc = MethodDescriptor.newBuilder<ListRemoteAgentsRequestProto, ListRemoteAgentsResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
@@ -72,7 +80,7 @@ suspend fun listRemoteAgents(filterStatus: String = ""): List<RemoteAgentInfoPro
                                         status = status, capabilities = capabilities,
                                         activeTasks = activeTasks, lastHeartbeat = lastHeartbeat
                                     ))
-                                } catch (_: Exception) {}
+                                } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
                             }
                         }
                         else -> cis.skipField(tag)
@@ -88,13 +96,13 @@ suspend fun listRemoteAgents(filterStatus: String = ""): List<RemoteAgentInfoPro
 
     call.start(object : io.grpc.ClientCall.Listener<ListRemoteAgentsResponseProto>() {
         override fun onMessage(message: ListRemoteAgentsResponseProto) {
-            if (lavender.client.android.BuildConfig.DEBUG) {
+            if (DEBUG) {
             Log.d("RemoteAgentGrpc", "listRemoteAgents: received ${message.agents.size} agents")
             }
             result.complete(message.agents)
         }
         override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-            if (lavender.client.android.BuildConfig.DEBUG) {
+            if (DEBUG) {
             Log.d("RemoteAgentGrpc", "listRemoteAgents: onClose status=${status.code} desc=${status.description}")
             }
             if (!result.isCompleted) result.complete(emptyList())
@@ -105,7 +113,7 @@ suspend fun listRemoteAgents(filterStatus: String = ""): List<RemoteAgentInfoPro
     call.halfClose()
     call.request(1)
 
-    return@withContext withTimeoutOrNull(10000) { result.await() } ?: emptyList<RemoteAgentInfoProto>().also {
+    return@withContext withTimeoutOrNull(10.seconds) { result.await() } ?: emptyList<RemoteAgentInfoProto>().also {
         Log.w("RemoteAgentGrpc", "listRemoteAgents: timeout or empty result")
     }
 }
@@ -121,7 +129,7 @@ suspend fun generateAgentToken(
 ): GenerateAgentTokenResponseProto = withContext(Dispatchers.IO) {
     val channel = RealGrpcClient.getChannel()
     if (channel == null || channel.isShutdown || channel.isTerminated) {
-        return@withContext GenerateAgentTokenResponseProto(success = false, error = "Channel dead")
+        return@withContext GenerateAgentTokenResponseProto(success = false, error = CHANNEL_DEAD)
     }
     val methodDesc = MethodDescriptor.newBuilder<GenerateAgentTokenRequestProto, GenerateAgentTokenResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
@@ -195,7 +203,7 @@ suspend fun generateAgentToken(
 suspend fun revokeAgentToken(agentId: String, adminUserId: String): RevokeAgentTokenResponseProto = withContext(Dispatchers.IO) {
     val channel = RealGrpcClient.getChannel()
     if (channel == null || channel.isShutdown || channel.isTerminated) {
-        return@withContext RevokeAgentTokenResponseProto(success = false, error = "Channel dead")
+        return@withContext RevokeAgentTokenResponseProto(success = false, error = CHANNEL_DEAD)
     }
     val methodDesc = MethodDescriptor.newBuilder<RevokeAgentTokenRequestProto, RevokeAgentTokenResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
@@ -245,14 +253,14 @@ suspend fun revokeAgentToken(agentId: String, adminUserId: String): RevokeAgentT
     call.sendMessage(RevokeAgentTokenRequestProto(agentId = agentId, adminUserId = adminUserId))
     call.halfClose()
     call.request(1)
-    return@withContext withTimeoutOrNull(10000) { result }
+    return@withContext withTimeoutOrNull(10.seconds) { result }
         ?: RevokeAgentTokenResponseProto(success = false, error = "Timeout")
 }
 
 suspend fun listAgentTokens(adminUserId: String): ListAgentTokensResponseProto = withContext(Dispatchers.IO) {
     val channel = RealGrpcClient.getChannel()
     if (channel == null || channel.isShutdown || channel.isTerminated) {
-        return@withContext ListAgentTokensResponseProto(success = false, error = "Channel dead")
+        return@withContext ListAgentTokensResponseProto(success = false, error = CHANNEL_DEAD)
     }
     val methodDesc = MethodDescriptor.newBuilder<ListAgentTokensRequestProto, ListAgentTokensResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
@@ -334,7 +342,7 @@ suspend fun listAgentTokens(adminUserId: String): ListAgentTokensResponseProto =
     call.sendMessage(ListAgentTokensRequestProto(adminUserId = adminUserId))
     call.halfClose()
     call.request(1)
-    return@withContext withTimeoutOrNull(10000) { result }
+    return@withContext withTimeoutOrNull(10.seconds) { result }
         ?: ListAgentTokensResponseProto(success = false, error = "Timeout")
 }
 
@@ -357,7 +365,7 @@ suspend fun deployAgentTask(
 ): DeployAgentTaskResponseProto = withContext(Dispatchers.IO) {
     val channel = RealGrpcClient.getChannel()
     if (channel == null || channel.isShutdown || channel.isTerminated) {
-        return@withContext DeployAgentTaskResponseProto(taskId = "", success = false, message = "Channel dead")
+        return@withContext DeployAgentTaskResponseProto(taskId = "", success = false, message = CHANNEL_DEAD)
     }
     val methodDesc = MethodDescriptor.newBuilder<DeployAgentTaskRequestProto, DeployAgentTaskResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
@@ -443,7 +451,7 @@ suspend fun deployAgentTask(
     call.halfClose()
     call.request(1)
 
-    return@withContext withTimeoutOrNull(15000) { result.await() }
+    return@withContext withTimeoutOrNull(15.seconds) { result.await() }
         ?: DeployAgentTaskResponseProto(taskId = "", success = false, message = "Timeout")
 }
 
@@ -464,7 +472,7 @@ fun deployAgentTaskStream(
 ): kotlinx.coroutines.flow.Flow<DeployAgentTaskStreamResponseProto> = kotlinx.coroutines.flow.flow {
     val channel = RealGrpcClient.getChannel()
     if (channel == null || channel.isShutdown || channel.isTerminated) {
-        emit(DeployAgentTaskStreamResponseProto(taskId = "", error = "Channel dead", done = true, status = "failed"))
+        emit(DeployAgentTaskStreamResponseProto(taskId = "", error = CHANNEL_DEAD, done = true, status = STREAM_FAILED))
         return@flow
     }
     val responseChannel = Channel<DeployAgentTaskStreamResponseProto>(UNLIMITED)
@@ -549,7 +557,7 @@ fun deployAgentTaskStream(
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (!status.isOk) {
                     responseChannel.trySend(DeployAgentTaskStreamResponseProto(
-                        error = status.description ?: status.code.toString(), done = true, status = "failed"
+                        error = status.description ?: status.code.toString(), done = true, status = STREAM_FAILED
                     ))
                 }
                 responseChannel.close()
@@ -569,7 +577,7 @@ fun deployAgentTaskStream(
         }
     } catch (e: Exception) {
         emit(DeployAgentTaskStreamResponseProto(
-            error = e.message ?: "Stream error", done = true, status = "failed"
+            error = e.message ?: STREAM_ERROR, done = true, status = STREAM_FAILED
         ))
     } finally {
         call?.cancel("Flow completed", null)
@@ -636,7 +644,7 @@ suspend fun getRemoteAgentStatus(agentId: String): GetRemoteAgentStatusResponseP
     call.halfClose()
     call.request(1)
 
-    return@withContext withTimeoutOrNull(10000) { result.await() }
+    return@withContext withTimeoutOrNull(10.seconds) { result.await() }
         ?: GetRemoteAgentStatusResponseProto(status = "timeout")
 }
 
@@ -652,7 +660,7 @@ suspend fun startAgentOnServer(
 ): StartAgentResponseProto = withContext(Dispatchers.IO) {
     val channel = RealGrpcClient.getChannel()
     if (channel == null || channel.isShutdown || channel.isTerminated) {
-        return@withContext StartAgentResponseProto(success = false, error = "Channel dead")
+        return@withContext StartAgentResponseProto(success = false, error = CHANNEL_DEAD)
     }
     val methodDesc = MethodDescriptor.newBuilder<StartAgentRequestProto, StartAgentResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
@@ -711,14 +719,14 @@ suspend fun startAgentOnServer(
     call.halfClose()
     call.request(1)
 
-    return@withContext withTimeoutOrNull(15000) { result.await() }
+    return@withContext withTimeoutOrNull(15.seconds) { result.await() }
         ?: StartAgentResponseProto(success = false, error = "Timeout")
 }
 
 suspend fun stopAgentOnServer(agentId: String, adminUserId: String = ""): StopAgentResponseProto = withContext(Dispatchers.IO) {
     val channel = RealGrpcClient.getChannel()
     if (channel == null || channel.isShutdown || channel.isTerminated) {
-        return@withContext StopAgentResponseProto(success = false, error = "Channel dead")
+        return@withContext StopAgentResponseProto(success = false, error = CHANNEL_DEAD)
     }
     val methodDesc = MethodDescriptor.newBuilder<StopAgentRequestProto, StopAgentResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
@@ -769,14 +777,14 @@ suspend fun stopAgentOnServer(agentId: String, adminUserId: String = ""): StopAg
     call.halfClose()
     call.request(1)
 
-    return@withContext withTimeoutOrNull(10000) { result.await() }
+    return@withContext withTimeoutOrNull(10.seconds) { result.await() }
         ?: StopAgentResponseProto(success = false, error = "Timeout")
 }
 
 suspend fun getAgentProcessStatus(agentId: String, adminUserId: String = ""): GetAgentProcessStatusResponseProto = withContext(Dispatchers.IO) {
     val channel = RealGrpcClient.getChannel()
     if (channel == null || channel.isShutdown || channel.isTerminated) {
-        return@withContext GetAgentProcessStatusResponseProto(running = false, error = "Channel dead")
+        return@withContext GetAgentProcessStatusResponseProto(running = false, error = CHANNEL_DEAD)
     }
     val methodDesc = MethodDescriptor.newBuilder<GetAgentProcessStatusRequestProto, GetAgentProcessStatusResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
@@ -830,6 +838,6 @@ suspend fun getAgentProcessStatus(agentId: String, adminUserId: String = ""): Ge
     call.halfClose()
     call.request(1)
 
-    return@withContext withTimeoutOrNull(10000) { result.await() }
+    return@withContext withTimeoutOrNull(10.seconds) { result.await() }
         ?: GetAgentProcessStatusResponseProto(running = false, error = "Timeout")
 }

@@ -1,4 +1,5 @@
 package lavender.client.android.ui.chatlist
+import android.util.Log
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -14,7 +15,7 @@ import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.content.edit
 import androidx.core.view.isVisible
-import kotlinx.coroutines.CoroutineScope
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -52,7 +53,7 @@ class UpdateCoordinator(
 
     // Listener
     val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
-        activity.runOnUiThread { updateIndicatorVisibility() }
+        activity.lifecycleScope.launch { updateIndicatorVisibility() }
     }
 
     // ======= Silent check (called once on startup) =======
@@ -61,7 +62,7 @@ class UpdateCoordinator(
         // Only check announcements, don't auto-download
         checkAnnouncements()
         updateManager.checkForUpdates { isAvailable, _ ->
-            activity.runOnUiThread {
+            activity.lifecycleScope.launch {
                 updateIndicatorVisibility()
             }
         }
@@ -72,7 +73,7 @@ class UpdateCoordinator(
     fun checkManualUpdate() {
         val currentVersion = BuildConfig.VERSION_NAME
         updateManager.checkForUpdates { isAvailable, latestVersion ->
-            activity.runOnUiThread {
+            activity.lifecycleScope.launch {
                 showUpdateDialog(currentVersion, latestVersion)
             }
         }
@@ -94,6 +95,16 @@ class UpdateCoordinator(
             titleView?.text = context.getString(R.string.ok)
             updateIcon?.setImageResource(R.drawable.ic_checked)
             btnUpdate?.text = context.getString(R.string.force_download)
+        } else {
+            // Check if we have a downloaded version that's now outdated
+            val prefs = context.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE)
+            val downloadedVersion = prefs.getString("downloaded_version", null)
+            val isDownloaded = prefs.getBoolean("update_downloaded", false)
+            if (isDownloaded && downloadedVersion != null && downloadedVersion != latest) {
+                btnUpdate?.text = context.getString(R.string.download_update, latest)
+            } else {
+                btnUpdate?.text = context.getString(R.string.download_update, latest)
+            }
         }
 
         messageView?.text = context.getString(R.string.version_info_format, current, latest)
@@ -115,6 +126,22 @@ class UpdateCoordinator(
         var isDownloaded = prefs.getBoolean("update_downloaded", false)
         val isDownloading = prefs.getBoolean("update_downloading", false)
 
+        // If current version matches the latest/downloaded version, update was already installed — clear flags
+        val currentVersion = BuildConfig.VERSION_NAME
+        val latestVersion = prefs.getString("latest_version", null)
+        val downloadedVersion = prefs.getString("downloaded_version", null)
+        if ((isAvailable || isDownloaded) && (currentVersion == latestVersion || currentVersion == downloadedVersion)) {
+            prefs.edit {
+                putBoolean("update_available", false)
+                putBoolean("update_downloaded", false)
+                putBoolean("update_downloading", false)
+                remove("apk_path")
+                remove("downloaded_version")
+            }
+            llUpdateContainer?.isVisible = false
+            return
+        }
+
         // Validate APK file still exists — reset if deleted
         if (isDownloaded) {
             val apkPath = prefs.getString("apk_path", null)
@@ -128,25 +155,27 @@ class UpdateCoordinator(
             }
         }
 
+        // If downloaded version is outdated (newer version available), treat as not downloaded
+        val effectiveDownloaded = isDownloaded && downloadedVersion == latestVersion
+
         // Show container if update is ready or downloading
-        llUpdateContainer?.isVisible = isAvailable || isDownloading || isDownloaded
+        llUpdateContainer?.isVisible = isAvailable || isDownloading || effectiveDownloaded
 
         if (isDownloading) {
             tvUpdateAvailable?.isVisible = false
             tvUpdateProgress?.isVisible = true
         } else {
             tvUpdateProgress?.isVisible = false
-            tvUpdateAvailable?.isVisible = isAvailable || isDownloaded
-            // Update text: "Install update" when downloaded, "Update available" when not
-            tvUpdateAvailable?.text = if (isDownloaded) {
-                context.getString(R.string.install_update)
-            } else {
-                context.getString(R.string.update_available)
+            tvUpdateAvailable?.isVisible = isAvailable || effectiveDownloaded
+            tvUpdateAvailable?.text = when {
+                effectiveDownloaded -> context.getString(R.string.install_update, downloadedVersion ?: "")
+                isAvailable -> context.getString(R.string.update_available, latestVersion ?: "")
+                else -> ""
             }
         }
 
         llUpdateContainer?.setOnClickListener {
-            if (isDownloaded) {
+            if (effectiveDownloaded) {
                 val apkPath = prefs.getString("apk_path", null)
                 if (apkPath != null) {
                     UpdateUtils.installApk(context, File(apkPath))
@@ -186,8 +215,10 @@ class UpdateCoordinator(
     // ======= Announcements (changelog.txt from server) =======
 
     private fun checkAnnouncements() {
-        CoroutineScope(Dispatchers.IO).launch {
-            checkAnnouncementsInternal()
+        activity.lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                checkAnnouncementsInternal()
+            }
         }
     }
 
@@ -217,7 +248,7 @@ class UpdateCoordinator(
                 }
             }
             connection.disconnect()
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
     }
 
     // ======= Notification for downloaded update =======
@@ -231,30 +262,24 @@ class UpdateCoordinator(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val whatsNewIntent = Intent(context, ChatListActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("extra_show_whats_new", true)
-        }
-        val whatsNewPendingIntent = PendingIntent.getActivity(
-            context, 1006, whatsNewIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channel = NotificationChannel(UpdateUtils.CHANNEL_ID, "Updates", NotificationManager.IMPORTANCE_DEFAULT)
         notificationManager.createNotificationChannel(channel)
 
         val notification = NotificationCompat.Builder(context, UpdateUtils.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_update_available)
-            .setContentTitle(context.getString(R.string.update_available))
+            .setContentTitle(context.getString(R.string.update_available, latestVersion))
             .setContentText(context.getString(R.string.version_available, latestVersion))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
-            .addAction(R.drawable.ic_star, context.getString(R.string.whats_new), whatsNewPendingIntent)
             .setAutoCancel(true)
             .setOnlyAlertOnce(true)
             .build()
 
         notificationManager.notify(1007, notification)
+    }
+
+    companion object {
+        private const val TAG = "UpdateCoordinator"
     }
 }

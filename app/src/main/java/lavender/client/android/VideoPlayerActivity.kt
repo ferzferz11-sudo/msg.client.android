@@ -72,7 +72,7 @@ class VideoPlayerActivity : AppCompatActivity() {
             downloadManager.enqueue(request)
             Toast.makeText(this, getString(R.string.download_started), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(this, "Failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.failed) + ": ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 

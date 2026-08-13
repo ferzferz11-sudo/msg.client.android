@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
@@ -25,17 +27,21 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import lavender.client.android.data.calls.CallMessageHelper
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.ui.adapter.MessageAdapter
 import lavender.client.android.ui.adapter.MessageSwipeController
+import lavender.client.android.ui.chat.ChatMetadataState
 import lavender.client.android.ui.chat.ChatViewModel
 import lavender.client.android.ui.chat.ChatViewModelFactory
+import lavender.client.android.ui.chat.NewChatViewModel
 import lavender.client.android.ui.chat.message.ChatE2EEDelegate
 import lavender.client.android.ui.chat.message.ChatInputDelegate
 import lavender.client.android.ui.chat.message.ChatMessageMenuDelegate
@@ -46,9 +52,6 @@ import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ui.ThemeUi
 import java.util.Locale
 
-/**
- * Chat screen — thin Activity delegating to delegates + ChatViewModel for business logic.
- */
 class NewChatActivity : AppCompatActivity() {
 
     override fun attachBaseContext(newBase: Context) {
@@ -67,7 +70,8 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private val grpcClient = GrpcClient
-    private lateinit var viewModel: ChatViewModel
+    private lateinit var chatViewModel: ChatViewModel
+    private lateinit var newChatViewModel: NewChatViewModel
 
     private lateinit var toolbarDelegate: ChatToolbarDelegate
     private lateinit var inputDelegate: ChatInputDelegate
@@ -76,17 +80,6 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var e2eeDelegate: ChatE2EEDelegate
     private lateinit var messageMenuDelegate: ChatMessageMenuDelegate
 
-    private var username = ""
-    private var password = ""
-    private var roomId = ""
-    private var chatName = ""
-    private var isDirect = false
-    private var chatType = "group"
-    private var participantsJson = "[]"
-    private var creator = ""
-    private var chatAvatarUrl = ""
-    private var chatFullAvatarUrl = ""
-    private var isSecret = false
     private var lastMessageCount = 0
     private var shouldScrollToBottom = false
 
@@ -99,65 +92,86 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var swipeRefreshLayout: androidx.swiperefreshlayout.widget.SwipeRefreshLayout
     private lateinit var historyLoadingProgress: ProgressBar
 
+    private val data get() = newChatViewModel.intentData.value
+
     override fun onCreate(savedInstanceState: Bundle?) {
-        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
+        try {
+            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "setDecorFitsSystemWindows failed: ${e.message}")
+        }
         setContentView(R.layout.activity_new_chat)
 
-        loadDataFromIntent()
+        newChatViewModel = ViewModelProvider(this)[NewChatViewModel::class.java]
+        newChatViewModel.parseIntent(intent, null)
 
         if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
-            val serverAddress = intent.getStringExtra("SERVER_ADDRESS")
-                ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "")
-            if (!serverAddress.isNullOrEmpty()) {
-                val parts = serverAddress.split(":")
-                val host = parts[0]
-                val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-                grpcClient.connect(host, false, port, this)
-            }
+            newChatViewModel.ensureConnection()
         }
 
-        grpcClient.setRoomId(roomId)
+        newChatViewModel.setRoomId(data.roomId)
 
-        initDelegates()
-        initSharedViews()
+        try {
+            initDelegates()
+            initSharedViews()
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "initDelegates/initSharedViews failed: ${e.message}", e)
+            Toast.makeText(this, getString(R.string.chat_init_error), Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
 
-        ThemeUi.bind(this, username)
+        ThemeUi.bind(this, data.username)
         setupTheme()
         setupRecyclerView()
-        setupDelegates()
+        try {
+            setupDelegates()
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "setupDelegates failed: ${e.message}", e)
+        }
         setupObservers()
         setupKeyboardHandling()
 
-        viewModel.fetchChatMetadata(username, roomId, isDirect, participantsJson, chatName) { meta ->
-            runOnUiThread {
-                chatName = meta.chatName; isDirect = meta.isDirect; chatType = meta.chatType
-                participantsJson = meta.participantsJson; creator = meta.creator
-                chatAvatarUrl = meta.avatarUrl; chatFullAvatarUrl = meta.fullAvatarUrl
-                toolbarDelegate.configure(roomId, username, chatName, isDirect, chatType, participantsJson, creator, chatAvatarUrl, chatFullAvatarUrl, isSecret)
-                toolbarDelegate.setup()
-                adapter.isGroupChat = !isDirect; adapter.adminUsername = creator
+        chatViewModel.fetchChatMetadata(data.username, data.roomId, data.isDirect, data.participantsJson, data.chatName) { meta ->
+            try {
+                lifecycleScope.launch {
+                    if (isFinishing || isDestroyed) return@launch
+                    newChatViewModel.updateMetadata(lavender.client.android.ui.chat.ChatMetadataState(
+                        chatName = meta.chatName, isDirect = meta.isDirect, chatType = meta.chatType,
+                        participantsJson = meta.participantsJson, creator = meta.creator,
+                        avatarUrl = meta.avatarUrl, fullAvatarUrl = meta.fullAvatarUrl
+                    ))
+                    val m = newChatViewModel.metadata.value
+                    toolbarDelegate.configure(data.roomId, data.username, m.chatName, m.isDirect, m.chatType, m.participantsJson, m.creator, m.avatarUrl, m.fullAvatarUrl, data.isSecret)
+                    toolbarDelegate.setup()
+                    toolbarDelegate.refreshSubtitle()
+                    adapter.isGroupChat = !m.isDirect; adapter.adminUsername = m.creator
+                }
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "fetchChatMetadata callback error: ${e.message}", e)
             }
         }
 
-        viewModel.switchRoom(roomId)
+        chatViewModel.switchRoom(data.roomId)
+        newChatViewModel.dismissNotifications(data.roomId)
 
         SessionManager.updateDeviceInfo(this)
-        val session = SessionManager.session.value
-        viewModel.startChatV2(roomId) { _ ->
-            viewModel.markRead(username)
+        chatViewModel.startChatV2(data.roomId) { _ ->
+            chatViewModel.markRead(data.username)
         }
-        viewModel.markRead(username)
-        viewModel.ensureUserIdSet(this) { loadDraft() }
+        chatViewModel.markRead(data.username)
+        chatViewModel.ensureUserIdSet(this) { loadDraft() }
+        registerMarkReadReceiver()
 
         lifecycleScope.launch {
-            SessionManager.logoutEvent.collect { runOnUiThread { finish() } }
+            SessionManager.logoutEvent.collect { finish() }
         }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 grpcClient.chatDeletedEvent.collect { deletedChatId ->
-                    if (deletedChatId == roomId) finish()
+                    if (deletedChatId == data.roomId) finish()
                 }
             }
         }
@@ -177,7 +191,7 @@ class NewChatActivity : AppCompatActivity() {
         toolbarDelegate = ChatToolbarDelegate(this, grpcClient); toolbarDelegate.initViews()
         inputDelegate = ChatInputDelegate(this, grpcClient); inputDelegate.initViews()
         selectionDelegate = ChatSelectionDelegate(this, grpcClient); selectionDelegate.initViews()
-        searchDelegate = ChatSearchDelegate(this); searchDelegate.initViews()
+        searchDelegate = ChatSearchDelegate(this, lifecycleScope); searchDelegate.initViews()
         e2eeDelegate = ChatE2EEDelegate(this, grpcClient)
         messageMenuDelegate = ChatMessageMenuDelegate(this, grpcClient)
     }
@@ -193,25 +207,29 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun setupDelegates() {
-        toolbarDelegate.configure(roomId, username, chatName, isDirect, chatType, participantsJson, creator, chatAvatarUrl, chatFullAvatarUrl, isSecret)
+        val m = newChatViewModel.metadata.value
+        toolbarDelegate.configure(data.roomId, data.username, m.chatName, m.isDirect, m.chatType, m.participantsJson, m.creator, m.avatarUrl, m.fullAvatarUrl, data.isSecret)
         toolbarDelegate.setup()
 
-        inputDelegate.configure(roomId, username, isDirect, participantsJson, isSecret)
+        inputDelegate.configure(data.roomId, data.username, m.isDirect, m.participantsJson, data.isSecret)
         inputDelegate.onSendMessage = { text, imageUrl -> sendMessage(text, imageUrl) }
-        inputDelegate.onTypingSignal = { isTyping -> grpcClient.sendTypingSignal(username, isTyping) }
-        inputDelegate.onAudioRecord = { file, dur -> viewModel.uploadAudio(this, file, dur, username) { msg -> runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() } } }
+        inputDelegate.onStickerSent = { shouldScrollToBottom = true }
+        inputDelegate.onTypingSignal = { isTyping -> grpcClient.sendTypingSignal(data.username, isTyping) }
+        inputDelegate.onAudioRecord = { file, dur -> chatViewModel.uploadAudio(this, file, dur, data.username) { msg -> lifecycleScope.launch { Toast.makeText(this@NewChatActivity, msg, Toast.LENGTH_SHORT).show() } } }
         inputDelegate.onReplyChanged = { m ->
             if (m != null) {
                 replyPreview.isVisible = true; replyUser.text = m.user
-                replyText.text = if (m.imageUrl.isNotEmpty()) "Photo" else m.text
+                replyText.text = if (m.imageUrl.isNotEmpty()) getString(R.string.photo) else m.text
                 inputDelegate.messageInput.requestFocus()
             } else { replyPreview.isVisible = false }
         }
         cancelReply.setOnClickListener { inputDelegate.hideReplyPreview() }
         inputDelegate.setupListeners()
 
-        selectionDelegate.configure(roomId, username)
+        selectionDelegate.configure(data.roomId, data.username)
         selectionDelegate.setAdapter(adapter)
+
+        searchDelegate.roomId = data.roomId
         selectionDelegate.onSelectionModeChanged = { invalidateOptionsMenu() }
         selectionDelegate.getToolbarDelegate = { toolbarDelegate }
         selectionDelegate.onReplySelected = { m -> inputDelegate.showReplyPreview(m) }
@@ -221,97 +239,116 @@ class NewChatActivity : AppCompatActivity() {
         searchDelegate.getToolbarDelegate = { toolbarDelegate }
         searchDelegate.setupListeners()
 
-        e2eeDelegate.configure(roomId, isSecret, toolbarDelegate.toolbarSubtitle)
+        e2eeDelegate.configure(data.roomId, data.isSecret, toolbarDelegate.toolbarSubtitle)
+        e2eeDelegate.onKeyExchangeStart = {
+            toolbarDelegate.isE2eeInProgress = true
+            toolbarDelegate.refreshSubtitle()
+        }
         e2eeDelegate.onKeyExchangeComplete = { success ->
+            toolbarDelegate.isE2eeInProgress = false
+            toolbarDelegate.refreshSubtitle()
             if (success) {
                 inputDelegate.setSecretState(true)
-                runOnUiThread {
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        try {
-                            val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@NewChatActivity)
-                            db.messageDao().clearRoom(roomId)
-                        } catch (_: Exception) {}
-                        withContext(Dispatchers.Main) {
-                            grpcClient.clearMessages()
-                            viewModel.loadHistory()
-                        }
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@NewChatActivity)
+                        db.messageDao().clearRoom(data.roomId)
+                    } catch (e: Exception) { android.util.Log.w(TAG, "clearRoom failed: ${e.message}") }
+                    withContext(Dispatchers.Main) {
+                        grpcClient.clearMessages()
+                        chatViewModel.loadHistory()
                     }
                 }
             }
         }
-        if (isSecret) e2eeDelegate.initE2EE()
+        if (data.isSecret) e2eeDelegate.initE2EE()
 
-        messageMenuDelegate.configure(username)
+        messageMenuDelegate.configure(data.username)
     }
 
     private fun setupTheme() {
-        val customTheme = ThemeStore.currentTheme()
         try {
+            val customTheme = ThemeStore.currentTheme()
             val pColor = customTheme.primaryColor.toColorInt()
             historyLoadingProgress.indeterminateTintList = ColorStateList.valueOf(pColor)
             swipeRefreshLayout.setColorSchemeColors(pColor)
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "setupTheme failed: ${e.message}")
+        }
 
         swipeRefreshLayout.setOnRefreshListener {
-            lifecycleScope.launch(Dispatchers.IO) {
-                viewModel.clearRoomMessages(this@NewChatActivity)
-                withContext(Dispatchers.Main) {
-                    viewModel.switchRoom(roomId)
-                    swipeRefreshLayout.isRefreshing = false
-                }
-            }
+            chatViewModel.forceLoadHistory()
+            swipeRefreshLayout.isRefreshing = false
         }
     }
 
     private fun setupRecyclerView() {
+        val m = newChatViewModel.metadata.value
         adapter = MessageAdapter(
-            currentUsername = username, isGroupChat = !isDirect, adminUsername = creator,
+            currentUsername = data.username, isGroupChat = !m.isDirect, adminUsername = m.creator,
             onMessageClick = { message ->
-                val text = message.text.trim().lowercase()
-                val isCall = text.contains("📹") || text.contains("конференция") || text.contains("conference")
-                val isEnded = text.contains("завершена") || text.contains("завершен") || text.contains("удалена") || text.contains("удален") || text.contains("ended") || text.contains("deleted")
-                if (isCall && !isEnded) joinConference()
-                else messageMenuDelegate.showReactionsDialog(message) { m -> inputDelegate.showReplyPreview(m) }
+                if (message.stickerUrl.isNotEmpty()) {
+                    // Open sticker fullscreen
+                    val intent = android.content.Intent(this, FullScreenImageActivity::class.java).apply {
+                        putExtra("image_url", message.stickerThumbnailUrl.ifEmpty { message.stickerUrl })
+                        putExtra("sticker_url", message.stickerUrl)
+                    }
+                    startActivity(intent)
+                } else {
+                    val text = message.text.trim().lowercase()
+                    val isCall = CallMessageHelper.isCallOrConference(text)
+                    val isEnded = CallMessageHelper.isCallEnded(text)
+                    if (isCall && !isEnded) joinConference()
+                    else messageMenuDelegate.showReactionsDialog(message) { msg -> inputDelegate.showReplyPreview(msg) }
+                }
             },
             onSelectionChanged = { if (it > 0) selectionDelegate.showSelectionToolbar(it) else selectionDelegate.hideSelectionToolbar() },
             onMessageLongClick = { selectionDelegate.enterSelectionMode(it) },
-            chatId = roomId,
-            onRetrySendMessage = { retryMessage(it) }
+            chatId = data.roomId,
+            onRetrySendMessage = { retryMessage(it) },
+            onReplyQuoteClick = { repliedToMessageId -> scrollToMessage(repliedToMessageId) }
         )
         messagesRecyclerView.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         messagesRecyclerView.adapter = adapter
         selectionDelegate.setAdapter(adapter)
 
         val swipeController = MessageSwipeController(this) { position, direction ->
-            if (direction == ItemTouchHelper.LEFT) { inputDelegate.showReplyPreview(adapter.currentList[position]); adapter.notifyItemChanged(position) }
+            if (direction == ItemTouchHelper.LEFT) {
+                val msg = adapter.currentList.getOrNull(position)
+                if (msg != null) { inputDelegate.showReplyPreview(msg); adapter.notifyItemChanged(position) }
+            }
             else if (direction == ItemTouchHelper.RIGHT) finish()
         }
         ItemTouchHelper(swipeController).attachToRecyclerView(messagesRecyclerView)
     }
 
     private fun setupObservers() {
-        viewModel = ViewModelProvider(this, ChatViewModelFactory(roomId))[ChatViewModel::class.java]
+        chatViewModel = ViewModelProvider(this, ChatViewModelFactory(data.roomId))[ChatViewModel::class.java]
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.messages.collect { roomMessages ->
-                    val hasNewMessages = roomMessages.size > lastMessageCount
-                    val isNewFromOther = hasNewMessages && roomMessages.lastOrNull()?.user != username
-                    adapter.submitList(roomMessages) {
-                        if (shouldScrollToBottom || (isNewFromOther && isNearBottom())) {
-                            shouldScrollToBottom = false
-                            messagesRecyclerView.post { messagesRecyclerView.scrollToPosition(roomMessages.size - 1) }
+                chatViewModel.messages.collect { roomMessages ->
+                    try {
+                        val hasNewMessages = roomMessages.size > lastMessageCount
+                        val isNewFromOther = hasNewMessages && roomMessages.lastOrNull()?.user != data.username
+                        adapter.submitList(roomMessages) {
+                            if (shouldScrollToBottom || (isNewFromOther && isNearBottom())) {
+                                shouldScrollToBottom = false
+                                messagesRecyclerView.post { messagesRecyclerView.scrollToPosition(roomMessages.size - 1) }
+                            }
                         }
+                        if (hasNewMessages && roomMessages.any { it.user != data.username && !it.isRead }) chatViewModel.markRead(data.username)
+                        lastMessageCount = roomMessages.size
+                    } catch (e: Exception) {
+                        android.util.Log.e(TAG, "messages.collect error: ${e.message}", e)
                     }
-                    if (hasNewMessages && roomMessages.any { it.user != username && !it.isRead }) viewModel.markRead(username)
-                    lastMessageCount = roomMessages.size
                 }
             }
         }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.isLoading.collect { loading ->
+                chatViewModel.isLoading.collect { loading ->
                     historyLoadingProgress.isVisible = loading && adapter.currentList.isEmpty()
                 }
             }
@@ -321,27 +358,31 @@ class NewChatActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 combine(grpcClient.users, grpcClient.connectionStatus, grpcClient.typingUsers, grpcClient.allUsers) { onlineUsers, status, typingMap, _ ->
                     val currentUserId = grpcClient.getUserId() ?: ""
-                    val currentTypists = typingMap[roomId]?.filter { it != username && it != currentUserId } ?: emptyList()
+                    val currentTypists = typingMap[data.roomId]?.filter { it != data.username && it != currentUserId } ?: emptyList()
                     Triple(onlineUsers, status, currentTypists)
                 }.collect { (onlineUsers, status, currentTypists) ->
-                    val isConnected = status == ConnectionStatus.READY
-                    val isConnecting = status == ConnectionStatus.CONNECTING
-                    val otherUser = toolbarDelegate.getOtherParticipant()
-                    val otherUserLastSeenAt = otherUser?.let { u ->
-                        grpcClient.allUsers.value.find { it.username == u }?.lastSeenAt
-                    }
-                    toolbarDelegate.updateSubtitle(onlineUsers, isConnected, currentTypists, otherUserLastSeenAt)
-                    inputDelegate.messageInput.isEnabled = !isConnecting
-                    inputDelegate.sendButton.isEnabled = !isConnecting
-                    inputDelegate.attachButton.isEnabled = !isConnecting
-                    inputDelegate.audioButton.isEnabled = !isConnecting
-                    if (isConnected) {
-                        viewModel.syncChatListIfNeeded(this@NewChatActivity)
-                        if (adapter.currentList.isEmpty()) {
-                            shouldScrollToBottom = true
-                            viewModel.loadHistory()
+                    try {
+                        val isConnected = status == ConnectionStatus.READY
+                        val isConnecting = status == ConnectionStatus.CONNECTING
+                        val otherUser = toolbarDelegate.getOtherParticipant()
+                        val otherUserLastSeenAt = otherUser?.let { u ->
+                            grpcClient.allUsers.value.find { it.username == u }?.lastSeenAt
                         }
-                        viewModel.loadPinnedMessages(this@NewChatActivity)
+                        toolbarDelegate.updateSubtitle(onlineUsers, isConnected, currentTypists, otherUserLastSeenAt, grpcClient.serverShuttingDown.value)
+                        inputDelegate.messageInput.isEnabled = !isConnecting
+                        inputDelegate.sendButton.isEnabled = !isConnecting
+                        inputDelegate.attachButton.isEnabled = !isConnecting
+                        inputDelegate.audioButton.isEnabled = !isConnecting
+                        if (isConnected) {
+                            chatViewModel.syncChatListIfNeeded(this@NewChatActivity)
+                            if (adapter.currentList.isEmpty()) {
+                                shouldScrollToBottom = true
+                            }
+                            chatViewModel.loadHistory()
+                            chatViewModel.loadPinnedMessages(this@NewChatActivity)
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e(TAG, "Connection observer error: ${e.message}", e)
                     }
                 }
             }
@@ -349,7 +390,7 @@ class NewChatActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.pinnedMessageIds.collect { pinnedIds ->
+                chatViewModel.pinnedMessageIds.collect { pinnedIds ->
                     selectionDelegate.setPinnedMessageIds(pinnedIds)
                     adapter.updatePinnedMessages(pinnedIds)
                 }
@@ -359,9 +400,37 @@ class NewChatActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 while (true) {
-                    kotlinx.coroutines.delay(60_000)
+                    kotlinx.coroutines.delay(60.seconds)
                     if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
                         grpcClient.loadUsers()
+                    }
+                }
+            }
+        }
+
+        // Retry fetchChatMetadata when connection becomes READY (handles notification-open case)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                grpcClient.connectionStatus.collect { status ->
+                    if (status == ConnectionStatus.READY) {
+                        val m = newChatViewModel.metadata.value
+                        if (m.avatarUrl.isEmpty() && m.participantsJson == "[]" && data.roomId.startsWith("favorites_").not()) {
+                            chatViewModel.fetchChatMetadata(data.username, data.roomId, data.isDirect, data.participantsJson, data.chatName) { meta ->
+                                lifecycleScope.launch {
+                                    if (isFinishing || isDestroyed) return@launch
+                                    newChatViewModel.updateMetadata(ChatMetadataState(
+                                        chatName = meta.chatName, isDirect = meta.isDirect, chatType = meta.chatType,
+                                        participantsJson = meta.participantsJson, creator = meta.creator,
+                                        avatarUrl = meta.avatarUrl, fullAvatarUrl = meta.fullAvatarUrl
+                                    ))
+                                    val updated = newChatViewModel.metadata.value
+                                    toolbarDelegate.configure(data.roomId, data.username, updated.chatName, updated.isDirect, updated.chatType, updated.participantsJson, updated.creator, updated.avatarUrl, updated.fullAvatarUrl, data.isSecret)
+                                    toolbarDelegate.setup()
+                                    toolbarDelegate.refreshSubtitle()
+                                    adapter.isGroupChat = !updated.isDirect; adapter.adminUsername = updated.creator
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -384,62 +453,37 @@ class NewChatActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadDataFromIntent() {
-        roomId = intent.getStringExtra("ROOM_ID") ?: intent.getStringExtra("roomId") ?: (if (roomId.isEmpty()) "general" else roomId)
-        val incomingUser = intent.getStringExtra("USERNAME")
-        val incomingPass = intent.getStringExtra("PASSWORD")
-        if (!incomingUser.isNullOrEmpty()) username = incomingUser
-        if (!incomingPass.isNullOrEmpty()) password = incomingPass
-        if (username.isEmpty() || password.isEmpty()) {
-            val session = SessionManager.session.value
-            if (session.isLoggedIn) { username = session.username; password = session.password }
-            else {
-                val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-                username = prefs.getString("username", "") ?: ""; password = prefs.getString("password", "") ?: ""
-            }
-        }
-        intent.getStringExtra("CHAT_NAME")?.let { chatName = it }
-        isDirect = intent.getBooleanExtra("IS_DIRECT", isDirect)
-        chatType = intent.getStringExtra("CHAT_TYPE") ?: (if (isDirect) "direct" else "group")
-        intent.getStringExtra("PARTICIPANTS")?.let { participantsJson = it }
-        intent.getStringExtra("CREATOR")?.let { creator = it }
-        intent.getStringExtra("AVATAR_URL")?.let { chatAvatarUrl = it }
-        intent.getStringExtra("FULL_AVATAR_URL")?.let { chatFullAvatarUrl = it }
-        isSecret = intent.getStringExtra("IS_SECRET") == "true"
-        if (isSecret) chatType = "secret"
-    }
-
     private fun sendMessage(text: String, imageUrl: String) {
-        if (isSecret && e2eeDelegate.isKeyExchanged()) {
-            viewModel.sendMessageWithE2EE(text, { t, cb -> e2eeDelegate.encryptAndSend(t, cb) },
+        if (data.isSecret && e2eeDelegate.isKeyExchanged()) {
+            chatViewModel.sendMessageWithE2EE(text, { t, cb -> e2eeDelegate.encryptAndSend(t, cb) },
                 onSuccess = { inputDelegate.resetInput() },
-                onError = { Toast.makeText(this, "E2EE encryption failed", Toast.LENGTH_SHORT).show() }
+                onError = { Toast.makeText(this, getString(R.string.e2ee_encryption_failed), Toast.LENGTH_SHORT).show() }
             )
             return
         }
         val et = when { text.isEmpty() && imageUrl.isEmpty() -> "Message"; imageUrl.isNotEmpty() && text.isEmpty() -> ""; else -> text }
         val msg = Message(
-            id = java.util.UUID.randomUUID().toString(), user = username, text = et,
-            timestamp = System.currentTimeMillis(), roomId = roomId, imageUrl = imageUrl,
+            id = java.util.UUID.randomUUID().toString(), user = data.username, text = et,
+            timestamp = System.currentTimeMillis(), roomId = data.roomId, imageUrl = imageUrl,
             repliedToMessageId = inputDelegate.getReplyingTo()?.id ?: "",
             repliedToUser = inputDelegate.getReplyingTo()?.user ?: "",
             repliedToText = inputDelegate.getReplyingTo()?.text ?: "",
             userId = grpcClient.getUserId() ?: "", isSent = false
         )
         shouldScrollToBottom = true
-        viewModel.sendMessage(msg)
+        chatViewModel.sendMessage(msg)
         inputDelegate.resetInput()
     }
 
     private fun joinConference() {
-        if (roomId.isEmpty()) return
-        lavender.client.android.data.calls.CallManager.joinConference(roomId)
-        lavender.client.android.data.calls.CallNavigator.joinConference(this, roomId)
+        if (data.roomId.isEmpty()) return
+        lavender.client.android.data.calls.CallManager.joinConference(data.roomId)
+        lavender.client.android.data.calls.CallNavigator.joinConference(this, data.roomId)
     }
 
     private fun retryMessage(message: Message) {
         Toast.makeText(this, getString(R.string.checking_server), Toast.LENGTH_SHORT).show()
-        viewModel.retryMessage(message)
+        chatViewModel.retryMessage(message)
     }
 
     private fun isNearBottom(): Boolean {
@@ -450,58 +494,65 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun loadDraft() {
-        if (roomId.isEmpty() || username.isEmpty() || grpcClient.getUserId() == null) return
-        viewModel.getDraft { dt, rmi, ru, rt, hd ->
-            runOnUiThread {
+        if (data.roomId.isEmpty() || data.username.isEmpty() || grpcClient.getUserId() == null) return
+        chatViewModel.getDraft { dt, rmi, ru, rt, hd ->
+            lifecycleScope.launch {
                 if (hd && (dt.isNotEmpty() || rmi.isNotEmpty())) {
                     if (dt.isNotEmpty()) inputDelegate.setDraftText(dt)
-                    if (rmi.isNotEmpty()) inputDelegate.showReplyPreview(Message(id = rmi, user = ru, text = rt, timestamp = System.currentTimeMillis(), roomId = roomId))
+                    if (rmi.isNotEmpty()) inputDelegate.showReplyPreview(Message(id = rmi, user = ru, text = rt, timestamp = System.currentTimeMillis(), roomId = data.roomId))
                 }
             }
         }
     }
 
     private fun saveDraft() {
-        if (roomId.isEmpty() || username.isEmpty()) return
-        if (grpcClient.getUserId() == null) { viewModel.ensureUserIdSet(this) { saveDraft() }; return }
+        if (data.roomId.isEmpty() || data.username.isEmpty()) return
+        if (grpcClient.getUserId() == null) { chatViewModel.ensureUserIdSet(this) { saveDraft() }; return }
         val dt = inputDelegate.getDraftText()
         val replyingTo = inputDelegate.getReplyingTo()
         if (dt.isNotEmpty() || replyingTo != null) {
-            viewModel.saveDraft(dt, replyingTo?.id ?: "", replyingTo?.user ?: "", replyingTo?.text ?: "")
+            chatViewModel.saveDraft(dt, replyingTo?.id ?: "", replyingTo?.user ?: "", replyingTo?.text ?: "")
         } else if (grpcClient.getUserId() != null) {
-            viewModel.deleteDraft()
+            chatViewModel.deleteDraft()
         }
     }
 
     override fun onResume() {
         super.onResume()
-        ThemeStore.refresh(this, username)
+        ThemeStore.refresh(this, data.username)
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
         if (lavender.client.android.data.auth.AuthManager.isJwtAuthenticated(this)
             && lavender.client.android.data.auth.AuthManager.needsRefresh(this)) {
-            lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) { lavender.client.android.data.session.SessionManager.ensureFreshToken(this@NewChatActivity) }
+            lifecycleScope.launch(Dispatchers.IO) { SessionManager.ensureFreshToken(this@NewChatActivity) }
         }
         if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
             grpcClient.loadUsers()
         }
-        if (grpcClient.shouldForceReconnect()) {
-            val sa = intent.getStringExtra("SERVER_ADDRESS") ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "")
-            if (!sa.isNullOrEmpty()) {
-                val p = sa.split(":")
-                grpcClient.connect(p[0], false, p.getOrNull(1)?.toIntOrNull() ?: 50051, this, true)
+        if (newChatViewModel.shouldForceReconnect()) {
+            newChatViewModel.forceReconnect()
+        }
+        chatViewModel.fetchChatMetadata(data.username, data.roomId, data.isDirect, data.participantsJson, data.chatName) { meta ->
+            try {
+                lifecycleScope.launch {
+                    if (isFinishing || isDestroyed) return@launch
+                    newChatViewModel.updateMetadata(
+                        ChatMetadataState(
+                            chatName = meta.chatName, isDirect = meta.isDirect, chatType = meta.chatType,
+                            participantsJson = meta.participantsJson, creator = meta.creator,
+                            avatarUrl = meta.avatarUrl, fullAvatarUrl = meta.fullAvatarUrl
+                        )
+                    )
+                    val m = newChatViewModel.metadata.value
+                    toolbarDelegate.configure(data.roomId, data.username, m.chatName, m.isDirect, m.chatType, m.participantsJson, m.creator, m.avatarUrl, m.fullAvatarUrl, data.isSecret)
+                    toolbarDelegate.setup()
+                    toolbarDelegate.refreshSubtitle()
+                    adapter.isGroupChat = !m.isDirect; adapter.adminUsername = m.creator
+                }
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "fetchChatMetadata callback error: ${e.message}", e)
             }
         }
-        viewModel.fetchChatMetadata(username, roomId, isDirect, participantsJson, chatName) { meta ->
-            runOnUiThread {
-                chatName = meta.chatName; isDirect = meta.isDirect; chatType = meta.chatType
-                participantsJson = meta.participantsJson; creator = meta.creator
-                chatAvatarUrl = meta.avatarUrl; chatFullAvatarUrl = meta.fullAvatarUrl
-                toolbarDelegate.configure(roomId, username, chatName, isDirect, chatType, participantsJson, creator, chatAvatarUrl, chatFullAvatarUrl, isSecret)
-                toolbarDelegate.setup()
-                adapter.isGroupChat = !isDirect; adapter.adminUsername = creator
-            }
-        }
-        viewModel.loadPinnedMessages(this)
+        chatViewModel.loadPinnedMessages(this)
     }
 
     override fun onPause() {
@@ -514,12 +565,82 @@ class NewChatActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        loadDataFromIntent()
-        grpcClient.setRoomId(roomId)
+        val oldRoomId = data.roomId
+        newChatViewModel.parseIntent(intent, null)
+        val newRoomId = data.roomId
+        if (newRoomId.isEmpty()) return
+
+        newChatViewModel.dismissNotifications(newRoomId)
+
+        if (newRoomId == oldRoomId) return
+        newChatViewModel.setRoomId(newRoomId)
         grpcClient.clearMessages()
-        grpcClient.loadHistoryV2(roomId) { _, _ -> }
-        viewModel.switchRoom(roomId)
-        loadDraft()
+        chatViewModel.switchRoom(newRoomId)
+        chatViewModel.startChatV2(newRoomId) { _ -> chatViewModel.markRead(data.username) }
+        chatViewModel.markRead(data.username)
+
+        val m = newChatViewModel.metadata.value
+        if (m.chatName.isNotEmpty()) {
+            toolbarDelegate.configure(newRoomId, data.username, m.chatName, m.isDirect, m.chatType, m.participantsJson, m.creator, m.avatarUrl, m.fullAvatarUrl, data.isSecret)
+            toolbarDelegate.setup()
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.chat_menu, menu)
+        return true
+    }
+
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        val inSelection = selectionDelegate.isInSelectionMode()
+        val callItem = menu.findItem(R.id.action_video_call)
+        val searchItem = menu.findItem(R.id.action_search)
+        val conferenceItem = menu.findItem(R.id.action_conference)
+        val pinnedItem = menu.findItem(R.id.action_pinned_messages)
+        callItem?.isVisible = !inSelection && data.isDirect && !data.roomId.startsWith("favorites_") && !data.isSecret
+        conferenceItem?.isVisible = false
+        searchItem?.isVisible = !inSelection
+        pinnedItem?.isVisible = !inSelection && chatViewModel.pinnedMessageIds.value.isNotEmpty()
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_video_call -> {
+                val other = toolbarDelegate.getOtherParticipant()
+                if (!other.isNullOrEmpty()) {
+                    val otherUser = GrpcClient.allUsers.value.firstOrNull { it.username == other }
+                    val otherUserId = otherUser?.userId ?: other
+                    val avatarUrl = otherUser?.avatarUrl?.takeIf { it.isNotEmpty() }
+                    val lastSeenAt = otherUser?.lastSeenAt
+                    lavender.client.android.ui.chat.message.PreCallSheet(
+                        activity = this,
+                        username = other,
+                        userId = otherUserId,
+                        avatarUrl = avatarUrl,
+                        lastSeenAt = lastSeenAt,
+                        onAudioCall = { userId, name ->
+                            lavender.client.android.data.calls.CallManager.initiateCall(name)
+                            lavender.client.android.data.calls.CallNavigator.startCall(this, userId, name, isVideo = false)
+                        },
+                        onVideoCall = { userId, name ->
+                            lavender.client.android.data.calls.CallManager.initiateCall(name)
+                            lavender.client.android.data.calls.CallNavigator.startCall(this, userId, name, isVideo = true)
+                        }
+                    ).show()
+                }
+                true
+            }
+            R.id.action_pinned_messages -> {
+                showPinnedMessagesSheet()
+                true
+            }
+            R.id.action_search -> {
+                searchDelegate.show()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     fun handleIncomingE2EEMessage(msg: Message) {
@@ -527,11 +648,83 @@ class NewChatActivity : AppCompatActivity() {
         val decrypted = e2eeDelegate.decryptMessage(msg)
         if (decrypted != null) {
             val decryptedMsg = msg.copy(text = decrypted, isE2EE = false)
-            runOnUiThread {
-                val current = grpcClient.messages.value.toMutableList()
-                current.add(decryptedMsg)
+            lifecycleScope.launch {
+                grpcClient.addLocalMessage(decryptedMsg)
             }
         }
+    }
+
+    private fun showPinnedMessagesSheet() {
+        lifecycleScope.launch {
+            val pinnedMessages = withContext(Dispatchers.IO) {
+                try {
+                    GrpcClient.getPinnedMessages(data.roomId)
+                } catch (e: Exception) {
+                    emptyList()
+                }
+            }
+            if (pinnedMessages.isEmpty()) {
+                Toast.makeText(this@NewChatActivity, getString(R.string.no_pinned_messages), Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            val sheet = lavender.client.android.ui.widget.StandardBottomSheet(this@NewChatActivity, R.layout.dialog_pinned_messages)
+            sheet.setTitle(getString(R.string.pinned_messages))
+            val rv = sheet.dialog?.findViewById<RecyclerView>(R.id.recyclerView)
+            rv?.layoutManager = LinearLayoutManager(this@NewChatActivity)
+            lateinit var pinnedMsgAdapter: lavender.client.android.ui.adapter.PinnedMessageAdapter
+            pinnedMsgAdapter = lavender.client.android.ui.adapter.PinnedMessageAdapter { msg ->
+                sheet.dismiss()
+                val pos = pinnedMsgAdapter.currentList.indexOfFirst { item -> item.id == msg.id }
+                if (pos != -1) {
+                    messagesRecyclerView.scrollToPosition(pos)
+                }
+            }
+            pinnedMsgAdapter.submitList(pinnedMessages)
+            rv?.adapter = pinnedMsgAdapter
+            sheet.show()
+        }
+    }
+
+    private fun scrollToMessage(messageId: String) {
+        val pos = adapter.currentList.indexOfFirst { it.id == messageId }
+        if (pos != -1) {
+            messagesRecyclerView.scrollToPosition(pos)
+            messagesRecyclerView.post {
+                val holder = messagesRecyclerView.findViewHolderForAdapterPosition(pos)
+                holder?.itemView?.let { view ->
+                    view.setBackgroundColor(android.graphics.Color.parseColor("#33FFFFFF"))
+                    view.postDelayed({ view.setBackgroundColor(android.graphics.Color.TRANSPARENT) }, 1500)
+                }
+            }
+        }
+    }
+
+    private var markReadReceiver: android.content.BroadcastReceiver? = null
+
+    @Suppress("UnprotectedRegisterReceiver")
+    private fun registerMarkReadReceiver() {
+        markReadReceiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val roomId = intent.getStringExtra("room_id") ?: return
+                if (roomId == data.roomId) {
+                    chatViewModel.forceLoadHistory()
+                }
+            }
+        }
+        val filter = android.content.IntentFilter(lavender.client.android.data.fcm.NotificationMarkReadReceiver.ACTION_CHAT_MARKED_READ)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(markReadReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(markReadReceiver, filter)
+        }
+    }
+
+    override fun onDestroy() {
+        markReadReceiver?.let {
+            try { unregisterReceiver(it) } catch (_: Exception) {}
+        }
+        e2eeDelegate.cancelPendingRetries()
+        super.onDestroy()
     }
 
     private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()

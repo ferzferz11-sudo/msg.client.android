@@ -27,6 +27,12 @@ class AudioUploader(private val context: Context) {
     suspend fun uploadAudio(audioFile: File, duration: Int): AudioUploadResult {
         return withContext(Dispatchers.IO) {
             try {
+                if (audioFile.length() > lavender.client.android.data.grpc.ProfileClient.maxUploadSize) {
+                    return@withContext AudioUploadResult(
+                        success = false,
+                        error = "FILE_TOO_LARGE"
+                    )
+                }
                 val uploadUrl = "http://$serverAddress:$serverPort/upload-audio"
                 
                 // Create multipart request

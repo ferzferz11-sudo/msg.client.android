@@ -8,12 +8,12 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.databinding.ActivityCallBinding
 import lavender.client.android.data.calls.*
 import lavender.client.android.data.grpc.GrpcClient
@@ -37,11 +37,33 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     private var roomId: String = ""
     
     private var isMicEnabled = true
-    private var isCameraEnabled = false
+    private var isCameraEnabled = true
+    private var isVideoCall = true
 
     private val eglBase = EglBase.create()
     private var isRemoteViewInitialized = false
     private var isLocalViewInitialized = false
+
+    private val permissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions.values.all { it }) {
+            if (!isIncoming || isConference) initWebRtc()
+        } else {
+            // Retry after 500ms — system may not have updated permission state yet
+            // (race condition after first registration)
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                val requiredPermissions = if (isVideoCall || isConference) PERMISSIONS else AUDIO_PERMISSIONS
+                if (!isFinishing && !isDestroyed && hasPermissions(requiredPermissions)) {
+                    Log.d(TAG, "Permissions granted on retry")
+                    if (!isIncoming || isConference) initWebRtc()
+                } else {
+                    Toast.makeText(this, getString(R.string.camera_mic_permissions_required), Toast.LENGTH_LONG).show()
+                    finish()
+                }
+            }, 500)
+        }
+    }
 
     // WebRTC connection timeout
     private var connectionTimeoutRunnable: Runnable? = null
@@ -50,8 +72,8 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
     companion object {
         private const val TAG = "CallActivity"
-        private const val PERMISSION_CODE = 101
         private val PERMISSIONS = arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+        private val AUDIO_PERMISSIONS = arrayOf(Manifest.permission.RECORD_AUDIO)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -68,7 +90,9 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         receiverId = intent.getStringExtra("RECEIVER_ID") ?: ""
         isIncoming = intent.getBooleanExtra("IS_INCOMING", false)
         isConference = intent.getBooleanExtra("IS_CONFERENCE", false)
+        isVideoCall = intent.getBooleanExtra("IS_VIDEO_CALL", true)
         roomId = intent.getStringExtra("ROOM_ID") ?: ""
+        val senderName = intent.getStringExtra("SENDER_NAME") ?: ""
 
         CallManager.init(applicationContext)
         if (isConference) {
@@ -80,6 +104,12 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
              binding.btnCamera.visibility = View.VISIBLE
              binding.btnCamera.setImageResource(R.drawable.ic_videocam_on)
              viewModel.startTimer()
+             // Show "End for All" immediately for the conference creator
+             val creatorId = intent.getStringExtra("CREATOR") ?: ""
+             val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername()
+             if (creatorId.isNotEmpty() && myId == creatorId) {
+                 binding.btnEndForAll.visibility = View.VISIBLE
+             }
         } else {
              CallManager.syncCallState(callId, receiverId, isIncoming)
              binding.tvCallStatus.text = if (isIncoming) getString(R.string.call_status_incoming) else getString(R.string.call_status_calling)
@@ -92,23 +122,31 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         }
         GrpcClient.startCallSession()
 
-        binding.tvCallerName.text = if (isConference) getString(R.string.group_conference) else receiverId
-        if (!isConference) loadOtherParticipantAvatar()
+        val displayName = senderName.ifEmpty { getString(R.string.call_status_incoming) }
+        binding.tvCallerName.text = if (isConference) getString(R.string.group_conference) else displayName
+        if (!isConference) {
+            loadOtherParticipantAvatar()
+            if (senderName.isEmpty()) resolveCallerName(receiverId)
+        }
 
         if (isIncoming && !isConference) {
             binding.btnAccept.visibility = View.VISIBLE
             binding.btnMic.visibility = View.GONE
             binding.btnCamera.visibility = View.GONE
+            isCameraEnabled = false
+        } else if (!isVideoCall && !isConference) {
+            isCameraEnabled = false
+            binding.btnCamera.setImageResource(R.drawable.ic_videocam_off)
         }
 
-        if (hasPermissions()) {
+        val requiredPermissions = if (isVideoCall || isConference) PERMISSIONS else AUDIO_PERMISSIONS
+        if (hasPermissions(requiredPermissions)) {
             if (!isIncoming || isConference) initWebRtc()
         } else {
-            ActivityCompat.requestPermissions(this, PERMISSIONS, PERMISSION_CODE)
+            permissionLauncher.launch(requiredPermissions)
         }
 
         setupButtons()
-        setupController()
         
         lifecycleScope.launch {
             viewModel.timerText.collect { binding.tvCallDuration.text = it }
@@ -140,16 +178,20 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     }
 
     private fun setupController() {
+        callController?.cancel()
         callController = CallController(callId, receiverId, isIncoming, isConference, roomId, webRtcClient, object : CallController.Listener {
             override fun onCallAccepted() {
                 soundManager.stop()
-                cancelConnectionTimeout() // Cancel timeout on successful connection
+                cancelConnectionTimeout()
                 viewModel.startTimer()
-                runOnUiThread { binding.tvCallStatus.text = getString(R.string.call_status_connected) }
+                lifecycleScope.launch {
+                    binding.tvCallStatus.text = getString(R.string.call_status_connecting)
+                    binding.tvCallDuration.visibility = View.VISIBLE
+                }
             }
 
             override fun onCallTerminated(reason: String) {
-                runOnUiThread {
+                lifecycleScope.launch {
                     cancelConnectionTimeout()
                     Toast.makeText(this@CallActivity, reason, Toast.LENGTH_SHORT).show()
                     finish()
@@ -158,14 +200,14 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
             override fun onConferencePresenceUpdated(participants: List<String>, creatorId: String) {
                 val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername()
-                runOnUiThread {
+                lifecycleScope.launch {
                     binding.tvCallStatus.text = getString(R.string.in_conference_format, participants.joinToString(", "))
                     binding.btnEndForAll.visibility = if (myId == creatorId) View.VISIBLE else View.GONE
                 }
             }
 
             override fun onStatusUpdate(status: String) {
-                runOnUiThread { binding.tvCallStatus.text = status }
+                lifecycleScope.launch { binding.tvCallStatus.text = status }
             }
 
             override fun onIdAssigned(newCallId: String) {
@@ -189,6 +231,10 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             receiverId = intent.getStringExtra("RECEIVER_ID") ?: ""
             isIncoming = intent.getBooleanExtra("IS_INCOMING", false)
             isConference = intent.getBooleanExtra("IS_CONFERENCE", false)
+            val senderName = intent.getStringExtra("SENDER_NAME") ?: ""
+            val displayName = senderName.ifEmpty { getString(R.string.call_status_incoming) }
+            binding.tvCallerName.text = if (isConference) getString(R.string.group_conference) else displayName
+            if (!isConference && senderName.isEmpty()) resolveCallerName(receiverId)
             
             if (isConference) CallManager.joinConference(roomId)
             else CallManager.syncCallState(callId, receiverId, isIncoming)
@@ -211,8 +257,9 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             binding.btnAccept.visibility = View.GONE
             binding.btnMic.visibility = View.VISIBLE
             binding.btnCamera.visibility = View.VISIBLE
-            initWebRtc()
-            CallManager.acceptCall()
+            isCameraEnabled = true
+            binding.btnCamera.setImageResource(R.drawable.ic_videocam_on)
+            initWebRtc(onReady = { CallManager.acceptCall() })
         }
 
         binding.btnMic.setOnClickListener {
@@ -228,6 +275,11 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             updateVideoVisibility()
         }
 
+        binding.btnSpeakerphone.setOnClickListener {
+            val isOn = audioModeManager.toggleSpeakerphone()
+            binding.btnSpeakerphone.setImageResource(if (isOn) R.drawable.ic_speakerphone else R.drawable.ic_earpiece)
+        }
+
         binding.btnEndForAll.setOnClickListener {
             CallManager.endConference()
             finish()
@@ -235,13 +287,26 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     }
 
     private fun fetchTurnCredentials(callback: (List<PeerConnection.IceServer>) -> Unit) {
-        Thread {
+        lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 val url = java.net.URL(lavender.client.android.data.ServerConfig.turnCredentialsUrl())
                 val connection = url.openConnection() as java.net.HttpURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 5000
                 connection.readTimeout = 5000
+                val bearerToken = lavender.client.android.data.auth.AuthManager.getBearerToken(this@CallActivity)
+                if (bearerToken != null) {
+                    connection.setRequestProperty("Authorization", bearerToken)
+                }
+
+                val responseCode = connection.responseCode
+                if (responseCode != 200) {
+                    Log.e(TAG, "TURN credentials failed (HTTP $responseCode), using STUN only")
+                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        if (!isFinishing && !isDestroyed) callback(listOf(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()))
+                    }
+                    return@launch
+                }
 
                 val response = connection.inputStream.bufferedReader().readText()
                 val json = org.json.JSONObject(response)
@@ -264,22 +329,27 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
                         )
                     }
                 }
-                callback(servers)
+                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    if (!isFinishing && !isDestroyed) callback(servers)
+                }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to fetch TURN credentials, using STUN only", e)
-                callback(listOf(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()))
+                Log.e(TAG, "Failed to fetch TURN credentials: ${e.message}")
+                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    if (!isFinishing && !isDestroyed) callback(listOf(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()))
+                }
             }
-        }.start()
+        }
     }
 
-    private fun initWebRtc() {
+    private fun initWebRtc(onReady: (() -> Unit)? = null) {
         webRtcClient = WebRtcClient(this, eglBase.eglBaseContext, this)
 
         // Get TURN credentials from server
         fetchTurnCredentials { iceServers ->
-            runOnUiThread {
+            lifecycleScope.launch {
                 webRtcClient?.initPeerConnection(iceServers)
                 setupWebRtcListeners()
+                onReady?.invoke()
             }
         }
     }
@@ -290,23 +360,22 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             Log.d(TAG, "ICE connection state: $state")
             when (state) {
                 PeerConnection.IceConnectionState.CONNECTED, PeerConnection.IceConnectionState.COMPLETED -> {
-                    Log.d(TAG, "WebRTC connection established!")
-                    runOnUiThread {
+                    Log.d(TAG, "WebRTC connected")
+                    lifecycleScope.launch {
                         cancelConnectionTimeout()
                         binding.tvCallStatus.text = getString(R.string.call_status_connected)
                     }
                 }
                 PeerConnection.IceConnectionState.FAILED -> {
-                    Log.e(TAG, "WebRTC connection FAILED!")
-                    runOnUiThread {
+                    Log.e(TAG, "WebRTC ICE FAILED")
+                    lifecycleScope.launch {
                         Toast.makeText(this@CallActivity, getString(R.string.call_connection_error), Toast.LENGTH_SHORT).show()
                         CallManager.hangup()
                         finish()
                     }
                 }
                 PeerConnection.IceConnectionState.DISCONNECTED -> {
-                    Log.w(TAG, "WebRTC connection disconnected")
-                    // Don't immediately fail — may recover
+                    Log.w(TAG, "WebRTC disconnected")
                 }
                 else -> {}
             }
@@ -326,21 +395,15 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     }
 
     override fun onLocalStream(stream: MediaStream) {
-        runOnUiThread {
+        lifecycleScope.launch {
             stream.videoTracks.getOrNull(0)?.addSink(binding.localView)
-            if (isConference && !isRemoteViewInitialized) {
-                if (!binding.remoteView.isVisible) {
-                     binding.remoteView.isVisible = true
-                     binding.remoteView.init(eglBase.eglBaseContext, null)
-                     isRemoteViewInitialized = true
-                }
-                stream.videoTracks.getOrNull(0)?.addSink(binding.remoteView)
-            }
+            // Don't show local stream in remote view — confusing in conference mode
+            // Remote view will be initialized when actual remote streams arrive
         }
     }
 
     override fun onRemoteStream(stream: MediaStream) {
-        runOnUiThread {
+        lifecycleScope.launch {
             if (!isRemoteViewInitialized) {
                 binding.remoteView.init(eglBase.eglBaseContext, null)
                 isRemoteViewInitialized = true
@@ -352,7 +415,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
     override fun onRemoteTrack(track: MediaStreamTrack) {
         if (track is VideoTrack) {
-            runOnUiThread {
+            lifecycleScope.launch {
                 if (!isRemoteViewInitialized) {
                     binding.remoteView.init(eglBase.eglBaseContext, null)
                     binding.remoteView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FILL)
@@ -375,34 +438,46 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
     override fun onOfferCreated(description: SessionDescription) {
         CallManager.sendWebRtcSignal(receiverId, CallMessageProto.Type.OFFER, description.description)
-        runOnUiThread { binding.tvCallStatus.text = getString(R.string.call_status_connecting) }
+        lifecycleScope.launch { binding.tvCallStatus.text = getString(R.string.call_status_connecting) }
     }
 
     override fun onAnswerCreated(description: SessionDescription) {
         CallManager.sendWebRtcSignal(receiverId, CallMessageProto.Type.ANSWER, description.description)
-        runOnUiThread { 
+        lifecycleScope.launch { 
             binding.tvCallStatus.text = getString(R.string.call_status_connected) 
+            binding.tvCallDuration.visibility = View.VISIBLE
             viewModel.startTimer()
         }
     }
 
     override fun onRemoteDescriptionSet() {
-        if (!isConference) runOnUiThread { binding.tvCallStatus.text = getString(R.string.call_status_connecting) }
+        if (!isConference) lifecycleScope.launch { binding.tvCallStatus.text = getString(R.string.call_status_connecting) }
         if (isIncoming && webRtcClient != null) webRtcClient?.createAnswer()
     }
 
     private fun loadOtherParticipantAvatar() {
         if (receiverId.isEmpty()) return
         GrpcClient.getUserAvatar(receiverId) { avatarUrl ->
-            if (avatarUrl.isNotEmpty()) runOnUiThread {
-                Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(binding.imgAvatar)
-                Glide.with(this).load(avatarUrl).centerCrop().into(binding.imgBgBlur)
+            if (avatarUrl.isNotEmpty()) lifecycleScope.launch {
+                Glide.with(this@CallActivity).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(binding.imgAvatar)
+                Glide.with(this@CallActivity).load(avatarUrl).centerCrop().into(binding.imgBgBlur)
+            }
+        }
+    }
+
+    private fun resolveCallerName(userId: String) {
+        GrpcClient.getUserProfile(userId) { profile ->
+            val name = profile?.username?.takeIf { it.isNotEmpty() }
+            if (name != null) {
+                lifecycleScope.launch {
+                    binding.tvCallerName.text = name
+                }
             }
         }
     }
 
     private fun updateVideoVisibility() {
-        runOnUiThread {
+        lifecycleScope.launch {
             binding.localView.isVisible = isCameraEnabled
             binding.remoteView.isVisible = isCameraEnabled
             binding.imgAvatar.isVisible = !isCameraEnabled
@@ -411,8 +486,10 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
     override fun onDestroy() {
         super.onDestroy()
+        dismissCallNotification()
+        callController?.cancel()
         cancelConnectionTimeout()
-        soundManager.stop()
+        soundManager.destroy()
         audioModeManager.restoreMode()
         CallManager.clearCurrentCall()
         binding.localView.release()
@@ -421,15 +498,12 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         eglBase.release()
     }
 
-    private fun hasPermissions() = PERMISSIONS.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
-    
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_CODE && hasPermissions()) {
-            if (!isIncoming || isConference) initWebRtc()
-        } else if (requestCode == PERMISSION_CODE) {
-            Toast.makeText(this, getString(R.string.camera_mic_permissions_required), Toast.LENGTH_LONG).show()
-            finish()
+    private fun dismissCallNotification() {
+        if (callId.isNotEmpty()) {
+            val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
+            nm.cancel(callId.hashCode())
         }
     }
+
+    private fun hasPermissions(permissions: Array<String> = PERMISSIONS) = permissions.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
 }

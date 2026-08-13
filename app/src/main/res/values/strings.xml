@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">Lava</string>
+    <string name="error">Error</string>
     
     <!-- Settings Menu -->
     <string name="action_settings">Settings</string>
@@ -36,7 +37,7 @@
     <string name="about_description">Лава: платформа защищенных бизнес-коммуникаций</string>
     <string name="server_address">%s</string>
     <string name="server_address_local">192.168.1.135:50051</string>
-    <string name="download_update">update</string>
+    <string name="download_update">Download %1$s</string>
     <string name="downloading_update">Downloading Lava Update</string>
     <string name="update">Update</string>
     <string name="connection_logs">Connection logs:</string>
@@ -181,8 +182,10 @@
     <string name="no_users_available">No users available</string>
     <string name="select_user">Select User</string>
     <string name="online_users">Online Users</string>
-    <string name="update_available">Update available</string>
-    <string name="install_update">Install update</string>
+    <string name="update_available">Version %1$s available</string>
+    <string name="install_update">Install %1$s</string>
+    <string name="update_download_prompt">New version available. Download?</string>
+    <string name="downloading">Downloading…</string>
     <string name="delete_chats">Delete Chats</string>
     <string name="delete_chats_confirmation">Are you sure you want to delete %d selected chats? This will permanently remove all messages and images.</string>
     <string name="deleted_count">Deleted %d chats</string>
@@ -191,8 +194,8 @@
     <string name="mute_chats_confirmation">Mute notifications for %d selected chats? You won\'t receive push notifications from these chats.</string>
     <string name="unmute_chats">Unmute Chats</string>
     <string name="unmute_chats_confirmation">Unmute notifications for %d selected chats? You will receive push notifications from these chats again.</string>
-    <string name="mute">Mute</string>
-    <string name="unmute">Unmute</string>
+    <string name="mute">Mute Push Notifications</string>
+    <string name="unmute">Unmute Push Notifications</string>
     <string name="muted_count">Muted %d chats</string>
     <string name="unmuted_count">Unmuted %d chats</string>
     <string name="add_chat">Add Chat</string>
@@ -215,6 +218,13 @@
     <string name="participants_online_count">%1$d participants (%2$d online)</string>
     <string name="search">Search</string>
     <string name="video_call">Video Call</string>
+    <string name="voice_call">Voice Call</string>
+    <string name="message">Message</string>
+    <string name="email">Email</string>
+    <string name="send_email">Send Email</string>
+    <string name="action_voice_call">Voice call</string>
+    <string name="action_video_call">Video call</string>
+    <string name="no_email_app">No email app found</string>
     <string name="no_results">No results</string>
     <string name="search_results_format">%1$d/%2$d</string>
     <string name="edit_message">Edit Message</string>
@@ -225,8 +235,11 @@
     <string name="message_edited">Message edited</string>
     <string name="edited_label">edited</string>
     <string name="group_info">Group Info</string>
+    <string name="conference_info">Conference Info</string>
     <string name="delete_group">Delete Group</string>
     <string name="delete_group_confirm">Are you sure you want to delete this group?</string>
+    <string name="group_creator">Group creator</string>
+    <string name="cannot_delete_group">You don\'t have permission to delete this group. Only the group creator or an admin can delete it.</string>
     <string name="no_bio">No bio yet</string>
     <string name="offline">offline</string>
     <string name="group_chat">Group Chat</string>
@@ -241,12 +254,15 @@
     <string name="failed_to_get_token">Failed to get token</string>
     <string name="test_notification_added">Test notification added</string>
     <string name="notifications">Notifications</string>
+    <string name="notifications_all">All</string>
+    <string name="notifications_company">Company</string>
     <string name="clear">Clear</string>
     <string name="history_cleared">History cleared</string>
 
     <string name="loading">Loading…</string>
     <string name="change_bio">Save</string>
     <string name="bio_label">Bio</string>
+    <string name="username_label">Name</string>
     <string name="tell_about_yourself">Tell about yourself</string>
     <string name="edit_profile_title">Edit Profile</string>
     <string name="fcm_token_label">FCM Token:</string>
@@ -261,9 +277,10 @@
     <string name="add_emoji">Add emoji</string>
     <string name="contacts">Contacts</string>
     <string name="add_contact">Add Contact</string>
-    <string name="create_direct_chat_after">Create direct chat immediately</string>
+    <string name="create_chat_after">Create chat immediately</string>
     <string name="contacts_added">Added %d contacts</string>
-    <string name="contact_added">Contact added successfully</string>
+    <string name="contacts_add_failed">Failed to add %d contacts</string>
+    <string name="all_contacts_already_in_group">All your contacts are already in this group</string>
     <string name="already_in_contacts">User is already in contacts</string>
     <string name="no_contacts">No contacts yet. Add some to start chatting!</string>
     <string name="remove_contact">Remove Contact</string>
@@ -296,7 +313,13 @@
     <string name="theme_template_mint">Cyber Mint</string>
     <string name="theme_dark_graphite">Graphite Dark</string>
     <string name="admin_label">(Admin)</string>
+    <string name="admin_indicator">Admin</string>
     <string name="muted_label">Muted</string>
+    <string name="uploading_images_label">Uploading images…</string>
+    <string name="select_message">Select message</string>
+    <string name="cancel_reply">Cancel reply</string>
+    <string name="search_previous">Previous</string>
+    <string name="search_next">Next</string>
     <string name="super_admin">Admin Panel</string>
     <string name="about">About</string>
     <string name="about_program">About Program</string>
@@ -348,7 +371,7 @@
     <string name="checking_for_updates">Checking for updates…</string>
     <string name="chat_last_message_format">%1$s%2$s</string>
     <string name="plus_count_format">+%1$d</string>
-    <string name="percent_format">%1$d%%</string>
+    <string name="percent_format">Downloading: %1$d%%</string>
     <string name="online_count_format">%1$d/%2$d online</string>
     <string name="download_complete">Download complete!</string>
     <string name="manual_install_hint">If the installation doesn\'t start automatically, please click the button below.</string>
@@ -360,8 +383,9 @@
     <string name="users_are_typing">%1$d users are typing…</string>
     <string name="action_update">Check for Updates</string>
     <string name="action_about">About</string>
-    <string name="action_super_admin">Admin Panel</string>
+    <string name="admin_panel">Admin Panel</string>
     <string name="lava_ai_name">Lava AI</string>
+    <string name="ai">AI</string>
     <string name="ai_v2_chat_title">AI Chat</string>
     <string name="ai_v2_agents">AI Agents</string>
     <string name="presets">Presets</string>
@@ -393,6 +417,10 @@
     <string name="ai_agent_max_tokens">Max Tokens</string>
     <string name="ai_agent_saved">Agent saved</string>
     <string name="ai_v2_agent_name_required">Name is required</string>
+    <string name="ai_api_key_copied">API key copied to clipboard</string>
+    <string name="ai_status_available">Available</string>
+    <string name="ai_status_server_key">Server key</string>
+    <string name="ai_status_needs_key">Needs API key</string>
 
     <!-- Marketplace -->
     <string name="marketplace">Marketplace</string>
@@ -420,7 +448,7 @@
     <string name="marketplace_avg_request">Avg/Request</string>
     <string name="marketplace_no_data">No data yet</string>
     <string name="marketplace_no_data_desc">Usage stats will appear after using AI chats</string>
-    <string name="marketplace_search_hint">Search agents...</string>
+    <string name="marketplace_search_hint">Search agents…</string>
     <string name="rate_limit_exceeded">Rate limit exceeded. Wait %ds</string>
 
     <string name="favorites">Favorites</string>
@@ -470,6 +498,8 @@
     <string name="no">No</string>
     <string name="user_not_found">User not found</string>
     <string name="wrong_password">Wrong username or password</string>
+    <string name="server_error">Server is temporarily unavailable. Please try again later</string>
+    <string name="session_expired">Session expired. Please log in again</string>
     <string name="register_confirm">User \"%s\" is not registered. Do you want to create a new account?</string>
     <string name="preset_colors">Preset Colors</string>
     <string name="custom_color">Custom Color</string>
@@ -504,7 +534,7 @@
     <string name="server_default_name">Lava Germany</string>
     <string name="app_version_format">Lava: app Android %s</string>
     <string name="error_required">Required</string>
-    <string name="error_invalid_port">Port must be 1-65535</string>
+    <string name="error_invalid_port">Port must be 1–65535</string>
     <string name="delete_server_title">Delete server</string>
     <string name="delete_server_confirm">Remove \"%s\" from the list?</string>
     <string name="delete">Delete</string>
@@ -692,6 +722,10 @@
         <item quantity="one">%d day ago</item>
         <item quantity="other">%d days ago</item>
     </plurals>
+    <plurals name="chats_count">
+        <item quantity="one">%d chat</item>
+        <item quantity="other">%d chats</item>
+    </plurals>
     <string name="resending">Resending…</string>
     <string name="message_already_sent">Message already on server</string>
     <string name="today">Today</string>
@@ -713,6 +747,11 @@
     <string name="participants_already_joined">%d participants already joined</string>
     <string name="join_conference_action">Join Conference</string>
     <string name="lobby_title">Conference Lobby</string>
+    <string name="open_lobby">Open Lobby</string>
+    <string name="lobby">Lobby</string>
+    <string name="delete_conference">Delete Conference</string>
+    <string name="leave_conference">Leave Conference</string>
+    <string name="invited_participants">Invited Participants</string>
     <string name="new_conference_format">Conference %s</string>
     <string name="edit_topic">Edit Topic</string>
     <string name="plus_5_min">+5 min</string>
@@ -814,8 +853,11 @@
     <!-- i18n: FCM notifications -->
     <string name="new_message">New message</string>
     <string name="incoming_call">Incoming call</string>
+    <string name="notification_permission_denied">Notification permission is required to receive alerts. Enable notifications in app settings.</string>
+    <string name="open_settings">Open settings</string>
     <string name="call_from">Calling %s</string>
     <string name="lavender_calls_channel">Lava Calls</string>
+    <string name="decline_call">Decline</string>
     <string name="lavender_messages_channel">Lava Messages</string>
     <string name="lavender_messages_channel_desc">Incoming chat messages</string>
 
@@ -891,6 +933,8 @@
     <string name="tab_all">All</string>
     <string name="tab_ai">AI Chats</string>
     <string name="tab_groups">Groups</string>
+    <string name="tab_company">Company</string>
+    <string name="tab_archive">Archive</string>
     <string name="section_pinned">Pinned</string>
     <string name="section_favorites">Favorites</string>
     <string name="section_all_chats">All Chats</string>
@@ -909,6 +953,8 @@
     <string name="pin_message">Pin message</string>
     <string name="unpin_message">Unpin message</string>
     <string name="pinned_message_format">📌 %s</string>
+    <string name="pinned_messages">Pinned messages</string>
+    <string name="no_pinned_messages">No pinned messages</string>
 
     <!-- i18n: English hardcoded strings -->
     <string name="failed_to_resize_image">Failed to resize image</string>
@@ -919,6 +965,7 @@
     <string name="error_user_id_not_found">Error: User ID not found. Please wait or log in again.</string>
     <string name="failed_to_terminate_session">Failed to terminate session</string>
     <string name="failed_to_upload_file">Failed to upload file</string>
+    <string name="file_too_large">File is too large (max 30 MB)</string>
     <string name="download_started">Download started</string>
     <string name="theme_saved_failed_to_set">Theme saved but failed to set as current</string>
     <string name="failed_to_start_recording">Failed to start recording</string>
@@ -928,11 +975,195 @@
     <string name="connecting">Connecting…</string>
     <string name="connection_online">Online</string>
     <string name="connection_offline">Offline</string>
-    <string name="server_restarting">Server restarting…</string>
+    <string name="server_restarting">Server updating…</string>
+
+    <!-- Chat list media previews -->
+    <string name="chat_preview_image">Image</string>
+    <string name="chat_preview_voice">Voice message</string>
+
+    <!-- Company System -->
+    <string name="company">Company</string>
+    <string name="my_company">My Company</string>
+    <string name="create_company">Create Company</string>
+    <string name="create_company_name_hint">Company name</string>
+    <string name="company_created">Company created</string>
+    <string name="company_updated">Company updated</string>
+    <string name="company_deleted">Company deleted</string>
+    <string name="leave_company">Leave Company</string>
+    <string name="leave_company_confirm">Are you sure you want to leave this company?</string>
+    <string name="delete_company">Delete Company</string>
+    <string name="delete_company_confirm">Are you sure you want to delete this company? This action cannot be undone.</string>
+    <string name="members">Members</string>
+    <string name="positions">Positions</string>
+    <string name="company_chats">Company Chats</string>
+    <string name="add_member">Add Member</string>
+    <string name="remove_member">Remove Member</string>
+    <string name="remove_member_confirm">Remove %s from company?</string>
+    <string name="owner_cannot_remove_self">Owner cannot leave the company as the only member. But you can delete the company.</string>
+    <string name="member_added">Member added</string>
+    <string name="member_removed">Member removed</string>
+    <string name="position_created">Position created</string>
+    <string name="position_updated">Position updated</string>
+    <string name="position_deleted">Position deleted</string>
+    <string name="create_position">Create Position</string>
+    <string name="position_title_hint">Position title</string>
+    <string name="position_level">Level</string>
+    <string name="chat_access">Chat Access</string>
+    <string name="create_company_chat">Create Company Chat</string>
+    <string name="chat_name_hint">Chat name</string>
+    <string name="company_chat_created">Company chat created</string>
+    <string name="employee">Employee</string>
+    <string name="manager">Manager</string>
+    <string name="top_manager">Top Manager</string>
+    <string name="owner">Owner</string>
+    <string name="access_member">Member</string>
+    <string name="access_management">Management</string>
+    <string name="access_owner_only">Owner Only</string>
+    <string name="no_company">No company</string>
+    <string name="company_position">Position: %1$s (Level %2$d)</string>
+    <string name="company_badge">Company</string>
+
+    <!-- Company Invite -->
+    <string name="share_invite_code">Share Invite Code</string>
+    <string name="join_by_code">Join by Code</string>
+    <string name="invite_code_copied">Invite code copied to clipboard</string>
+    <string name="enter_invite_code">Enter invite code</string>
+    <string name="invite_code_hint">Company ID or invite code</string>
+    <string name="join_company">Join Company</string>
+    <string name="joined_company">Successfully joined company</string>
+    <string name="join_failed">Failed to join company</string>
+
+    <!-- Company Settings -->
+    <string name="company_settings">Company Settings</string>
+    <string name="company_notifications">Notifications</string>
+    <string name="mute_company_chats">Mute company chats</string>
+    <string name="company_settings_saved">Settings saved</string>
+    <string name="more_options">More options</string>
+    <string name="edit_position">Edit</string>
+    <string name="delete_position">Delete Position</string>
+    <string name="change_position">Change Position</string>
 
     <!-- File/Feedback -->
     <string name="filename_prefix">Lava</string>
     <string name="share_app_description">Lava: secure business communications platform\nhttp://13.140.25.249</string>
     <string name="feedback_subject">Lava Feedback</string>
+
+    <!-- Stickers -->
+    <string name="sticker_empty">No stickers yet</string>
+    <string name="sticker_create_pack">Create Pack</string>
+    <string name="sticker_library">Sticker Library</string>
+    <string name="sticker_my_packs">My Packs</string>
+    <string name="sticker_public_packs">Public</string>
+    <string name="sticker_pending_packs">Pending</string>
+    <string name="sticker_pack_title">Pack Title</string>
+    <string name="sticker_pack_title_required">Pack Title *</string>
+    <string name="sticker_default_pack_name">Stickers by %s</string>
+    <string name="sticker_set_cover">Set as cover</string>
+    <string name="sticker_cover_set">Cover set</string>
+    <string name="sticker_save_disabled">Add at least one sticker to save</string>
+    <string name="sticker_pack_name">Pack Name</string>
+    <string name="sticker_submit_for_approval">Submit for Approval</string>
+    <string name="sticker_approved">Approved</string>
+    <string name="sticker_pending">Pending</string>
+    <string name="sticker_rejected">Rejected</string>
+    <string name="sticker_draft">Draft</string>
+    <string name="sticker_add_sticker">Add Sticker</string>
+    <string name="sticker_remove">Remove</string>
+    <string name="sticker_removed">Sticker removed</string>
+    <string name="sticker_delete_pack">Delete Pack</string>
+    <string name="sticker_edit_pack">Edit Pack</string>
+    <string name="sticker_added">Sticker added</string>
+    <string name="sticker_pack_created">Pack created</string>
+    <string name="sticker_pack_updated">Pack updated</string>
+    <string name="sticker_upload_failed">Upload failed</string>
+    <string name="sticker_title_required">Title is required</string>
+    <string name="sticker_submitted">Submitted for approval</string>
+    <string name="sticker_pick_image">Select image</string>
+    <string name="sticker_max_size_hint">Max file size: 2 MB (images are compressed automatically)</string>
+    <string name="sticker_file_too_large">File is too large (max 2 MB)</string>
+    <plurals name="sticker_count">
+        <item quantity="one">%d sticker</item>
+        <item quantity="other">%d stickers</item>
+    </plurals>
+
+    <!-- Sticker Editor -->
+    <string name="sticker_editor_title">Edit Sticker</string>
+    <string name="sticker_editor_crop">Crop</string>
+    <string name="sticker_editor_text">Text</string>
+    <string name="sticker_editor_filters">Filters</string>
+    <string name="sticker_editor_done">Done</string>
+    <string name="sticker_editor_enter_text">Enter text…</string>
+    <string name="sticker_editor_add">Add</string>
+    <string name="sticker_editor_save_failed">Failed to save sticker</string>
+    <string name="sticker_filter_original">Original</string>
+    <string name="sticker_filter_grayscale">B&amp;W</string>
+    <string name="sticker_filter_sepia">Sepia</string>
+    <string name="sticker_filter_warm">Warm</string>
+    <string name="sticker_filter_cool">Cool</string>
+    <string name="sticker_filter_bright">Bright</string>
+    <string name="sticker_search_hint">Search stickers…</string>
+    <string name="sticker_search_failed">Search failed. Check your connection and try again.</string>
+    <string name="sticker_no_results">No stickers found</string>
+    <string name="sticker_added_to_favorites">Added to favorites</string>
+    <string name="sticker_removed_from_favorites">Removed from favorites</string>
+    <string name="sticker_favorites_header">Favorites (%d)</string>
+    <string name="sticker_recent_header">Recent</string>
+    <string name="sticker_no_favorites">No favorites yet.\nLong-press a sticker to add it.</string>
+    <string name="follow_system_dark_mode">Follow system dark mode</string>
+    <string name="follow_system_dark_mode_desc">Automatically switch between light and dark theme based on system setting</string>
+    <string name="archive">Archive</string>
+    <string name="archived">Archived</string>
+    <string name="muted">Muted</string>
+    <string name="unmuted">Unmuted</string>
+    <string name="delete_chat">Delete chat</string>
+    <string name="failed">Failed</string>
+
+    <!-- Hardcoded string extraction -->
+    <string name="photo">Photo</string>
+    <string name="user">User</string>
+    <string name="chat_init_error">Chat init error</string>
+    <string name="e2ee_encryption_failed">E2EE encryption failed</string>
+    <string name="failed_to_load_packs">Failed to load packs</string>
+    <string name="submitted_for_approval">Submitted for approval</string>
+    <string name="failed_to_delete">Failed to delete</string>
+    <string name="please_enter_share_code">Please enter share code</string>
+    <string name="unknown_error">Unknown error</string>
+    <string name="error_uploading_backgrounds">Error uploading backgrounds: %s</string>
+    <string name="upload_failed_code">Upload failed: %d</string>
+
+    <!-- gRPC callback strings -->
+    <string name="grpc_error">Error</string>
+    <string name="favorite_removed">Removed</string>
+    <string name="favorite_remove_failed">Failed to remove</string>
+    <string name="channel_dead">Channel dead</string>
+    <string name="stream_failed">Stream failed</string>
+    <string name="stream_error">Stream error</string>
+
+    <!-- Forward message UI -->
+    <plurals name="forward_message_count">
+        <item quantity="one">%d message</item>
+        <item quantity="other">%d messages</item>
+    </plurals>
+    <string name="forward_more_messages">and %d more…</string>
+    <string name="forward_send">Forward</string>
+    <string name="forward_send_count">Forward to %d</string>
+    <string name="forwarded_from">Forwarded from %s</string>
+    <string name="selected">Selected</string>
+
+    <!-- Delete confirmation -->
+    <string name="delete_confirmation_users">%1$s: %2$d %3$s?</string>
+    <string name="delete_confirmation_chats">%1$s: %2$d %3$s?</string>
+
+    <!-- Username format -->
+    <string name="username_at">@%1$s</string>
+    <string name="company_position_with_count">%1$s (%2$d)</string>
+
+    <!-- Accessibility -->
+    <string name="selection_indicator">Select message</string>
+    <string name="sticker_image">Sticker</string>
+    <string name="status_pending">Sending</string>
+    <string name="status_sent">Sent</string>
+    <string name="status_read">Read</string>
+    <string name="status_error">Failed to send</string>
 
 </resources>

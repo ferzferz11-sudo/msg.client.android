@@ -43,7 +43,19 @@ object CallManager {
         
         if (isMe(signal.senderId)) {
             when (signal.type) {
-                CallMessageProto.Type.INITIATE, 
+                CallMessageProto.Type.INITIATE -> {
+                    val existing = _currentCall.value
+                    if (existing != null) {
+                        // Server echoes INITIATE back with receiverId swapped to sender.
+                        // Only update callId, preserve original receiverId.
+                        Log.d(TAG, "Self INITIATE echo — updating callId only: ${signal.callId}")
+                        _currentCall.value = existing.copy(callId = signal.callId)
+                    } else {
+                        _currentCall.value = signal
+                    }
+                    scope.launch { _incomingSignals.emit(signal) }
+                    return
+                }
                 CallMessageProto.Type.INITIATE_CONFERENCE,
                 CallMessageProto.Type.JOIN_CONFERENCE,
                 CallMessageProto.Type.UPDATE_CONFERENCE,
@@ -63,10 +75,26 @@ object CallManager {
             CallMessageProto.Type.INITIATE -> {
                 if (_currentCall.value == null) {
                     _currentCall.value = signal
+                    val senderId = signal.senderId
                     val displayName = signal.senderName.takeIf { it.isNotEmpty() } ?: signal.senderId
-                    appContext?.let { CallNavigator.navigateToCall(it, signal.callId, displayName, true) }
+                    appContext?.let { ctx ->
+                        val intent = android.content.Intent(ctx, lavender.client.android.CallActivity::class.java).apply {
+                            putExtra("CALL_ID", signal.callId)
+                            putExtra("RECEIVER_ID", senderId)
+                            putExtra("SENDER_NAME", displayName)
+                            putExtra("IS_INCOMING", true)
+                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                        }
+                        ctx.startActivity(intent)
+                    }
                 } else {
                     Log.w(TAG, "Already in a call, ignoring INITIATE")
+                }
+            }
+            CallMessageProto.Type.ACCEPT -> {
+                if (_currentCall.value == null) {
+                    Log.w(TAG, "Ignoring stale ACCEPT — no active call (callId: ${signal.callId})")
+                    return
                 }
             }
             CallMessageProto.Type.INITIATE_CONFERENCE -> {
@@ -86,8 +114,9 @@ object CallManager {
         }
     }
 
-    fun initiateCall(receiverId: String) {
+    fun initiateCall(receiverUsername: String) {
         val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
+        val receiverId = resolveUserId(receiverUsername) ?: receiverUsername
         
         // Clear state before starting new call
         _currentCall.value = null
@@ -97,6 +126,7 @@ object CallManager {
         val signal = CallMessageProto(
             senderId = senderId,
             receiverId = receiverId,
+            senderName = GrpcClient.getCurrentUsername() ?: "",
             type = CallMessageProto.Type.INITIATE
         )
         GrpcClient.sendCallSignal(signal)
@@ -120,6 +150,23 @@ object CallManager {
 
     fun clearCurrentCall() {
         Log.d(TAG, "Clearing current call state")
+        val call = _currentCall.value
+        if (call != null && call.callId.isNotEmpty()) {
+            dismissCallNotification(call.callId)
+        }
+        _currentCall.value = null
+    }
+
+    fun handleCallEndedPush(callId: String) {
+        Log.d(TAG, "Call ended push received for call: $callId")
+        val signal = CallMessageProto(
+            callId = callId,
+            senderId = "",
+            receiverId = "",
+            type = CallMessageProto.Type.HANGUP
+        )
+        scope.launch { _incomingSignals.emit(signal) }
+        dismissCallNotification(callId)
         _currentCall.value = null
     }
 
@@ -145,6 +192,7 @@ object CallManager {
             type = CallMessageProto.Type.REJECT
         )
         GrpcClient.sendCallSignal(signal)
+        dismissCallNotification(call.callId)
         _currentCall.value = null
     }
 
@@ -162,7 +210,16 @@ object CallManager {
             type = CallMessageProto.Type.HANGUP
         )
         GrpcClient.sendCallSignal(signal)
+        dismissCallNotification(call.callId)
         _currentCall.value = null
+    }
+
+    private fun dismissCallNotification(callId: String) {
+        if (callId.isEmpty()) return
+        appContext?.let { ctx ->
+            val nm = ctx.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            nm.cancel(callId.hashCode())
+        }
     }
 
     fun isMe(id: String): Boolean {
@@ -175,6 +232,10 @@ object CallManager {
         
         // Also check if id is a UUID that belongs to me (safety check)
         return false
+    }
+
+    private fun resolveUserId(username: String): String? {
+        return GrpcClient.allUsers.value.firstOrNull { it.username == username }?.userId
     }
 
     fun sendWebRtcSignal(receiverId: String, type: CallMessageProto.Type, payload: String) {
@@ -193,7 +254,7 @@ object CallManager {
     }
 
     fun initiateConference(roomId: String) {
-        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
         GrpcClient.startCallSession()
         val signal = CallMessageProto(
             senderId = senderId,
@@ -205,7 +266,7 @@ object CallManager {
     }
 
     fun joinConference(roomId: String) {
-        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
         GrpcClient.startCallSession()
         val signal = CallMessageProto(
             senderId = senderId,
@@ -216,20 +277,22 @@ object CallManager {
         _currentCall.value = signal
     }
 
-    fun leaveConference() {
-        val call = _currentCall.value ?: return
-        val senderId = GrpcClient.getCurrentUsername() ?: return
+    fun leaveConference(roomId: String = "") {
+        val effectiveRoomId = roomId.ifEmpty { _currentCall.value?.roomId ?: return }
+        val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
         val signal = CallMessageProto(
             senderId = senderId,
-            roomId = call.roomId,
+            roomId = effectiveRoomId,
             type = CallMessageProto.Type.LEAVE_CONFERENCE
         )
         GrpcClient.sendCallSignal(signal)
-        _currentCall.value = null
+        if (_currentCall.value?.roomId == effectiveRoomId) {
+            _currentCall.value = null
+        }
     }
 
     fun inviteToConference(roomId: String, targetUserId: String, targetUserName: String) {
-        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
         val signal = CallMessageProto(
             senderId = senderId,
             receiverId = targetUserId,
@@ -241,7 +304,7 @@ object CallManager {
     }
 
     fun removeFromConference(roomId: String, targetUserId: String) {
-        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
         val signal = CallMessageProto(
             senderId = senderId,
             receiverId = targetUserId,
@@ -252,7 +315,7 @@ object CallManager {
     }
 
     fun updateConferenceMetadata(roomId: String, topic: String, startTime: Long) {
-        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
         val payload = JSONObject().apply {
             put("topic", topic)
             put("start_time", startTime)
@@ -268,7 +331,7 @@ object CallManager {
 
     fun endConference(roomId: String? = null) {
         val targetRoomId = roomId ?: _currentCall.value?.roomId ?: return
-        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
         val signal = CallMessageProto(
             senderId = senderId,
             roomId = targetRoomId,

@@ -9,6 +9,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import kotlinx.coroutines.*
 import lavender.client.android.R
+import lavender.client.android.data.ai.AgentStatus
 import lavender.client.android.data.ai.AiV2Agent
 import lavender.client.android.data.ai.AiV2ChatUseCase
 import lavender.client.android.theme.ThemeStore
@@ -40,6 +41,7 @@ class AIBottomSheet(
     private var isLoadingAgents = true
     private val agentCheckBoxes = mutableListOf<Pair<AiV2Agent, ImageView>>()
     private var agentLoadJob: Job? = null
+    private val agentScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var summaryText: TextView? = null
     private var createChatButtonView: View? = null
     private var footerContainer: android.widget.LinearLayout? = null
@@ -48,6 +50,10 @@ class AIBottomSheet(
         isLoadingAgents = true
         selectedAgents.clear()
         buildContent()
+        dialog?.setOnDismissListener {
+            agentLoadJob?.cancel()
+            agentScope.cancel()
+        }
         show()
         loadPresetAgents()
     }
@@ -66,8 +72,7 @@ class AIBottomSheet(
 
     private fun loadPresetAgents() {
         agentLoadJob?.cancel()
-        val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-        agentLoadJob = scope.launch {
+        agentLoadJob = agentScope.launch {
             try {
                 val agents = AiV2ChatUseCase.listAgents(includePublic = false)
                 myAgents = agents
@@ -142,8 +147,14 @@ class AIBottomSheet(
                 }
                 icon.setImageResource(R.drawable.ic_agents)
                 icon.imageTintList = ColorStateList.valueOf(primColor)
-                val displayName = agent.name.ifEmpty { agent.id }
-                text.text = "${getAgentEmoji(agent.id)} $displayName"
+                val displayName = agent.name.ifEmpty { "Agent" }
+                val status = AgentStatus.fromProviderConfig(agent.providerConfig)
+                val statusDot = when (status) {
+                    AgentStatus.AVAILABLE -> "\uD83D\uDFE2"
+                    AgentStatus.SERVER_KEY -> "\uD83D\uDFE1"
+                    AgentStatus.NEEDS_KEY -> "\uD83D\uDD34"
+                }
+                text.text = "${getAgentEmoji(agent.id)} $displayName $statusDot"
                 text.setTextColor(txtColor)
                 badge.visibility = View.GONE
 
@@ -313,6 +324,7 @@ class AIBottomSheet(
             "writer" -> "✍️"
             "analyst" -> "📊"
             "translator" -> "🌐"
+            "hermes" -> "🔬"
             else -> "🤖"
         }
     }

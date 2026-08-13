@@ -27,7 +27,12 @@ data class Message(
     val isSent: Boolean = true, // Messages from server are always sent
     val isE2EE: Boolean = false, // E2EE-encrypted message
     val e2eePayload: String = "", // Base64-encoded encrypted data
-    val isPinned: Boolean = false // Pin Message: message is pinned in chat
+    val isPinned: Boolean = false, // Pin Message: message is pinned in chat
+    val mentions: List<String> = emptyList(), // @usernames mentioned in this message
+    val stickerUrl: String = "", // Sticker Lottie URL
+    val stickerThumbnailUrl: String = "", // Sticker static preview URL
+    val isForwarded: Boolean = false, // Message was forwarded from another chat
+    val forwardedFrom: String = "" // Original sender username (for display)
 )
 
 data class ChatInfo(
@@ -54,7 +59,10 @@ data class ChatInfo(
     val agentMode: String = "",         // For hermes sessions: single/parallel/pipeline
     val isPinned: Boolean = false,      // ChatList v2: pinned status
     val isArchived: Boolean = false,    // ChatList v2: archived status
-    val pinnedAt: Long = 0L             // ChatList v2: timestamp when pinned (for sort order)
+    val pinnedAt: Long = 0L,            // ChatList v2: timestamp when pinned (for sort order)
+    val companyId: String = "",         // Company chat: company ID
+    val companyChatAccess: String = "", // Company chat: access level
+    val companyMinPositionLevel: Int = 0 // Company chat: min position level
 ) {
     fun getDisplayName(currentUsername: String): String {
         if (isSecret) {
