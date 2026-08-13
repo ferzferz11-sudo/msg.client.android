@@ -50,6 +50,10 @@
 - actionCreateChat: 40dp → 48dp
 - actionDelete: 40dp → 48dp
 
+**Touch targets: new chat activity search (Medium):**
+- searchPrev: 40dp → 48dp
+- searchNext: 40dp → 48dp
+
 ### Accessibility
 
 **Sticker editor color pickers (Medium):**

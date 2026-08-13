@@ -251,20 +251,22 @@
 
                 <ImageButton
                     android:id="@+id/searchPrev"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/search_previous"
                     android:src="@android:drawable/arrow_up_float"
+                    android:padding="8dp"
                     app:tint="?attr/colorOnPrimary" />
 
                 <ImageButton
                     android:id="@+id/searchNext"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/search_next"
                     android:src="@android:drawable/arrow_down_float"
+                    android:padding="8dp"
                     app:tint="?attr/colorOnPrimary" />
 
             </LinearLayout>
