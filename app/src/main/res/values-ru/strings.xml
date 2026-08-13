@@ -943,7 +943,8 @@
     <string name="action_unmute">Включить звук</string>
     <string name="mute_chat">Отключить уведомления</string>
     <string name="unmute_chat">Включить уведомления</string>
-    <string name="self_destruct_timer">Автоудаление</string>
+    <string name="self_destruct_timer">Авто-удаление</string>
+    <string name="self_destruct_active">Авто-удаление: %s</string>
     <string name="self_destruct_off">Выкл</string>
     <string name="self_destruct_30s">30 секунд</string>
     <string name="self_destruct_1m">1 минута</string>

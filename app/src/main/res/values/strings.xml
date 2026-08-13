@@ -944,6 +944,7 @@
     <string name="mute_chat">Mute notifications</string>
     <string name="unmute_chat">Unmute notifications</string>
     <string name="self_destruct_timer">Auto-Delete Timer</string>
+    <string name="self_destruct_active">Auto-Delete: %s</string>
     <string name="self_destruct_off">Off</string>
     <string name="self_destruct_30s">30 seconds</string>
     <string name="self_destruct_1m">1 minute</string>

@@ -1,5 +1,38 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.6] - 2026-08-13
+
+### Исправлено
+
+**Avatar: colorFilter не сбрасывался при загрузке (High):**
+- `ChatAdapter`: добавлен `clearColorFilter()` перед Glide загрузкой аватара
+- Устраняет окрашивание аватара в цвет primaryColor поверх загруженного изображения
+
+**Default avatar: несовместимость стилей (Medium):**
+- Chat list toolbar: `ThemeUtils.applyDefaultAvatar()` вместо `setImageResource` + `clearColorFilter`
+- Теперь дефолтный аватар в тулбаре совпадает с аватаром внутри чата (овал + primaryColor tint)
+- `ThemeApplier`: `imageTintList` очищается перед применением дефолтного аватара
+
+**Поиск: мигание иконки лупы (Medium):**
+- `ChatListSearch`: `expandActionView()` вызывается синхронно вместо `post {}`
+- Добавлен `SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW` флаг
+- Закрытие через `OnActionExpandListener` вместо `setOnCloseListener`
+
+**Авто-удаление: "Автоудаление" → "Авто-удаление" (Low):**
+- Исправлено написание через дефис в русских строках
+
+**Авто-удаление: меню показывает только период (Medium):**
+- Новая строка `self_destruct_active` = "Авто-удаление: %s"
+- Меню теперь показывает "Авто-удаление: 5 минут" вместо просто "5 минут"
+
+**Авто-удаление: системное сообщение пропадает при повторном входе (High):**
+- При входе в чат с активным таймером генерируется системное сообщение, если его нет в истории
+- Флаг `sdSystemMessageInjected` предотвращает дублирование
+
+**Список чатов: иконки увеличивают высоту плашки (Medium):**
+- Bottom row в `item_chat.xml`: `wrap_content` → фиксированная высота 24dp
+- Lobby кнопка: 32dp → 24dp (padding 6dp → 4dp)
+
 ## [1.4.0.5] - 2026-08-13
 
 ### Исправлено

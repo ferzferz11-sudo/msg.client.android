@@ -339,6 +339,7 @@ class ChatAdapter(
                 if (avatarUrl.isNotEmpty() && avatarUrl != currentTag) {
                     ivChatAvatar.tag = avatarUrl
                     val sizePx = (48 * itemView.resources.displayMetrics.density).toInt()
+                    ivChatAvatar.clearColorFilter()
                     com.bumptech.glide.Glide.with(itemView.context).load(avatarUrl)
                         .placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar)
                         .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)

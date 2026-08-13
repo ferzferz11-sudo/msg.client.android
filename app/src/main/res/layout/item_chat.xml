@@ -136,7 +136,7 @@
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="24dp"
                 android:orientation="horizontal"
                 android:gravity="end|center_vertical"
                 android:layout_marginTop="2dp">
@@ -172,10 +172,10 @@
 
                 <ImageView
                     android:id="@+id/btnEnterLobby"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
                     android:layout_marginStart="4dp"
-                    android:padding="6dp"
+                    android:padding="4dp"
                     android:src="@drawable/ic_conference_lobby"
                     android:background="@drawable/circle_button"
                     android:backgroundTint="?attr/colorPrimary"

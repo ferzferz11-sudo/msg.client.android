@@ -94,6 +94,7 @@ class NewChatActivity : AppCompatActivity() {
 
     private var isChatMuted = false
     private var selfDestructTimer = 0
+    private var sdSystemMessageInjected = false
 
     private val data get() = newChatViewModel.intentData.value
 
@@ -334,6 +335,32 @@ class NewChatActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 chatViewModel.messages.collect { roomMessages ->
                     try {
+                        // Inject self-destruct system message on first load if timer is active
+                        if (!sdSystemMessageInjected && selfDestructTimer > 0 && roomMessages.isNotEmpty()) {
+                            sdSystemMessageInjected = true
+                            val hasSdMessage = roomMessages.any { it.id.startsWith("sd_timer_") }
+                            if (!hasSdMessage) {
+                                val timerLabel = when (selfDestructTimer) {
+                                    30 -> getString(R.string.self_destruct_30s)
+                                    60 -> getString(R.string.self_destruct_1m)
+                                    300 -> getString(R.string.self_destruct_5m)
+                                    3600 -> getString(R.string.self_destruct_1h)
+                                    86400 -> getString(R.string.self_destruct_24h)
+                                    else -> "${selfDestructTimer}s"
+                                }
+                                val text = "\uD83D\uDD25 ${getString(R.string.self_destruct_set, timerLabel)}"
+                                val lastTs = roomMessages.lastOrNull()?.timestamp ?: (System.currentTimeMillis() / 1000)
+                                val sysMsg = lavender.client.android.data.models.Message(
+                                    id = "sd_timer_${data.roomId}_${System.currentTimeMillis()}",
+                                    user = "",
+                                    text = text,
+                                    timestamp = lastTs + 1,
+                                    roomId = data.roomId
+                                )
+                                grpcClient.addLocalMessage(sysMsg)
+                            }
+                        }
+
                         val hasNewMessages = roomMessages.size > lastMessageCount
                         val isNewFromOther = hasNewMessages && roomMessages.lastOrNull()?.user != data.username
                         adapter.submitList(roomMessages) {
@@ -407,6 +434,7 @@ class NewChatActivity : AppCompatActivity() {
                 grpcClient.selfDestructTimer.collect { timer ->
                     if (timer != selfDestructTimer) {
                         selfDestructTimer = timer
+                        sdSystemMessageInjected = false
                         invalidateOptionsMenu()
                     }
                 }
@@ -868,11 +896,12 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun getSelfDestructLabel(seconds: Int): String = when (seconds) {
-        30 -> getString(R.string.self_destruct_30s)
-        60 -> getString(R.string.self_destruct_1m)
-        300 -> getString(R.string.self_destruct_5m)
-        3600 -> getString(R.string.self_destruct_1h)
-        86400 -> getString(R.string.self_destruct_24h)
+        0 -> getString(R.string.self_destruct_timer)
+        30 -> getString(R.string.self_destruct_active, getString(R.string.self_destruct_30s))
+        60 -> getString(R.string.self_destruct_active, getString(R.string.self_destruct_1m))
+        300 -> getString(R.string.self_destruct_active, getString(R.string.self_destruct_5m))
+        3600 -> getString(R.string.self_destruct_active, getString(R.string.self_destruct_1h))
+        86400 -> getString(R.string.self_destruct_active, getString(R.string.self_destruct_24h))
         else -> getString(R.string.self_destruct_timer)
     }
 
