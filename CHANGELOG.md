@@ -1,5 +1,35 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.2] - 2026-08-13
+
+### Исправлено
+
+**Chat list search activates immediately (Low):**
+- Убран промежуточный значок лупы — поиск открывается сразу при тапе в меню
+- `expandActionView()` вызывается автоматически после создания SearchView
+
+**Chat list toolbar avatar for light themes (Medium):**
+- Дефолтный аватар на светлых темах теперь использует `ThemeUtils.applyDefaultAvatar()` — иконка с primary color + круглый фон
+- На тёмных темах поведение без изменений
+- `ThemeApplier` обновляет аватар при смене темы
+
+**Chat list overflow icon alignment and color (Low):**
+- Иконка меню поднята на 3px для выравнивания со звёздочкой избранного
+- Цвет иконки меню синхронизирован с `colorOnPrimary` темы (как у звёздочки)
+- `ThemeApplier` обновляет цвет overflow при смене темы
+
+**Hardcoded Russian fallbacks (Low):**
+- `RemoteAgentManager`: 4 строки-заглушки заменены на английские
+- `HermesGatewayManager`: добавлен строковый ресурс `ssh_session_not_established` (EN+RU)
+
+### Удалено (dead code)
+
+- `NotificationActivity` + `NotificationAdapter` (ui/notification/) — не имели точек запуска
+- `NotificationLogActivity` (root package) — не имела точек запуска
+- `NotificationHistory` + `NotificationEntry` (data/fcm/) — не использовались
+- Layouts: `activity_notification.xml`, `activity_notification_log.xml`, `item_notification_log.xml`
+- Удалены обе записи из AndroidManifest.xml
+
 ## [1.4.0.1] - 2026-08-13
 
 ### Новые фичи

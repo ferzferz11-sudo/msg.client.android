@@ -105,8 +105,13 @@ object ThemeApplier {
 
                 setTitleTextColor(customOnPrimary)
                 setNavigationIconTint(customOnPrimary)
+                overflowIcon?.let {
+                    val wrapped = androidx.core.graphics.drawable.DrawableCompat.wrap(it.mutate())
+                    androidx.core.graphics.drawable.DrawableCompat.setTint(wrapped, customOnPrimary)
+                    overflowIcon = wrapped
+                }
                 
-                val toolbarActions = listOf(R.id.actionSearch, R.id.actionDelete, R.id.actionEdit, R.id.actionApply, R.id.actionCreateChat, R.id.btnLobby, R.id.ivToolbarUserAvatar)
+                val toolbarActions = listOf(R.id.actionSearch, R.id.actionDelete, R.id.actionEdit, R.id.actionApply, R.id.actionCreateChat, R.id.btnLobby)
                 toolbarActions.forEach { id ->
                     findViewById<ImageView>(id)?.let { iv ->
                         iv.imageTintList = ColorStateList.valueOf(customOnPrimary)
@@ -125,9 +130,13 @@ object ThemeApplier {
                 appBar.setBackgroundColor(customPrimary)
             }
 
-            activity.findViewById<ImageView>(R.id.ivToolbarUserAvatar)?.parent?.let { parent ->
-                if (parent is android.widget.FrameLayout) {
-                    parent.backgroundTintList = ColorStateList.valueOf(customOnPrimary)
+            activity.findViewById<ImageView>(R.id.ivToolbarUserAvatar)?.let { avatar ->
+                if (activity is lavender.client.android.ui.chatlist.ChatListActivity) {
+                    if (activity.isShowingDefaultAvatar) {
+                        lavender.client.android.theme.ThemeUtils.applyDefaultAvatar(avatar, theme)
+                    }
+                } else {
+                    avatar.imageTintList = ColorStateList.valueOf(customOnPrimary)
                 }
             }
 

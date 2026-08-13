@@ -91,6 +91,7 @@ class ChatListActivity : AppCompatActivity() {
     internal var ivToolbarUserAvatar: ImageView? = null
     internal var llToolbarTitleContainer: android.widget.LinearLayout? = null
     internal var ivFavorites: ImageView? = null
+    internal var isShowingDefaultAvatar = true
 
     // ActionMode
     internal var isSelectionMode = false
@@ -266,6 +267,25 @@ class ChatListActivity : AppCompatActivity() {
         // Setup search menu in toolbar
         setupSearchMenu(this)
 
+        // Adjust overflow icon: shift up 3px for vertical alignment with favorites star
+        toolbar?.post {
+            for (i in 0 until (toolbar?.childCount ?: 0)) {
+                val child = toolbar?.getChildAt(i)
+                if (child is androidx.appcompat.widget.ActionMenuView) {
+                    for (j in 0 until child.childCount) {
+                        val menuChild = child.getChildAt(j)
+                        if (menuChild is android.widget.ImageButton) {
+                            val drawable = menuChild.drawable
+                            if (drawable == toolbar?.overflowIcon) {
+                                menuChild.translationY = -3f * resources.displayMetrics.density
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Setup tabs
         setupTabs(this)
 
@@ -318,6 +338,7 @@ class ChatListActivity : AppCompatActivity() {
             GrpcClient.avatarCacheFlow.collectLatest { cache ->
                 val url = cache[avatarUsername]
                 if (!url.isNullOrEmpty() && ivToolbarUserAvatar != null) {
+                    isShowingDefaultAvatar = false
                     Glide.with(this@ChatListActivity)
                         .load(url)
                         .apply(RequestOptions.circleCropTransform()
@@ -325,6 +346,9 @@ class ChatListActivity : AppCompatActivity() {
                             .error(R.drawable.ic_default_avatar))
                         .diskCacheStrategy(DiskCacheStrategy.ALL)
                         .into(ivToolbarUserAvatar!!)
+                } else if (ivToolbarUserAvatar != null) {
+                    isShowingDefaultAvatar = true
+                    lavender.client.android.theme.ThemeUtils.applyDefaultAvatar(ivToolbarUserAvatar!!, lavender.client.android.theme.ThemeStore.currentTheme())
                 }
             }
         }
