@@ -27,6 +27,14 @@
 - Добавлен contentDescription `delete_device`
 - Новая строка: `delete_device` (EN+RU)
 
+**Company list touch targets (Medium):**
+- Company member "more" кнопка увеличена с 36dp до 48dp
+- Company position "more" кнопка увеличена с 36dp до 48dp
+
+**AI agent card touch targets (Medium):**
+- Favorite кнопка увеличена с 40dp до 48dp
+- Delete кнопка увеличена с 40dp до 48dp
+
 ### Testing
 
 **GrpcMarshallersTest expanded (Medium):**

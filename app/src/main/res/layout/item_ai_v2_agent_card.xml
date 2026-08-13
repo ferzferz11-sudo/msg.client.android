@@ -104,8 +104,8 @@
 
         <ImageButton
             android:id="@+id/btnFavorite"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_star_outline"
             android:scaleType="centerInside"
@@ -115,8 +115,8 @@
 
         <ImageButton
             android:id="@+id/deleteButton"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/exit_to_app_24"
             android:contentDescription="@string/ai_v2_delete_agent"
