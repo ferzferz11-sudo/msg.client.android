@@ -85,7 +85,7 @@ class GrpcConnectionManager(
         updateConnectionStatus(isReconnecting = connectionStatus.value == ConnectionStatus.READY ||
                 connectionStatus.value == ConnectionStatus.RECONNECTING)
 
-        val newChannel = buildChannel(serverAddress, useTls, port, context)
+        val newChannel = buildChannel(serverAddress, useTls, port, context, forceShutdown = forceReconnect)
         if (newChannel != null) {
             activateChannel(newChannel, serverAddress, port, context)
         } else {
@@ -146,7 +146,8 @@ class GrpcConnectionManager(
         serverAddress: String,
         useTls: Boolean,
         port: Int,
-        context: Context?
+        context: Context?,
+        forceShutdown: Boolean = false
     ): ManagedChannel? {
         return try {
             val builder = OkHttpChannelBuilder.forAddress(serverAddress, port)
@@ -171,8 +172,12 @@ class GrpcConnectionManager(
             val newChannel = builder.build()
             val oldChannel = channel
             channel = newChannel
-            oldChannel?.shutdown()
-            Log.d(TAG, "Channel built: $serverAddress:$port")
+            if (forceShutdown) {
+                oldChannel?.shutdownNow()
+            } else {
+                oldChannel?.shutdown()
+            }
+            Log.d(TAG, "Channel built: $serverAddress:$port (forceShutdown=$forceShutdown)")
             newChannel
         } catch (e: Exception) {
             Log.e(TAG, "Failed to build channel", e)
@@ -187,9 +192,9 @@ class GrpcConnectionManager(
         context: Context?
     ) {
         channel = newChannel
-        connectionStatus.value = ConnectionStatus.READY
+        // Stay at CONNECTING — READY is confirmed by first ChatV2 response in RealGrpcClient
         reconnectStrategy.resetBackoff()
-        Log.d(TAG, "Channel activated — READY (optimistic): $serverAddress")
+        Log.d(TAG, "Channel activated — CONNECTING (waiting for stream confirmation): $serverAddress")
         RealGrpcClient.clearServerShuttingDown()
 
         fetchServerInfoIfNeeded(serverAddress, port, context)

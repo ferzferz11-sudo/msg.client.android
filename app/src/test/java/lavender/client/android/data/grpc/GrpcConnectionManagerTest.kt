@@ -60,7 +60,13 @@ class GrpcConnectionManagerTest {
     fun connect_alreadyConnected_skipsReconnect() = runTest {
         connectionStatus.value = ConnectionStatus.READY
         manager.connect("127.0.0.1", false, 50051)
-        assertEquals(ConnectionStatus.READY, connectionStatus.value)
+        // With no existing channel, connect proceeds. Status becomes CONNECTING
+        // (READY is confirmed by first ChatV2 response, not set optimistically).
+        assertTrue(
+            "Should be CONNECTING or RECONNECTING after new channel",
+            connectionStatus.value == ConnectionStatus.CONNECTING ||
+            connectionStatus.value == ConnectionStatus.RECONNECTING
+        )
     }
 
     @Test

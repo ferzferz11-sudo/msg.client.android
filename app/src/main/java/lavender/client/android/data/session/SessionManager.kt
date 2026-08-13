@@ -101,23 +101,28 @@ object SessionManager {
 
     private var tokenRefreshJob: Job? = null
     private val refreshGuard = AtomicBoolean(false)
+    @Volatile private var refreshLatch: java.util.concurrent.CountDownLatch? = null
 
     /**
      * Blocks until any in-progress refresh completes (max 10 seconds).
      * Returns true if we waited, false if nothing was in progress.
+     * Safe to call from any thread (uses CountDownLatch instead of Thread.sleep).
      */
     private fun waitForRefreshComplete(): Boolean {
-        var waited = false
-        val deadline = System.currentTimeMillis() + 10_000
-        while (refreshGuard.get() && System.currentTimeMillis() < deadline) {
-            waited = true
-            Thread.sleep(100)
-        }
-        if (refreshGuard.get()) {
+        if (!refreshGuard.get()) return false
+        val latch = refreshLatch ?: return false
+        Log.d("SessionManager", "waitForRefreshComplete: waiting for in-progress refresh")
+        val completed = latch.await(10, java.util.concurrent.TimeUnit.SECONDS)
+        if (!completed) {
             Log.w("SessionManager", "waitForRefreshComplete: timed out after 10s, forcing guard release")
             refreshGuard.set(false)
         }
-        return waited
+        return true
+    }
+
+    private fun notifyRefreshComplete() {
+        refreshLatch?.countDown()
+        refreshLatch = null
     }
 
     fun startTokenRefresh(context: Context) {
@@ -169,6 +174,7 @@ object SessionManager {
             waitForRefreshComplete()
             return
         }
+        refreshLatch = java.util.concurrent.CountDownLatch(1)
 
         try {
             val refreshToken = AuthManager.getRefreshToken(context) ?: return
@@ -223,6 +229,7 @@ object SessionManager {
             if (!refreshed) Log.w("SessionManager", "Sync token refresh timed out")
         } finally {
             refreshGuard.set(false)
+            notifyRefreshComplete()
         }
     }
 
@@ -255,6 +262,7 @@ object SessionManager {
             waitForRefreshComplete()
             return
         }
+        refreshLatch = java.util.concurrent.CountDownLatch(1)
 
         try {
             val refreshToken = AuthManager.getRefreshToken(context) ?: return
@@ -295,15 +303,21 @@ object SessionManager {
             if (!refreshed) Log.w("SessionManager", "Force token refresh timed out")
         } finally {
             refreshGuard.set(false)
+            notifyRefreshComplete()
         }
     }
 
     private suspend fun performTokenRefresh(context: Context) {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            Log.e("SessionManager", "performTokenRefresh() called on Main thread — will cause ANR")
+            return
+        }
         // Try to acquire the guard — skip if another refresh is in progress
         if (!refreshGuard.compareAndSet(false, true)) {
             Log.d("SessionManager", "Periodic refresh: another refresh in progress, skipping")
             return
         }
+        refreshLatch = java.util.concurrent.CountDownLatch(1)
 
         try {
             val refreshToken = AuthManager.getRefreshToken(context) ?: return
@@ -356,6 +370,7 @@ object SessionManager {
             }
         } finally {
             refreshGuard.set(false)
+            notifyRefreshComplete()
         }
     }
 

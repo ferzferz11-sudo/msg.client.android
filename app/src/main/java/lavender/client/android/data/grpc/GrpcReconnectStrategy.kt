@@ -41,7 +41,7 @@ class GrpcReconnectStrategy(
             val delayMs = reconnectDelayMs.coerceAtMost(30000L)
             Log.d(TAG, "Scheduling reconnect in ${delayMs}ms...")
             delay(delayMs)
-            reconnectDelayMs = (reconnectDelayMs * 2).coerceAtMost(60000L)
+            reconnectDelayMs = (reconnectDelayMs * 2).coerceAtMost(30000L)
             Log.d(TAG, "Retrying connection...")
             reconnectAction()
         }

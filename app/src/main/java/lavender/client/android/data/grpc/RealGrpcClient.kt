@@ -136,6 +136,7 @@ object RealGrpcClient {
 
     private val deletedMessageHashes: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     private val pendingReads: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    private var persistDeletedHashesJob: kotlinx.coroutines.Job? = null
 
     private fun addDeletedHash(hash: String) {
         deletedMessageHashes.add(hash)
@@ -143,10 +144,14 @@ object RealGrpcClient {
             val toRemove = deletedMessageHashes.take(DELETED_HASHES_MAX_SIZE / 2)
             deletedMessageHashes.removeAll(toRemove.toSet())
         }
-        // Persist to SharedPreferences
-        appContext?.getSharedPreferences("deleted_messages", Context.MODE_PRIVATE)?.edit()
-            ?.putStringSet("hashes", deletedMessageHashes.toSet())
-            ?.apply()
+        // Debounce SharedPreferences write (batch multiple rapid deletes)
+        persistDeletedHashesJob?.cancel()
+        persistDeletedHashesJob = scope.launch {
+            kotlinx.coroutines.delay(500)
+            appContext?.getSharedPreferences("deleted_messages", Context.MODE_PRIVATE)?.edit()
+                ?.putStringSet("hashes", deletedMessageHashes.toSet())
+                ?.apply()
+        }
         // Persist to Room DB (extract message ID from hash)
         val messageId = hash.removePrefix("id:")
         if (messageId != hash && messageId.isNotEmpty()) {
@@ -298,9 +303,9 @@ object RealGrpcClient {
     @Volatile private var currentUsername: String? = null
     @Volatile private var currentUserId: String? = null
     @Volatile private var requestObserver: StreamObserver<MessageProto>? = null
-    @Volatile private var chatV2RequestObserver: StreamObserver<ChatV2MessageProto>? = null
+    private val chatV2Lock = Any()
+    private var chatV2RequestObserver: StreamObserver<ChatV2MessageProto>? = null
     @Volatile private var lastAuthWasJwt: Boolean = false
-    @Volatile private var isRetrying = false
     @Volatile private var lastChatRequest: LastChatRequest? = null
     private data class LastChatRequest(
         val roomId: String, val cb: (Message) -> Unit
@@ -363,7 +368,7 @@ object RealGrpcClient {
     fun disconnect() {
         connectionManager.disconnect()
         requestObserver = null
-        chatV2RequestObserver = null
+        synchronized(chatV2Lock) { chatV2RequestObserver = null }
         typingClient.clearTypingObserver()
         callClient.clearCallObserver()
         lastChatRequest = null
@@ -428,12 +433,13 @@ object RealGrpcClient {
 
     // ====== Typing (via ChatV2 stream) ======
     fun sendTypingSignal(username: String, isTyping: Boolean) {
-        if (chatV2RequestObserver == null) {
+        val observer = synchronized(chatV2Lock) { chatV2RequestObserver }
+        if (observer == null) {
             Log.w(TAG, "sendTypingSignal: chatV2RequestObserver is null, dropping signal")
             return
         }
         Log.d(TAG, "sendTypingSignal: roomId=$currentRoomId, isTyping=$isTyping")
-        chatV2RequestObserver?.onNext(
+        observer.onNext(
             ChatV2MessageProto(
                 roomId = currentRoomId,
                 typing = ChatV2TypingProto(isTyping = isTyping)
@@ -449,14 +455,15 @@ object RealGrpcClient {
         currentRoomId = roomId
 
         val currentChannel = getChannel() ?: return
-        if (chatV2RequestObserver != null) {
+        val existingObserver = synchronized(chatV2Lock) { chatV2RequestObserver }
+        if (existingObserver != null) {
             val switchMsg = ChatV2MessageProto(roomId = roomId)
-            try { chatV2RequestObserver?.onNext(switchMsg) } catch (e: Exception) { Log.e("RealGrpcClient", "Failed to send room switch message for $roomId", e) }
+            try { existingObserver.onNext(switchMsg) } catch (e: Exception) { Log.e("RealGrpcClient", "Failed to send room switch message for $roomId", e) }
             return
         }
 
         if (_connectionStatus.value == ConnectionStatus.FAILED || _connectionStatus.value == ConnectionStatus.DISCONNECTED) {
-            if (!isRetrying) _connectionStatus.value = ConnectionStatus.CONNECTING
+            _connectionStatus.value = ConnectionStatus.CONNECTING
         }
 
         val methodDescriptor = MethodDescriptor.newBuilder<ChatV2MessageProto, ChatV2MessageProto>()
@@ -468,7 +475,7 @@ object RealGrpcClient {
 
         val call = currentChannel.newCall(methodDescriptor, CallOptions.DEFAULT)
         val observer = call.startChatV2Stream(onMessageReceived)
-        chatV2RequestObserver = observer
+        synchronized(chatV2Lock) { chatV2RequestObserver = observer }
 
         val ctx = appContext
         if (ctx != null) {
@@ -734,12 +741,12 @@ object RealGrpcClient {
 
             override fun onError(t: Throwable) {
                 ErrorHandler.handle("RealGrpcClient.chatV2Stream", t)
-                chatV2RequestObserver = null
+                synchronized(chatV2Lock) { chatV2RequestObserver = null }
                 _connectionStatus.value = ConnectionStatus.FAILED
             }
 
             override fun onCompleted() {
-                chatV2RequestObserver = null
+                synchronized(chatV2Lock) { chatV2RequestObserver = null }
                 _connectionStatus.value = ConnectionStatus.DISCONNECTED
             }
         }
@@ -747,7 +754,7 @@ object RealGrpcClient {
         this.start(object : ClientCall.Listener<ChatV2MessageProto>() {
             override fun onMessage(message: ChatV2MessageProto) { responseObserver.onNext(message) }
             override fun onClose(status: Status, trailers: Metadata) {
-                chatV2RequestObserver = null
+                synchronized(chatV2Lock) { chatV2RequestObserver = null }
                 if (status.isOk) {
                     _connectionStatus.value = ConnectionStatus.DISCONNECTED
                 } else {
@@ -947,13 +954,20 @@ object RealGrpcClient {
     fun getCurrentUsername(): String? = currentUsername
 
     // ====== Avatar cache ======
+    private var avatarFlowUpdateJob: kotlinx.coroutines.Job? = null
+
     fun getAvatarCache(): Map<String, String> = avatarCache.toMap()
     fun getFullAvatarCache(): Map<String, String> = fullAvatarCache.toMap()
     fun getFullAvatarUrl(u: String): String? = fullAvatarCache[u]
     fun updateAvatarCache(u: String, a: String, fa: String) {
         avatarCache[u] = a
         if (fa.isNotEmpty()) fullAvatarCache[u] = fa
-        avatarCacheFlow.value = avatarCache.toMap()
+        // Debounce flow update (batch rapid avatar loads)
+        avatarFlowUpdateJob?.cancel()
+        avatarFlowUpdateJob = scope.launch {
+            kotlinx.coroutines.delay(500)
+            avatarCacheFlow.value = avatarCache.toMap()
+        }
     }
 
     // ====== ChatList v2 (delegated to unaryCallChatListV2) ======
@@ -981,7 +995,11 @@ object RealGrpcClient {
     private fun getMessageHashForDedup(message: Message): String =
         "${message.user}:${message.text}:${message.timestamp / 1000}"
 
+    @Volatile private var deletedMessagesLoaded = false
+
     private fun loadDeletedMessages() {
+        if (deletedMessagesLoaded) return
+        deletedMessagesLoaded = true
         // Load from SharedPreferences
         appContext?.getSharedPreferences("deleted_messages", Context.MODE_PRIVATE)?.let { prefs ->
             deletedMessageHashes.addAll(prefs.getStringSet("hashes", emptySet()) ?: emptySet())
