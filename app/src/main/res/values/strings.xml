@@ -993,6 +993,8 @@
     <string name="download_started">Download started</string>
     <string name="download_file">Download file</string>
     <string name="read_status">Read status</string>
+    <string name="play_audio">Play audio</string>
+    <string name="pause_audio">Pause audio</string>
     <string name="theme_saved_failed_to_set">Theme saved but failed to set as current</string>
     <string name="failed_to_start_recording">Failed to start recording</string>
     <string name="default_model_saved">Default model saved</string>

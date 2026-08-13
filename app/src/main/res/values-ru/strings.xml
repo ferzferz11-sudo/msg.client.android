@@ -993,6 +993,8 @@
     <string name="download_started">Загрузка начата</string>
     <string name="download_file">Скачать файл</string>
     <string name="read_status">Статус прочтения</string>
+    <string name="play_audio">Воспроизвести аудио</string>
+    <string name="pause_audio">Пауза аудио</string>
     <string name="theme_saved_failed_to_set">Тема сохранена, но не установлена как текущая</string>
     <string name="failed_to_start_recording">Не удалось начать запись</string>
     <string name="default_model_saved">Модель по умолчанию сохранена</string>

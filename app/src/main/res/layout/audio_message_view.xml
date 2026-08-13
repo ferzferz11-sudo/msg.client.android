@@ -9,21 +9,21 @@
 
     <ImageView
         android:id="@+id/playButton"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:src="@drawable/ic_play_arrow"
         android:background="@drawable/play_button_background"
         android:padding="8dp"
-        android:contentDescription="Play audio" />
+        android:contentDescription="@string/play_audio" />
 
     <ImageView
         android:id="@+id/pauseButton"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:src="@drawable/ic_pause"
         android:background="@drawable/play_button_background"
         android:padding="8dp"
-        android:contentDescription="Pause audio"
+        android:contentDescription="@string/pause_audio"
         android:visibility="gone" />
 
     <TextView

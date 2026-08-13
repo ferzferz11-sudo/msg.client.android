@@ -9,13 +9,18 @@
 - Новые строки: `color_white`, `color_black`, `color_red`, `color_yellow`, `color_green`, `color_blue` (EN+RU)
 
 **Message item accessibility (Medium):**
-- `btnDownloadFile` — добавлен contentDescription `download_file`
+- `btnDownloadFile` — добавлен contentDescription `download_file`, увеличен до 48dp
 - `ivReadStatus` — добавлен contentDescription `read_status`
 - `vReplyBar` — помечен как декоративный (`importantForAccessibility="no"`)
 - `ivAvatar` — помечен как декоративный (описание задаётся динамически в коде)
 - `ivStickerImage`, `lottieStickerView` — помечены как декоративные
 - `ivMessageImage` — убран неправильный `contentDescription="@string/app_name"`
 - Новые строки: `download_file`, `read_status` (EN+RU)
+
+**Audio message touch targets (Medium):**
+- Play/Pause кнопки увеличены с 40dp до 48dp (minimum touch target)
+- Заменены hardcoded строки на string resources (`play_audio`, `pause_audio`)
+- Новые строки: `play_audio`, `pause_audio` (EN+RU)
 
 ### Testing
 
