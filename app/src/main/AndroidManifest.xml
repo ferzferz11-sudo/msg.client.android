@@ -108,8 +108,6 @@
         <activity android:name=".ContactsActivity" android:exported="false" />
         <activity android:name=".ThemePaletteActivity" android:exported="false" />
         <activity android:name=".SuperAdminActivity" android:exported="false" />
-        <activity android:name=".ui.notification.NotificationActivity" android:exported="false" />
-        <activity android:name=".NotificationLogActivity" android:exported="false" />
         <activity android:name=".SecurityActivity" android:exported="false" />
         <activity android:name=".ServersActivity" android:exported="false" />
         <activity android:name=".ChangelogActivity" android:exported="false" />
