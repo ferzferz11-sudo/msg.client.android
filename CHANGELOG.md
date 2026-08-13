@@ -43,6 +43,7 @@
   - `bg_onboarding_profile.xml` — onboarding profile: белый → `#2D2D2D`
   - `bg_edit_text_rounded.xml` — edit text: `#40FFFFFF` → `#30FFFFFF`
   - `bg_message_preview.xml` — message preview stroke: `#33FFFFFF` → `#22FFFFFF`
+- `circle_indicator.xml` — добавлен stroke `?attr/colorOutline` для видимости на тёмном фоне
 
 **Chat screen accessibility (High):**
 - 9 ImageButtons в `widget_chat.xml` получили `contentDescription` (reply, copy, forward, delete, star, close, search prev/next)
