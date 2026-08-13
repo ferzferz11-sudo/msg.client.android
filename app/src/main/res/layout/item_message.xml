@@ -102,6 +102,7 @@
             android:layout_marginEnd="8dp"
             android:layout_marginBottom="2dp"
             android:visibility="gone"
+            android:importantForAccessibility="no"
             app:shapeAppearanceOverlay="@style/CircleAppearanceOverlay" />
 
         <LinearLayout
@@ -127,7 +128,8 @@
                     android:layout_width="3dp"
                     android:layout_height="match_parent"
                     android:background="@color/lavender_mist"
-                    android:layout_marginEnd="4dp" />
+                    android:layout_marginEnd="4dp"
+                    android:importantForAccessibility="no" />
 
                 <LinearLayout
                     android:id="@+id/llReplyContent"
@@ -189,8 +191,7 @@
                     android:maxHeight="400dp"
                     android:adjustViewBounds="true"
                     android:scaleType="centerCrop"
-                    android:visibility="gone"
-                    android:contentDescription="@string/app_name" />
+                    android:visibility="gone" />
 
                 <com.airbnb.lottie.LottieAnimationView
                     android:id="@+id/lottieStickerView"
@@ -198,7 +199,8 @@
                     android:layout_height="150dp"
                     android:visibility="gone"
                     android:clickable="true"
-                    android:focusable="true" />
+                    android:focusable="true"
+                    android:importantForAccessibility="no" />
 
                 <ImageView
                     android:id="@+id/ivStickerImage"
@@ -208,7 +210,8 @@
                     android:scaleType="fitCenter"
                     android:clickable="true"
                     android:focusable="true"
-                    android:adjustViewBounds="true" />
+                    android:adjustViewBounds="true"
+                    android:importantForAccessibility="no" />
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvGalleryThumbnails"
@@ -246,6 +249,7 @@
                         android:layout_marginEnd="8dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:src="@drawable/ic_download"
+                        android:contentDescription="@string/download_file"
                         android:visibility="gone"
                         android:padding="4dp"
                         android:scaleType="fitCenter"
@@ -288,6 +292,7 @@
                         android:layout_width="14dp"
                         android:layout_height="14dp"
                         android:layout_marginStart="2dp"
+                        android:contentDescription="@string/read_status"
                         android:visibility="gone" />
                 </LinearLayout>
             </LinearLayout>

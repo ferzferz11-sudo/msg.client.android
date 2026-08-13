@@ -2,6 +2,21 @@
 
 ## [1.4.0.4] - 2026-08-13
 
+### Accessibility
+
+**Sticker editor color pickers (Medium):**
+- 6 color picker ImageViews получили contentDescription (White, Black, Red, Yellow, Green, Blue)
+- Новые строки: `color_white`, `color_black`, `color_red`, `color_yellow`, `color_green`, `color_blue` (EN+RU)
+
+**Message item accessibility (Medium):**
+- `btnDownloadFile` — добавлен contentDescription `download_file`
+- `ivReadStatus` — добавлен contentDescription `read_status`
+- `vReplyBar` — помечен как декоративный (`importantForAccessibility="no"`)
+- `ivAvatar` — помечен как декоративный (описание задаётся динамически в коде)
+- `ivStickerImage`, `lottieStickerView` — помечены как декоративные
+- `ivMessageImage` — убран неправильный `contentDescription="@string/app_name"`
+- Новые строки: `download_file`, `read_status` (EN+RU)
+
 ### Testing
 
 **GrpcMarshallersTest expanded (Medium):**

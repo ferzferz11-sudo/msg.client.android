@@ -991,6 +991,8 @@
     <string name="failed_to_upload_file">Failed to upload file</string>
     <string name="file_too_large">File is too large (max 30 MB)</string>
     <string name="download_started">Download started</string>
+    <string name="download_file">Download file</string>
+    <string name="read_status">Read status</string>
     <string name="theme_saved_failed_to_set">Theme saved but failed to set as current</string>
     <string name="failed_to_start_recording">Failed to start recording</string>
     <string name="default_model_saved">Default model saved</string>
@@ -1143,6 +1145,12 @@
     <string name="sticker_editor_enter_text">Enter text…</string>
     <string name="sticker_editor_add">Add</string>
     <string name="sticker_editor_save_failed">Failed to save sticker</string>
+    <string name="color_white">White</string>
+    <string name="color_black">Black</string>
+    <string name="color_red">Red</string>
+    <string name="color_yellow">Yellow</string>
+    <string name="color_green">Green</string>
+    <string name="color_blue">Blue</string>
     <string name="sticker_filter_original">Original</string>
     <string name="sticker_filter_grayscale">B&amp;W</string>
     <string name="sticker_filter_sepia">Sepia</string>

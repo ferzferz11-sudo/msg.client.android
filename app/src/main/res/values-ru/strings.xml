@@ -991,6 +991,8 @@
     <string name="failed_to_upload_file">Не удалось загрузить файл</string>
     <string name="file_too_large">Файл слишком большой (макс. 30 МБ)</string>
     <string name="download_started">Загрузка начата</string>
+    <string name="download_file">Скачать файл</string>
+    <string name="read_status">Статус прочтения</string>
     <string name="theme_saved_failed_to_set">Тема сохранена, но не установлена как текущая</string>
     <string name="failed_to_start_recording">Не удалось начать запись</string>
     <string name="default_model_saved">Модель по умолчанию сохранена</string>
@@ -1144,6 +1146,12 @@
     <string name="sticker_editor_enter_text">Введите текст…</string>
     <string name="sticker_editor_add">Добавить</string>
     <string name="sticker_editor_save_failed">Не удалось сохранить стикер</string>
+    <string name="color_white">Белый</string>
+    <string name="color_black">Чёрный</string>
+    <string name="color_red">Красный</string>
+    <string name="color_yellow">Жёлтый</string>
+    <string name="color_green">Зелёный</string>
+    <string name="color_blue">Синий</string>
     <string name="sticker_filter_original">Оригинал</string>
     <string name="sticker_filter_grayscale">Ч/Б</string>
     <string name="sticker_filter_sepia">Сепия</string>
