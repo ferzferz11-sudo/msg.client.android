@@ -667,7 +667,6 @@
     <string name="end_for_all">Завершить для всех</string>
     <string name="tap_to_record">Нажмите для записи</string>
     <string name="recording">Запись…</string>
-    <string name="participants_already_joined">%d участников уже в звонке</string>
     <string name="join_conference_action">Присоединиться к конференции</string>
     <string name="lobby_title">Лобби конференции</string>
     <string name="open_lobby">Открыть лобби</string>
@@ -1189,9 +1188,7 @@
         <item quantity="many">%d сообщений</item>
         <item quantity="other">%d сообщений</item>
     </plurals>
-    <string name="forward_more_messages">и ещё %d…</string>
     <string name="forward_send">Переслать</string>
-    <string name="forward_send_count">Переслать в %d</string>
     <string name="forwarded_from">Переслано от %s</string>
     <string name="selected">Выбрано</string>
 
