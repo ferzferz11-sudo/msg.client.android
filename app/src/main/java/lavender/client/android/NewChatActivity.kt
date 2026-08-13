@@ -92,6 +92,8 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var swipeRefreshLayout: androidx.swiperefreshlayout.widget.SwipeRefreshLayout
     private lateinit var historyLoadingProgress: ProgressBar
 
+    private var isChatMuted = false
+
     private val data get() = newChatViewModel.intentData.value
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -105,6 +107,7 @@ class NewChatActivity : AppCompatActivity() {
 
         newChatViewModel = ViewModelProvider(this)[NewChatViewModel::class.java]
         newChatViewModel.parseIntent(intent, null)
+        isChatMuted = intent.getBooleanExtra("IS_MUTED", false)
 
         if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
             newChatViewModel.ensureConnection()
@@ -593,14 +596,23 @@ class NewChatActivity : AppCompatActivity() {
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         val inSelection = selectionDelegate.isInSelectionMode()
+        val inSearch = searchDelegate.isVisible()
         val callItem = menu.findItem(R.id.action_video_call)
         val searchItem = menu.findItem(R.id.action_search)
         val conferenceItem = menu.findItem(R.id.action_conference)
         val pinnedItem = menu.findItem(R.id.action_pinned_messages)
-        callItem?.isVisible = !inSelection && data.isDirect && !data.roomId.startsWith("favorites_") && !data.isSecret
+        val muteItem = menu.findItem(R.id.action_mute_chat)
+        val clearItem = menu.findItem(R.id.action_clear_history)
+        val deleteItem = menu.findItem(R.id.action_delete_chat)
+        val isFavorites = data.roomId.startsWith("favorites_")
+        callItem?.isVisible = !inSelection && !inSearch && data.isDirect && !isFavorites && !data.isSecret
         conferenceItem?.isVisible = false
-        searchItem?.isVisible = !inSelection
-        pinnedItem?.isVisible = !inSelection && chatViewModel.pinnedMessageIds.value.isNotEmpty()
+        searchItem?.isVisible = !inSelection && !inSearch
+        pinnedItem?.isVisible = !inSelection && !inSearch && chatViewModel.pinnedMessageIds.value.isNotEmpty()
+        muteItem?.isVisible = !inSelection && !inSearch && !isFavorites
+        muteItem?.setTitle(if (isChatMuted) R.string.unmute_chat else R.string.mute_chat)
+        clearItem?.isVisible = !inSelection && !inSearch && !isFavorites
+        deleteItem?.isVisible = !inSelection && !inSearch && !isFavorites
         return true
     }
 
@@ -637,6 +649,60 @@ class NewChatActivity : AppCompatActivity() {
             }
             R.id.action_search -> {
                 searchDelegate.show()
+                true
+            }
+            R.id.action_mute_chat -> {
+                val newMuted = !isChatMuted
+                GrpcClient.setMutedChat(data.roomId, newMuted) { success ->
+                    if (success) {
+                        isChatMuted = newMuted
+                        runOnUiThread { invalidateOptionsMenu() }
+                    }
+                }
+                true
+            }
+            R.id.action_clear_history -> {
+                androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle(R.string.clear_history)
+                    .setMessage(R.string.clear_history_confirm)
+                    .setPositiveButton(R.string.clear) { _, _ ->
+                        chatViewModel.clearRoomMessages(this)
+                        chatViewModel.loadHistory()
+                        Toast.makeText(this, getString(R.string.history_cleared), Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton(R.string.cancel_dialog, null)
+                    .show()
+                true
+            }
+            R.id.action_delete_chat -> {
+                val chatName = newChatViewModel.metadata.value.chatName.ifEmpty { data.chatName }
+                val message = if (data.isDirect) {
+                    getString(R.string.delete_chat_confirmation)
+                } else {
+                    getString(R.string.delete_group) + ": \"$chatName\"?"
+                }
+                androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle(R.string.delete_chat)
+                    .setMessage(message)
+                    .setPositiveButton(R.string.delete) { _, _ ->
+                        val username = SessionManager.session.value.username
+                        GrpcClient.deleteChat(data.roomId, username) { success, errorMsg ->
+                            runOnUiThread {
+                                if (success) {
+                                    Toast.makeText(this, getString(R.string.chat_deleted), Toast.LENGTH_SHORT).show()
+                                    val intent = android.content.Intent(this, lavender.client.android.ui.chatlist.ChatListActivity::class.java).apply {
+                                        flags = android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
+                                    }
+                                    startActivity(intent)
+                                    finish()
+                                } else {
+                                    Toast.makeText(this, getString(R.string.error_colon, errorMsg ?: "Failed"), Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }
+                    }
+                    .setNegativeButton(R.string.cancel_dialog, null)
+                    .show()
                 true
             }
             else -> super.onOptionsItemSelected(item)

@@ -231,4 +231,160 @@ class CompanyMarshallersTest {
         assertEquals("Admin", member.position?.title)
         assertEquals(5, member.position?.level)
     }
+
+    // ======= CompanySettings =======
+    @Test
+    fun companySettingsProto_defaults() {
+        val settings = CompanySettingsProto()
+        assertEquals("", settings.companyId)
+        assertFalse(settings.inviteOnly)
+        assertEquals("", settings.defaultPositionId)
+        assertFalse(settings.allowMemberInvite)
+        assertEquals("member", settings.chatAccess)
+        assertFalse(settings.requireApproval)
+    }
+
+    @Test
+    fun companySettingsProto_withValues() {
+        val settings = CompanySettingsProto(
+            companyId = "c1",
+            inviteOnly = true,
+            defaultPositionId = "p1",
+            allowMemberInvite = true,
+            chatAccess = "management",
+            requireApproval = true
+        )
+        assertEquals("c1", settings.companyId)
+        assertTrue(settings.inviteOnly)
+        assertEquals("p1", settings.defaultPositionId)
+        assertTrue(settings.allowMemberInvite)
+        assertEquals("management", settings.chatAccess)
+        assertTrue(settings.requireApproval)
+    }
+
+    @Test
+    fun getCompanySettingsResponse_marshallerParseEmpty() {
+        val parsed = GetCompanySettingsResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertNull(parsed.settings)
+    }
+
+    @Test
+    fun updateCompanySettingsRequestProto() {
+        val settings = CompanySettingsProto(companyId = "c1", inviteOnly = true)
+        val req = UpdateCompanySettingsRequestProto(companyId = "c1", settings = settings)
+        assertEquals("c1", req.companyId)
+        assertNotNull(req.settings)
+        assertTrue(req.settings!!.inviteOnly)
+    }
+
+    @Test
+    fun updateCompanySettingsResponse_marshallerParseEmpty() {
+        val parsed = UpdateCompanySettingsResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse(parsed.success)
+    }
+
+    // ======= InviteCodes =======
+    @Test
+    fun inviteCodeInfoProto_defaults() {
+        val code = InviteCodeInfoProto()
+        assertEquals("", code.id)
+        assertEquals("", code.code)
+        assertEquals("", code.companyId)
+        assertEquals("", code.createdBy)
+        assertEquals("", code.createdAt)
+        assertEquals("", code.expiresAt)
+        assertEquals(1, code.maxUses)
+        assertEquals(0, code.useCount)
+        assertTrue(code.isActive)
+    }
+
+    @Test
+    fun inviteCodeInfoProto_withValues() {
+        val code = InviteCodeInfoProto(
+            id = "ic-1",
+            code = "ABC123",
+            companyId = "c1",
+            createdBy = "alice",
+            maxUses = 10,
+            useCount = 3,
+            isActive = true
+        )
+        assertEquals("ic-1", code.id)
+        assertEquals("ABC123", code.code)
+        assertEquals("c1", code.companyId)
+        assertEquals("alice", code.createdBy)
+        assertEquals(10, code.maxUses)
+        assertEquals(3, code.useCount)
+        assertTrue(code.isActive)
+    }
+
+    @Test
+    fun generateInviteCodeRequestProto() {
+        val req = GenerateInviteCodeRequestProto(companyId = "c1", expiresHours = 24, maxUses = 5)
+        assertEquals("c1", req.companyId)
+        assertEquals(24, req.expiresHours)
+        assertEquals(5, req.maxUses)
+    }
+
+    @Test
+    fun generateInviteCodeResponse_marshallerParseEmpty() {
+        val parsed = GenerateInviteCodeResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse(parsed.success)
+        assertNull(parsed.code)
+    }
+
+    @Test
+    fun listInviteCodesResponse_marshallerParseEmpty() {
+        val parsed = ListInviteCodesResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertTrue(parsed.codes.isEmpty())
+    }
+
+    @Test
+    fun revokeInviteCodeRequestProto() {
+        val req = RevokeInviteCodeRequestProto(codeId = "ic-1")
+        assertEquals("ic-1", req.codeId)
+    }
+
+    @Test
+    fun revokeInviteCodeResponse_marshallerParseEmpty() {
+        val parsed = RevokeInviteCodeResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse(parsed.success)
+    }
+
+    @Test
+    fun joinByInviteCodeRequestProto() {
+        val req = JoinByInviteCodeRequestProto(code = "ABC123")
+        assertEquals("ABC123", req.code)
+    }
+
+    @Test
+    fun joinByInviteCodeResponse_marshallerParseEmpty() {
+        val parsed = JoinByInviteCodeResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse(parsed.success)
+        assertEquals("", parsed.companyId)
+        assertNull(parsed.member)
+    }
+
+    // ======= Company Notifications =======
+    @Test
+    fun sendCompanyNotificationRequestProto() {
+        val req = SendCompanyNotificationRequestProto(
+            companyId = "c1",
+            eventType = 1,
+            actorUsername = "alice",
+            targetUsername = "bob",
+            positionName = "Manager"
+        )
+        assertEquals("c1", req.companyId)
+        assertEquals(1, req.eventType)
+        assertEquals("alice", req.actorUsername)
+        assertEquals("bob", req.targetUsername)
+        assertEquals("Manager", req.positionName)
+    }
+
+    @Test
+    fun sendCompanyNotificationResponse_marshallerParseEmpty() {
+        val parsed = SendCompanyNotificationResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse(parsed.success)
+    }
 }

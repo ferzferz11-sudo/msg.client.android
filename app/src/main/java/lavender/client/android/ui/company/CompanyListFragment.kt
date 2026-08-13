@@ -139,6 +139,15 @@ class CompanyListFragment : Fragment() {
                         GrpcCompanyClient.removeMember(companyId, member.userId)
                     }
                     if (response?.success == true) {
+                        // Send company notification for member leave
+                        withContext(Dispatchers.IO) {
+                            GrpcCompanyClient.sendCompanyNotification(
+                                companyId = companyId,
+                                eventType = 2, // member_left
+                                actorUsername = SessionManager.session.value.username,
+                                targetUsername = member.username
+                            )
+                        }
                         Toast.makeText(context, R.string.member_removed, Toast.LENGTH_SHORT).show()
                         loadData()
                     } else {
@@ -192,6 +201,16 @@ class CompanyListFragment : Fragment() {
                             GrpcCompanyClient.updateMemberPosition(companyId, member.userId, selectedPosition.id)
                         }
                         if (response?.success == true) {
+                            // Send company notification for position change
+                            withContext(Dispatchers.IO) {
+                                GrpcCompanyClient.sendCompanyNotification(
+                                    companyId = companyId,
+                                    eventType = 3, // position_changed
+                                    actorUsername = SessionManager.session.value.username,
+                                    targetUsername = member.username,
+                                    positionName = selectedPosition.title
+                                )
+                            }
                             Toast.makeText(context, R.string.position_updated, Toast.LENGTH_SHORT).show()
                             loadData()
                         } else {

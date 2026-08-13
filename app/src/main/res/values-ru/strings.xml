@@ -249,6 +249,8 @@
     <string name="notifications_company">Компания</string>
     <string name="clear">Очистить</string>
     <string name="history_cleared">История очищена</string>
+    <string name="clear_history">Очистить историю</string>
+    <string name="clear_history_confirm">Очистить все сообщения в этом чате?</string>
     <string name="loading">Загрузка…</string>
     <string name="change_bio">Сохранить</string>
     <string name="bio_label">Кратко о себе</string>
@@ -813,6 +815,7 @@
     <string name="server_default_name">Lava Germany</string>
     <string name="app_version_format">Lava: приложение Android %s</string>
     <string name="delete_chat_confirmation">Удалить этот чат?</string>
+    <string name="chat_deleted">Чат удалён</string>
     <string name="delete_message_confirmation">Удалить это сообщение?</string>
     <string name="delete_messages_confirmation">Удалить %d выбранных сообщений?</string>
     <string name="e2ee_enabled">🔒 E2EE</string>
@@ -945,6 +948,8 @@
     <string name="action_unarchive">Разархивировать</string>
     <string name="action_mute">Отключить звук</string>
     <string name="action_unmute">Включить звук</string>
+    <string name="mute_chat">Отключить уведомления</string>
+    <string name="unmute_chat">Включить уведомления</string>
     <string name="search_chats">Поиск чатов…</string>
     <string name="search_no_results">Ничего не найдено</string>
 
@@ -1037,6 +1042,30 @@
     <string name="company_notifications">Уведомления</string>
     <string name="mute_company_chats">Отключить уведомления company чатов</string>
     <string name="company_settings_saved">Настройки сохранены</string>
+    <string name="company_access_control">Контроль доступа</string>
+    <string name="company_invite_only">Только по приглашению</string>
+    <string name="company_invite_only_desc">Только пользователи с кодом приглашения могут вступить</string>
+    <string name="company_allow_member_invite">Разрешить приглашение участникам</string>
+    <string name="company_allow_member_invite_desc">Участники могут создавать коды приглашения</string>
+    <string name="company_require_approval">Требовать одобрение</string>
+    <string name="company_require_approval_desc">Новые участники требуют одобрения владельца</string>
+    <string name="company_chat_access">Доступ к чатам по умолчанию</string>
+    <string name="company_default_chat_access">Кто может создавать чаты компании</string>
+    <string name="company_default_position">Должность по умолчанию</string>
+    <string name="company_default_position_desc">Должность, назначаемая новым участникам</string>
+    <string name="no_default_position">Без должности по умолчанию</string>
+    <string name="company_invite_codes">Коды приглашения</string>
+    <string name="company_generate_code">Создать код</string>
+    <string name="company_code_generated">Код приглашения создан</string>
+    <string name="company_code_revoked">Код приглашения отозван</string>
+    <string name="company_no_codes">Нет кодов приглашения</string>
+    <string name="company_code_expires_hours">Срок действия (часов, 0 = бессрочно)</string>
+    <string name="company_code_max_uses">Макс. использований (0 = без ограничений)</string>
+    <string name="company_code_share">Поделиться</string>
+    <string name="company_code_revoke">Отозвать</string>
+    <string name="company_code_uses">Использований: %1$d/%2$d</string>
+    <string name="company_code_active">Активный</string>
+    <string name="company_code_expired">Истёк</string>
     <string name="more_options">Ещё</string>
     <string name="edit_position">Редактировать</string>
     <string name="delete_position">Удалить должность</string>

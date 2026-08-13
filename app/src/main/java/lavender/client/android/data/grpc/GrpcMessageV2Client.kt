@@ -94,6 +94,17 @@ class GrpcMessageV2Client(
             val toRemove = deletedMessageHashes.take(DELETED_HASHES_MAX_SIZE / 2)
             deletedMessageHashes.removeAll(toRemove.toSet())
         }
+        // Persist to SharedPreferences
+        appContext()?.getSharedPreferences("deleted_messages", android.content.Context.MODE_PRIVATE)?.edit()
+            ?.putStringSet("hashes", deletedMessageHashes.toSet())
+            ?.apply()
+        // Persist to Room DB
+        val messageId = hash.removePrefix("id:")
+        if (messageId != hash && messageId.isNotEmpty()) {
+            scope.launch(Dispatchers.IO) {
+                try { db()?.deletedMessageDao()?.insert(lavender.client.android.data.db.DeletedMessageEntity(messageId)) } catch (_: Exception) {}
+            }
+        }
     }
 
     @Volatile private var database: AppDatabase? = null

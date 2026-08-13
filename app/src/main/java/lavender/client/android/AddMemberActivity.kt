@@ -121,6 +121,15 @@ class AddMemberActivity : AppCompatActivity() {
                 GrpcCompanyClient.addMember(companyId, userId, positionId)
             }
             if (response?.success == true) {
+                // Send company notification for member join
+                withContext(Dispatchers.IO) {
+                    GrpcCompanyClient.sendCompanyNotification(
+                        companyId = companyId,
+                        eventType = 1, // member_joined
+                        actorUsername = SessionManager.session.value.username,
+                        targetUsername = username
+                    )
+                }
                 Toast.makeText(this@AddMemberActivity, getString(R.string.member_added), Toast.LENGTH_SHORT).show()
                 setResult(RESULT_OK)
                 finish()

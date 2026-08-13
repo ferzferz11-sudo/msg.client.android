@@ -1,8 +1,5 @@
 package lavender.client.android
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -36,7 +33,6 @@ import lavender.client.android.data.grpc.GrpcCompanyClient
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
-import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.company.CompanyPagerAdapter
 import lavender.client.android.ui.widget.ActionBottomSheet
@@ -461,30 +457,14 @@ class CompanyProfileActivity : AppCompatActivity() {
     }
 
     private fun shareInviteCode() {
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val clip = ClipData.newPlainText("invite_code", companyId)
-        clipboard.setPrimaryClip(clip)
-        Toast.makeText(this, getString(R.string.invite_code_copied), Toast.LENGTH_SHORT).show()
+        val intent = Intent(this, InviteCodeActivity::class.java)
+        intent.putExtra("COMPANY_ID", companyId)
+        startActivity(intent)
     }
 
     private fun showCompanySettings() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_company_settings, null)
-        val builder = AlertDialog.Builder(this)
-            .setTitle(R.string.company_settings)
-            .setView(dialogView)
-            .setPositiveButton(R.string.save) { _, _ ->
-                val muteSwitch = dialogView.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchMuteChats)
-                val prefs = getSharedPreferences("company_prefs", MODE_PRIVATE)
-                prefs.edit().putBoolean("mute_company_chats_$companyId", muteSwitch.isChecked).apply()
-                Toast.makeText(this, getString(R.string.company_settings_saved), Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton(R.string.cancel_dialog, null)
-
-        val dialog = builder.create()
-        dialog.show()
-
-        val prefs = getSharedPreferences("company_prefs", MODE_PRIVATE)
-        val muteSwitch = dialogView.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchMuteChats)
-        muteSwitch.isChecked = prefs.getBoolean("mute_company_chats_$companyId", false)
+        val intent = Intent(this, CompanySettingsActivity::class.java)
+        intent.putExtra("COMPANY_ID", companyId)
+        startActivity(intent)
     }
 }

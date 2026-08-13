@@ -199,3 +199,9 @@ fun MarketplaceAgentEntity.toDomain(): MarketplaceAgent = MarketplaceAgent(
     avgRating = avgRating,
     installCount = installCount
 )
+
+@Entity(tableName = "deleted_messages")
+data class DeletedMessageEntity(
+    @PrimaryKey val id: String,
+    val deletedAt: Long = System.currentTimeMillis()
+)

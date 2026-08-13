@@ -214,6 +214,7 @@
     <string name="delete_message_confirmation">Delete this message?</string>
     <string name="delete_messages_confirmation">Delete %d selected messages?</string>
     <string name="delete_chat_confirmation">Delete this chat?</string>
+    <string name="chat_deleted">Chat deleted</string>
     <string name="participants_count">%d participants</string>
     <string name="participants_online_count">%1$d participants (%2$d online)</string>
     <string name="search">Search</string>
@@ -258,6 +259,8 @@
     <string name="notifications_company">Company</string>
     <string name="clear">Clear</string>
     <string name="history_cleared">History cleared</string>
+    <string name="clear_history">Clear history</string>
+    <string name="clear_history_confirm">Clear all messages in this chat?</string>
 
     <string name="loading">Loading…</string>
     <string name="change_bio">Save</string>
@@ -945,6 +948,8 @@
     <string name="action_unarchive">Unarchive</string>
     <string name="action_mute">Mute</string>
     <string name="action_unmute">Unmute</string>
+    <string name="mute_chat">Mute notifications</string>
+    <string name="unmute_chat">Unmute notifications</string>
     <string name="search_chats">Search chats…</string>
     <string name="search_no_results">No results</string>
 
@@ -1038,6 +1043,30 @@
     <string name="company_notifications">Notifications</string>
     <string name="mute_company_chats">Mute company chats</string>
     <string name="company_settings_saved">Settings saved</string>
+    <string name="company_access_control">Access Control</string>
+    <string name="company_invite_only">Invite Only</string>
+    <string name="company_invite_only_desc">Only users with invite code can join</string>
+    <string name="company_allow_member_invite">Allow Member Invite</string>
+    <string name="company_allow_member_invite_desc">Members can generate invite codes</string>
+    <string name="company_require_approval">Require Approval</string>
+    <string name="company_require_approval_desc">New members need owner approval</string>
+    <string name="company_chat_access">Default Chat Access</string>
+    <string name="company_default_chat_access">Who can create company chats</string>
+    <string name="company_default_position">Default Position</string>
+    <string name="company_default_position_desc">Position assigned to new members</string>
+    <string name="no_default_position">No default position</string>
+    <string name="company_invite_codes">Invite Codes</string>
+    <string name="company_generate_code">Generate Code</string>
+    <string name="company_code_generated">Invite code generated</string>
+    <string name="company_code_revoked">Invite code revoked</string>
+    <string name="company_no_codes">No invite codes</string>
+    <string name="company_code_expires_hours">Expires in (hours, 0 = never)</string>
+    <string name="company_code_max_uses">Max uses (0 = unlimited)</string>
+    <string name="company_code_share">Share</string>
+    <string name="company_code_revoke">Revoke</string>
+    <string name="company_code_uses">Uses: %1$d/%2$d</string>
+    <string name="company_code_active">Active</string>
+    <string name="company_code_expired">Expired</string>
     <string name="more_options">More options</string>
     <string name="edit_position">Edit</string>
     <string name="delete_position">Delete Position</string>

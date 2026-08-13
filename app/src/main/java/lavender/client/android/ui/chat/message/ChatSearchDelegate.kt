@@ -99,6 +99,7 @@ class ChatSearchDelegate(
         searchInput.requestFocus()
         (activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager)
             .showSoftInput(searchInput, 0)
+        activity.invalidateOptionsMenu()
     }
 
     fun hide() {
@@ -113,6 +114,7 @@ class ChatSearchDelegate(
         (activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager)
             .hideSoftInputFromWindow(searchInput.windowToken, 0)
         getToolbarDelegate?.invoke()?.setNavigationIcon(R.drawable.ic_back_arrow)
+        activity.invalidateOptionsMenu()
     }
 
     fun isVisible(): Boolean = searchBar.isVisible

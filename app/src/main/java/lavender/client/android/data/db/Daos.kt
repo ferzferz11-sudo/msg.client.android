@@ -146,3 +146,18 @@ interface StickerDao {
     @Query("DELETE FROM stickers")
     suspend fun clearAll()
 }
+
+@Dao
+interface DeletedMessageDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(entity: DeletedMessageEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(entities: List<DeletedMessageEntity>)
+
+    @Query("SELECT id FROM deleted_messages")
+    suspend fun getAllIds(): List<String>
+
+    @Query("DELETE FROM deleted_messages WHERE deletedAt < :before")
+    suspend fun cleanupOlderThan(before: Long)
+}

@@ -140,6 +140,17 @@ object RealGrpcClient {
             val toRemove = deletedMessageHashes.take(DELETED_HASHES_MAX_SIZE / 2)
             deletedMessageHashes.removeAll(toRemove.toSet())
         }
+        // Persist to SharedPreferences
+        appContext?.getSharedPreferences("deleted_messages", Context.MODE_PRIVATE)?.edit()
+            ?.putStringSet("hashes", deletedMessageHashes.toSet())
+            ?.apply()
+        // Persist to Room DB (extract message ID from hash)
+        val messageId = hash.removePrefix("id:")
+        if (messageId != hash && messageId.isNotEmpty()) {
+            scope.launch(Dispatchers.IO) {
+                try { db()?.deletedMessageDao()?.insert(lavender.client.android.data.db.DeletedMessageEntity(messageId)) } catch (_: Exception) {}
+            }
+        }
     }
 
     // ====== Module: Connection Manager ======
@@ -906,8 +917,19 @@ object RealGrpcClient {
         "${message.user}:${message.text}:${message.timestamp / 1000}"
 
     private fun loadDeletedMessages() {
+        // Load from SharedPreferences
         appContext?.getSharedPreferences("deleted_messages", Context.MODE_PRIVATE)?.let { prefs ->
             deletedMessageHashes.addAll(prefs.getStringSet("hashes", emptySet()) ?: emptySet())
+        }
+        // Load from Room DB
+        scope.launch(Dispatchers.IO) {
+            try {
+                val ids = db()?.deletedMessageDao()?.getAllIds() ?: emptyList()
+                ids.forEach { deletedMessageHashes.add("id:$it") }
+                // Cleanup old entries (> 30 days)
+                val cutoff = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000
+                db()?.deletedMessageDao()?.cleanupOlderThan(cutoff)
+            } catch (_: Exception) {}
         }
     }
 

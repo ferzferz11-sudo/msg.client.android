@@ -56,6 +56,7 @@ internal fun navigateToChat(activity: ChatListActivity, chat: ChatInfo, username
                 putExtra("FULL_AVATAR_URL", chat.fullAvatarUrl)
                 putExtra("CREATOR", chat.creator)
                 putExtra("IS_SECRET", chat.isSecret.toString())
+                putExtra("IS_MUTED", chat.isMuted)
             }
             activity.startActivity(intent)
         }

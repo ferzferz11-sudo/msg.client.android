@@ -1,5 +1,95 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.0] - 2026-08-13
+
+### Новые фичи
+
+**Company Settings screen (Medium):**
+- `CompanySettingsActivity` — полноценный экран настроек компании с использованием `getCompanySettings`/`updateCompanySettings` RPC
+- Настройки: Invite Only, Allow Member Invite, Require Approval, Default Chat Access (member/management/owner_only), Default Position
+- ChipGroup для выбора уровня доступа, Dropdown для выбора позиции
+- Заменён примитивный mute-диалог на полноценный экран
+
+**Invite Code management UI (Medium):**
+- `InviteCodeActivity` — управление кодами приглашений с использованием `generateInviteCode`/`listInviteCodes`/`revokeInviteCode`
+- Список активных кодов с RecyclerView, FAB для генерации нового
+- Кнопки Share (системный share sheet) и Revoke (с подтверждением)
+- Статус кода (Active/Expired), использование (uses/maxUses), срок действия
+
+**Company Notifications integration (Low):**
+- `sendCompanyNotification` подключён к операциям с участниками
+- eventType=1 (member_joined) при `addMember` в `AddMemberActivity`
+- eventType=2 (member_left) при `removeMember` в `CompanyListFragment`
+- eventType=3 (position_changed) при `updateMemberPosition` в `CompanyListFragment`
+
+**Chat toolbar redesign (Medium):**
+- Иконка видеозвонка заменена на телефонную трубку (`ic_call`) в стиле Telegram
+- Поиск перенесён в overflow menu (`showAsAction="never"`)
+- Pinned Messages перенесён в overflow menu
+- Новые пункты меню: Mute notifications (`ic_mute`), Clear history (`ic_delete_sweep`), Delete chat (`ic_delete`)
+- Все пункты меню с иконками в стиле Telegram
+
+**Delete message persistence fix (Critical):**
+- `deletedMessageHashes` теперь сохраняется в SharedPreferences + Room DB при каждом удалении
+- Загрузка при старте из SharedPreferences + Room DB (backup)
+- Автоочистка записей старше 30 дней
+- Новая таблица `deleted_messages` в Room DB (миграция 15→16)
+- Удалённые сообщения больше не появляются после перезапуска приложения
+
+### Исправлено
+
+**Chat list selection mode — delay + checkbox残留 (Medium):**
+- `setSelectionMode()` и `clearSelection()` используют `notifyDataSetChanged()` вместо поштучных `notifyItemChanged(i)`
+- Исправлен баг: чекбоксы оставались видимыми у невыбранных элементов при выходе из режима выделения
+- Удалён неиспользуемый метод `chatAdapter.clearSelection()` — заменён на `setSelectionMode(false)`
+
+**Chat search mode — call icon not hiding (Low):**
+- `onPrepareOptionsMenu` — иконка звонка теперь скрывается при активном поиске (`searchDelegate.isVisible()`)
+- `ChatSearchDelegate.show()` и `hide()` вызывают `activity.invalidateOptionsMenu()` для обновления меню
+
+### Unit Tests
+
+- `EditProfileViewModelTest` — 7 тестов для `ProfileUiState` и `AvatarUploadState`
+- `SuperAdminViewModelTest` — 6 тестов для `SuperAdminUiState` и `Mode`
+- `ConferenceLobbyViewModelTest` — 5 тестов для `ConferenceLobbyUiState`
+- `CompanyMarshallersTest` — расширен на CompanySettings, InviteCode, CompanyNotifications
+
+### Изменения в файлах
+
+| Файл | Изменение |
+|------|-----------|
+| `CompanySettingsActivity.kt` | Новый — экран настроек компании |
+| `InviteCodeActivity.kt` | Новый — управление кодами приглашений |
+| `InviteCodeAdapter.kt` | Новый — адаптер для списка кодов |
+| `CompanyProfileActivity.kt` | Запуск новых Activities вместо примитивных диалогов, удалены неиспользуемые импорты |
+| `AddMemberActivity.kt` | sendCompanyNotification при добавлении участника |
+| `CompanyListFragment.kt` | sendCompanyNotification при удалении/смене позиции |
+| `NewChatActivity.kt` | Mute toggle, Clear history, Delete chat handlers, search mode fix |
+| `ChatAdapter.kt` | notifyDataSetChanged для selection mode, удалён notifyChatItemsChanged |
+| `ChatSearchDelegate.kt` | invalidateOptionsMenu в show()/hide() |
+| `ChatListNavigation.kt` | Передача IS_MUTED через intent |
+| `GrpcMessageV2Client.kt` | addDeletedHash — сохранение в SharedPreferences + Room DB |
+| `RealGrpcClient.kt` | addDeletedHash — сохранение в SharedPreferences + Room DB, loadDeletedMessages — загрузка из Room DB |
+| `AppDatabase.kt` | Миграция 15→16, DeletedMessageEntity, DeletedMessageDao |
+| `Daos.kt` | DeletedMessageDao (insert, getAllIds, cleanupOlderThan) |
+| `Entities.kt` | DeletedMessageEntity |
+| `chat_menu.xml` | 7 пунктов меню с иконками |
+| `ic_delete_sweep.xml` | Новая иконка |
+| `ic_mute.xml` | Новая иконка |
+| `activity_company_settings.xml` | Новый layout |
+| `activity_invite_codes.xml` | Новый layout |
+| `item_invite_code.xml` | Новый layout |
+| `dialog_generate_invite_code.xml` | Новый layout |
+| `strings.xml` (EN+RU) | 20+ новых строковых ресурсов |
+| `CompanyMarshallersTest.kt` | +156 строк тестов |
+| `EditProfileViewModelTest.kt` | Новый файл тестов |
+| `SuperAdminViewModelTest.kt` | Новый файл тестов |
+| `ConferenceLobbyViewModelTest.kt` | Новый файл тестов |
+| `AndroidManifest.xml` | Регистрация CompanySettingsActivity, InviteCodeActivity |
+| `version.txt` | 1.4.0.0 |
+
+---
+
 ## [1.3.4.20] - 2026-08-11
 
 ### Исправлено
