@@ -264,7 +264,7 @@ class MessageAdapter(
         }
 
         private fun bindBubbleStyle(isOutgoing: Boolean, isSystem: Boolean, surfaceColor: Int, textColor: Int, secColor: Int, canShowSenderInfo: Boolean, theme: lavender.client.android.theme.Theme) {
-            if (isSystem) { messageBubble.setBackgroundResource(R.drawable.bg_date_separator); messageBubble.backgroundTintList = ColorStateList.valueOf(ThemeUtils.adjustAlpha(Color.GRAY, 0.4f)); messageText.setTextColor(Color.WHITE); messageText.textSize = 13f; timeText.isVisible = false; readStatusIcon.isVisible = false; avatarImageView.isVisible = false; userText.isVisible = false; return }
+            if (isSystem) { messageBubble.setBackgroundResource(R.drawable.bg_date_separator); messageBubble.backgroundTintList = ColorStateList.valueOf(ThemeUtils.adjustAlpha(Color.GRAY, 0.4f)); messageText.setTextColor(Color.WHITE); messageText.textSize = 11f; timeText.isVisible = false; readStatusIcon.isVisible = false; avatarImageView.isVisible = false; userText.isVisible = false; return }
             val bubbleRes = if (isOutgoing) R.drawable.bg_message_outgoing else R.drawable.bg_message_incoming
             messageBubble.setBackgroundResource(bubbleRes); messageBubble.backgroundTintList = ColorStateList.valueOf(surfaceColor)
             messageText.setTextColor(textColor); messageText.setLinkTextColor(textColor)
