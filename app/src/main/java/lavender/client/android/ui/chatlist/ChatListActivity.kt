@@ -551,6 +551,13 @@ class ChatListActivity : AppCompatActivity() {
             layoutManager = LinearLayoutManager(context)
             adapter = chatAdapter
             setHasFixedSize(true)
+            // Smooth item animations
+            itemAnimator = androidx.recyclerview.widget.DefaultItemAnimator().apply {
+                addDuration = 200
+                removeDuration = 150
+                changeDuration = 150
+                moveDuration = 200
+            }
             addOnScrollListener(object : RecyclerView.OnScrollListener() {
                 override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
                     if (dy > 0) {
@@ -568,12 +575,21 @@ class ChatListActivity : AppCompatActivity() {
         setupSwipeActions()
 
         // Observe sections
+        var isFirstLoad = true
         lifecycleScope.launch {
             viewModel.sections.collectLatest { sections ->
                 val layoutManager = rvChatList?.layoutManager as? LinearLayoutManager
                 val firstVisible = layoutManager?.findFirstCompletelyVisibleItemPosition() ?: 0
                 val wasNearTop = firstVisible <= 1
                 chatAdapter.setSections(sections)
+                // Apply layout animation only on first load
+                if (isFirstLoad && sections.isNotEmpty()) {
+                    isFirstLoad = false
+                    rvChatList?.layoutAnimation = android.view.animation.AnimationUtils.loadLayoutAnimation(
+                        this@ChatListActivity, R.anim.layout_animation_fall_down
+                    )
+                    rvChatList?.scheduleLayoutAnimation()
+                }
                 // Update dynamic tabs (AI, per-company, Archive)
                 updateDynamicTabs(this@ChatListActivity, viewModel.getChats())
                 if (wasNearTop) {

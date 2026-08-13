@@ -45,6 +45,13 @@
 - Layouts: `activity_notification.xml`, `activity_notification_log.xml`, `item_notification_log.xml`
 - Удалены обе записи из AndroidManifest.xml
 
+### Улучшения
+
+**List animation polish (Low):**
+- Chat list: `DefaultItemAnimator` с оптимизированными длительностями (add=200ms, remove=150ms, change=150ms)
+- Chat list: layout animation «fall down» при первой загрузке (fade + slide, stagger 8%)
+- Chat messages: `DefaultItemAnimator` для плавного появления новых сообщений (add=150ms)
+
 ### Тесты
 
 - `GrpcMarshallersTest` — 27 тестов для критических маршаллеров (field order verification)

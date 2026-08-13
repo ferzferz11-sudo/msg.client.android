@@ -116,6 +116,12 @@ class ChatWidget @JvmOverloads constructor(
         messagesRecyclerView.layoutManager = LinearLayoutManager(context).apply {
             stackFromEnd = true
         }
+        messagesRecyclerView.itemAnimator = androidx.recyclerview.widget.DefaultItemAnimator().apply {
+            addDuration = 150
+            removeDuration = 100
+            changeDuration = 100
+            moveDuration = 150
+        }
     }
 
     private fun setupMentionList() {
