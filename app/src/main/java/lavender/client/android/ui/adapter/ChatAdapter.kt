@@ -343,9 +343,11 @@ class ChatAdapter(
                         .placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar)
                         .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
                         .override(sizePx, sizePx).circleCrop().into(ivChatAvatar)
-                } else if (avatarUrl.isEmpty() && currentTag != null) {
-                    ivChatAvatar.tag = null
-                    com.bumptech.glide.Glide.with(itemView.context).clear(ivChatAvatar)
+                } else if (avatarUrl.isEmpty()) {
+                    if (currentTag != null) {
+                        ivChatAvatar.tag = null
+                        com.bumptech.glide.Glide.with(itemView.context).clear(ivChatAvatar)
+                    }
                     try {
                         val currentTheme = lavender.client.android.theme.ThemeStore.currentTheme()
                         lavender.client.android.theme.ThemeUtils.applyDefaultAvatar(ivChatAvatar, currentTheme)

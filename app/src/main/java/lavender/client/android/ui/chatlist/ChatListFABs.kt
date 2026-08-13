@@ -158,7 +158,7 @@ internal fun showAddContactDialog(activity: ChatListActivity) {
                                 }
                             }
                         }
-                        Toast.makeText(activity, activity.getString(R.string.contacts_added, added), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(activity, activity.resources.getQuantityString(R.plurals.contacts_added_count, added, added), Toast.LENGTH_SHORT).show()
                     }
                 }
             }

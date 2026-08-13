@@ -111,7 +111,7 @@ class ForwardMessageSheet(
         }
         if (messages.size > 3) {
             val moreView = TextView(activity).apply {
-                text = activity.getString(R.string.forward_more_messages, messages.size - 3)
+                text = activity.resources.getQuantityString(R.plurals.forward_more_messages, messages.size - 3, messages.size - 3)
                 setTextColor(ThemeUtils.adjustAlpha(txtColor, 0.6f))
                 setPadding(16, 8, 16, 8)
             }
@@ -166,7 +166,7 @@ class ForwardMessageSheet(
         val count = selectedChats.size
         btnSend.isEnabled = count > 0
         btnSend.text = if (count > 0) {
-            activity.getString(R.string.forward_send_count, count)
+            activity.resources.getQuantityString(R.plurals.forward_send_count, count, count)
         } else {
             activity.getString(R.string.forward_send)
         }

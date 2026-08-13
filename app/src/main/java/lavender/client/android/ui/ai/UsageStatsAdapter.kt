@@ -31,7 +31,7 @@ class UsageStatsAdapter : ListAdapter<UsageStat, UsageStatsAdapter.ViewHolder>(D
         fun bind(stat: UsageStat) {
             agentName.text = stat.agentName.ifEmpty { itemView.context.getString(R.string.agent) }
             tokens.text = itemView.context.getString(R.string.marketplace_tokens_count, formatNumber(stat.totalTokens))
-            requests.text = itemView.context.getString(R.string.marketplace_requests_count, stat.requestCount)
+            requests.text = itemView.context.resources.getQuantityString(R.plurals.marketplace_requests_count, stat.requestCount, stat.requestCount)
             period.text = formatDate(stat.periodStart)
         }
 

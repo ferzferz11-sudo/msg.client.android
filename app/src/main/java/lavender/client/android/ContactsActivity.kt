@@ -224,7 +224,7 @@ class ContactsActivity : AppCompatActivity() {
 
         AlertDialog.Builder(this)
             .setTitle(R.string.remove_contact)
-            .setMessage(getString(R.string.remove_multiple_contacts_confirm, selected.size))
+            .setMessage(resources.getQuantityString(R.plurals.remove_contacts_confirm, selected.size, selected.size))
             .setPositiveButton(R.string.delete) { _, _ ->
                 viewModel.removeContacts(username, selected) {
                     lifecycleScope.launch { viewModel.loadContacts(username) }
@@ -292,10 +292,10 @@ class ContactsActivity : AppCompatActivity() {
                     if (completed == total) {
                         lifecycleScope.launch {
                             if (failed > 0) {
-                                Toast.makeText(this@ContactsActivity, getString(R.string.contacts_add_failed, failed), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this@ContactsActivity, resources.getQuantityString(R.plurals.contacts_add_failed_count, failed, failed), Toast.LENGTH_SHORT).show()
                             }
                             if (failed < total) {
-                                Toast.makeText(this@ContactsActivity, getString(R.string.contacts_added, total - failed), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this@ContactsActivity, resources.getQuantityString(R.plurals.contacts_added_count, total - failed, total - failed), Toast.LENGTH_SHORT).show()
                             }
                             sheet.dismiss()
                             if (createChat && failed == 0) {

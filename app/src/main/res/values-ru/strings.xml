@@ -181,17 +181,11 @@
     <string name="update_download_prompt">Доступна новая версия. Скачать?</string>
     <string name="downloading">Загрузка…</string>
     <string name="delete_chats">Удалить чаты</string>
-    <string name="delete_chats_confirmation">Вы уверены, что хотите удалить %d выбранных чатов? Все сообщения и изображения будут удалены навсегда.</string>
-    <string name="deleted_count">Удалено чатов: %d</string>
     <string name="failed_to_delete_chats">Не удалось удалить чаты</string>
     <string name="mute_chats">Отключить уведомления</string>
-    <string name="mute_chats_confirmation">Отключить уведомления для %d выбранных чатов? Вы не будете получать push-уведомления из этих чатов.</string>
     <string name="unmute_chats">Включить уведомления</string>
-    <string name="unmute_chats_confirmation">Включить уведомления для %d выбранных чатов? Вы снова будете получать push-уведомления из этих чатов.</string>
     <string name="mute">Заглушить Пуш-уведомления</string>
     <string name="unmute">Включить Пуш-уведомления</string>
-    <string name="muted_count">Уведомления отключены в %d чатах</string>
-    <string name="unmuted_count">Уведомления включены в %d чатах</string>
     <string name="add_chat">Добавить чат</string>
     <string name="create_group">Создать группу</string>
     <string name="default_group_name">Группа</string>
@@ -203,10 +197,7 @@
     <string name="delete_messages_title">Удаление сообщений</string>
     <string name="delete_for_everyone">Удалить для всех</string>
     <string name="delete_for_me">Удалить у меня</string>
-    <string name="delete_messages_confirm">Вы уверены, что хотите удалить выбранные сообщения (%d)? Это также удалит изображения с сервера.</string>
     <string name="delete_messages_action">Удалить сообщения</string>
-    <string name="participants_count">%d участников</string>
-    <string name="participants_online_count">%1$d участников (%2$d онлайн)</string>
     <string name="search">Поиск</string>
     <string name="video_call">Видеозвонок</string>
     <string name="voice_call">Звонок</string>
@@ -275,8 +266,6 @@
     <string name="contacts">Контакты</string>
     <string name="add_contact">Добавить контакт</string>
     <string name="create_chat_after">Создать чат сразу</string>
-        <string name="contacts_added">Добавлено контактов: %d</string>
-        <string name="contacts_add_failed">Не удалось добавить %d контактов</string>
         <string name="all_contacts_already_in_group">Все ваши контакты уже добавлены в эту группу</string>
     <string name="already_in_contacts">Пользователь уже в контактах</string>
     <string name="no_contacts">Контактов пока нет. Добавьте кого-нибудь, чтобы начать общение!</string>
@@ -379,14 +368,12 @@
     <string name="share_with_friends">Поделиться Лавой</string>
     <string name="apply">Применить</string>
     <string name="user_is_typing">%1$s печатает…</string>
-    <string name="users_are_typing">%1$d чел. печатают…</string>
     <string name="action_update">Проверка обновлений</string>
     <string name="action_about">О программе</string>
     <string name="admin_panel">Админ панель</string>
     <string name="favorites">Избранное</string>
     <string name="no_favorites_yet">Избранного пока нет</string>
     <string name="added_to_favorites">Добавлено в Избранное</string>
-    <string name="remove_multiple_contacts_confirm">Удалить выбранные контакты (%d)?</string>
 
     <!-- Theme Palette -->
     <string name="theme_palette">Палитра</string>
@@ -708,7 +695,6 @@
     <string name="changelog_title">Что нового</string>
     <string name="tag_latest">★ Новейший</string>
     <string name="tag_prerelease">Пре</string>
-    <string name="files_count">📦 %d файл(ов)</string>
     <string name="downloads">Скачать</string>
     <string name="view_on_github">Открыть на GitHub →</string>
     <string name="changelog_empty">Релизов пока нет</string>
@@ -763,8 +749,6 @@
     <string name="marketplace_enter_share_code">Введите код</string>
     <string name="marketplace_write_review">Напишите отзыв (необязательно)</string>
     <string name="marketplace_submit">Отправить</string>
-    <string name="marketplace_installs">%d установок</string>
-    <string name="marketplace_reviews">%d отзывов</string>
     <string name="marketplace_agent_installed">Агент установлен!</string>
     <string name="marketplace_thanks_rating">Спасибо за оценку!</string>
     <string name="marketplace_select_rating">Пожалуйста, выберите оценку</string>
@@ -775,7 +759,6 @@
     <string name="marketplace_tokens">Токенов</string>
     <string name="marketplace_requests">Запросов</string>
     <string name="marketplace_tokens_count">%s токенов</string>
-    <string name="marketplace_requests_count">%d запросов</string>
     <string name="marketplace_avg_request">Ср. на запрос</string>
     <string name="marketplace_no_data">Пока нет данных</string>
     <string name="marketplace_no_data_desc">Статистика появится после использования AI чатов</string>
@@ -824,7 +807,6 @@
     <string name="delete_chat_confirmation">Удалить этот чат?</string>
     <string name="chat_deleted">Чат удалён</string>
     <string name="delete_message_confirmation">Удалить это сообщение?</string>
-    <string name="delete_messages_confirmation">Удалить %d выбранных сообщений?</string>
     <string name="e2ee_enabled">🔒 E2EE</string>
     <string name="e2ee_pending">🔒 Обмен ключами…</string>
     <string name="e2ee_verified">🔒 Сквозное шифрование</string>
@@ -1228,5 +1210,139 @@
     <string name="status_sent">Отправлено</string>
     <string name="status_read">Прочитано</string>
     <string name="status_error">Ошибка отправки</string>
+
+    <!-- Plurals for lint PluralsCandidate -->
+    <plurals name="selected_chats_count">
+        <item quantity="one">%d выбранный чат</item>
+        <item quantity="few">%d выбранных чата</item>
+        <item quantity="many">%d выбранных чатов</item>
+        <item quantity="other">%d выбранных чатов</item>
+    </plurals>
+    <plurals name="deleted_chats_count">
+        <item quantity="one">Удалён %d чат</item>
+        <item quantity="few">Удалено %d чата</item>
+        <item quantity="many">Удалено %d чатов</item>
+        <item quantity="other">Удалено %d чатов</item>
+    </plurals>
+    <plurals name="muted_chats_count">
+        <item quantity="one">Отключены уведомления для %d чата</item>
+        <item quantity="few">Отключены уведомления для %d чатов</item>
+        <item quantity="many">Отключены уведомления для %d чатов</item>
+        <item quantity="other">Отключены уведомления для %d чатов</item>
+    </plurals>
+    <plurals name="unmuted_chats_count">
+        <item quantity="one">Включены уведомления для %d чата</item>
+        <item quantity="few">Включены уведомления для %d чатов</item>
+        <item quantity="many">Включены уведомления для %d чатов</item>
+        <item quantity="other">Включены уведомления для %d чатов</item>
+    </plurals>
+    <plurals name="delete_chats_confirmation">
+        <item quantity="one">Вы уверены, что хотите удалить %d выбранный чат? Это навсегда удалит все сообщения и изображения.</item>
+        <item quantity="few">Вы уверены, что хотите удалить %d выбранных чата? Это навсегда удалит все сообщения и изображения.</item>
+        <item quantity="many">Вы уверены, что хотите удалить %d выбранных чатов? Это навсегда удалит все сообщения и изображения.</item>
+        <item quantity="other">Вы уверены, что хотите удалить %d выбранных чатов? Это навсегда удалит все сообщения и изображения.</item>
+    </plurals>
+    <plurals name="mute_chats_confirmation">
+        <item quantity="one">Отключить уведомления для %d выбранного чата? Вы не будете получать push-уведомления от этого чата.</item>
+        <item quantity="few">Отключить уведомления для %d выбранных чатов? Вы не будете получать push-уведомления от этих чатов.</item>
+        <item quantity="many">Отключить уведомления для %d выбранных чатов? Вы не будете получать push-уведомления от этих чатов.</item>
+        <item quantity="other">Отключить уведомления для %d выбранных чатов? Вы не будете получать push-уведомления от этих чатов.</item>
+    </plurals>
+    <plurals name="unmute_chats_confirmation">
+        <item quantity="one">Включить уведомления для %d выбранного чата? Вы будете получать push-уведомления от этого чата.</item>
+        <item quantity="few">Включить уведомления для %d выбранных чатов? Вы будете получать push-уведомления от этих чатов.</item>
+        <item quantity="many">Включить уведомления для %d выбранных чатов? Вы будете получать push-уведомления от этих чатов.</item>
+        <item quantity="other">Включить уведомления для %d выбранных чатов? Вы будете получать push-уведомления от этих чатов.</item>
+    </plurals>
+    <plurals name="contacts_added_count">
+        <item quantity="one">Добавлен %d контакт</item>
+        <item quantity="few">Добавлено %d контакта</item>
+        <item quantity="many">Добавлено %d контактов</item>
+        <item quantity="other">Добавлено %d контактов</item>
+    </plurals>
+    <plurals name="contacts_add_failed_count">
+        <item quantity="one">Не удалось добавить %d контакт</item>
+        <item quantity="few">Не удалось добавить %d контакта</item>
+        <item quantity="many">Не удалось добавить %d контактов</item>
+        <item quantity="other">Не удалось добавить %d контактов</item>
+    </plurals>
+    <plurals name="participants_count">
+        <item quantity="one">%d участник</item>
+        <item quantity="few">%d участника</item>
+        <item quantity="many">%d участников</item>
+        <item quantity="other">%d участников</item>
+    </plurals>
+    <plurals name="participants_online_count">
+        <item quantity="one">%1$d участник (%2$d в сети)</item>
+        <item quantity="few">%1$d участника (%2$d в сети)</item>
+        <item quantity="many">%1$d участников (%2$d в сети)</item>
+        <item quantity="other">%1$d участников (%2$d в сети)</item>
+    </plurals>
+    <plurals name="participants_already_joined">
+        <item quantity="one">%d участник уже присоединился</item>
+        <item quantity="few">%d участника уже присоединились</item>
+        <item quantity="many">%d участников уже присоединились</item>
+        <item quantity="other">%d участников уже присоединились</item>
+    </plurals>
+    <plurals name="marketplace_installs_count">
+        <item quantity="one">%d установка</item>
+        <item quantity="few">%d установки</item>
+        <item quantity="many">%d установок</item>
+        <item quantity="other">%d установок</item>
+    </plurals>
+    <plurals name="marketplace_reviews_count">
+        <item quantity="one">%d отзыв</item>
+        <item quantity="few">%d отзыва</item>
+        <item quantity="many">%d отзывов</item>
+        <item quantity="other">%d отзывов</item>
+    </plurals>
+    <plurals name="marketplace_requests_count">
+        <item quantity="one">%d запрос</item>
+        <item quantity="few">%d запроса</item>
+        <item quantity="many">%d запросов</item>
+        <item quantity="other">%d запросов</item>
+    </plurals>
+    <plurals name="remove_contacts_confirm">
+        <item quantity="one">Вы уверены, что хотите удалить %d выбранный контакт?</item>
+        <item quantity="few">Вы уверены, что хотите удалить %d выбранных контакта?</item>
+        <item quantity="many">Вы уверены, что хотите удалить %d выбранных контактов?</item>
+        <item quantity="other">Вы уверены, что хотите удалить %d выбранных контактов?</item>
+    </plurals>
+    <plurals name="delete_messages_confirm">
+        <item quantity="one">Вы уверены, что хотите удалить %d выбранное сообщение?</item>
+        <item quantity="few">Вы уверены, что хотите удалить %d выбранных сообщения?</item>
+        <item quantity="many">Вы уверены, что хотите удалить %d выбранных сообщений?</item>
+        <item quantity="other">Вы уверены, что хотите удалить %d выбранных сообщений?</item>
+    </plurals>
+    <plurals name="delete_messages_confirmation">
+        <item quantity="one">Удалить %d выбранное сообщение?</item>
+        <item quantity="few">Удалить %d выбранных сообщения?</item>
+        <item quantity="many">Удалить %d выбранных сообщений?</item>
+        <item quantity="other">Удалить %d выбранных сообщений?</item>
+    </plurals>
+    <plurals name="users_typing">
+        <item quantity="one">%d пользователь печатает…</item>
+        <item quantity="few">%d пользователя печатают…</item>
+        <item quantity="many">%d пользователей печатают…</item>
+        <item quantity="other">%d пользователей печатают…</item>
+    </plurals>
+    <plurals name="files_count">
+        <item quantity="one">%d файл</item>
+        <item quantity="few">%d файла</item>
+        <item quantity="many">%d файлов</item>
+        <item quantity="other">%d файлов</item>
+    </plurals>
+    <plurals name="forward_more_messages">
+        <item quantity="one">и ещё %d…</item>
+        <item quantity="few">и ещё %d…</item>
+        <item quantity="many">и ещё %d…</item>
+        <item quantity="other">и ещё %d…</item>
+    </plurals>
+    <plurals name="forward_send_count">
+        <item quantity="one">Переслать в %d</item>
+        <item quantity="few">Переслать в %d</item>
+        <item quantity="many">Переслать в %d</item>
+        <item quantity="other">Переслать в %d</item>
+    </plurals>
 
 </resources>

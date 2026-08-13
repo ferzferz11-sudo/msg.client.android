@@ -4,6 +4,17 @@
 
 ### Исправлено
 
+**Token refresh: UNAUTHENTICATED при истёкшем токене (High):**
+- `GrpcChatAuxClient.getAllUsers` теперь автоматически обновляет токен при UNAUTHENTICATED
+- Повторяет запрос после обновления токена
+- Предотвращает принудительный выход при временной ошибке токена
+
+**PluralsCandidate lint: 22 строки (Medium):**
+- Конвертированы 22 строки в plurals ресурсы (EN+RU)
+- Обновлены вызовы в коде: `getString` → `getQuantityString`
+- Затронуты: ForwardMessageSheet, UsageStatsAdapter, ChatToolbarDelegate, ChatListFABs, ChatSelectionDelegate, ContactsActivity, ChangelogAdapter
+- Удалены старые строки-дубликаты
+
 **Avatar section: цвет заголовка не адаптировался к теме (Medium):**
 - `avatarLabel` добавлен в список ThemeApplier для применения `customPrimary` цвета
 - Теперь заголовок "Аватар" адаптируется к теме как остальные секции

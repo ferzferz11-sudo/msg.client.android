@@ -371,7 +371,7 @@ class ChatToolbarDelegate(
             typists.isNotEmpty() -> {
                 toolbarSubtitle.text = if (typists.size == 1)
                     activity.getString(R.string.user_is_typing, typists.first())
-                else activity.getString(R.string.users_are_typing, typists.size)
+                else activity.resources.getQuantityString(R.plurals.users_typing, typists.size, typists.size)
                 toolbarSubtitle.setTextColor(cop)
                 toolbarSubtitle.setTypeface(null, Typeface.ITALIC)
             }
@@ -416,7 +416,7 @@ class ChatToolbarDelegate(
             var o = 0
             for (i in 0 until t) if (onlineUsers.contains(a.getString(i))) o++
             toolbarSubtitle.isVisible = true
-            toolbarSubtitle.text = activity.getString(R.string.participants_online_count, t, o)
+            toolbarSubtitle.text = activity.resources.getQuantityString(R.plurals.participants_online_count, t, t, o)
             toolbarSubtitle.setTextColor(getThemeColor(com.google.android.material.R.attr.colorOnPrimary))
         } catch (_: Exception) { toolbarSubtitle.isVisible = false }
     }

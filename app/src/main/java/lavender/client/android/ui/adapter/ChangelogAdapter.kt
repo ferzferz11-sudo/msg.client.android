@@ -76,7 +76,7 @@ class ChangelogAdapter(
 
         // File count
         if (release.assets.isNotEmpty()) {
-            holder.tvFileCount.text = context.getString(R.string.files_count, release.assets.size)
+            holder.tvFileCount.text = context.resources.getQuantityString(R.plurals.files_count, release.assets.size, release.assets.size)
             holder.tvFileCount.alpha = 0.5f
             holder.tvFileCount.visibility = View.VISIBLE
         } else {

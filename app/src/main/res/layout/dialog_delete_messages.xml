@@ -20,7 +20,7 @@
         android:id="@+id/messageText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/delete_messages_confirm"
+        android:text="@string/delete_messages_title"
         android:textSize="16sp"
         android:textColor="?attr/colorOnPrimaryContainer"
         android:layout_marginBottom="20dp" />
