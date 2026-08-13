@@ -706,6 +706,7 @@ class NewChatActivity : AppCompatActivity() {
                     .setTitle(R.string.clear_history)
                     .setMessage(R.string.clear_history_confirm)
                     .setPositiveButton(R.string.clear) { _, _ ->
+                        grpcClient.clearMessages()
                         chatViewModel.clearRoomMessages(this)
                         chatViewModel.loadHistory()
                         Toast.makeText(this, getString(R.string.history_cleared), Toast.LENGTH_SHORT).show()

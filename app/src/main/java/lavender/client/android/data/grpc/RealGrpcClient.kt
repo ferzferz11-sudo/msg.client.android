@@ -655,11 +655,14 @@ object RealGrpcClient {
                                     val t = ctx?.resources?.getString(lavender.client.android.R.string.self_destruct_set, timerLabel) ?: "Timer set: $timerLabel"
                                     "\uD83D\uDD25 $t"
                                 }
+                                // Use timestamp after the last message to ensure correct ordering
+                                val lastMsgTimestamp = _messages.value.lastOrNull { it.roomId == targetRoomId }?.timestamp ?: (System.currentTimeMillis() / 1000)
+                                val sysMsgTimestamp = lastMsgTimestamp + 1
                                 val sysMsg = Message(
                                     id = "sd_timer_${targetRoomId}_${System.currentTimeMillis()}",
                                     user = "",
                                     text = text,
-                                    timestamp = System.currentTimeMillis() / 1000,
+                                    timestamp = sysMsgTimestamp,
                                     roomId = targetRoomId
                                 )
                                 if (targetRoomId == currentRoomId) {
@@ -667,6 +670,12 @@ object RealGrpcClient {
                                         if (current.any { it.id == sysMsg.id }) current
                                         else current.toMutableList().apply { add(sysMsg) }
                                     }
+                                }
+                                // Persist system message to Room DB
+                                scope.launch(Dispatchers.IO) {
+                                    try {
+                                        db()?.messageDao()?.insertMessages(listOf(sysMsg.toEntity()))
+                                    } catch (e: Exception) { Log.e(TAG, "Failed to persist self-destruct system message", e) }
                                 }
                             }
                         }

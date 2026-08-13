@@ -346,7 +346,10 @@ class ChatAdapter(
                 } else if (avatarUrl.isEmpty() && currentTag != null) {
                     ivChatAvatar.tag = null
                     com.bumptech.glide.Glide.with(itemView.context).clear(ivChatAvatar)
-                    ivChatAvatar.setImageResource(R.drawable.ic_default_avatar)
+                    try {
+                        val currentTheme = lavender.client.android.theme.ThemeStore.currentTheme()
+                        lavender.client.android.theme.ThemeUtils.applyDefaultAvatar(ivChatAvatar, currentTheme)
+                    } catch (_: Exception) { ivChatAvatar.setImageResource(R.drawable.ic_default_avatar) }
                 }
             } catch (_: Exception) { ivChatAvatar.setImageResource(R.drawable.ic_default_avatar) }
 
