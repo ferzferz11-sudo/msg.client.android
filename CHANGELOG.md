@@ -33,6 +33,17 @@
 - `text_hint` исправлен с `#80FFFFFF` (невидимый) на `#80212121`
 - Тёмная тема не затронута (`values-night/colors.xml` уже корректна)
 
+**Dark mode drawable night variants (Medium):**
+- 8 drawable-night файлов создано для корректного отображения в тёмной теме:
+  - `bg_message_outgoing.xml` — outgoing bubble: белый → `#3D6B6C` (графит)
+  - `bg_chip.xml` — chip background: `#33FFFFFF` → `#22FFFFFF`
+  - `bg_reactions.xml` — reactions overlay: `#15000000` → `#15FFFFFF`
+  - `bg_status_bubble.xml` — status bubble: `#33000000` → `#22FFFFFF`
+  - `bg_onboarding_fab.xml` — onboarding FAB: белый → `#2D2D2D`
+  - `bg_onboarding_profile.xml` — onboarding profile: белый → `#2D2D2D`
+  - `bg_edit_text_rounded.xml` — edit text: `#40FFFFFF` → `#30FFFFFF`
+  - `bg_message_preview.xml` — message preview stroke: `#33FFFFFF` → `#22FFFFFF`
+
 **Chat screen accessibility (High):**
 - 9 ImageButtons в `widget_chat.xml` получили `contentDescription` (reply, copy, forward, delete, star, close, search prev/next)
 - 2 CheckBox'а получили `contentDescription` (`item_user_selectable.xml`, `widget_searchable_list_bottom_sheet.xml`)
