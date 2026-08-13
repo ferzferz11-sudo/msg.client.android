@@ -62,7 +62,8 @@ data class ChatInfo(
     val pinnedAt: Long = 0L,            // ChatList v2: timestamp when pinned (for sort order)
     val companyId: String = "",         // Company chat: company ID
     val companyChatAccess: String = "", // Company chat: access level
-    val companyMinPositionLevel: Int = 0 // Company chat: min position level
+    val companyMinPositionLevel: Int = 0, // Company chat: min position level
+    val selfDestructTimer: Int = 0     // Self-destruct timer in seconds: 0=disabled
 ) {
     fun getDisplayName(currentUsername: String): String {
         if (isSecret) {

@@ -124,6 +124,30 @@ class GrpcChatAuxClient(
         call.request(1)
     }
 
+    fun setSelfDestructTimer(roomId: String, timerSeconds: Int, callback: (Boolean, String?) -> Unit) {
+        val currentChannel = getChannel() ?: return
+        val call = currentChannel.newCall(
+            io.grpc.MethodDescriptor.newBuilder<SetSelfDestructTimerRequestProto, SetSelfDestructTimerResponseProto>()
+                .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+                .setFullMethodName("messenger.ChatService/SetSelfDestructTimer")
+                .setRequestMarshaller(SetSelfDestructTimerRequestMarshaller())
+                .setResponseMarshaller(SetSelfDestructTimerResponseMarshaller())
+                .build(),
+            io.grpc.CallOptions.DEFAULT
+        )
+        call.start(object : io.grpc.ClientCall.Listener<SetSelfDestructTimerResponseProto>() {
+            override fun onMessage(message: SetSelfDestructTimerResponseProto) {
+                callback(message.success, message.error.ifEmpty { null })
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) callback(false, status.description)
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(SetSelfDestructTimerRequestProto(roomId, timerSeconds))
+        call.halfClose()
+        call.request(1)
+    }
+
     fun getAdminUserList(query: String, cursor: String, limit: Int, sortBy: String, callback: (GetAdminUserListResponseProto) -> Unit) {
         val currentChannel = getChannel() ?: return
         val call = currentChannel.newCall(

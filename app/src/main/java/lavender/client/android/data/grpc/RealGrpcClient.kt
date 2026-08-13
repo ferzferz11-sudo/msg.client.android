@@ -108,6 +108,9 @@ object RealGrpcClient {
     private val _chatDeletedEvent = MutableStateFlow<String?>(null)
     val chatDeletedEvent: StateFlow<String?> = _chatDeletedEvent
 
+    private val _selfDestructTimer = MutableStateFlow(0)
+    val selfDestructTimer: StateFlow<Int> = _selfDestructTimer
+
     private val _callSignals = MutableSharedFlow<CallMessageProto>(extraBufferCapacity = 64)
     val callSignals: SharedFlow<CallMessageProto> = _callSignals
 
@@ -627,6 +630,10 @@ object RealGrpcClient {
                                 }
                             } catch (e: Exception) { Log.e(TAG, "Error parsing reaction update", e) }
                         }
+                        "SELF_DESTRUCT_TIMER" -> {
+                            val timerValue = sysMessage.toIntOrNull() ?: 0
+                            _selfDestructTimer.value = timerValue
+                        }
                     }
                     return
                 }
@@ -814,6 +821,7 @@ object RealGrpcClient {
     fun getAdminUserSessions(userId: String, callback: (GetAdminUserSessionsResponseProto) -> Unit) { chatAuxClient.getAdminUserSessions(userId, callback) }
     fun getMutedChats(callback: (List<String>) -> Unit) { chatAuxClient.getMutedChats(callback) }
     fun setMutedChat(roomId: String, muted: Boolean, callback: (Boolean) -> Unit) { chatAuxClient.setMutedChat(roomId, muted, callback) }
+    fun setSelfDestructTimer(roomId: String, timerSeconds: Int, callback: (Boolean, String?) -> Unit) { chatAuxClient.setSelfDestructTimer(roomId, timerSeconds, callback) }
     fun deleteChat(cid: String, requesterUsername: String, cb: (Boolean, String) -> Unit) { chatClient.deleteChat(cid, requesterUsername, cb) }
     fun deleteChatWithUserId(cid: String, userId: String, username: String, cb: (Boolean, String) -> Unit) { chatClient.deleteChatWithUserId(cid, userId, username, cb) }
     fun createDirectChat(u1: String, u2: String, cb: (String?) -> Unit) { chatClient.createDirectChat(u1, u2, cb) }

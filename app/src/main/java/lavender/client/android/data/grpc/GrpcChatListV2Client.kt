@@ -61,7 +61,8 @@ class GrpcChatListV2Client(
                 isPinned = proto.isPinned, isMuted = proto.isMuted,
                 isArchived = proto.isArchived, pinnedAt = proto.pinnedAt,
                 companyId = proto.companyId, companyChatAccess = proto.companyChatAccess,
-                companyMinPositionLevel = proto.companyMinPositionLevel
+                companyMinPositionLevel = proto.companyMinPositionLevel,
+                selfDestructTimer = proto.selfDestructTimer
             )
         } ?: emptyList()
     }

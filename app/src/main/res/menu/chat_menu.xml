@@ -30,6 +30,11 @@
         android:title="@string/mute_chat"
         app:showAsAction="never" />
     <item
+        android:id="@+id/action_self_destruct"
+        android:icon="@drawable/ic_delete_sweep"
+        android:title="@string/self_destruct_timer"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_clear_history"
         android:icon="@drawable/ic_delete_sweep"
         android:title="@string/clear_history"

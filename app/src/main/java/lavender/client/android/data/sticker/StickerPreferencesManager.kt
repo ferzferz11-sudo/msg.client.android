@@ -74,6 +74,14 @@ object StickerPreferencesManager {
         saveStickerList(KEY_FAVORITES, favorites)
     }
 
+    fun removeFavoritesByPackIds(validPackIds: Set<String>) {
+        val favorites = getFavoriteStickers().toMutableList()
+        val filtered = favorites.filter { it.packId.isEmpty() || it.packId in validPackIds }
+        if (filtered.size != favorites.size) {
+            saveStickerList(KEY_FAVORITES, filtered)
+        }
+    }
+
     private fun saveStickerList(key: String, stickers: List<Sticker>) {
         try {
             val jsonArray = JSONArray()

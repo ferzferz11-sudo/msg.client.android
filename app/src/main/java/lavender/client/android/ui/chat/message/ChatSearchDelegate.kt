@@ -78,6 +78,7 @@ class ChatSearchDelegate(
         searchBar.isVisible = true
         toolbarContent.isVisible = false
         getToolbarDelegate?.invoke()?.setNavigationIcon(R.drawable.ic_close)
+        getToolbarDelegate?.invoke()?.setNavigationClickListener(android.view.View.OnClickListener { hide() })
         val theme = ThemeStore.currentTheme()
         try {
             val prim = theme.primaryColor.toColorInt()
@@ -114,6 +115,7 @@ class ChatSearchDelegate(
         (activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager)
             .hideSoftInputFromWindow(searchInput.windowToken, 0)
         getToolbarDelegate?.invoke()?.setNavigationIcon(R.drawable.ic_back_arrow)
+        getToolbarDelegate?.invoke()?.restoreDefaultNavigation()
         activity.invalidateOptionsMenu()
     }
 

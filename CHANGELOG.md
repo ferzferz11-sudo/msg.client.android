@@ -1,5 +1,88 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.1] - 2026-08-13
+
+### Новые фичи
+
+**Self-Destruct Timer (Medium):**
+- Интеграция с серверным `SetSelfDestructTimer` RPC
+- Пункт меню "Автоудаление" в overflow menu чата с picker'ом (Off/30s/1m/5m/1h/24h)
+- Отображение текущего таймера в заголовке меню
+- Обработка `SELF_DESTRUCT_TIMER` broadcast от сервера
+- Proto: `selfDestructTimer` field (29) в `ChatInfoProto`, новые маршаллеры
+- Строки EN+RU для всех опций таймера
+
+**Chat list toolbar redesign (Low):**
+- Search перенесён в overflow меню (вместо отдельной иконки)
+- Overflow icon tinted white (как в чате)
+- Favorites icon остаётся видимым
+
+### Исправлено
+
+**Toolbar overflow icon color (Low):**
+- Иконка многоточия теперь белая (как трубка звонка)
+
+**Search close button navigation (Medium):**
+- Крестик в режиме поиска теперь корректно выходит из поиска, а не возвращает на список чатов
+- `ChatToolbarDelegate` — добавлены `setNavigationClickListener()` и `restoreDefaultNavigation()`
+
+**Clear history / Delete chat dialog buttons (Low):**
+- Кнопки "Отмена" и "Очистить"/"Удалить" теперь используют `primaryColor` темы
+- `applyDialogButtonColors()` helper для единообразного стиля диалогов
+
+**Mute chat feedback (Low):**
+- Toast "Muted"/"Unmuted" при переключении уведомлений
+- Toast ошибки при failure
+
+**Media picker back arrow (Low):**
+- Убрана случайная стрелка назад в шторке медиа
+
+**Deleted sticker packs in favorites (Medium):**
+- `StickerPreferencesManager.removeFavoritesByPackIds()` — фильтрация favorites по валидным packId
+- Автоочистка при загрузке пакетов
+
+**Sticker save button position (Low):**
+- Убран лишний padding в bottom bar — кнопка "Сохранить" выше на20px
+
+**Sticker pack not appearing after creation (Medium):**
+- Убран фильтр `it.stickers.isNotEmpty()` — пакеты с пустыми стикерами теперь отображаются
+
+**Call system messages (Medium):**
+- Tap на системное сообщение звонка → открывает лобби ТОЛЬКО для конференций
+- `CallMessageHelper.isVideoCall()` — детект по ключевым словам
+- Новые строки: `call_outgoing_audio`, `call_incoming_audio`, `call_ended_duration`, `call_not_answered`
+- `bindCallMessage` различает: missed, ended (с длительностью/без), conference, video, audio
+
+**Send button visibility (Low):**
+- Иконка отправки скрыта при пустом тексте (как было раньше)
+
+### Серверные задачи
+- `TASK_CALL_MESSAGES.md` — разделение аудио/видео звонков (в процессе)
+
+### Изменённые файлы (24)
+- `NewChatActivity.kt` — self-destruct timer, mute toast, dialog colors, call tap fix
+- `StickerPackCreateActivity.kt` — bottom bar padding
+- `CallMessageHelper.kt` — `isVideoCall()`, expanded keywords
+- `GrpcChatAuxClient.kt` — `setSelfDestructTimer()` RPC
+- `GrpcChatClient.kt` — `selfDestructTimer` mapping
+- `GrpcChatListV2Client.kt` — `selfDestructTimer` mapping
+- `GrpcClient.kt` — facade method + StateFlow
+- `GrpcMarshallers.kt` — field 29 in 3 parsers +2 new marshallers
+- `RealGrpcClient.kt` — `SELF_DESTRUCT_TIMER` signal handler + StateFlow
+- `Message.kt` — `selfDestructTimer` field
+- `MessengerProto.kt` — `selfDestructTimer` + request/response types
+- `StickerPreferencesManager.kt` — `removeFavoritesByPackIds()`
+- `MessageAdapter.kt` — improved `bindCallMessage()`
+- `ChatInputDelegate.kt` — send button initial state
+- `ChatSearchDelegate.kt` — navigation click listener
+- `ChatToolbarDelegate.kt` — `setNavigationClickListener()`, `restoreDefaultNavigation()`
+- `MediaPickerSheet.kt` — back button fix, favorites cleanup, pack filter
+- `ChatListNavigation.kt` — `SELF_DESTRUCT_TIMER` extra
+- `ChatListSearch.kt` — overflow menu redesign
+- `chat_list_menu.xml` — new overflow menu
+- `chat_menu.xml` — self-destruct timer item
+- `strings.xml` (EN+RU) —20 new strings
+
 ## [1.4.0.0] - 2026-08-13
 
 ### Новые фичи

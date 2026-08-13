@@ -12,6 +12,9 @@ object CallMessageHelper {
         "звонок", "звонка", "вызов", "вызова", "видеозвонок",
         "call", "calling", "video call"
     )
+    private val VIDEO_KEYWORDS = listOf(
+        "видеозвонок", "видео", "video"
+    )
     private val CONFERENCE_KEYWORDS = listOf(
         "конференция", "конференции",
         "conference"
@@ -24,8 +27,9 @@ object CallMessageHelper {
     private val MISSED_KEYWORDS = listOf(
         "пропущенный", "пропущена", "пропущен",
         "не принят", "не принята",
+        "не отвечено",
         "отклонён", "отклонена", "отклонен",
-        "missed", "rejected", "declined"
+        "missed", "rejected", "declined", "not answered"
     )
 
     private fun String.containsAny(keywords: List<String>): Boolean {
@@ -38,6 +42,11 @@ object CallMessageHelper {
         if (text.containsAny(CALL_EMOJIS)) return true
         if (text.containsAny(CALL_KEYWORDS)) return true
         return false
+    }
+
+    /** Message is a video call (not audio) */
+    fun isVideoCall(text: String): Boolean {
+        return text.containsAny(VIDEO_KEYWORDS)
     }
 
     /** Message is a conference call */

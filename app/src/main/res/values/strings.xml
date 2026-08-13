@@ -894,10 +894,14 @@
     <!-- i18n: MessageAdapter call status -->
     <string name="call_not_accepted">Call not accepted</string>
     <string name="call_missed">Missed call</string>
-    <string name="call_outgoing_with_duration">Outgoing (%s)</string>
-    <string name="call_incoming_with_duration">Incoming (%s)</string>
+    <string name="call_outgoing_with_duration">Outgoing call (%s)</string>
+    <string name="call_incoming_with_duration">Incoming call (%s)</string>
     <string name="call_outgoing_video">Outgoing video call</string>
     <string name="call_incoming_video">Incoming video call</string>
+    <string name="call_outgoing_audio">Outgoing call</string>
+    <string name="call_incoming_audio">Incoming call</string>
+    <string name="call_ended_duration">Call ended (%s)</string>
+    <string name="call_not_answered">Not answered</string>
 
     <!-- i18n: RemoteAgentActivity commands -->
     <string name="cmd_help">Show command help</string>
@@ -950,6 +954,15 @@
     <string name="action_unmute">Unmute</string>
     <string name="mute_chat">Mute notifications</string>
     <string name="unmute_chat">Unmute notifications</string>
+    <string name="self_destruct_timer">Auto-Delete Timer</string>
+    <string name="self_destruct_off">Off</string>
+    <string name="self_destruct_30s">30 seconds</string>
+    <string name="self_destruct_1m">1 minute</string>
+    <string name="self_destruct_5m">5 minutes</string>
+    <string name="self_destruct_1h">1 hour</string>
+    <string name="self_destruct_24h">24 hours</string>
+    <string name="self_destruct_set">Timer set: %s</string>
+    <string name="self_destruct_disabled">Timer disabled</string>
     <string name="search_chats">Search chats…</string>
     <string name="search_no_results">No results</string>
 

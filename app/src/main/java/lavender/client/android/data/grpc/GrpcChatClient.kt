@@ -51,7 +51,8 @@ class GrpcChatClient(
                         proto.conferenceStartTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
                         proto.isSecret, proto.peerPublicKey, proto.e2eeReady,
                         proto.activeAgentId, proto.agentMode, proto.isPinned, proto.isArchived, proto.pinnedAt,
-                        proto.companyId, proto.companyChatAccess, proto.companyMinPositionLevel
+                        proto.companyId, proto.companyChatAccess, proto.companyMinPositionLevel,
+                        proto.selfDestructTimer
                     )
                 }
                 val unreadChats = chats.filter { it.unreadCount > 0 }

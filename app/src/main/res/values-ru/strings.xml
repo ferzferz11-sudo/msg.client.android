@@ -892,12 +892,16 @@
     <string name="no_output">(нет вывода)</string>
 
     <!-- i18n: MessageAdapter call status -->
-    <string name="call_not_accepted">Вызов не принят</string>
+    <string name="call_not_accepted">Собеседник не взял трубку</string>
     <string name="call_missed">Пропущенный вызов</string>
-    <string name="call_outgoing_with_duration">Исходящий (%s)</string>
-    <string name="call_incoming_with_duration">Входящий (%s)</string>
+    <string name="call_outgoing_with_duration">Исходящий звонок (%s)</string>
+    <string name="call_incoming_with_duration">Входящий звонок (%s)</string>
     <string name="call_outgoing_video">Исходящий видеозвонок</string>
     <string name="call_incoming_video">Входящий видеозвонок</string>
+    <string name="call_outgoing_audio">Исходящий звонок</string>
+    <string name="call_incoming_audio">Входящий звонок</string>
+    <string name="call_ended_duration">Звонок завершён (%s)</string>
+    <string name="call_not_answered">Не отвечено</string>
 
     <!-- i18n: RemoteAgentActivity commands -->
     <string name="cmd_help">Показать справку по командам</string>
@@ -950,6 +954,15 @@
     <string name="action_unmute">Включить звук</string>
     <string name="mute_chat">Отключить уведомления</string>
     <string name="unmute_chat">Включить уведомления</string>
+    <string name="self_destruct_timer">Автоудаление</string>
+    <string name="self_destruct_off">Выкл</string>
+    <string name="self_destruct_30s">30 секунд</string>
+    <string name="self_destruct_1m">1 минута</string>
+    <string name="self_destruct_5m">5 минут</string>
+    <string name="self_destruct_1h">1 час</string>
+    <string name="self_destruct_24h">24 часа</string>
+    <string name="self_destruct_set">Таймер: %s</string>
+    <string name="self_destruct_disabled">Таймер отключён</string>
     <string name="search_chats">Поиск чатов…</string>
     <string name="search_no_results">Ничего не найдено</string>
 

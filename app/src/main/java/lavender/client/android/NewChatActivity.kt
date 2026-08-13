@@ -93,6 +93,7 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var historyLoadingProgress: ProgressBar
 
     private var isChatMuted = false
+    private var selfDestructTimer = 0
 
     private val data get() = newChatViewModel.intentData.value
 
@@ -108,6 +109,7 @@ class NewChatActivity : AppCompatActivity() {
         newChatViewModel = ViewModelProvider(this)[NewChatViewModel::class.java]
         newChatViewModel.parseIntent(intent, null)
         isChatMuted = intent.getBooleanExtra("IS_MUTED", false)
+        selfDestructTimer = intent.getIntExtra("SELF_DESTRUCT_TIMER", 0)
 
         if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
             newChatViewModel.ensureConnection()
@@ -299,9 +301,9 @@ class NewChatActivity : AppCompatActivity() {
                     startActivity(intent)
                 } else {
                     val text = message.text.trim().lowercase()
-                    val isCall = CallMessageHelper.isCallOrConference(text)
+                    val isConference = CallMessageHelper.isConferenceMessage(text)
                     val isEnded = CallMessageHelper.isCallEnded(text)
-                    if (isCall && !isEnded) joinConference()
+                    if (isConference && !isEnded) joinConference()
                     else messageMenuDelegate.showReactionsDialog(message) { msg -> inputDelegate.showReplyPreview(msg) }
                 }
             },
@@ -396,6 +398,17 @@ class NewChatActivity : AppCompatActivity() {
                 chatViewModel.pinnedMessageIds.collect { pinnedIds ->
                     selectionDelegate.setPinnedMessageIds(pinnedIds)
                     adapter.updatePinnedMessages(pinnedIds)
+                }
+            }
+        }
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                grpcClient.selfDestructTimer.collect { timer ->
+                    if (timer != selfDestructTimer) {
+                        selfDestructTimer = timer
+                        invalidateOptionsMenu()
+                    }
                 }
             }
         }
@@ -591,6 +604,15 @@ class NewChatActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.chat_menu, menu)
+        try {
+            val theme = ThemeStore.currentTheme()
+            val iconColor = theme.onPrimaryColor.toColorInt()
+            toolbarDelegate.toolbar.overflowIcon?.let {
+                val wrapped = androidx.core.graphics.drawable.DrawableCompat.wrap(it)
+                androidx.core.graphics.drawable.DrawableCompat.setTint(wrapped, iconColor)
+                toolbarDelegate.toolbar.overflowIcon = wrapped
+            }
+        } catch (_: Exception) {}
         return true
     }
 
@@ -602,6 +624,7 @@ class NewChatActivity : AppCompatActivity() {
         val conferenceItem = menu.findItem(R.id.action_conference)
         val pinnedItem = menu.findItem(R.id.action_pinned_messages)
         val muteItem = menu.findItem(R.id.action_mute_chat)
+        val selfDestructItem = menu.findItem(R.id.action_self_destruct)
         val clearItem = menu.findItem(R.id.action_clear_history)
         val deleteItem = menu.findItem(R.id.action_delete_chat)
         val isFavorites = data.roomId.startsWith("favorites_")
@@ -611,6 +634,8 @@ class NewChatActivity : AppCompatActivity() {
         pinnedItem?.isVisible = !inSelection && !inSearch && chatViewModel.pinnedMessageIds.value.isNotEmpty()
         muteItem?.isVisible = !inSelection && !inSearch && !isFavorites
         muteItem?.setTitle(if (isChatMuted) R.string.unmute_chat else R.string.mute_chat)
+        selfDestructItem?.isVisible = !inSelection && !inSearch && !isFavorites
+        selfDestructItem?.setTitle(getSelfDestructLabel(selfDestructTimer))
         clearItem?.isVisible = !inSelection && !inSearch && !isFavorites
         deleteItem?.isVisible = !inSelection && !inSearch && !isFavorites
         return true
@@ -654,15 +679,24 @@ class NewChatActivity : AppCompatActivity() {
             R.id.action_mute_chat -> {
                 val newMuted = !isChatMuted
                 GrpcClient.setMutedChat(data.roomId, newMuted) { success ->
-                    if (success) {
-                        isChatMuted = newMuted
-                        runOnUiThread { invalidateOptionsMenu() }
+                    runOnUiThread {
+                        if (success) {
+                            isChatMuted = newMuted
+                            invalidateOptionsMenu()
+                            Toast.makeText(this, if (newMuted) getString(R.string.muted) else getString(R.string.unmuted), Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this, getString(R.string.error_colon, "Failed"), Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
                 true
             }
+            R.id.action_self_destruct -> {
+                showSelfDestructTimerPicker()
+                true
+            }
             R.id.action_clear_history -> {
-                androidx.appcompat.app.AlertDialog.Builder(this)
+                val dlg = androidx.appcompat.app.AlertDialog.Builder(this)
                     .setTitle(R.string.clear_history)
                     .setMessage(R.string.clear_history_confirm)
                     .setPositiveButton(R.string.clear) { _, _ ->
@@ -671,7 +705,9 @@ class NewChatActivity : AppCompatActivity() {
                         Toast.makeText(this, getString(R.string.history_cleared), Toast.LENGTH_SHORT).show()
                     }
                     .setNegativeButton(R.string.cancel_dialog, null)
-                    .show()
+                    .create()
+                dlg.show()
+                applyDialogButtonColors(dlg)
                 true
             }
             R.id.action_delete_chat -> {
@@ -681,7 +717,7 @@ class NewChatActivity : AppCompatActivity() {
                 } else {
                     getString(R.string.delete_group) + ": \"$chatName\"?"
                 }
-                androidx.appcompat.app.AlertDialog.Builder(this)
+                val dlg = androidx.appcompat.app.AlertDialog.Builder(this)
                     .setTitle(R.string.delete_chat)
                     .setMessage(message)
                     .setPositiveButton(R.string.delete) { _, _ ->
@@ -702,7 +738,9 @@ class NewChatActivity : AppCompatActivity() {
                         }
                     }
                     .setNegativeButton(R.string.cancel_dialog, null)
-                    .show()
+                    .create()
+                dlg.show()
+                applyDialogButtonColors(dlg)
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -783,6 +821,60 @@ class NewChatActivity : AppCompatActivity() {
         } else {
             registerReceiver(markReadReceiver, filter)
         }
+    }
+
+    private fun showSelfDestructTimerPicker() {
+        val options = intArrayOf(0, 30, 60, 300, 3600, 86400)
+        val labels = arrayOf(
+            getString(R.string.self_destruct_off),
+            getString(R.string.self_destruct_30s),
+            getString(R.string.self_destruct_1m),
+            getString(R.string.self_destruct_5m),
+            getString(R.string.self_destruct_1h),
+            getString(R.string.self_destruct_24h)
+        )
+        val checkedIndex = options.indexOf(selfDestructTimer).coerceAtLeast(0)
+        val dlg = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.self_destruct_timer)
+            .setSingleChoiceItems(labels, checkedIndex) { dialog, which ->
+                val timerSeconds = options[which]
+                GrpcClient.setSelfDestructTimer(data.roomId, timerSeconds) { success, error ->
+                    runOnUiThread {
+                        if (success) {
+                            selfDestructTimer = timerSeconds
+                            invalidateOptionsMenu()
+                            val msg = if (timerSeconds == 0) getString(R.string.self_destruct_disabled)
+                            else getString(R.string.self_destruct_set, labels[which])
+                            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this, getString(R.string.error_colon, error ?: "Failed"), Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.cancel_dialog, null)
+            .create()
+        dlg.show()
+        applyDialogButtonColors(dlg)
+    }
+
+    private fun getSelfDestructLabel(seconds: Int): String = when (seconds) {
+        30 -> getString(R.string.self_destruct_30s)
+        60 -> getString(R.string.self_destruct_1m)
+        300 -> getString(R.string.self_destruct_5m)
+        3600 -> getString(R.string.self_destruct_1h)
+        86400 -> getString(R.string.self_destruct_24h)
+        else -> getString(R.string.self_destruct_timer)
+    }
+
+    private fun applyDialogButtonColors(dialog: androidx.appcompat.app.AlertDialog) {
+        try {
+            val theme = ThemeStore.currentTheme()
+            val primaryColor = theme.primaryColor.toColorInt()
+            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)?.setTextColor(primaryColor)
+            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE)?.setTextColor(primaryColor)
+        } catch (_: Exception) {}
     }
 
     override fun onDestroy() {

@@ -273,13 +273,35 @@ class MessageAdapter(
         }
 
         private fun bindCallMessage(message: Message, isOutgoing: Boolean, textColor: Int, ctx: android.content.Context) {
-            val raw = message.text; val isMissed = CallMessageHelper.isCallMissed(raw)
+            val raw = message.text
+            val isMissed = CallMessageHelper.isCallMissed(raw)
             val isCompleted = CallMessageHelper.isCallEnded(raw)
-            val icon = when { isMissed -> if (isOutgoing) "🚫" else "📞↙️"; isCompleted -> if (isOutgoing) "📞↗️" else "📞↙️"; else -> if (isOutgoing) "📞↗️" else "📹" }
-            val statusText = when { isMissed -> if (isOutgoing) ctx.getString(R.string.call_not_accepted) else ctx.getString(R.string.call_missed)
-                isCompleted -> { val dur = raw.substringAfter("(").substringBefore(")"); if (isOutgoing) ctx.getString(R.string.call_outgoing_with_duration, dur) else ctx.getString(R.string.call_incoming_with_duration, dur) }
-                else -> if (isOutgoing) ctx.getString(R.string.call_outgoing_video) else ctx.getString(R.string.call_incoming_video) }
-            messageText.text = "$icon $statusText"; messageText.textSize = 15f; messageText.setTypeface(null, Typeface.BOLD)
+            val isVideo = CallMessageHelper.isVideoCall(raw)
+            val isConference = CallMessageHelper.isConferenceMessage(raw)
+            val icon = when {
+                isMissed -> if (isOutgoing) "🚫" else "📞↙️"
+                isCompleted -> if (isOutgoing) "📞↗️" else "📞↙️"
+                isConference -> "📹"
+                isVideo -> "📹"
+                else -> "📞"
+            }
+            val statusText = when {
+                isMissed -> if (isOutgoing) ctx.getString(R.string.call_not_accepted) else ctx.getString(R.string.call_missed)
+                isCompleted -> {
+                    val dur = raw.substringAfter("(").substringBefore(")")
+                    if (dur.isNotEmpty() && dur != raw) {
+                        ctx.getString(R.string.call_ended_duration, dur)
+                    } else {
+                        ctx.getString(R.string.call_not_answered)
+                    }
+                }
+                isConference -> raw.substringAfter("📹").trim()
+                isVideo -> if (isOutgoing) ctx.getString(R.string.call_outgoing_video) else ctx.getString(R.string.call_incoming_video)
+                else -> if (isOutgoing) ctx.getString(R.string.call_outgoing_audio) else ctx.getString(R.string.call_incoming_audio)
+            }
+            messageText.text = "$icon $statusText"
+            messageText.textSize = 15f
+            messageText.setTypeface(null, Typeface.BOLD)
             messageText.setTextColor(if (isMissed && !isOutgoing) "#FF5252".toColorInt() else textColor)
         }
 

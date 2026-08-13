@@ -107,7 +107,7 @@ class StickerPackCreateActivity : AppCompatActivity() {
 
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(bottomBar) { view, insets ->
             val navBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.navigationBars())
-            view.setPadding(view.paddingLeft, view.paddingTop, view.paddingRight, navBars.bottom + (12 * resources.displayMetrics.density).toInt())
+            view.setPadding(view.paddingLeft, view.paddingTop, view.paddingRight, navBars.bottom)
             insets
         }
 

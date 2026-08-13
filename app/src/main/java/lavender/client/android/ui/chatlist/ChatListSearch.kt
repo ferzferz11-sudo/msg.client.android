@@ -1,42 +1,49 @@
 package lavender.client.android.ui.chatlist
 
+import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.widget.SearchView
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import lavender.client.android.R
+import lavender.client.android.theme.ThemeStore
 
 /**
- * Search setup for ChatListActivity.
+ * Search setup for ChatListActivity — overflow menu item.
  */
 internal fun setupSearchMenu(activity: ChatListActivity) {
-    activity.toolbar?.inflateMenu(R.menu.chat_list_search)
+    activity.toolbar?.inflateMenu(R.menu.chat_list_menu)
+
+    // Tint overflow icon white
+    try {
+        val theme = ThemeStore.currentTheme()
+        val iconColor = lavender.client.android.theme.ThemeUtils.parseSafeColor(theme.onPrimaryColor, android.graphics.Color.WHITE)
+        activity.toolbar?.overflowIcon?.let {
+            val wrapped = androidx.core.graphics.drawable.DrawableCompat.wrap(it)
+            androidx.core.graphics.drawable.DrawableCompat.setTint(wrapped, iconColor)
+            activity.toolbar?.overflowIcon = wrapped
+        }
+    } catch (_: Exception) {}
+
     activity.toolbar?.setOnMenuItemClickListener { menuItem ->
-        if (menuItem.itemId == R.id.action_search) {
-            true
-        } else {
-            false
+        when (menuItem.itemId) {
+            R.id.action_search -> {
+                showSearchView(activity)
+                true
+            }
+            else -> false
         }
     }
+}
 
-    val searchItem = activity.toolbar?.menu?.findItem(R.id.action_search)
-    activity.searchView = searchItem?.actionView as? SearchView
-    searchItem?.setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
-        override fun onMenuItemActionExpand(item: MenuItem): Boolean {
-            return true
-        }
-        override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
-            activity.viewModel.loadChats()
-            return true
-        }
-    })
-
-    activity.searchView?.apply {
+private fun showSearchView(activity: ChatListActivity) {
+    // Create a SearchView in the toolbar
+    val searchView = SearchView(activity).apply {
         queryHint = activity.getString(R.string.search_chats)
         setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean = true
-
             override fun onQueryTextChange(newText: String?): Boolean {
                 activity.searchDebounceJob?.cancel()
                 activity.searchDebounceJob = activity.lifecycleScope.launch {
@@ -51,5 +58,18 @@ internal fun setupSearchMenu(activity: ChatListActivity) {
                 return true
             }
         })
+        setOnCloseListener {
+            activity.toolbar?.menu?.clear()
+            setupSearchMenu(activity)
+            activity.viewModel.loadChats()
+            false
+        }
     }
+
+    // Replace menu with search view
+    activity.toolbar?.menu?.clear()
+    val searchItem = activity.toolbar?.menu?.add(Menu.NONE, R.id.action_search, Menu.NONE, R.string.search)
+    searchItem?.actionView = searchView
+    searchItem?.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+    searchView.requestFocus()
 }

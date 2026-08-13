@@ -315,6 +315,20 @@ class ChatToolbarDelegate(
         }
     }
 
+    fun setNavigationClickListener(listener: View.OnClickListener) {
+        toolbar.setNavigationOnClickListener(listener)
+    }
+
+    fun restoreDefaultNavigation() {
+        toolbar.setNavigationOnClickListener {
+            val intent = Intent(activity, ChatListActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            activity.startActivity(intent)
+            activity.finish()
+        }
+    }
+
     fun updateSubtitle(onlineUsers: List<String>, isConnected: Boolean, typists: List<String>, otherUserLastSeenAt: com.google.protobuf.Timestamp? = null, isServerShuttingDown: Boolean = false) {
         lastOnlineUsers = onlineUsers
         lastIsConnected = isConnected

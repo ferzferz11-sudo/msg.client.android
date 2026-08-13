@@ -35,6 +35,7 @@ object GrpcClient {
     val authStatus: StateFlow<String?> = realGrpcClient.authStatus
     val typingUsers: StateFlow<Map<String, Set<String>>> = realGrpcClient.typingUsers
     val chatDeletedEvent: StateFlow<String?> = realGrpcClient.chatDeletedEvent
+    val selfDestructTimer: StateFlow<Int> = realGrpcClient.selfDestructTimer
     val serverShuttingDown: StateFlow<Boolean> = realGrpcClient.serverShuttingDown
     val callSignals: SharedFlow<CallMessageProto> = realGrpcClient.callSignals
 
@@ -394,6 +395,10 @@ object GrpcClient {
     fun setMutedChat(
         roomId: String, muted: Boolean, callback: (Boolean) -> Unit = {}
     ) = realGrpcClient.setMutedChat(roomId, muted, callback)
+
+    fun setSelfDestructTimer(
+        roomId: String, timerSeconds: Int, callback: (Boolean, String?) -> Unit = { _, _ -> }
+    ) = realGrpcClient.setSelfDestructTimer(roomId, timerSeconds, callback)
 
     // ======= Favorites =======
 

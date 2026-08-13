@@ -177,6 +177,8 @@ class ChatInputDelegate(
         imagePreviewScroll = activity.findViewById(R.id.imagePreviewScroll)
         imagePreviewContainer = activity.findViewById(R.id.imagePreviewContainer)
 
+        sendButton.isVisible = false
+
         mentionAdapter = MentionAdapter { insertMention(it) }
         mentionList.layoutManager = LinearLayoutManager(activity)
         mentionList.adapter = mentionAdapter

@@ -57,6 +57,7 @@ internal fun navigateToChat(activity: ChatListActivity, chat: ChatInfo, username
                 putExtra("CREATOR", chat.creator)
                 putExtra("IS_SECRET", chat.isSecret.toString())
                 putExtra("IS_MUTED", chat.isMuted)
+                putExtra("SELF_DESTRUCT_TIMER", chat.selfDestructTimer)
             }
             activity.startActivity(intent)
         }

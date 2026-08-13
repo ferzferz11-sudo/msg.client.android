@@ -235,7 +235,8 @@ data class ChatInfoProto(
     val pinnedAt: Long = 0L,          // ChatList v2: timestamp when pinned (for sort order)
     val companyId: String = "",       // Company chat: company ID
     val companyChatAccess: String = "", // Company chat: access level
-    val companyMinPositionLevel: Int = 0 // Company chat: min position level
+    val companyMinPositionLevel: Int = 0, // Company chat: min position level
+    val selfDestructTimer: Int = 0    // Self-destruct timer in seconds: 0=disabled, 30, 60, 300, 3600, 86400
 )
 
 // Mark Read Request/Response
@@ -679,6 +680,16 @@ data class SetMutedChatRequestProto(
 
 data class SetMutedChatResponseProto(
     val success: Boolean = false
+)
+
+data class SetSelfDestructTimerRequestProto(
+    val roomId: String = "",
+    val timerSeconds: Int = 0
+)
+
+data class SetSelfDestructTimerResponseProto(
+    val success: Boolean = false,
+    val error: String = ""
 )
 
 data class GetAllUsersRequestProto(

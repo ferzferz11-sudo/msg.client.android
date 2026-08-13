@@ -98,6 +98,7 @@ class MediaPickerSheet(
         try {
             setupStickerTab()
             show()
+            backButton?.isVisible = false
             root?.post { setupEmojiTab() }
         } catch (e: Exception) {
             android.util.Log.e("MediaPickerSheet", "showPicker failed", e)
@@ -263,10 +264,16 @@ class MediaPickerSheet(
                     )
                 } ?: emptyList()
 
-                val combinedPacks = (userPacks + publicPacks).filter { it.stickers.isNotEmpty() }.distinctBy { it.id }
+                val combinedPacks = (userPacks + publicPacks).distinctBy { it.id }
 
                 allPacks = combinedPacks
                 currentPacks = combinedPacks
+
+                // Clean up favorites from deleted packs
+                if (combinedPacks.isNotEmpty()) {
+                    val validPackIds = combinedPacks.map { it.id }.toSet()
+                    try { StickerPreferencesManager.removeFavoritesByPackIds(validPackIds) } catch (_: Exception) {}
+                }
 
                 if (combinedPacks.isNotEmpty()) {
                     stickerPackAdapter.submitList(combinedPacks)
