@@ -1,7 +1,7 @@
 package lavender.client.android
 
 import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.action.ViewActions.*
+import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.ext.junit.rules.ActivityScenarioRule
@@ -21,8 +21,6 @@ import org.junit.runner.RunWith
  *  - Toolbar elements visibility
  *  - Chat list (RecyclerView) presence
  *  - FAB buttons visibility
- *  - Search functionality
- *  - Chat item click
  */
 @RunWith(AndroidJUnit4::class)
 class ChatListActivityTest {
@@ -47,18 +45,6 @@ class ChatListActivityTest {
     @Test
     fun toolbarUserAvatar_isDisplayed() {
         onView(withId(R.id.ivToolbarUserAvatar))
-            .check(matches(isDisplayed()))
-    }
-
-    @Test
-    fun toolbarSearchButton_isDisplayed() {
-        onView(withId(R.id.ivActionSearch))
-            .check(matches(isDisplayed()))
-    }
-
-    @Test
-    fun toolbarSettingsButton_isDisplayed() {
-        onView(withId(R.id.ivActionSettings))
             .check(matches(isDisplayed()))
     }
 
@@ -87,52 +73,6 @@ class ChatListActivityTest {
     @Test
     fun fabAi_isDisplayed() {
         onView(withId(R.id.fabAi))
-            .check(matches(isDisplayed()))
-    }
-
-    // --- Search Tests ---
-
-    @Test
-    fun searchCard_initiallyHidden() {
-        onView(withId(R.id.searchCard))
-            .check(matches(withEffectiveVisibility(Visibility.GONE)))
-    }
-
-    @Test
-    fun searchButton_opensSearchCard() {
-        onView(withId(R.id.ivActionSearch))
-            .perform(click())
-        onView(withId(R.id.searchCard))
-            .check(matches(isDisplayed()))
-    }
-
-    @Test
-    fun searchInput_isDisplayedAfterSearchOpened() {
-        onView(withId(R.id.ivActionSearch))
-            .perform(click())
-        onView(withId(R.id.etSearch))
-            .check(matches(isDisplayed()))
-    }
-
-    @Test
-    fun searchInput_canTypeText() {
-        onView(withId(R.id.ivActionSearch))
-            .perform(click())
-        onView(withId(R.id.etSearch))
-            .perform(typeText("test query"), closeSoftKeyboard())
-        onView(withId(R.id.etSearch))
-            .check(matches(withText("test query")))
-    }
-
-    // --- Chat Item Tests ---
-
-    @Test
-    fun chatItem_hasNameAndTypeViews() {
-        // Wait for data to load
-        Thread.sleep(2000)
-        // Check that the first item in the list has the expected structure
-        // Favorites is always at position 0
-        onView(withId(R.id.rvChatList))
             .check(matches(isDisplayed()))
     }
 

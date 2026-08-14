@@ -15,6 +15,8 @@ import lavender.client.android.data.proto.MessageReplyProto
 import lavender.client.android.data.proto.MessageV2Proto
 import lavender.client.android.data.proto.SendMessageV2RequestProto
 import lavender.client.android.data.proto.SendMessageV2ResponseProto
+import lavender.client.android.data.proto.ClearRoomHistoryRequestProto
+import lavender.client.android.data.proto.ClearRoomHistoryResponseProto
 import lavender.client.android.data.proto.SetReactionV2RequestProto
 import lavender.client.android.data.proto.SetReactionV2ResponseProto
 import org.junit.Assert.assertEquals
@@ -858,5 +860,94 @@ class MessagesV2MarshallersTest {
         assertNotNull(parsedMedia)
         assertEquals("image", parsedMedia?.type)
         assertEquals("photo.jpg", parsedMedia?.url)
+    }
+
+    // ======= ClearRoomHistory =======
+
+    @Test
+    fun clearRoomHistoryRequestProto_defaults() {
+        val proto = ClearRoomHistoryRequestProto()
+        assertEquals("", proto.roomId)
+        assertEquals("", proto.requesterUsername)
+    }
+
+    @Test
+    fun clearRoomHistoryRequestProto_withValues() {
+        val proto = ClearRoomHistoryRequestProto(roomId = "room-42", requesterUsername = "alice")
+        assertEquals("room-42", proto.roomId)
+        assertEquals("alice", proto.requesterUsername)
+    }
+
+    @Test
+    fun clearRoomHistoryResponseProto_defaults() {
+        val proto = ClearRoomHistoryResponseProto()
+        assertFalse(proto.success)
+    }
+
+    @Test
+    fun clearRoomHistoryResponseProto_success() {
+        val proto = ClearRoomHistoryResponseProto(success = true)
+        assertTrue(proto.success)
+    }
+
+    @Test
+    fun clearRoomHistoryRequestMarshaller_stream_writesFields() {
+        val marshaller = ClearRoomHistoryRequestMarshaller()
+        val proto = ClearRoomHistoryRequestProto(roomId = "room-1", requesterUsername = "bob")
+        val bytes = marshaller.stream(proto).readBytes()
+        assertTrue("Should have data", bytes.isNotEmpty())
+    }
+
+    @Test
+    fun clearRoomHistoryRequestMarshaller_stream_emptyFields() {
+        val marshaller = ClearRoomHistoryRequestMarshaller()
+        val proto = ClearRoomHistoryRequestProto()
+        val bytes = marshaller.stream(proto).readBytes()
+        assertEquals("Empty proto should produce empty bytes", 0, bytes.size)
+    }
+
+    @Test
+    fun clearRoomHistoryResponseMarshaller_parse_true() {
+        val marshaller = ClearRoomHistoryResponseMarshaller()
+        // Manually encode: field 1 (bool) = true → tag=8, value=1
+        val data = byteArrayOf(8, 1)
+        val parsed = marshaller.parse(java.io.ByteArrayInputStream(data))
+        assertTrue(parsed.success)
+    }
+
+    @Test
+    fun clearRoomHistoryResponseMarshaller_parse_false() {
+        val marshaller = ClearRoomHistoryResponseMarshaller()
+        // field 1 (bool) = false → tag=8, value=0
+        val data = byteArrayOf(8, 0)
+        val parsed = marshaller.parse(java.io.ByteArrayInputStream(data))
+        assertFalse(parsed.success)
+    }
+
+    @Test
+    fun clearRoomHistoryResponseMarshaller_parse_empty() {
+        val marshaller = ClearRoomHistoryResponseMarshaller()
+        val parsed = marshaller.parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse("Empty response should default to false", parsed.success)
+    }
+
+    @Test
+    fun clearRoomHistoryRequestMarshaller_roundTrip() {
+        val marshaller = ClearRoomHistoryRequestMarshaller()
+        val original = ClearRoomHistoryRequestProto(roomId = "r1", requesterUsername = "user1")
+        val bytes = marshaller.stream(original).readBytes()
+        // Parse manually since request marshaller parse() returns default
+        val cis = com.google.protobuf.CodedInputStream.newInstance(java.io.ByteArrayInputStream(bytes))
+        var parsedRoomId = ""; var parsedUsername = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> parsedRoomId = cis.readString()
+                2 -> parsedUsername = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        assertEquals("r1", parsedRoomId)
+        assertEquals("user1", parsedUsername)
     }
 }

@@ -95,16 +95,22 @@ class GrpcMessageV2Client(
             .build()
     }
 
+    private var persistDeletedHashesJob: kotlinx.coroutines.Job? = null
+
     private fun addDeletedHash(hash: String) {
         deletedMessageHashes.add(hash)
         if (deletedMessageHashes.size > DELETED_HASHES_MAX_SIZE) {
             val toRemove = deletedMessageHashes.take(DELETED_HASHES_MAX_SIZE / 2)
             deletedMessageHashes.removeAll(toRemove.toSet())
         }
-        // Persist to SharedPreferences
-        appContext()?.getSharedPreferences("deleted_messages", android.content.Context.MODE_PRIVATE)?.edit()
-            ?.putStringSet("hashes", deletedMessageHashes.toSet())
-            ?.apply()
+        // Debounce SharedPreferences write (batch multiple rapid deletes)
+        persistDeletedHashesJob?.cancel()
+        persistDeletedHashesJob = scope.launch {
+            kotlinx.coroutines.delay(500)
+            appContext()?.getSharedPreferences("deleted_messages", android.content.Context.MODE_PRIVATE)?.edit()
+                ?.putStringSet("hashes", deletedMessageHashes.toSet())
+                ?.apply()
+        }
         // Persist to Room DB
         val messageId = hash.removePrefix("id:")
         if (messageId != hash && messageId.isNotEmpty()) {

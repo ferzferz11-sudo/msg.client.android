@@ -60,6 +60,10 @@ class GrpcChatAuxClient(
     }
 
     fun fetchUserId(username: String, callback: (String?, Boolean) -> Unit) {
+        fetchUserIdInternal(username, callback, retryCount = 0)
+    }
+
+    private fun fetchUserIdInternal(username: String, callback: (String?, Boolean) -> Unit, retryCount: Int) {
         val currentChannel = getChannel() ?: return
         val call = currentChannel.newCall(
             io.grpc.MethodDescriptor.newBuilder<GetUserIdRequestProto, GetUserIdResponseProto>()
@@ -72,7 +76,15 @@ class GrpcChatAuxClient(
         )
         call.start(object : io.grpc.ClientCall.Listener<GetUserIdResponseProto>() {
             override fun onMessage(message: GetUserIdResponseProto) { callback(message.userId, message.found) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    if (status.code == io.grpc.Status.Code.UNAUTHENTICATED && retryCount < 1) {
+                        Log.w(TAG, "GetUserId: UNAUTHENTICATED — refreshing token and retrying")
+                        refreshToken?.invoke()
+                        fetchUserIdInternal(username, callback, retryCount + 1)
+                    }
+                }
+            }
         }, io.grpc.Metadata())
         call.sendMessage(GetUserIdRequestProto(username))
         call.halfClose()
@@ -97,6 +109,10 @@ class GrpcChatAuxClient(
     }
 
     fun getMutedChats(callback: (List<String>) -> Unit) {
+        getMutedChatsInternal(callback, retryCount = 0)
+    }
+
+    private fun getMutedChatsInternal(callback: (List<String>) -> Unit, retryCount: Int) {
         val currentChannel = getChannel() ?: return
         val call = currentChannel.newCall(
             io.grpc.MethodDescriptor.newBuilder<GetMutedChatsRequestProto, GetMutedChatsResponseProto>()
@@ -109,7 +125,15 @@ class GrpcChatAuxClient(
         )
         call.start(object : io.grpc.ClientCall.Listener<GetMutedChatsResponseProto>() {
             override fun onMessage(message: GetMutedChatsResponseProto) { callback(message.roomIds) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    if (status.code == io.grpc.Status.Code.UNAUTHENTICATED && retryCount < 1) {
+                        Log.w(TAG, "GetMutedChats: UNAUTHENTICATED — refreshing token and retrying")
+                        refreshToken?.invoke()
+                        getMutedChatsInternal(callback, retryCount + 1)
+                    }
+                }
+            }
         }, io.grpc.Metadata())
         call.sendMessage(GetMutedChatsRequestProto(getUserId() ?: ""))
         call.halfClose()
@@ -117,6 +141,10 @@ class GrpcChatAuxClient(
     }
 
     fun setMutedChat(roomId: String, muted: Boolean, callback: (Boolean) -> Unit) {
+        setMutedChatInternal(roomId, muted, callback, retryCount = 0)
+    }
+
+    private fun setMutedChatInternal(roomId: String, muted: Boolean, callback: (Boolean) -> Unit, retryCount: Int) {
         val currentChannel = getChannel() ?: return
         val call = currentChannel.newCall(
             io.grpc.MethodDescriptor.newBuilder<SetMutedChatRequestProto, SetMutedChatResponseProto>()
@@ -129,7 +157,18 @@ class GrpcChatAuxClient(
         )
         call.start(object : io.grpc.ClientCall.Listener<SetMutedChatResponseProto>() {
             override fun onMessage(message: SetMutedChatResponseProto) { callback(message.success) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    if (status.code == io.grpc.Status.Code.UNAUTHENTICATED && retryCount < 1) {
+                        Log.w(TAG, "SetMutedChat: UNAUTHENTICATED — refreshing token and retrying")
+                        refreshToken?.invoke()
+                        setMutedChatInternal(roomId, muted, callback, retryCount + 1)
+                    } else {
+                        ErrorHandler.handle("GrpcChatAuxClient.setMutedChat", "Status: ${status.code} — ${status.description}")
+                        callback(false)
+                    }
+                }
+            }
         }, io.grpc.Metadata())
         call.sendMessage(SetMutedChatRequestProto(getUserId() ?: "", roomId, muted))
         call.halfClose()
@@ -137,6 +176,10 @@ class GrpcChatAuxClient(
     }
 
     fun setSelfDestructTimer(roomId: String, timerSeconds: Int, callback: (Boolean, String?) -> Unit) {
+        setSelfDestructTimerInternal(roomId, timerSeconds, callback, retryCount = 0)
+    }
+
+    private fun setSelfDestructTimerInternal(roomId: String, timerSeconds: Int, callback: (Boolean, String?) -> Unit, retryCount: Int) {
         val currentChannel = getChannel() ?: return
         val call = currentChannel.newCall(
             io.grpc.MethodDescriptor.newBuilder<SetSelfDestructTimerRequestProto, SetSelfDestructTimerResponseProto>()
@@ -152,7 +195,15 @@ class GrpcChatAuxClient(
                 callback(message.success, message.error.ifEmpty { null })
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) callback(false, status.description)
+                if (!status.isOk) {
+                    if (status.code == io.grpc.Status.Code.UNAUTHENTICATED && retryCount < 1) {
+                        Log.w(TAG, "SetSelfDestructTimer: UNAUTHENTICATED — refreshing token and retrying")
+                        refreshToken?.invoke()
+                        setSelfDestructTimerInternal(roomId, timerSeconds, callback, retryCount + 1)
+                    } else {
+                        callback(false, status.description)
+                    }
+                }
             }
         }, io.grpc.Metadata())
         call.sendMessage(SetSelfDestructTimerRequestProto(roomId, timerSeconds))

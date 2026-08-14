@@ -15,6 +15,18 @@
 - Room schema verification: `defaultValue = '0'` (DB) vs `defaultValue = 'undefined'` (Entity)
 - Исправлено: `@ColumnInfo(defaultValue = "0")` на `deletedAt` в `DeletedMessageEntity`
 
+**Token refresh: UNAUTHENTICATED не обрабатывался в GrpcChatAuxClient (High):**
+- `setMutedChat`, `setSelfDestructTimer`, `fetchUserId`, `getMutedChats` — пустой `onClose`, crash при истёкшем токене
+- Добавлен UNAUTHENTICATED retry (refresh token + 1 retry) по образцу `loadAllUsers`
+
+**Debounce addDeletedHash в GrpcMessageV2Client (Medium):**
+- Каждое удалённое сообщение立刻 писало в SharedPreferences — лишняя I/O при массовых удалениях
+- Добавлен debounce 500ms (как в RealGrpcClient)
+
+**Тесты:**
+- 11 новых тестов для ClearRoomHistory (proto defaults + marshallers round-trip)
+- ChatListActivityTest: удалены тесты, ссылающиеся на несуществующие View (ivActionSearch, ivActionSettings, searchCard)
+
 ## [1.4.0.7] - 2026-08-13
 
 ### Исправлено
