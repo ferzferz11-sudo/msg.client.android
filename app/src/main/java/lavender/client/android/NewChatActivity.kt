@@ -28,6 +28,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import lavender.client.android.data.db.toEntity
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -94,7 +95,6 @@ class NewChatActivity : AppCompatActivity() {
 
     private var isChatMuted = false
     private var selfDestructTimer = 0
-    private var sdSystemMessageInjected = false
 
     private val data get() = newChatViewModel.intentData.value
 
@@ -337,9 +337,8 @@ class NewChatActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 chatViewModel.messages.collect { roomMessages ->
                     try {
-                        // Inject self-destruct system message on first load if timer is active
-                        if (!sdSystemMessageInjected && selfDestructTimer > 0 && roomMessages.isNotEmpty()) {
-                            sdSystemMessageInjected = true
+                        // Inject self-destruct system message if timer is active and no sd_timer_ exists
+                        if (selfDestructTimer > 0 && roomMessages.isNotEmpty()) {
                             val hasSdMessage = roomMessages.any { it.id.startsWith("sd_timer_") }
                             if (!hasSdMessage) {
                                 val timerLabel = when (selfDestructTimer) {
@@ -360,6 +359,15 @@ class NewChatActivity : AppCompatActivity() {
                                     roomId = data.roomId
                                 )
                                 grpcClient.addLocalMessage(sysMsg)
+                                // Persist to Room DB so it survives activity recreation
+                                lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                    try {
+                                        lavender.client.android.data.db.AppDatabase.getDatabase(this@NewChatActivity)
+                                            .messageDao().insertMessages(listOf(sysMsg.toEntity()))
+                                    } catch (e: Exception) {
+                                        android.util.Log.w(TAG, "Failed to persist sd_timer message: ${e.message}")
+                                    }
+                                }
                             }
                         }
 
@@ -437,7 +445,6 @@ class NewChatActivity : AppCompatActivity() {
                     val timer = timerMap[data.roomId] ?: 0
                     if (timer != selfDestructTimer) {
                         selfDestructTimer = timer
-                        sdSystemMessageInjected = false
                         invalidateOptionsMenu()
                     }
                 }

@@ -1,5 +1,22 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.12] - 2026-08-14
+
+### Исправлено
+
+**Системные сообщения таймера авто-удаления пропадали при повторном входе (High):**
+- `sdSystemMessageInjected` флаг предотвращал повторную инъекцию при перезаходе в чат
+- Сообщение добавлялось через `addLocalMessage()` только в память — терялось при `loadHistory()`
+- Исправлено: убран флаг, проверка `hasSdMessage` на каждую загрузку; после инъекции сообщение сохраняется в Room DB
+
+**Дефолтный аватар в чате — прямоугольный фон за круглым аватаром (Medium):**
+- `applyDefaultAvatar()` для `ShapeableImageView` вызывал `setBackgroundColor()` — прямоугольный фон выходит за пределы круглой клиппинг-зоны
+- Исправлено: `GradientDrawable` с `OVAL` формой вместо `setBackgroundColor()`
+
+**MessageAdapter: colorFilter от дефолтного аватара сохранялся на реальных аватарах (Medium):**
+- `applyDefaultAvatar()` ставит `colorFilter = primaryColor`, Glide не очищал его при загрузке реального фото
+- Исправлено: `clearColorFilter()` перед Glide загрузкой в `MessageAdapter` (аналогично ChatAdapter v1.4.0.6)
+
 ## [1.4.0.11] - 2026-08-14
 
 ### Исправлено

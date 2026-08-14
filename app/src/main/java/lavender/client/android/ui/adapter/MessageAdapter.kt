@@ -181,6 +181,7 @@ class MessageAdapter(
             if (canShowSenderInfo) {
                 avatarImageView.isVisible = true
                 if (message.avatarUrl.isNotEmpty()) {
+                    avatarImageView.clearColorFilter()
                     try { Glide.with(ctx).load(message.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(avatarImageView) } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
                     avatarImageView.imageTintList = null
                 } else {

@@ -48,8 +48,17 @@ object ThemeUtils {
         // If it's a ShapeableImageView, we use its native properties
         if (imageView is com.google.android.material.imageview.ShapeableImageView) {
             imageView.strokeWidth = 0f // Remove stroke
-            // Use setBackgroundColor for automatic shape clipping on modern Material components
-            imageView.setBackgroundColor(avatarBgColor)
+            // Use oval drawable background — setBackgroundColor creates rectangular bleed
+            val currentBg = imageView.background
+            if (currentBg is android.graphics.drawable.GradientDrawable) {
+                currentBg.setColor(avatarBgColor)
+                currentBg.setStroke(0, Color.TRANSPARENT)
+            } else {
+                imageView.background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.OVAL
+                    setColor(avatarBgColor)
+                }
+            }
             imageView.setImageResource(if (isLight) R.drawable.ic_default_avatar_white else R.drawable.ic_default_avatar)
             imageView.setColorFilter(primaryColor)
             return
