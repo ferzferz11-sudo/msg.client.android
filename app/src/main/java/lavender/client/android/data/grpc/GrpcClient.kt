@@ -241,6 +241,8 @@ object GrpcClient {
         realGrpcClient.registerToken(user, token, pushEnabled)
 
     fun clearMessages() = realGrpcClient.clearMessages()
+
+    fun setMessages(msgs: List<Message>) = realGrpcClient.setMessages(msgs)
     fun clearRoomHistory(roomId: String, cb: (Boolean) -> Unit = {}) = realGrpcClient.clearRoomHistory(roomId, cb)
 
     // ======= Messages V2 Operations =======

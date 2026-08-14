@@ -100,6 +100,7 @@ class ChatViewModel : ViewModel() {
     }
 
     fun retryMessage(message: Message) {
+        if (currentRoomId.startsWith("favorites_")) return
         viewModelScope.launch {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 grpcClient.loadHistoryV2(currentRoomId) { _, _ ->
@@ -131,6 +132,7 @@ class ChatViewModel : ViewModel() {
     }
 
     fun loadPinnedMessages(context: Context) {
+        if (currentRoomId.startsWith("favorites_")) return
         viewModelScope.launch {
             try {
                 val pinned = GrpcClient.getPinnedMessages(currentRoomId)
@@ -203,8 +205,20 @@ class ChatViewModel : ViewModel() {
         if (_isLoading.value) return
         _isLoading.value = true
         viewModelScope.launch {
-            grpcClient.loadHistoryV2(currentRoomId) { _, _ ->
-                _isLoading.value = false
+            if (currentRoomId.startsWith("favorites_")) {
+                val userId = grpcClient.getUserId() ?: ""
+                if (userId.isNotEmpty()) {
+                    grpcClient.getFavorites(userId) { favMessages ->
+                        grpcClient.setMessages(favMessages)
+                        _isLoading.value = false
+                    }
+                } else {
+                    _isLoading.value = false
+                }
+            } else {
+                grpcClient.loadHistoryV2(currentRoomId) { _, _ ->
+                    _isLoading.value = false
+                }
             }
         }
     }
@@ -212,8 +226,20 @@ class ChatViewModel : ViewModel() {
     fun forceLoadHistory() {
         _isLoading.value = true
         viewModelScope.launch {
-            grpcClient.loadHistoryV2(currentRoomId) { _, _ ->
-                _isLoading.value = false
+            if (currentRoomId.startsWith("favorites_")) {
+                val userId = grpcClient.getUserId() ?: ""
+                if (userId.isNotEmpty()) {
+                    grpcClient.getFavorites(userId) { favMessages ->
+                        grpcClient.setMessages(favMessages)
+                        _isLoading.value = false
+                    }
+                } else {
+                    _isLoading.value = false
+                }
+            } else {
+                grpcClient.loadHistoryV2(currentRoomId) { _, _ ->
+                    _isLoading.value = false
+                }
             }
         }
     }

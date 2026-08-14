@@ -1,5 +1,17 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.10] - 2026-08-14
+
+### Исправлено
+
+**Избранное: сообщения не загружались при повторном входе (High):**
+- `ChatViewModel.loadHistory()` вызывал `loadHistoryV2("favorites_$username")` — сервер не имеет комнаты с таким ID → UNAVAILABLE
+- Избранное — виртуальная комната на клиенте, сообщения загружаются через `GetFavorites` RPC
+- Исправлено: `loadHistory()` и `forceLoadHistory()` используют `getFavorites()` для комнат избранного
+- `loadPinnedMessages()`: пропускает комнаты избранного (нет pinned на сервере)
+- `retryMessage()`: пропускает комнаты избранного
+- Добавлен `GrpcClient.setMessages()` / `RealGrpcClient.setMessages()` для установки сообщений избранного
+
 ## [1.4.0.9] - 2026-08-14
 
 ### Исправлено
