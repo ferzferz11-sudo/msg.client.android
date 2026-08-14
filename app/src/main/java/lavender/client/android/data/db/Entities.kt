@@ -200,7 +200,7 @@ fun MarketplaceAgentEntity.toDomain(): MarketplaceAgent = MarketplaceAgent(
     installCount = installCount
 )
 
-@Entity(tableName = "deleted_messages")
+@Entity(tableName = "deleted_messages", indices = [androidx.room.Index("deletedAt")])
 data class DeletedMessageEntity(
     @PrimaryKey val id: String,
     @ColumnInfo(defaultValue = "0") val deletedAt: Long = System.currentTimeMillis()

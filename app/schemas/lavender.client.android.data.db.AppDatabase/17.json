@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 17,
-    "identityHash": "15b39caa729245a200e3baf520178152",
+    "identityHash": "2c35f5480f32483cf169fc8cc3d0b586",
     "entities": [
       {
         "tableName": "messages",
@@ -611,12 +611,23 @@
           "columnNames": [
             "id"
           ]
-        }
+        },
+        "indices": [
+          {
+            "name": "index_deleted_messages_deletedAt",
+            "unique": false,
+            "columnNames": [
+              "deletedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_deleted_messages_deletedAt` ON `${TABLE_NAME}` (`deletedAt`)"
+          }
+        ]
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '15b39caa729245a200e3baf520178152')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2c35f5480f32483cf169fc8cc3d0b586')"
     ]
   }
 }
