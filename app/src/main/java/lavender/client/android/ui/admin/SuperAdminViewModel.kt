@@ -45,8 +45,9 @@ class SuperAdminViewModel(application: Application) : AndroidViewModel(applicati
             try {
                 grpcClient.getAdminUserList("", "", 50, "last_message") { response ->
                     viewModelScope.launch {
+                        val filtered = response.users.filter { it.username != "[deleted]" }
                         _uiState.value = _uiState.value.copy(
-                            adminUsers = response.users,
+                            adminUsers = filtered,
                             currentCursor = response.nextCursor,
                             hasMore = response.hasMore
                         )
@@ -76,8 +77,9 @@ class SuperAdminViewModel(application: Application) : AndroidViewModel(applicati
             try {
                 grpcClient.getAdminUserList("", state.currentCursor, 50, "last_message") { response ->
                     viewModelScope.launch {
+                        val filtered = response.users.filter { it.username != "[deleted]" }
                         _uiState.value = _uiState.value.copy(
-                            adminUsers = state.adminUsers + response.users,
+                            adminUsers = state.adminUsers + filtered,
                             currentCursor = response.nextCursor,
                             hasMore = response.hasMore
                         )
@@ -161,8 +163,8 @@ class SuperAdminViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun deleteSelectedUsers() {
-        val usernames = _uiState.value.selectedUsernames.toList()
-        if (usernames.isEmpty()) return
+        val usernames = _uiState.value.selectedUsernames.filter { it != "[deleted]" }.toList()
+        if (usernames.isEmpty()) { clearSelection(); return }
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
