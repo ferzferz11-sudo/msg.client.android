@@ -12,6 +12,11 @@
 - `retryMessage()`: пропускает комнаты избранного
 - Добавлен `GrpcClient.setMessages()` / `RealGrpcClient.setMessages()` для установки сообщений избранного
 
+**Toolbar avatar: colorFilter не очищался после загрузки фото (Medium):**
+- После установки аватара в профиле toolbar показывал круг с primary color поверх фото
+- `applyDefaultAvatar()` ставит `colorFilter = primaryColor`, Glide не очищал его при загрузке нового изображения
+- Исправлено: `clearColorFilter()` в Glide `onResourceReady` callback для toolbar avatar (observer + refreshToolbarAvatar)
+
 ## [1.4.0.9] - 2026-08-14
 
 ### Исправлено

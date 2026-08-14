@@ -331,7 +331,12 @@ class ChatListActivity : AppCompatActivity() {
                             .placeholder(R.drawable.ic_default_avatar)
                             .error(R.drawable.ic_default_avatar))
                         .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .into(ivToolbarUserAvatar!!)
+                        .into(object : com.bumptech.glide.request.target.DrawableImageViewTarget(ivToolbarUserAvatar!!) {
+                            override fun onResourceReady(resource: android.graphics.drawable.Drawable, transition: com.bumptech.glide.request.transition.Transition<in android.graphics.drawable.Drawable>?) {
+                                super.onResourceReady(resource, transition)
+                                ivToolbarUserAvatar!!.clearColorFilter()
+                            }
+                        })
                 } else if (ivToolbarUserAvatar != null) {
                     isShowingDefaultAvatar = true
                     ivToolbarUserAvatar!!.imageTintList = null
@@ -354,7 +359,12 @@ class ChatListActivity : AppCompatActivity() {
                     .placeholder(R.drawable.ic_default_avatar)
                     .error(R.drawable.ic_default_avatar))
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
-                .into(avatar)
+                .into(object : com.bumptech.glide.request.target.DrawableImageViewTarget(avatar) {
+                    override fun onResourceReady(resource: android.graphics.drawable.Drawable, transition: com.bumptech.glide.request.transition.Transition<in android.graphics.drawable.Drawable>?) {
+                        super.onResourceReady(resource, transition)
+                        avatar.clearColorFilter()
+                    }
+                })
         } else {
             isShowingDefaultAvatar = true
             avatar.imageTintList = null
