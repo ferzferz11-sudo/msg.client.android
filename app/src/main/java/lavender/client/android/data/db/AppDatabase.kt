@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [MessageEntity::class, ChatEntity::class, MarketplaceAgentEntity::class, StickerPackEntity::class, StickerEntity::class, DeletedMessageEntity::class], version = 17, exportSchema = true)
+@Database(entities = [MessageEntity::class, ChatEntity::class, MarketplaceAgentEntity::class, StickerPackEntity::class, StickerEntity::class, DeletedMessageEntity::class], version = 18, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun messageDao(): MessageDao
     abstract fun chatDao(): ChatDao
@@ -171,7 +171,7 @@ abstract class AppDatabase : RoomDatabase() {
                         model TEXT NOT NULL,
                         toolsEnabled INTEGER NOT NULL,
                         ragEnabled INTEGER NOT NULL,
-                        isPinned INTEGER NOT NULL,
+                        isPreset INTEGER NOT NULL,
                         isPublic INTEGER NOT NULL,
                         avgRating REAL NOT NULL,
                         installCount INTEGER NOT NULL,
@@ -263,6 +263,50 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Fix marketplace_agents column: isPinned → isPreset (old migration bug)
+        val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    // Check if the wrong column name exists
+                    val cursor = db.query("PRAGMA table_info(marketplace_agents)")
+                    var hasPinned = false
+                    while (cursor.moveToNext()) {
+                        val name = cursor.getString(cursor.getColumnIndexOrThrow("name"))
+                        if (name == "isPinned") { hasPinned = true; break }
+                    }
+                    cursor.close()
+
+                    if (hasPinned) {
+                        // Recreate table with correct column name
+                        db.execSQL("""
+                            CREATE TABLE marketplace_agents_new (
+                                id TEXT PRIMARY KEY NOT NULL,
+                                name TEXT NOT NULL,
+                                description TEXT NOT NULL,
+                                providerType TEXT NOT NULL,
+                                model TEXT NOT NULL,
+                                toolsEnabled INTEGER NOT NULL,
+                                ragEnabled INTEGER NOT NULL,
+                                isPreset INTEGER NOT NULL,
+                                isPublic INTEGER NOT NULL,
+                                avgRating REAL NOT NULL,
+                                installCount INTEGER NOT NULL,
+                                cachedAt INTEGER NOT NULL
+                            )
+                        """.trimIndent())
+                        db.execSQL("""
+                            INSERT INTO marketplace_agents_new
+                            SELECT id, name, description, providerType, model, toolsEnabled, ragEnabled, isPinned, isPublic, avgRating, installCount, cachedAt
+                            FROM marketplace_agents
+                        """.trimIndent())
+                        db.execSQL("DROP TABLE marketplace_agents")
+                        db.execSQL("ALTER TABLE marketplace_agents_new RENAME TO marketplace_agents")
+                    }
+                    // else: table was created by Room from Entity — already has isPreset
+                } catch (_: Exception) {}
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -270,7 +314,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "lavender_cache"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
                 .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
                 .build()
                 INSTANCE = instance

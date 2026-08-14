@@ -1,7 +1,7 @@
 # Lavender Messenger — Android Client
 
 **Author:** Pavel Davydov (ferz)
-**Version:** 1.4.0.6
+**Version:** 1.4.0.9
 **Language:** Kotlin 2.4.0
 
 Native Android client for Lavender Messenger with gRPC bidirectional streaming, E2EE, Material Design 3, AI v2 chat integration, Marketplace, Reve Image Generation, and Remote Agent.
@@ -32,7 +32,6 @@ app/src/main/java/lavender/client/android/
 ├── ContactsActivity                               # Contacts
 ├── ThemesActivity, ThemePaletteActivity           # Theme system
 ├── SuperAdminActivity                             # Admin tools
-├── NotificationActivity, NotificationLogActivity  # Notifications
 ├── SecurityActivity, ServersActivity              # Settings
 ├── ChangelogActivity                              # Version history
 ├── CallActivity, ConferenceLobbyActivity          # Voice/video calls
@@ -128,6 +127,8 @@ app/src/main/java/lavender/client/android/
 - Voice messages with waveform
 - File/image attachments
 - Message reactions & replies
+- Server-side history clear (ClearRoomHistory RPC)
+- Self-destruct timer per chat (auto-delete messages)
 - Voice/video calls (WebRTC)
 - Background APK updates via WorkManager
 - Localization (RU/English, RU default)

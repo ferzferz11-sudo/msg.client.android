@@ -146,7 +146,7 @@ class MigrationTest {
         rawDb.close()
 
         val migratedDb = Room.databaseBuilder(context, AppDatabase::class.java, dbName)
-            .addMigrations(AppDatabase.MIGRATION_15_16, AppDatabase.MIGRATION_16_17)
+            .addMigrations(AppDatabase.MIGRATION_15_16, AppDatabase.MIGRATION_16_17, AppDatabase.MIGRATION_17_18)
             .build()
 
         // Force Room to verify schema
@@ -230,7 +230,7 @@ class MigrationTest {
         rawDb.close()
 
         val migratedDb = Room.databaseBuilder(context, AppDatabase::class.java, dbName)
-            .addMigrations(AppDatabase.MIGRATION_15_16, AppDatabase.MIGRATION_16_17)
+            .addMigrations(AppDatabase.MIGRATION_15_16, AppDatabase.MIGRATION_16_17, AppDatabase.MIGRATION_17_18)
             .build()
 
         val thread = Thread {
@@ -251,5 +251,50 @@ class MigrationTest {
         }
         thread.start()
         thread.join(5000)
+    }
+
+    @Test
+    fun migrate17to18_marketplaceAgentsColumnRename() {
+        val dbName = "migration_17_18_test"
+        context.deleteDatabase(dbName)
+        val rawDb = context.openOrCreateDatabase(dbName, 0, null)
+
+        // Create v17 schema with the WRONG column name (isPinned instead of isPreset)
+        rawDb.execSQL("""
+            CREATE TABLE IF NOT EXISTS marketplace_agents (
+                id TEXT PRIMARY KEY NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT NOT NULL,
+                providerType TEXT NOT NULL,
+                model TEXT NOT NULL,
+                toolsEnabled INTEGER NOT NULL,
+                ragEnabled INTEGER NOT NULL,
+                isPinned INTEGER NOT NULL,
+                isPublic INTEGER NOT NULL,
+                avgRating REAL NOT NULL,
+                installCount INTEGER NOT NULL,
+                cachedAt INTEGER NOT NULL
+            )
+        """.trimIndent())
+        rawDb.execSQL("INSERT INTO marketplace_agents (id, name, description, providerType, model, toolsEnabled, ragEnabled, isPinned, isPublic, avgRating, installCount, cachedAt) VALUES ('a1', 'Test', 'desc', 'openrouter', 'gpt-4', 1, 0, 1, 1, 4.5, 100, 1000)")
+        rawDb.execSQL("PRAGMA user_version = 17")
+        rawDb.close()
+
+        val migratedDb = Room.databaseBuilder(context, AppDatabase::class.java, dbName)
+            .addMigrations(AppDatabase.MIGRATION_17_18)
+            .build()
+
+        // Force Room to verify schema
+        migratedDb.openHelper.writableDatabase
+
+        // Verify data survived the rename
+        val cursor = queryDb(migratedDb, "SELECT id, isPreset FROM marketplace_agents WHERE id='a1'")
+        assertTrue(cursor.moveToFirst())
+        assertEquals("a1", cursor.getString(0))
+        assertEquals(1, cursor.getInt(1))
+        cursor.close()
+
+        migratedDb.close()
+        context.deleteDatabase(dbName)
     }
 }

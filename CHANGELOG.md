@@ -1,5 +1,36 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.9] - 2026-08-14
+
+### Исправлено
+
+**Room миграция: crash из-за отсутствующего @Index (Critical):**
+- Миграция v16→v17 создала индекс `index_deleted_messages_deletedAt`, но `DeletedMessageEntity` не объявлял `@Index`
+- Room schema verification: индекс в БД есть, в Entity нет → `IllegalStateException` при каждом открытии БД
+- Блокировал все обращения к БД: чаты, избранное, поиск
+- Исправлено: `@Entity(indices = [Index("deletedAt")])` на `DeletedMessageEntity`
+
+**Room миграция: marketplace_agents колонка isPinned → isPreset (Critical):**
+- MIGRATION_10_11 создавал таблицу с `isPinned`, но Entity ожидает `isPreset`
+- Room verification: колонка в БД не совпадает с Entity → crash при открытии
+- Исправлено: MIGRATION_10_11 → `isPreset`, MIGRATION_17_18 → рекреация таблицы с правильным именем для существующих БД
+- DB version: 17 → 18
+
+**Админ-панель: удалённый аккаунт [deleted] (Medium):**
+- Удалённые аккаунты с username `[deleted]` возвращались в `GetAdminUserList`
+- Невозможно повторно удалить, засоряли список, показывали случайное последнее сообщение
+- Исправлено: фильтрация `[deleted]` из `loadData()` и `loadMoreUsers()`
+- Защита: `deleteSelectedUsers()` пропускает `[deleted]` в выделении
+- Серверная задача: `TASK_ADMIN_DELETED_USERS.md`
+
+**AGP предупреждение при sync (Low):**
+- Добавлено `android.sync.suppressAgpWarnings=UNSUPPORTED_PROJECT_OPTION_USE` в gradle.properties
+
+### Тесты
+- MigrationTest: тест v17→v18 (marketplace_agents колонка rename)
+- MigrationTest: тест v15→v18 (полный путь миграции)
+- 11 тестов ClearRoomHistory (proto + marshallers)
+
 ## [1.4.0.8] - 2026-08-14
 
 ### Исправлено
