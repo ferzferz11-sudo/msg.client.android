@@ -1,5 +1,20 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.11] - 2026-08-14
+
+### Исправлено
+
+**Таймер авто-удаления из одного чата появлялся в избранном (High):**
+- `_selfDestructTimer` был глобальным `StateFlow<Int>` на весь `RealGrpcClient`
+- При установке таймера в chat1 → значение 30 попадало в глобальный flow
+- При открытии избранного observer подхватывал 30 → инжектировал системное сообщение таймера
+- Исправлено: `_selfDestructTimer` → `MutableStateFlow<Map<String, Int>>` (per-room), observer берёт значение для текущей комнаты
+
+**Toolbar avatar: толстая черная обводка (Medium):**
+- `CircleImageView` + `padding="6dp"` + `GradientDrawable` background из `applyDefaultAvatar()` = черная обводка по краям
+- Убран `android:padding="6dp"` из XML
+- `applyDefaultAvatar()`: для `CircleImageView` не ставится background (он сам клиппит в круг)
+
 ## [1.4.0.10] - 2026-08-14
 
 ### Исправлено

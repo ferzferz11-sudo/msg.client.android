@@ -55,7 +55,14 @@ object ThemeUtils {
             return
         }
 
-        // Fallback for regular ImageViews (or CircleImageView)
+        // CircleImageView clips to circle itself — don't set background (causes black border)
+        if (imageView is de.hdodenhof.circleimageview.CircleImageView) {
+            imageView.setImageResource(if (isLight) R.drawable.ic_default_avatar_white else R.drawable.ic_default_avatar)
+            imageView.setColorFilter(primaryColor)
+            return
+        }
+
+        // Fallback for regular ImageViews
         imageView.setImageResource(if (isLight) R.drawable.ic_default_avatar_white else R.drawable.ic_default_avatar)
         imageView.setColorFilter(primaryColor)
 

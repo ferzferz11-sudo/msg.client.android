@@ -143,11 +143,13 @@ class NewChatActivity : AppCompatActivity() {
             try {
                 lifecycleScope.launch {
                     if (isFinishing || isDestroyed) return@launch
-                    newChatViewModel.updateMetadata(lavender.client.android.ui.chat.ChatMetadataState(
-                        chatName = meta.chatName, isDirect = meta.isDirect, chatType = meta.chatType,
-                        participantsJson = meta.participantsJson, creator = meta.creator,
-                        avatarUrl = meta.avatarUrl, fullAvatarUrl = meta.fullAvatarUrl
-                    ))
+                    newChatViewModel.updateMetadata(
+                        ChatMetadataState(
+                            chatName = meta.chatName, isDirect = meta.isDirect, chatType = meta.chatType,
+                            participantsJson = meta.participantsJson, creator = meta.creator,
+                            avatarUrl = meta.avatarUrl, fullAvatarUrl = meta.fullAvatarUrl
+                        )
+                    )
                     val m = newChatViewModel.metadata.value
                     toolbarDelegate.configure(data.roomId, data.username, m.chatName, m.isDirect, m.chatType, m.participantsJson, m.creator, m.avatarUrl, m.fullAvatarUrl, data.isSecret)
                     toolbarDelegate.setup()
@@ -431,7 +433,8 @@ class NewChatActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                grpcClient.selfDestructTimer.collect { timer ->
+                grpcClient.selfDestructTimer.collect { timerMap ->
+                    val timer = timerMap[data.roomId] ?: 0
                     if (timer != selfDestructTimer) {
                         selfDestructTimer = timer
                         sdSystemMessageInjected = false
@@ -766,8 +769,8 @@ class NewChatActivity : AppCompatActivity() {
                             runOnUiThread {
                                 if (success) {
                                     Toast.makeText(this, getString(R.string.chat_deleted), Toast.LENGTH_SHORT).show()
-                                    val intent = android.content.Intent(this, lavender.client.android.ui.chatlist.ChatListActivity::class.java).apply {
-                                        flags = android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
+                                    val intent = Intent(this, lavender.client.android.ui.chatlist.ChatListActivity::class.java).apply {
+                                        flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                                     }
                                     startActivity(intent)
                                     finish()
@@ -836,7 +839,7 @@ class NewChatActivity : AppCompatActivity() {
             messagesRecyclerView.post {
                 val holder = messagesRecyclerView.findViewHolderForAdapterPosition(pos)
                 holder?.itemView?.let { view ->
-                    view.setBackgroundColor(android.graphics.Color.parseColor("#33FFFFFF"))
+                    view.setBackgroundColor("#33FFFFFF".toColorInt())
                     view.postDelayed({ view.setBackgroundColor(android.graphics.Color.TRANSPARENT) }, 1500)
                 }
             }

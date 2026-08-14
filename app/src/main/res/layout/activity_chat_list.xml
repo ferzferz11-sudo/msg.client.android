@@ -50,8 +50,7 @@
                         android:id="@+id/ivToolbarUserAvatar"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
-                        android:src="@drawable/ic_default_avatar"
-                        android:padding="6dp" />
+                        android:src="@drawable/ic_default_avatar" />
 
                 </FrameLayout>
 

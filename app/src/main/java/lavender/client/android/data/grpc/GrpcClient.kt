@@ -35,7 +35,7 @@ object GrpcClient {
     val authStatus: StateFlow<String?> = realGrpcClient.authStatus
     val typingUsers: StateFlow<Map<String, Set<String>>> = realGrpcClient.typingUsers
     val chatDeletedEvent: StateFlow<String?> = realGrpcClient.chatDeletedEvent
-    val selfDestructTimer: StateFlow<Int> = realGrpcClient.selfDestructTimer
+    val selfDestructTimer: StateFlow<Map<String, Int>> = realGrpcClient.selfDestructTimer
     val serverShuttingDown: StateFlow<Boolean> = realGrpcClient.serverShuttingDown
     val callSignals: SharedFlow<CallMessageProto> = realGrpcClient.callSignals
 

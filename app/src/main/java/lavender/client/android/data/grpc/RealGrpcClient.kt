@@ -108,8 +108,8 @@ object RealGrpcClient {
     private val _chatDeletedEvent = MutableStateFlow<String?>(null)
     val chatDeletedEvent: StateFlow<String?> = _chatDeletedEvent
 
-    private val _selfDestructTimer = MutableStateFlow(0)
-    val selfDestructTimer: StateFlow<Int> = _selfDestructTimer
+    private val _selfDestructTimer = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val selfDestructTimer: StateFlow<Map<String, Int>> = _selfDestructTimer
 
     private val _callSignals = MutableSharedFlow<CallMessageProto>(extraBufferCapacity = 64)
     val callSignals: SharedFlow<CallMessageProto> = _callSignals
@@ -644,8 +644,8 @@ object RealGrpcClient {
                         }
                         "SELF_DESTRUCT_TIMER" -> {
                             val timerValue = sysMessage.toIntOrNull() ?: 0
-                            _selfDestructTimer.value = timerValue
                             val targetRoomId = value.roomId.ifEmpty { currentRoomId }
+                            _selfDestructTimer.update { it + (targetRoomId to timerValue) }
                             if (targetRoomId.isNotEmpty()) {
                                 val ctx = appContext
                                 val timerLabel = if (ctx != null) {
