@@ -1,5 +1,20 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.8] - 2026-08-14
+
+### Исправлено
+
+**Логин: "Соединение не удалось" при доступном сервере (Critical):**
+- В v1.4.0.5 убрали optimistic READY из `activateChannel` — статус остаётся CONNECTING до первого ChatV2 ответа
+- Login и re-login ждали `ConnectionStatus.READY`, который не приходит без ChatV2 стрима → timeout → CONNECTION_FAILED
+- Исправлено: login принимает `CONNECTING` (канал жив, может делать unary-вызовы) или `READY`
+- `waitForConnectionAndReLogin()`: аналогичный фикс
+
+**Room миграция: crash при обновлении (Critical):**
+- Миграция v15→v16 создала `deleted_messages` с `DEFAULT 0`, но Entity не объявлял SQL default
+- Room schema verification: `defaultValue = '0'` (DB) vs `defaultValue = 'undefined'` (Entity)
+- Исправлено: `@ColumnInfo(defaultValue = "0")` на `deletedAt` в `DeletedMessageEntity`
+
 ## [1.4.0.7] - 2026-08-13
 
 ### Исправлено
@@ -26,6 +41,11 @@
 **Тулбар: аватар не обновлялся после смены (Medium):**
 - `collectLatest` на `avatarCacheFlow` не переэмитит значение при возврате из ProfileActivity
 - `refreshToolbarAvatar()` вызывается в `onResume()` — читает текущий кэш и обновляет тулбар
+
+**Room миграция: crash при обновлении (Critical):**
+- Миграция v15→v16 создала `deleted_messages` с `DEFAULT 0`, но Entity не объявлял SQL default
+- Room schema verification: `defaultValue = '0'` (DB) vs `defaultValue = 'undefined'` (Entity)
+- Исправлено: `@ColumnInfo(defaultValue = "0")` на `deletedAt` в `DeletedMessageEntity`
 
 ## [1.4.0.6] - 2026-08-13
 

@@ -445,11 +445,11 @@ object SessionManager {
     private fun waitForConnectionAndReLogin(context: Context, username: String, password: String, serverAddress: String) {
         scope.launch {
             val status = withTimeoutOrNull(10.seconds) {
-                GrpcClient.connectionStatus.filter {
-                    it == ConnectionStatus.READY || it == ConnectionStatus.FAILED
-                }.first()
+                GrpcClient.connectionStatus.first {
+                    it == ConnectionStatus.CONNECTING || it == ConnectionStatus.READY || it == ConnectionStatus.FAILED
+                }
             }
-            if (status != ConnectionStatus.READY) {
+            if (status == ConnectionStatus.FAILED || status == null) {
                 Log.w("SessionManager", "Re-login: connection failed")
                 return@launch
             }
@@ -564,11 +564,11 @@ object SessionManager {
             try {
                 val status = withTimeoutOrNull(10.seconds) {
                     GrpcClient.connectionStatus.filter {
-                        (it == ConnectionStatus.READY) || (it == ConnectionStatus.FAILED)
+                        it == ConnectionStatus.CONNECTING || it == ConnectionStatus.READY || it == ConnectionStatus.FAILED
                     }.first()
                 }
 
-                if (status != ConnectionStatus.READY) {
+                if (status == ConnectionStatus.FAILED || status == null) {
                     Log.w("SessionManager", "V2: connection failed")
                     onComplete("CONNECTION_FAILED")
                     return@launch

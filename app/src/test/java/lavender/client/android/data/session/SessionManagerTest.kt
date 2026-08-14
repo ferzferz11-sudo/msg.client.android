@@ -1,7 +1,89 @@
 package lavender.client.android.data.session
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
+import lavender.client.android.data.grpc.ConnectionStatus
 import org.junit.Assert.*
 import org.junit.Test
+import kotlin.time.Duration.Companion.seconds
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class LoginConnectionFilterTest {
+
+    // Replicates the filter logic from loginV2 to verify CONNECTING is accepted
+    private suspend fun simulateLoginWaitForConnection(
+        connectionStatus: MutableStateFlow<ConnectionStatus>,
+        emitStatus: ConnectionStatus
+    ): String? {
+        connectionStatus.value = ConnectionStatus.DISCONNECTED
+        // Simulate the status transition that happens during connect()
+        connectionStatus.value = emitStatus
+
+        val status = withTimeoutOrNull(1.seconds) {
+            connectionStatus.first {
+                it == ConnectionStatus.CONNECTING || it == ConnectionStatus.READY || it == ConnectionStatus.FAILED
+            }
+        }
+
+        return if (status == ConnectionStatus.FAILED || status == null) {
+            "CONNECTION_FAILED"
+        } else {
+            null // success
+        }
+    }
+
+    @Test
+    fun loginFilter_connectingAccepted() = runTest {
+        val connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
+        val result = simulateLoginWaitForConnection(connectionStatus, ConnectionStatus.CONNECTING)
+        assertNull("CONNECTING should be accepted (not CONNECTION_FAILED)", result)
+    }
+
+    @Test
+    fun loginFilter_readyAccepted() = runTest {
+        val connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
+        val result = simulateLoginWaitForConnection(connectionStatus, ConnectionStatus.READY)
+        assertNull("READY should be accepted (not CONNECTION_FAILED)", result)
+    }
+
+    @Test
+    fun loginFilter_failedRejected() = runTest {
+        val connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
+        val result = simulateLoginWaitForConnection(connectionStatus, ConnectionStatus.FAILED)
+        assertEquals("FAILED should be rejected", "CONNECTION_FAILED", result)
+    }
+
+    @Test
+    fun loginFilter_disconnectedTimesOut() = runTest {
+        val connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
+        // Don't emit any status — should timeout
+        val status = withTimeoutOrNull(1.seconds) {
+            connectionStatus.first {
+                it == ConnectionStatus.CONNECTING || it == ConnectionStatus.READY || it == ConnectionStatus.FAILED
+            }
+        }
+        assertNull("DISCONNECTED should timeout", status)
+    }
+
+    @Test
+    fun loginFilter_connectingThenReady_stillSucceeds() = runTest {
+        val connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
+        // Simulate: connect() sets CONNECTING, then later READY
+        connectionStatus.value = ConnectionStatus.CONNECTING
+
+        val status = withTimeoutOrNull(2.seconds) {
+            connectionStatus.first {
+                it == ConnectionStatus.CONNECTING || it == ConnectionStatus.READY || it == ConnectionStatus.FAILED
+            }
+        }
+
+        assertNotNull("Should succeed when CONNECTING", status)
+        assertNotEquals("Should not be FAILED", ConnectionStatus.FAILED, status)
+    }
+}
 
 class SessionManagerTest {
 
@@ -21,7 +103,7 @@ class SessionManagerTest {
     }
 
     @Test
-    fun session_loggedIn只要有Username() {
+    fun session_loggedIn_whenUsernamePresent() {
         val session = UserSession(username = "ferz")
         assertTrue(session.isLoggedIn)
     }

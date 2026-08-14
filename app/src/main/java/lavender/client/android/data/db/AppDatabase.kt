@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [MessageEntity::class, ChatEntity::class, MarketplaceAgentEntity::class, StickerPackEntity::class, StickerEntity::class, DeletedMessageEntity::class], version = 17, exportSchema = false)
+@Database(entities = [MessageEntity::class, ChatEntity::class, MarketplaceAgentEntity::class, StickerPackEntity::class, StickerEntity::class, DeletedMessageEntity::class], version = 17, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun messageDao(): MessageDao
     abstract fun chatDao(): ChatDao
