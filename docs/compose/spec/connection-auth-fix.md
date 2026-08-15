@@ -1,6 +1,6 @@
 ---
 feature: connection-auth-fix
-status: designed
+status: delivered
 updated: 2026-08-14
 branch: feat/1.4.0.x
 ---
@@ -51,8 +51,8 @@ Add `OFFLINE` state: when all reconnects fail with UNAVAILABLE and device has no
 - `registerToken()` error handling (GrpcChatAuxClient:105 — low impact)
 
 ## Tasks
-- [ ] T1: ChatV2 stream reconnect — handle UNAUTHENTICATED (refresh+retry) and UNAVAILABLE (backoff reconnect) in `onClose`/`onError` (covers: S2.1)
-- [ ] T2: Token refresh bypass — don't block on READY when channel exists for unary calls (covers: S2.2)
-- [ ] T3: GrpcChatAuxClient — add UNAUTHENTICATED retry to `getAdminUserList` + `getAdminUserSessions` (covers: S2.3)
-- [ ] T4: Status debounce — suppress rapid FAILED→CONNECTING→FAILED flapping (covers: S2.4)
-- [ ] T5: Build + test + CHANGELOG (covers: all)
+- [x] T1: ChatV2 stream reconnect — handle UNAUTHENTICATED (refresh+retry) and UNAVAILABLE (backoff reconnect) in `onClose`/`onError` (covers: S2.1)
+- [x] T2: Token refresh bypass — don't block on READY when channel exists for unary calls (covers: S2.2)
+- [x] T3: GrpcChatAuxClient — add UNAUTHENTICATED retry to `getAdminUserList` + `getAdminUserSessions` (covers: S2.3)
+- [x] T4: Status debounce — suppress rapid FAILED→CONNECTING→FAILED flapping (covers: S2.4)
+- [x] T5: Build + test + CHANGELOG (covers: all)
