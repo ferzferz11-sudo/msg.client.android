@@ -186,6 +186,7 @@ class ChatToolbarDelegate(
                 toolbarAvatar.isVisible = true
                 groupParticipantsContainer.isVisible = false
                 if (!effectiveAvatarUrl.isNullOrEmpty()) {
+                    toolbarAvatar.clearColorFilter()
                     com.bumptech.glide.Glide.with(activity).load(effectiveAvatarUrl)
                         .placeholder(R.drawable.ic_default_avatar).circleCrop().into(toolbarAvatar)
                 } else {

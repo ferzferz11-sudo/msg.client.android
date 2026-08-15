@@ -64,8 +64,18 @@ object ThemeUtils {
             return
         }
 
-        // CircleImageView clips to circle itself — don't set background (causes black border)
+        // CircleImageView clips to circle — use circular background
         if (imageView is de.hdodenhof.circleimageview.CircleImageView) {
+            val currentBg = imageView.background
+            if (currentBg is android.graphics.drawable.GradientDrawable) {
+                currentBg.setColor(avatarBgColor)
+                currentBg.setStroke(0, Color.TRANSPARENT)
+            } else {
+                imageView.background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.OVAL
+                    setColor(avatarBgColor)
+                }
+            }
             imageView.setImageResource(if (isLight) R.drawable.ic_default_avatar_white else R.drawable.ic_default_avatar)
             imageView.setColorFilter(primaryColor)
             return
