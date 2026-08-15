@@ -55,6 +55,11 @@
 - `applyDefaultAvatar()` ставит `colorFilter = primaryColor`, Glide не очищал его при загрузке реального фото
 - Исправлено: `clearColorFilter()` перед Glide загрузкой в `MessageAdapter` (аналогично ChatAdapter v1.4.0.6)
 
+**Chat toolbar: дефолтный аватар собеседника не отображался (Medium):**
+- `CircleImageView` ветка в `applyDefaultAvatar()` не ставила фон — аватар был невидим на тёмной теме
+- Исправлено: добавлен oval GradientDrawable фон (аналогично ShapeableImageView)
+- Добавлен `clearColorFilter()` перед Glide загрузкой в `setupNormalToolbar()`
+
 ## [1.4.0.11] - 2026-08-14
 
 ### Исправлено
