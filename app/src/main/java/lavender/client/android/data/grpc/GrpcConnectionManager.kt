@@ -221,4 +221,9 @@ class GrpcConnectionManager(
             connect(serverAddress, useTls, port, appCtx)
         }
     }
+
+    fun scheduleReconnect() {
+        val addr = currentServerAddress ?: return
+        scheduleReconnect(addr, false, currentServerPort)
+    }
 }

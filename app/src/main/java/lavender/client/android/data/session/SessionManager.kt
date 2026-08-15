@@ -181,17 +181,23 @@ object SessionManager {
 
             Log.d("SessionManager", "Token expired, refreshing synchronously...")
 
-            // Wait for gRPC connection to be READY before attempting refresh
+            // Wait for gRPC connection before attempting refresh.
+            // Accept READY or CONNECTING/RECONNECTING — channel may be alive even if stream is down.
+            // Only skip if channel is null/shutdown (DISCONNECTED/FAILED with no channel).
             val connLatch = java.util.concurrent.CountDownLatch(1)
             val connJob = scope.launch {
-                GrpcClient.connectionStatus.first { it == ConnectionStatus.READY || it == ConnectionStatus.FAILED }
+                GrpcClient.connectionStatus.first {
+                    it == ConnectionStatus.READY || it == ConnectionStatus.FAILED ||
+                    it == ConnectionStatus.CONNECTING || it == ConnectionStatus.RECONNECTING
+                }
                 connLatch.countDown()
             }
             connLatch.await(5, java.util.concurrent.TimeUnit.SECONDS)
             connJob.cancel()
 
-            if (GrpcClient.connectionStatus.value != ConnectionStatus.READY) {
-                Log.w("SessionManager", "Sync token refresh: gRPC not ready, skipping")
+            val channel = GrpcClient.getChannel()
+            if (channel == null || channel.isShutdown || channel.isTerminated) {
+                Log.w("SessionManager", "Sync token refresh: gRPC channel unavailable, skipping")
                 return
             }
 

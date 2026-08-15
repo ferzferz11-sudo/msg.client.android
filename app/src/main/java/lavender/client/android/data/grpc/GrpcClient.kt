@@ -78,6 +78,8 @@ object GrpcClient {
 
     fun disconnect() = realGrpcClient.disconnect()
 
+    fun getChannel(): io.grpc.ManagedChannel? = realGrpcClient.getChannel()
+
     fun clearLastChatRequestPrefs() = realGrpcClient.clearLastChatRequestPrefs()
 
     fun clearSystemNotification() = realGrpcClient.clearSystemNotification()

@@ -742,7 +742,7 @@ object RealGrpcClient {
             override fun onError(t: Throwable) {
                 ErrorHandler.handle("RealGrpcClient.chatV2Stream", t)
                 synchronized(chatV2Lock) { chatV2RequestObserver = null }
-                _connectionStatus.value = ConnectionStatus.FAILED
+                handleStreamFailure(t)
             }
 
             override fun onCompleted() {
@@ -759,7 +759,7 @@ object RealGrpcClient {
                     _connectionStatus.value = ConnectionStatus.DISCONNECTED
                 } else {
                     Log.w(TAG, "ChatV2 stream closed: ${status.code} ${status.description ?: ""}")
-                    _connectionStatus.value = ConnectionStatus.FAILED
+                    handleStreamCloseStatus(status)
                 }
             }
         }, Metadata())
@@ -769,6 +769,76 @@ object RealGrpcClient {
             override fun onNext(value: ChatV2MessageProto) = this@startChatV2Stream.sendMessage(value)
             override fun onError(t: Throwable) = this@startChatV2Stream.cancel("Error in request stream", t)
             override fun onCompleted() = this@startChatV2Stream.halfClose()
+        }
+    }
+
+    // ====== Stream failure recovery ======
+
+    private fun handleStreamFailure(t: Throwable) {
+        val status = if (t is io.grpc.StatusRuntimeException) t.status else null
+        val code = status?.code
+        when (code) {
+            io.grpc.Status.Code.UNAUTHENTICATED -> {
+                Log.w(TAG, "ChatV2 stream: UNAUTHENTICATED — refreshing token and reconnecting")
+                connectionManager.isAuthFailure = true
+                _connectionStatus.value = ConnectionStatus.RECONNECTING
+                scope.launch(Dispatchers.IO) {
+                    val refreshed = try {
+                        appContext?.let { ctx ->
+                            lavender.client.android.data.session.SessionManager.forceTokenRefresh(ctx)
+                            lavender.client.android.data.auth.AuthManager.getAccessToken(ctx)?.isNotEmpty() == true
+                        } ?: false
+                    } catch (e: Exception) { Log.e(TAG, "Token refresh failed", e); false }
+                    if (refreshed) {
+                        connectionManager.isAuthFailure = false
+                        scope.launch { connectionManager.reconnect() }
+                    } else {
+                        _connectionStatus.value = ConnectionStatus.FAILED
+                        _authStatus.value = "AUTH_FAILED"
+                    }
+                }
+            }
+            io.grpc.Status.Code.UNAVAILABLE, io.grpc.Status.Code.DEADLINE_EXCEEDED -> {
+                _connectionStatus.value = ConnectionStatus.RECONNECTING
+                connectionManager.scheduleReconnect()
+            }
+            else -> {
+                _connectionStatus.value = ConnectionStatus.FAILED
+                connectionManager.scheduleReconnect()
+            }
+        }
+    }
+
+    private fun handleStreamCloseStatus(status: Status) {
+        when (status.code) {
+            io.grpc.Status.Code.UNAUTHENTICATED -> {
+                Log.w(TAG, "ChatV2 stream closed: UNAUTHENTICATED — refreshing token and reconnecting")
+                connectionManager.isAuthFailure = true
+                _connectionStatus.value = ConnectionStatus.RECONNECTING
+                scope.launch(Dispatchers.IO) {
+                    val refreshed = try {
+                        appContext?.let { ctx ->
+                            lavender.client.android.data.session.SessionManager.forceTokenRefresh(ctx)
+                            lavender.client.android.data.auth.AuthManager.getAccessToken(ctx)?.isNotEmpty() == true
+                        } ?: false
+                    } catch (e: Exception) { Log.e(TAG, "Token refresh failed", e); false }
+                    if (refreshed) {
+                        connectionManager.isAuthFailure = false
+                        scope.launch { connectionManager.reconnect() }
+                    } else {
+                        _connectionStatus.value = ConnectionStatus.FAILED
+                        _authStatus.value = "AUTH_FAILED"
+                    }
+                }
+            }
+            io.grpc.Status.Code.UNAVAILABLE, io.grpc.Status.Code.DEADLINE_EXCEEDED -> {
+                _connectionStatus.value = ConnectionStatus.RECONNECTING
+                connectionManager.scheduleReconnect()
+            }
+            else -> {
+                _connectionStatus.value = ConnectionStatus.FAILED
+                connectionManager.scheduleReconnect()
+            }
         }
     }
 

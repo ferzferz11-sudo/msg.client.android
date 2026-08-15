@@ -212,6 +212,10 @@ class GrpcChatAuxClient(
     }
 
     fun getAdminUserList(query: String, cursor: String, limit: Int, sortBy: String, callback: (GetAdminUserListResponseProto) -> Unit) {
+        getAdminUserListInternal(query, cursor, limit, sortBy, callback, retryCount = 0)
+    }
+
+    private fun getAdminUserListInternal(query: String, cursor: String, limit: Int, sortBy: String, callback: (GetAdminUserListResponseProto) -> Unit, retryCount: Int) {
         val currentChannel = getChannel() ?: return
         val call = currentChannel.newCall(
             io.grpc.MethodDescriptor.newBuilder<GetAdminUserListRequestProto, GetAdminUserListResponseProto>()
@@ -228,7 +232,15 @@ class GrpcChatAuxClient(
                 callback(message)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) ErrorHandler.handle("GrpcChatAuxClient.getAdminUserList", "Status: ${status.code} — ${status.description}")
+                if (!status.isOk) {
+                    if (status.code == io.grpc.Status.Code.UNAUTHENTICATED && retryCount < 1) {
+                        Log.w(TAG, "GetAdminUserList: UNAUTHENTICATED — refreshing token and retrying")
+                        refreshToken?.invoke()
+                        getAdminUserListInternal(query, cursor, limit, sortBy, callback, retryCount + 1)
+                    } else {
+                        ErrorHandler.handle("GrpcChatAuxClient.getAdminUserList", "Status: ${status.code} — ${status.description}")
+                    }
+                }
             }
         }, io.grpc.Metadata())
         call.sendMessage(GetAdminUserListRequestProto(query, cursor, limit, sortBy))
@@ -237,6 +249,10 @@ class GrpcChatAuxClient(
     }
 
     fun getAdminUserSessions(userId: String, callback: (GetAdminUserSessionsResponseProto) -> Unit) {
+        getAdminUserSessionsInternal(userId, callback, retryCount = 0)
+    }
+
+    private fun getAdminUserSessionsInternal(userId: String, callback: (GetAdminUserSessionsResponseProto) -> Unit, retryCount: Int) {
         val currentChannel = getChannel() ?: return
         val call = currentChannel.newCall(
             io.grpc.MethodDescriptor.newBuilder<GetAdminUserSessionsRequestProto, GetAdminUserSessionsResponseProto>()
@@ -253,7 +269,15 @@ class GrpcChatAuxClient(
                 callback(message)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) ErrorHandler.handle("GrpcChatAuxClient.getAdminUserSessions", "Status: ${status.code} — ${status.description}")
+                if (!status.isOk) {
+                    if (status.code == io.grpc.Status.Code.UNAUTHENTICATED && retryCount < 1) {
+                        Log.w(TAG, "GetAdminUserSessions: UNAUTHENTICATED — refreshing token and retrying")
+                        refreshToken?.invoke()
+                        getAdminUserSessionsInternal(userId, callback, retryCount + 1)
+                    } else {
+                        ErrorHandler.handle("GrpcChatAuxClient.getAdminUserSessions", "Status: ${status.code} — ${status.description}")
+                    }
+                }
             }
         }, io.grpc.Metadata())
         call.sendMessage(GetAdminUserSessionsRequestProto(userId))

@@ -1,5 +1,29 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.13] - 2026-08-14
+
+### Исправлено
+
+**ChatV2 stream не переподключался после UNAUTHENTICATED (Critical):**
+- `onError`/`onClose` ставили `FAILED` но не триггерили reconnect — stream был one-shot
+- UNAUTHENTICATED ошибки (протухший токен) вызывали FAILED→reconnect→FAILED бесконечный цикл
+- Исправлено: UNAUTHENTICATED → `isAuthFailure = true` + `forceTokenRefresh()` + reconnect при успехе
+- UNAVAILABLE/DEADLINE_EXCEEDED → `scheduleReconnect()` с exponential backoff
+- Остальные ошибки → FAILED + reconnect
+
+**Token refresh не работал при мёртвом соединении (Critical):**
+- `ensureFreshToken()` блокировался на `connectionStatus == READY` (5с timeout)
+- Если stream был в FAILED, refresh молча пропускался → stale token → UNAUTHENTICATED cascade
+- Исправлено: проверка что канал жив (`!isShutdown && !isTerminated`) вместо требования READY
+
+**getAdminUserList/getAdminUserSessions не ретраили UNAUTHENTICATED (High):**
+- Эти RPC не имели retry-once логики в отличие от getAllUsers/setMutedChat
+- При протухшем токене ошибка логировалась но не исправлялась
+- Исправлено: добавлен retry-once с refreshToken (аналогично другим методам GrpcChatAuxClient)
+
+**GrpcConnectionManager: scheduleReconnect() стал публичным:**
+- Stream failure handler из RealGrpcClient может теперь триггерить reconnect через backoff strategy
+
 ## [1.4.0.12] - 2026-08-14
 
 ### Исправлено
