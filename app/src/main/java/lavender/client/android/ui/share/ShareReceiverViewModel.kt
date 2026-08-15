@@ -71,18 +71,18 @@ class ShareReceiverViewModel(application: Application) : AndroidViewModel(applic
                     val db = AppDatabase.getDatabase(getApplication())
                     val list = db.chatDao().getAllChats().map { it.toDomain() }.toMutableList()
 
-                    val favoritesId = "favorites_$username"
-                    val favoritesIndex = list.indexOfFirst { it.id == favoritesId }
+                    val savedMessagesId = "saved_messages_$username"
+                    val savedMessagesIndex = list.indexOfFirst { it.id == savedMessagesId }
 
-                    if (favoritesIndex != -1) {
-                        val fav = list.removeAt(favoritesIndex)
+                    if (savedMessagesIndex != -1) {
+                        val fav = list.removeAt(savedMessagesIndex)
                         list.add(0, fav)
                     } else if (username.isNotEmpty()) {
                         list.add(0, ChatInfo(
-                            id = favoritesId,
-                            name = getApplication<Application>().getString(lavender.client.android.R.string.favorites),
+                            id = savedMessagesId,
+                            name = getApplication<Application>().getString(lavender.client.android.R.string.saved_messages),
                             type = "direct",
-                            lastMessageText = getApplication<Application>().getString(lavender.client.android.R.string.favorites_description)
+                            lastMessageText = getApplication<Application>().getString(lavender.client.android.R.string.saved_messages_description)
                         ))
                     }
 

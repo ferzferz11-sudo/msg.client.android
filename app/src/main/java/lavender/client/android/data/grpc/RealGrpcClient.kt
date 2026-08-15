@@ -270,8 +270,8 @@ object RealGrpcClient {
         getUserId = { currentUserId }
     )
 
-    // ====== Module: Favorites Client ======
-    private val favoritesClient = GrpcFavoritesClient(
+    // ====== Module: Saved Messages Client ======
+    private val savedMessagesClient = GrpcSavedMessagesClient(
         getChannel = { getChannel() },
         getUserId = { currentUserId },
         getUsername = { currentUsername },
@@ -1016,10 +1016,10 @@ object RealGrpcClient {
     fun getDraft(roomId: String, callback: (String, String, String, String, Boolean) -> Unit) { draftClient.getDraft(roomId, callback) }
     fun deleteDraft(roomId: String, callback: (Boolean) -> Unit) { draftClient.deleteDraft(roomId, callback) }
 
-    // ====== Favorites (delegated) ======
-    fun addFavorite(userId: String, messageId: String, callback: (Boolean, String) -> Unit) { favoritesClient.addFavorite(userId, messageId, callback) }
-    fun removeFavorite(userId: String, messageId: String, callback: (Boolean, String) -> Unit) { favoritesClient.removeFavorite(userId, messageId, callback) }
-    fun getFavorites(userId: String, callback: (List<Message>) -> Unit) { favoritesClient.getFavorites(userId, callback) }
+    // ====== Saved Messages (delegated) ======
+    fun addSavedMessage(userId: String, messageId: String, callback: (Boolean, String) -> Unit) { savedMessagesClient.addSavedMessage(userId, messageId, callback) }
+    fun removeSavedMessage(userId: String, messageId: String, callback: (Boolean, String) -> Unit) { savedMessagesClient.removeSavedMessage(userId, messageId, callback) }
+    fun getSavedMessages(userId: String, callback: (List<Message>) -> Unit) { savedMessagesClient.getSavedMessages(userId, callback) }
 
     // ====== Auth V2 (delegated) ======
     fun signInV2(username: String, password: String, deviceId: String, deviceName: String, deviceType: String = "android", clientVersion: String = "", callback: (AuthResponseV2Proto?, String?) -> Unit) = authClient.signInV2(username, password, deviceId, deviceName, deviceType, clientVersion, callback)

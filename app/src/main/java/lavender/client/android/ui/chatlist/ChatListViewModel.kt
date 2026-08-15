@@ -729,6 +729,9 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
             tab == "archive" -> chats.filter { it.isArchived }
             else -> chats // "all"
         }.filter { chat ->
+            // Hide saved_messages chat — accessed via toolbar star button
+            chat.type != "saved_messages"
+        }.filter { chat ->
             // Company chat access control (per-company)
             if (chat.companyId.isNotEmpty()) {
                 // Look up position level from cache (populated by loadCompanyPositions)

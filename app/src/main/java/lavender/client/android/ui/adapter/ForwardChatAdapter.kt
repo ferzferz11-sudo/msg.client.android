@@ -44,11 +44,11 @@ class ForwardChatAdapter(
 
         fun bind(chat: ChatInfo) {
             val context = itemView.context
-            chatName.text = if (chat.type == "favorites") context.getString(R.string.favorites) else chat.getDisplayName(currentUsername)
+            chatName.text = if (chat.type == "saved_messages") context.getString(R.string.saved_messages) else chat.getDisplayName(currentUsername)
             chatType.text = when (chat.type) {
                 "direct" -> context.getString(R.string.direct_chat_type)
                 "group" -> context.getString(R.string.group_chat_type)
-                "favorites" -> context.getString(R.string.favorites_description)
+                "saved_messages" -> context.getString(R.string.saved_messages_description)
                 else -> chat.type.replaceFirstChar { it.uppercase() }
             }
             unreadCount.visibility = View.GONE
@@ -72,7 +72,7 @@ class ForwardChatAdapter(
             participantAvatars.removeAllViews()
             val context = itemView.context
             
-            if (chat.type == "favorites") {
+            if (chat.type == "saved_messages") {
                 val avatar = ImageView(context).apply {
                     layoutParams = LinearLayout.LayoutParams(52.dpToPx(), 52.dpToPx())
                     scaleType = ImageView.ScaleType.CENTER_INSIDE

@@ -226,7 +226,7 @@ class ChatAdapter(
         val changedPositions = mutableListOf<Int>()
         for (i in currentItems.indices) {
             val item = currentItems[i]
-            if (item is FlatItem.ChatItem && item.chat.type == "direct" && !item.chat.isSecret && !item.chat.id.startsWith("favorites_")) {
+            if (item is FlatItem.ChatItem && item.chat.type == "direct" && !item.chat.isSecret && !item.chat.id.startsWith("saved_messages_")) {
                 changedPositions.add(i)
             }
         }
@@ -243,7 +243,7 @@ class ChatAdapter(
         val changedPositions = mutableListOf<Int>()
         for (i in currentItems.indices) {
             val item = currentItems[i]
-            if (item is FlatItem.ChatItem && item.chat.type == "direct" && !item.chat.isSecret && !item.chat.id.startsWith("favorites_")) {
+            if (item is FlatItem.ChatItem && item.chat.type == "direct" && !item.chat.isSecret && !item.chat.id.startsWith("saved_messages_")) {
                 val otherUser = getOrComputeOtherParticipant(item.chat, currentUsername, otherParticipantCache)
                 val oldUrl = oldAvatarCache[otherUser] ?: ""
                 val newUrl = avatarUrlCache[otherUser] ?: ""
@@ -426,7 +426,7 @@ class ChatAdapter(
             cardView.setCardBackgroundColor(bgColor)
 
             // Online status + last seen
-            if (chat.type == "direct" && !chat.isSecret && !chat.id.startsWith("favorites_")) {
+            if (chat.type == "direct" && !chat.isSecret && !chat.id.startsWith("saved_messages_")) {
                 val otherUser = getOrComputeOtherParticipant(chat, currentUsername, otherParticipantCache)
                 if (otherUser.isNotEmpty()) {
                     val isOnline = onlineUsers.contains(otherUser)

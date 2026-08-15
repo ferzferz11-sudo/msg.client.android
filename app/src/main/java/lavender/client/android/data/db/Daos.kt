@@ -22,8 +22,8 @@ interface MessageDao {
     @Query("SELECT imageUrl FROM messages WHERE roomId = :roomId ORDER BY timestamp DESC LIMIT 1")
     suspend fun getLastMessageImageUrl(roomId: String): String?
 
-    @Query("SELECT * FROM messages WHERE roomId = :favoritesRoomId ORDER BY timestamp ASC")
-    suspend fun getFavorites(favoritesRoomId: String): List<MessageEntity>
+    @Query("SELECT * FROM messages WHERE roomId = :savedMessagesRoomId ORDER BY timestamp ASC")
+    suspend fun getSavedMessages(savedMessagesRoomId: String): List<MessageEntity>
 
     @Query("UPDATE messages SET read = 1 WHERE roomId = :roomId")
     suspend fun markRoomAsRead(roomId: String)

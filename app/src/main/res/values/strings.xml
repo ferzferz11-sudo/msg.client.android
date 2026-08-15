@@ -316,7 +316,8 @@
     <string name="cancel_reply">Cancel reply</string>
     <string name="search_previous">Previous</string>
     <string name="search_next">Next</string>
-    <string name="add_to_favorites">Add to favorites</string>
+    <string name="add_to_saved_messages">Save message</string>
+    <string name="save_message">Save message</string>
     <string name="super_admin">Admin Panel</string>
     <string name="about">About</string>
     <string name="about_program">About Program</string>
@@ -444,9 +445,9 @@
     <string name="marketplace_search_hint">Search agents…</string>
     <string name="rate_limit_exceeded">Rate limit exceeded. Wait %ds</string>
 
-    <string name="favorites">Favorites</string>
-    <string name="no_favorites_yet">No favorites yet</string>
-    <string name="added_to_favorites">Added to Favorites</string>
+    <string name="saved_messages">Saved Messages</string>
+    <string name="no_saved_messages_yet">No saved messages yet</string>
+    <string name="added_to_saved_messages">Saved</string>
 
     <!-- Theme Palette -->
     <string name="theme_palette">Color Palette</string>
@@ -533,7 +534,7 @@
     <string name="server_deleted">Server \"%s\" removed</string>
     <string name="under_development">In development</string>
     <string name="image_placeholder">Photo</string>
-    <string name="favorites_description">Personal storage</string>
+    <string name="saved_messages_description">Personal storage</string>
     <string name="no_messages">No messages</string>
     <string name="ai_sheet_title">AI Services</string>
     <string name="ai_notifications">Notifications</string>
@@ -932,7 +933,7 @@
     <string name="tab_company">Company</string>
     <string name="tab_archive">Archive</string>
     <string name="section_pinned">Pinned</string>
-    <string name="section_favorites">Favorites</string>
+    <string name="section_saved_messages">Saved Messages</string>
     <string name="section_all_chats">All Chats</string>
     <string name="section_archived">Archived</string>
     <string name="action_pin">Pin</string>
@@ -1175,8 +1176,8 @@
 
     <!-- gRPC callback strings -->
     <string name="grpc_error">Error</string>
-    <string name="favorite_removed">Removed</string>
-    <string name="favorite_remove_failed">Failed to remove</string>
+    <string name="saved_message_removed">Removed</string>
+    <string name="saved_message_remove_failed">Failed to remove</string>
     <string name="channel_dead">Channel dead</string>
     <string name="stream_failed">Stream failed</string>
     <string name="stream_error">Stream error</string>

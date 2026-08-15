@@ -105,16 +105,16 @@ internal fun showSettingsSheet(activity: ChatListActivity, onBack: (() -> Unit)?
         })
     }
 
-    sheet.findViewById<View>(R.id.actionFavorites)?.setOnClickListener {
+    sheet.findViewById<View>(R.id.actionSavedMessages)?.setOnClickListener {
         sheet.dismiss()
-        val favoritesChat = ChatInfo(
-            id = "favorites_$username",
-            name = activity.getString(R.string.favorites),
-            type = "favorites",
+        val savedMessagesChat = ChatInfo(
+            id = "saved_messages_$username",
+            name = activity.getString(R.string.saved_messages),
+            type = "saved_messages",
             lastMessageText = "",
             lastMessageTime = 0L
         )
-        activity.navigateToChat(favoritesChat, username)
+        activity.navigateToChat(savedMessagesChat, username)
     }
 
     // Admin panel — show for super admins

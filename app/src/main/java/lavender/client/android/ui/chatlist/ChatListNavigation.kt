@@ -14,11 +14,11 @@ import lavender.client.android.data.session.CredentialStore
 internal fun navigateToChat(activity: ChatListActivity, chat: ChatInfo, username: String) {
     val displayName = chat.getDisplayName(username)
     when (chat.type) {
-        "favorites" -> {
+        "saved_messages" -> {
             val intent = Intent(activity, NewChatActivity::class.java).apply {
                 putExtra("USERNAME", username)
-                putExtra("CHAT_NAME", activity.getString(R.string.favorites))
-                putExtra("ROOM_ID", "favorites_$username")
+                putExtra("CHAT_NAME", activity.getString(R.string.saved_messages))
+                putExtra("ROOM_ID", "saved_messages_$username")
                 putExtra("IS_DIRECT", false)
                 putExtra("PARTICIPANTS", "[\"$username\"]")
                 putExtra("CREATOR", username)

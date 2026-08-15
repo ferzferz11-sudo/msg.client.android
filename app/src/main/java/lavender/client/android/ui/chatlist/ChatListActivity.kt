@@ -217,21 +217,21 @@ class ChatListActivity : AppCompatActivity() {
         tvToolbarSubtitle = findViewById(R.id.tvToolbarSubtitle)
         ivToolbarUserAvatar = findViewById(R.id.ivToolbarUserAvatar)
         llToolbarTitleContainer = findViewById(R.id.llToolbarTitleContainer)
-        ivFavorites = findViewById(R.id.ivFavorites)
+        ivFavorites = findViewById(R.id.ivSavedMessages)
         tabLayout = findViewById(R.id.tabLayout)
         swipeRefresh = findViewById(R.id.srlChatList)
         rvChatList = findViewById(R.id.rvChatList)
 
-        // Favorites button
+        // Saved Messages button
         ivFavorites?.setOnClickListener {
-            val favoritesChat = ChatInfo(
-                id = "favorites_$username",
-                name = getString(R.string.favorites),
-                type = "favorites",
+            val savedMessagesChat = ChatInfo(
+                id = "saved_messages_$username",
+                name = getString(R.string.saved_messages),
+                type = "saved_messages",
                 lastMessageText = "",
                 lastMessageTime = 0L
             )
-            navigateToChat(favoritesChat, username)
+            navigateToChat(savedMessagesChat, username)
         }
         ivFavorites?.visibility = android.view.View.VISIBLE
 
@@ -267,7 +267,7 @@ class ChatListActivity : AppCompatActivity() {
         // Setup search menu in toolbar
         setupSearchMenu(this)
 
-        // Align favorites star with overflow menu icon (shift down 3dp)
+        // Align saved messages star with overflow menu icon (shift down 3dp)
         toolbar?.post {
             ivFavorites?.translationY = 3f * resources.displayMetrics.density
         }

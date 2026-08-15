@@ -405,19 +405,19 @@ object GrpcClient {
         roomId: String, timerSeconds: Int, callback: (Boolean, String?) -> Unit = { _, _ -> }
     ) = realGrpcClient.setSelfDestructTimer(roomId, timerSeconds, callback)
 
-    // ======= Favorites =======
+    // ======= Saved Messages =======
 
-    fun addFavorite(
+    fun addSavedMessage(
         userId: String, messageId: String, callback: (Boolean, String) -> Unit
-    ) = realGrpcClient.addFavorite(userId, messageId, callback)
+    ) = realGrpcClient.addSavedMessage(userId, messageId, callback)
 
-    fun removeFavorite(
+    fun removeSavedMessage(
         userId: String, messageId: String, callback: (Boolean, String) -> Unit
-    ) = realGrpcClient.removeFavorite(userId, messageId, callback)
+    ) = realGrpcClient.removeSavedMessage(userId, messageId, callback)
 
-    fun getFavorites(
+    fun getSavedMessages(
         userId: String, callback: (List<Message>) -> Unit
-    ) = realGrpcClient.getFavorites(userId, callback)
+    ) = realGrpcClient.getSavedMessages(userId, callback)
 
     // ======= Call Operations =======
 

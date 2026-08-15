@@ -202,13 +202,13 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun chatMetadata_favoritesRoom() {
+    fun chatMetadata_savedMessagesRoom() {
         val meta = ChatViewModel.ChatMetadata(
-            chatName = "Favorites", isDirect = false, chatType = "favorites",
+            chatName = "Saved Messages", isDirect = false, chatType = "saved_messages",
             participantsJson = "[]", creator = "",
             avatarUrl = "", fullAvatarUrl = ""
         )
-        assertEquals("favorites", meta.chatType)
+        assertEquals("saved_messages", meta.chatType)
         assertFalse(meta.isDirect)
     }
 

@@ -308,57 +308,57 @@ class GetUserIdResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetUserI
     }
 }
 
-class AddFavoriteRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<AddFavoriteRequestProto> {
-    override fun stream(v: AddFavoriteRequestProto): java.io.InputStream {
+class AddSavedMessageRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<AddSavedMessageRequestProto> {
+    override fun stream(v: AddSavedMessageRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.messageId.isNotEmpty()) cos.writeString(2, v.messageId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
-    override fun parse(s: java.io.InputStream): AddFavoriteRequestProto = AddFavoriteRequestProto()
+    override fun parse(s: java.io.InputStream): AddSavedMessageRequestProto = AddSavedMessageRequestProto()
 }
 
-class AddFavoriteResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<AddFavoriteResponseProto> {
-    override fun stream(v: AddFavoriteResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
-    override fun parse(s: java.io.InputStream): AddFavoriteResponseProto {
+class AddSavedMessageResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<AddSavedMessageResponseProto> {
+    override fun stream(v: AddSavedMessageResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): AddSavedMessageResponseProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false; var msg = ""
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> ok = cis.readBool(); 2 -> msg = cis.readString(); else -> cis.skipField(tag) } }
-        return AddFavoriteResponseProto(ok, msg)
+        return AddSavedMessageResponseProto(ok, msg)
     }
 }
 
-class RemoveFavoriteRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<RemoveFavoriteRequestProto> {
-    override fun stream(v: RemoveFavoriteRequestProto): java.io.InputStream {
+class RemoveSavedMessageRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<RemoveSavedMessageRequestProto> {
+    override fun stream(v: RemoveSavedMessageRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.messageId.isNotEmpty()) cos.writeString(2, v.messageId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
-    override fun parse(s: java.io.InputStream): RemoveFavoriteRequestProto = RemoveFavoriteRequestProto()
+    override fun parse(s: java.io.InputStream): RemoveSavedMessageRequestProto = RemoveSavedMessageRequestProto()
 }
 
-class RemoveFavoriteResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<RemoveFavoriteResponseProto> {
-    override fun stream(v: RemoveFavoriteResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
-    override fun parse(s: java.io.InputStream): RemoveFavoriteResponseProto {
+class RemoveSavedMessageResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<RemoveSavedMessageResponseProto> {
+    override fun stream(v: RemoveSavedMessageResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): RemoveSavedMessageResponseProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) ok = cis.readBool() else cis.skipField(tag) }
-        return RemoveFavoriteResponseProto(ok)
+        return RemoveSavedMessageResponseProto(ok)
     }
 }
 
-class GetFavoritesRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetFavoritesRequestProto> {
-    override fun stream(v: GetFavoritesRequestProto): java.io.InputStream {
+class GetSavedMessagesRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetSavedMessagesRequestProto> {
+    override fun stream(v: GetSavedMessagesRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.userId.isNotEmpty()) cos.writeString(1, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
-    override fun parse(s: java.io.InputStream): GetFavoritesRequestProto = GetFavoritesRequestProto()
+    override fun parse(s: java.io.InputStream): GetSavedMessagesRequestProto = GetSavedMessagesRequestProto()
 }
 
-class GetFavoritesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetFavoritesResponseProto> {
-    override fun stream(v: GetFavoritesResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
-    override fun parse(s: java.io.InputStream): GetFavoritesResponseProto {
+class GetSavedMessagesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetSavedMessagesResponseProto> {
+    override fun stream(v: GetSavedMessagesResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetSavedMessagesResponseProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); val msgs = mutableListOf<MessageV2Proto>()
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) { val len = cis.readUInt32(); val v1 = MessageProtoMarshaller().parse(java.io.ByteArrayInputStream(cis.readRawBytes(len))); msgs.add(v1ToV2(v1)) } else cis.skipField(tag) }
-        return GetFavoritesResponseProto(msgs)
+        return GetSavedMessagesResponseProto(msgs)
     }
     private fun v1ToV2(v1: MessageProto): MessageV2Proto {
         if (v1.createdAt != null && v1.createdAt.seconds != 0L) { }

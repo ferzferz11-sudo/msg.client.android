@@ -149,9 +149,9 @@ class ChatSelectionDelegate(
         grpcClient.getChats(username) { page ->
             activity.lifecycleScope.launch {
                 val oc = page.chats.toMutableList()
-                if (!roomId.startsWith("favorites_")) {
+                if (!roomId.startsWith("saved_messages_")) {
                     oc.add(0, lavender.client.android.data.models.ChatInfo(
-                        id = "favorites_$username", name = activity.getString(R.string.favorites), type = "favorites"
+                        id = "saved_messages_$username", name = activity.getString(R.string.saved_messages), type = "saved_messages"
                     ))
                 }
                 val f = oc.filter { it.id != roomId }

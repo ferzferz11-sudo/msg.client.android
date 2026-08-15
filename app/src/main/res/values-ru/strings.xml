@@ -306,7 +306,8 @@
     <string name="cancel_reply">Отменить ответ</string>
     <string name="search_previous">Предыдущее</string>
     <string name="search_next">Следующее</string>
-    <string name="add_to_favorites">Добавить в избранное</string>
+    <string name="add_to_saved_messages">Сохранить сообщение</string>
+    <string name="save_message">Сохранить сообщение</string>
     <string name="super_admin">Админ панель</string>
     <string name="about">О программе</string>
     <string name="about_program">О программе</string>
@@ -371,9 +372,9 @@
     <string name="action_update">Проверка обновлений</string>
     <string name="action_about">О программе</string>
     <string name="admin_panel">Админ панель</string>
-    <string name="favorites">Избранное</string>
-    <string name="no_favorites_yet">Избранного пока нет</string>
-    <string name="added_to_favorites">Добавлено в Избранное</string>
+    <string name="saved_messages">Сохранённые сообщения</string>
+    <string name="no_saved_messages_yet">Сохранённых сообщений пока нет</string>
+    <string name="added_to_saved_messages">Сохранено</string>
 
     <!-- Theme Palette -->
     <string name="theme_palette">Палитра</string>
@@ -456,7 +457,7 @@
     <string name="server_deleted">Сервер \"%s\" удалён</string>
     <string name="under_development">В разработке</string>
     <string name="image_placeholder">Фото</string>
-    <string name="favorites_description">Личное хранилище</string>
+    <string name="saved_messages_description">Личное хранилище</string>
     <string name="no_messages">Нет сообщений</string>
     <string name="ai_sheet_title">AI Сервисы</string>
     <string name="ai_notifications">Уведомления</string>
@@ -932,7 +933,7 @@
     <string name="tab_company">Компания</string>
     <string name="tab_archive">Архив</string>
     <string name="section_pinned">Закреплённые</string>
-    <string name="section_favorites">Избранное</string>
+    <string name="section_saved_messages">Сохранённые сообщения</string>
     <string name="section_all_chats">Все чаты</string>
     <string name="section_archived">Архив</string>
     <string name="action_pin">Закрепить</string>
@@ -1176,8 +1177,8 @@
 
     <!-- gRPC callback strings -->
     <string name="grpc_error">Ошибка</string>
-    <string name="favorite_removed">Удалено</string>
-    <string name="favorite_remove_failed">Не удалось удалить</string>
+    <string name="saved_message_removed">Удалено</string>
+    <string name="saved_message_remove_failed">Не удалось удалить</string>
     <string name="channel_dead">Канал недоступен</string>
     <string name="stream_failed">Ошибка потока</string>
     <string name="stream_error">Ошибка потока</string>

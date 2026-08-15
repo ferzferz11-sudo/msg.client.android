@@ -106,15 +106,15 @@
         android:layout_marginBottom="16dp" />
 
     <LinearLayout
-        android:id="@+id/actionFavorites"
+        android:id="@+id/actionSavedMessages"
         style="@style/MenuActionItemStyle">
         <ImageView
             style="@style/MenuActionIconStyle"
-            android:contentDescription="@string/favorites"
+            android:contentDescription="@string/saved_messages"
             android:src="@drawable/ic_star" />
         <TextView
             style="@style/MenuActionTextStyle"
-            android:text="@string/favorites" />
+            android:text="@string/saved_messages" />
     </LinearLayout>
 
     <LinearLayout

@@ -230,7 +230,7 @@ class ChatInputDelegate(
                 sendButton.isVisible = hasText || hasImages
                 audioButton.isVisible = !hasText && !hasImages
 
-                if (roomId.startsWith("favorites_")) return
+                if (roomId.startsWith("saved_messages_")) return
                 if (!isTypingSignalSent && hasText) {
                     isTypingSignalSent = true
                     onTypingSignal?.invoke(true)

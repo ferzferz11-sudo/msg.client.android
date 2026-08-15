@@ -61,14 +61,14 @@ class ChatViewModel : ViewModel() {
     fun sendMessage(message: Message) {
         grpcClient.addLocalMessage(message)
         grpcClient.sendMessageV2(message)
-        if (currentRoomId.startsWith("favorites_")) grpcClient.markRead(currentRoomId, message.user)
+        if (currentRoomId.startsWith("saved_messages_")) grpcClient.markRead(currentRoomId, message.user)
         grpcClient.deleteDraft(currentRoomId)
     }
 
     fun sendMessageWithE2EE(plainText: String, encryptAndSend: (String, (Boolean) -> Unit) -> Unit, onSuccess: () -> Unit, onError: () -> Unit) {
         encryptAndSend(plainText) { success ->
             if (success) {
-                if (currentRoomId.startsWith("favorites_")) grpcClient.markRead(currentRoomId, "")
+                if (currentRoomId.startsWith("saved_messages_")) grpcClient.markRead(currentRoomId, "")
                 grpcClient.deleteDraft(currentRoomId)
                 onSuccess()
             } else {
@@ -100,7 +100,7 @@ class ChatViewModel : ViewModel() {
     }
 
     fun retryMessage(message: Message) {
-        if (currentRoomId.startsWith("favorites_")) return
+        if (currentRoomId.startsWith("saved_messages_")) return
         viewModelScope.launch {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 grpcClient.loadHistoryV2(currentRoomId) { _, _ ->
@@ -114,7 +114,7 @@ class ChatViewModel : ViewModel() {
     }
 
     fun fetchChatMetadata(username: String, roomId: String, isDirect: Boolean, participantsJson: String, chatName: String, onResult: (ChatMetadata) -> Unit) {
-        if (roomId.startsWith("favorites_")) return
+        if (roomId.startsWith("saved_messages_")) return
         if (!isDirect || participantsJson == "[]" || chatName == "Chat") {
             grpcClient.getChats(username) { page ->
                 val chat = page.chats.find { it.id == roomId }
@@ -132,7 +132,7 @@ class ChatViewModel : ViewModel() {
     }
 
     fun loadPinnedMessages(context: Context) {
-        if (currentRoomId.startsWith("favorites_")) return
+        if (currentRoomId.startsWith("saved_messages_")) return
         viewModelScope.launch {
             try {
                 val pinned = GrpcClient.getPinnedMessages(currentRoomId)
@@ -205,10 +205,10 @@ class ChatViewModel : ViewModel() {
         if (_isLoading.value) return
         _isLoading.value = true
         viewModelScope.launch {
-            if (currentRoomId.startsWith("favorites_")) {
+            if (currentRoomId.startsWith("saved_messages_")) {
                 val userId = grpcClient.getUserId() ?: ""
                 if (userId.isNotEmpty()) {
-                    grpcClient.getFavorites(userId) { favMessages ->
+                    grpcClient.getSavedMessages(userId) { favMessages ->
                         grpcClient.setMessages(favMessages)
                         _isLoading.value = false
                     }
@@ -226,10 +226,10 @@ class ChatViewModel : ViewModel() {
     fun forceLoadHistory() {
         _isLoading.value = true
         viewModelScope.launch {
-            if (currentRoomId.startsWith("favorites_")) {
+            if (currentRoomId.startsWith("saved_messages_")) {
                 val userId = grpcClient.getUserId() ?: ""
                 if (userId.isNotEmpty()) {
-                    grpcClient.getFavorites(userId) { favMessages ->
+                    grpcClient.getSavedMessages(userId) { favMessages ->
                         grpcClient.setMessages(favMessages)
                         _isLoading.value = false
                     }
@@ -245,7 +245,7 @@ class ChatViewModel : ViewModel() {
     }
 
     fun markRead(username: String, onCompletion: (() -> Unit)? = null) {
-        if (currentRoomId.startsWith("favorites_")) {
+        if (currentRoomId.startsWith("saved_messages_")) {
             onCompletion?.invoke()
             return
         }

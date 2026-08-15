@@ -104,8 +104,8 @@ class ChatToolbarDelegate(
         try {
             if (isSecret) {
                 setupSecretChatToolbar()
-            } else if (roomId.startsWith("favorites_")) {
-                setupFavoritesToolbar()
+            } else if (roomId.startsWith("saved_messages_")) {
+                setupSavedMessagesToolbar()
                 return
             } else {
                 setupNormalToolbar()
@@ -139,7 +139,7 @@ class ChatToolbarDelegate(
         }
     }
 
-    private fun setupFavoritesToolbar() {
+    private fun setupSavedMessagesToolbar() {
         try {
             toolbarAvatar.isVisible = true
             groupParticipantsContainer.isVisible = false
@@ -154,14 +154,14 @@ class ChatToolbarDelegate(
             toolbarAvatar.background = bg
             val p = 8.dpToPx()
             toolbarAvatar.setPadding(p, p, p, p)
-            toolbarTitle.text = activity.getString(R.string.favorites)
+            toolbarTitle.text = activity.getString(R.string.saved_messages)
             toolbarSubtitle.isVisible = true
-            toolbarSubtitle.text = activity.getString(R.string.favorites)
+            toolbarSubtitle.text = activity.getString(R.string.saved_messages)
             toolbarContent.setOnClickListener(null)
         } catch (e: Exception) {
-            android.util.Log.e("ChatToolbar", "setupFavoritesToolbar failed: ${e.message}")
+            android.util.Log.e("ChatToolbar", "setupSavedMessagesToolbar failed: ${e.message}")
             toolbarAvatar.isVisible = true
-            toolbarTitle.text = activity.getString(R.string.favorites)
+            toolbarTitle.text = activity.getString(R.string.saved_messages)
         }
     }
 
@@ -335,9 +335,9 @@ class ChatToolbarDelegate(
         lastTypists = typists
         lastOtherUserLastSeenAt = otherUserLastSeenAt
         lastIsServerShuttingDown = isServerShuttingDown
-        if (roomId.startsWith("favorites_")) {
+        if (roomId.startsWith("saved_messages_")) {
             toolbarSubtitle.isVisible = true
-            toolbarSubtitle.text = activity.getString(R.string.favorites)
+            toolbarSubtitle.text = activity.getString(R.string.saved_messages)
             toolbarSubtitle.setTextColor(getThemeColor(com.google.android.material.R.attr.colorOnPrimary))
             return
         }

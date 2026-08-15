@@ -6,11 +6,11 @@ import lavender.client.android.data.models.Reaction
 import lavender.client.android.data.proto.*
 
 /**
- * Handles favorites operations: addFavorite, removeFavorite, getFavorites.
+ * Handles saved messages operations: addSavedMessage, removeSavedMessage, getSavedMessages.
  *
  * Extracted from RealGrpcClient v1.1.3.25 to reduce God Object anti-pattern.
  */
-class GrpcFavoritesClient(
+class GrpcSavedMessagesClient(
     private val getChannel: () -> io.grpc.ManagedChannel?,
     @Suppress("UNUSED_PARAMETER") private val getUserId: () -> String?,
     @Suppress("UNUSED_PARAMETER") private val getUsername: () -> String?,
@@ -22,42 +22,42 @@ class GrpcFavoritesClient(
         private const val FAILED = "Failed"
     }
 
-    fun addFavorite(userId: String, messageId: String, callback: (Boolean, String) -> Unit) {
+    fun addSavedMessage(userId: String, messageId: String, callback: (Boolean, String) -> Unit) {
         val currentChannel = getChannel() ?: return
         val call = currentChannel.newCall(
-            io.grpc.MethodDescriptor.newBuilder<AddFavoriteRequestProto, AddFavoriteResponseProto>()
+            io.grpc.MethodDescriptor.newBuilder<AddSavedMessageRequestProto, AddSavedMessageResponseProto>()
                 .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
                 .setFullMethodName("messenger.ChatService/AddFavorite")
-                .setRequestMarshaller(AddFavoriteRequestMarshaller())
-                .setResponseMarshaller(AddFavoriteResponseMarshaller())
+                .setRequestMarshaller(AddSavedMessageRequestMarshaller())
+                .setResponseMarshaller(AddSavedMessageResponseMarshaller())
                 .build(),
             io.grpc.CallOptions.DEFAULT
         )
-        call.start(object : io.grpc.ClientCall.Listener<AddFavoriteResponseProto>() {
-            override fun onMessage(message: AddFavoriteResponseProto) { callback(message.success, message.message) }
+        call.start(object : io.grpc.ClientCall.Listener<AddSavedMessageResponseProto>() {
+            override fun onMessage(message: AddSavedMessageResponseProto) { callback(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
-        call.sendMessage(AddFavoriteRequestProto(userId, messageId))
+        call.sendMessage(AddSavedMessageRequestProto(userId, messageId))
         call.halfClose()
         call.request(1)
     }
 
-    fun removeFavorite(userId: String, messageId: String, callback: (Boolean, String) -> Unit) {
+    fun removeSavedMessage(userId: String, messageId: String, callback: (Boolean, String) -> Unit) {
         val currentChannel = getChannel() ?: return
         val call = currentChannel.newCall(
-            io.grpc.MethodDescriptor.newBuilder<RemoveFavoriteRequestProto, RemoveFavoriteResponseProto>()
+            io.grpc.MethodDescriptor.newBuilder<RemoveSavedMessageRequestProto, RemoveSavedMessageResponseProto>()
                 .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
                 .setFullMethodName("messenger.ChatService/RemoveFavorite")
-                .setRequestMarshaller(RemoveFavoriteRequestMarshaller())
-                .setResponseMarshaller(RemoveFavoriteResponseMarshaller())
+                .setRequestMarshaller(RemoveSavedMessageRequestMarshaller())
+                .setResponseMarshaller(RemoveSavedMessageResponseMarshaller())
                 .build(),
             io.grpc.CallOptions.DEFAULT
         )
-        call.start(object : io.grpc.ClientCall.Listener<RemoveFavoriteResponseProto>() {
-            override fun onMessage(message: RemoveFavoriteResponseProto) { callback(message.success, if (message.success) REMOVED else FAILED) }
+        call.start(object : io.grpc.ClientCall.Listener<RemoveSavedMessageResponseProto>() {
+            override fun onMessage(message: RemoveSavedMessageResponseProto) { callback(message.success, if (message.success) REMOVED else FAILED) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
-        call.sendMessage(RemoveFavoriteRequestProto(userId, messageId))
+        call.sendMessage(RemoveSavedMessageRequestProto(userId, messageId))
         call.halfClose()
         call.request(1)
     }
@@ -75,24 +75,24 @@ class GrpcFavoritesClient(
             }
             result
         } catch (e: Exception) {
-            ErrorHandler.handle("GrpcFavoritesClient.parseReactions", e)
+            ErrorHandler.handle("GrpcSavedMessagesClient.parseReactions", e)
             emptyList()
         }
     }
 
-    fun getFavorites(userId: String, callback: (List<Message>) -> Unit) {
+    fun getSavedMessages(userId: String, callback: (List<Message>) -> Unit) {
         val currentChannel = getChannel() ?: return
         val call = currentChannel.newCall(
-            io.grpc.MethodDescriptor.newBuilder<GetFavoritesRequestProto, GetFavoritesResponseProto>()
+            io.grpc.MethodDescriptor.newBuilder<GetSavedMessagesRequestProto, GetSavedMessagesResponseProto>()
                 .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
                 .setFullMethodName("messenger.ChatService/GetFavorites")
-                .setRequestMarshaller(GetFavoritesRequestMarshaller())
-                .setResponseMarshaller(GetFavoritesResponseMarshaller())
+                .setRequestMarshaller(GetSavedMessagesRequestMarshaller())
+                .setResponseMarshaller(GetSavedMessagesResponseMarshaller())
                 .build(),
             io.grpc.CallOptions.DEFAULT
         )
-        call.start(object : io.grpc.ClientCall.Listener<GetFavoritesResponseProto>() {
-            override fun onMessage(message: GetFavoritesResponseProto) {
+        call.start(object : io.grpc.ClientCall.Listener<GetSavedMessagesResponseProto>() {
+            override fun onMessage(message: GetSavedMessagesResponseProto) {
                 val users = allUsers()
                 val msgs = message.messages.map { proto ->
                     val username = users.firstOrNull { it.userId == proto.senderId }?.username ?: ""
@@ -113,7 +113,7 @@ class GrpcFavoritesClient(
                         text = proto.text,
                         timestamp = timestamp,
                         reactions = reactions,
-                        roomId = "favorites_${getUsername() ?: ""}",
+                        roomId = "saved_messages_${getUsername() ?: ""}",
                         imageUrl = imageUrl,
                         voiceUrl = voiceUrl,
                         duration = duration,
@@ -124,7 +124,7 @@ class GrpcFavoritesClient(
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
-        call.sendMessage(GetFavoritesRequestProto(userId))
+        call.sendMessage(GetSavedMessagesRequestProto(userId))
         call.halfClose()
         call.request(1)
     }

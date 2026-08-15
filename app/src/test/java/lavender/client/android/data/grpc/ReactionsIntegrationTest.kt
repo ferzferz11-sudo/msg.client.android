@@ -11,16 +11,16 @@ import org.junit.Test
 
 /**
  * Reaction integration tests — covers the 3 bugs found in v1.3.1.06:
- * 1. GrpcFavoritesClient.getFavorites() didn't parse reactions from proto
+ * 1. GrpcSavedMessagesClient.getSavedMessages() didn't parse reactions from proto
  * 2. setReactionV2() didn't save to Room DB after server response
  * 3. loadHistoryV2 merge didn't preserve server reactions
  */
 class ReactionsIntegrationTest {
 
-    // ======= Bug #1: Favorites reactions parsing =======
+    // ======= Bug #1: Saved Messages reactions parsing =======
 
     @Test
-    fun favorites_protoMessage_hasReactions_field() {
+    fun savedMessages_protoMessage_hasReactions_field() {
         val reactions = """{"uuid-1":"👍","uuid-2":"🔥"}""".toByteArray()
         val proto = MessageV2Proto(
             id = "fav-1",
@@ -36,13 +36,13 @@ class ReactionsIntegrationTest {
     }
 
     @Test
-    fun favorites_protoMessage_emptyReactions() {
+    fun savedMessages_protoMessage_emptyReactions() {
         val proto = MessageV2Proto(id = "fav-1", reactions = byteArrayOf())
         assertTrue(proto.reactions.isEmpty())
     }
 
     @Test
-    fun favorites_protoMessage_emptyJsonObjectReactions() {
+    fun savedMessages_protoMessage_emptyJsonObjectReactions() {
         val proto = MessageV2Proto(id = "fav-1", reactions = "{}".toByteArray())
         assertTrue(proto.reactions.isNotEmpty())
     }

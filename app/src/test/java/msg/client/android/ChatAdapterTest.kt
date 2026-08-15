@@ -6,7 +6,7 @@ import org.junit.Assert.*
 
 /**
  * Unit tests for ChatAdapter logic.
- * Tests pure functions: getItemCount, hasFavorites, Favorites offset logic.
+ * Tests pure functions: getItemCount, hasSavedMessages, Saved Messages offset logic.
  *
  * Note: We test the data logic, not the Android UI binding.
  */
@@ -50,9 +50,9 @@ class ChatAdapterTest {
     }
 
     @Test
-    fun chatInfo_creation_favoritesChat() {
-        val chat = createChat(id = "fav", name = "Favorites", type = "favorites")
-        assertEquals("favorites", chat.type)
+    fun chatInfo_creation_savedMessagesChat() {
+        val chat = createChat(id = "fav", name = "Saved Messages", type = "saved_messages")
+        assertEquals("saved_messages", chat.type)
     }
 
     @Test
@@ -138,61 +138,61 @@ class ChatAdapterTest {
     }
 
     @Test
-    fun favoritesExtraction_favoritesType_isExtracted() {
+    fun savedMessagesExtraction_savedMessagesType_isExtracted() {
         val chats = listOf(
-            createChat(id = "fav", name = "Favorites", type = "favorites"),
+            createChat(id = "fav", name = "Saved Messages", type = "saved_messages"),
             createChat(id = "1", name = "Alice"),
             createChat(id = "2", name = "Bob")
         )
-        val favorites = chats.firstOrNull { it.type == "favorites" }
-        val actualChats = if (favorites != null) chats.drop(1) else chats
+        val savedMsg = chats.firstOrNull { it.type == "saved_messages" }
+        val actualChats = if (savedMsg != null) chats.drop(1) else chats
 
-        assertNotNull(favorites)
+        assertNotNull(savedMsg)
         assertEquals(2, actualChats.size)
-        assertFalse(actualChats.any { it.type == "favorites" })
+        assertFalse(actualChats.any { it.type == "saved_messages" })
     }
 
     @Test
-    fun favoritesExtraction_noFavoritesType_allChatsRemain() {
+    fun savedMessagesExtraction_noSavedMessagesType_allChatsRemain() {
         val chats = listOf(
             createChat(id = "1", name = "Alice"),
             createChat(id = "2", name = "Bob")
         )
-        val favorites = chats.firstOrNull { it.type == "favorites" }
-        val actualChats = if (favorites != null) chats.drop(1) else chats
+        val savedMsg = chats.firstOrNull { it.type == "saved_messages" }
+        val actualChats = if (savedMsg != null) chats.drop(1) else chats
 
-        assertNull(favorites)
+        assertNull(savedMsg)
         assertEquals(2, actualChats.size)
     }
 
     @Test
-    fun favoritesOffset_withFavorites_itemCountIsPlusOne() {
+    fun savedMessagesOffset_withSavedMessages_itemCountIsPlusOne() {
         // Simulates: getItemCount() = displayedChats.size + 1 (if Favorites exists)
         val displayedChats = listOf(
             createChat(id = "1", name = "Alice"),
             createChat(id = "2", name = "Bob")
         )
-        val hasFavorites = true
-        val itemCount = displayedChats.size + if (hasFavorites) 1 else 0
+        val hasSavedMessages = true
+        val itemCount = displayedChats.size + if (hasSavedMessages) 1 else 0
         assertEquals(3, itemCount)
     }
 
     @Test
-    fun favoritesOffset_withoutFavorites_itemCountEqualsChats() {
+    fun savedMessagesOffset_withoutSavedMessages_itemCountEqualsChats() {
         val displayedChats = listOf(
             createChat(id = "1", name = "Alice"),
             createChat(id = "2", name = "Bob")
         )
-        val hasFavorites = false
-        val itemCount = displayedChats.size + if (hasFavorites) 1 else 0
+        val hasSavedMessages = false
+        val itemCount = displayedChats.size + if (hasSavedMessages) 1 else 0
         assertEquals(2, itemCount)
     }
 
     @Test
-    fun favoritesOffset_emptyListWithFavorites_itemCountIsOne() {
+    fun savedMessagesOffset_emptyListWithSavedMessages_itemCountIsOne() {
         val displayedChats = emptyList<ChatInfo>()
-        val hasFavorites = true
-        val itemCount = displayedChats.size + if (hasFavorites) 1 else 0
+        val hasSavedMessages = true
+        val itemCount = displayedChats.size + if (hasSavedMessages) 1 else 0
         assertEquals(1, itemCount)
     }
 

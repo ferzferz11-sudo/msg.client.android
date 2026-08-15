@@ -407,105 +407,105 @@ class GrpcMarshallersTest {
         assertEquals("", resp.username)
     }
 
-    // ======= Favorites =======
+    // ======= Saved Messages =======
     // AddFavoriteRequest: user_id=1, message_id=2
 
     @Test
-    fun addFavoriteRequest_stream_fieldOrder() {
-        val req = AddFavoriteRequestProto(userId = "uuid-123", messageId = "msg-789")
-        val bytes = AddFavoriteRequestMarshaller().stream(req).readBytes()
+    fun addSavedMessageRequest_stream_fieldOrder() {
+        val req = AddSavedMessageRequestProto(userId = "uuid-123", messageId = "msg-789")
+        val bytes = AddSavedMessageRequestMarshaller().stream(req).readBytes()
         val fields = readFieldNumbers(bytes)
         assertEquals(listOf(1, 2), fields)
     }
 
     @Test
-    fun addFavoriteRequest_stream_nonEmpty() {
-        val req = AddFavoriteRequestProto(userId = "uuid-123", messageId = "msg-789")
-        val bytes = AddFavoriteRequestMarshaller().stream(req).readBytes()
+    fun addSavedMessageRequest_stream_nonEmpty() {
+        val req = AddSavedMessageRequestProto(userId = "uuid-123", messageId = "msg-789")
+        val bytes = AddSavedMessageRequestMarshaller().stream(req).readBytes()
         assertTrue(bytes.isNotEmpty())
     }
 
     @Test
-    fun addFavoriteRequest_stream_emptyFields_producesEmptyBytes() {
-        val req = AddFavoriteRequestProto()
-        val bytes = AddFavoriteRequestMarshaller().stream(req).readBytes()
+    fun addSavedMessageRequest_stream_emptyFields_producesEmptyBytes() {
+        val req = AddSavedMessageRequestProto()
+        val bytes = AddSavedMessageRequestMarshaller().stream(req).readBytes()
         assertTrue(bytes.isEmpty())
     }
 
     // RemoveFavoriteRequest: user_id=1, message_id=2
 
     @Test
-    fun removeFavoriteRequest_stream_fieldOrder() {
-        val req = RemoveFavoriteRequestProto(userId = "uuid-123", messageId = "msg-789")
-        val bytes = RemoveFavoriteRequestMarshaller().stream(req).readBytes()
+    fun removeSavedMessageRequest_stream_fieldOrder() {
+        val req = RemoveSavedMessageRequestProto(userId = "uuid-123", messageId = "msg-789")
+        val bytes = RemoveSavedMessageRequestMarshaller().stream(req).readBytes()
         val fields = readFieldNumbers(bytes)
         assertEquals(listOf(1, 2), fields)
     }
 
     @Test
-    fun removeFavoriteRequest_stream_emptyFields_producesEmptyBytes() {
-        val req = RemoveFavoriteRequestProto()
-        val bytes = RemoveFavoriteRequestMarshaller().stream(req).readBytes()
+    fun removeSavedMessageRequest_stream_emptyFields_producesEmptyBytes() {
+        val req = RemoveSavedMessageRequestProto()
+        val bytes = RemoveSavedMessageRequestMarshaller().stream(req).readBytes()
         assertTrue(bytes.isEmpty())
     }
 
     // GetFavoritesRequest: user_id=1
 
     @Test
-    fun getFavoritesRequest_stream_fieldOrder() {
-        val req = GetFavoritesRequestProto(userId = "uuid-123")
-        val bytes = GetFavoritesRequestMarshaller().stream(req).readBytes()
+    fun getSavedMessagesRequest_stream_fieldOrder() {
+        val req = GetSavedMessagesRequestProto(userId = "uuid-123")
+        val bytes = GetSavedMessagesRequestMarshaller().stream(req).readBytes()
         val fields = readFieldNumbers(bytes)
         assertEquals(listOf(1), fields)
     }
 
     @Test
-    fun getFavoritesRequest_stream_emptyFields_producesEmptyBytes() {
-        val req = GetFavoritesRequestProto()
-        val bytes = GetFavoritesRequestMarshaller().stream(req).readBytes()
+    fun getSavedMessagesRequest_stream_emptyFields_producesEmptyBytes() {
+        val req = GetSavedMessagesRequestProto()
+        val bytes = GetSavedMessagesRequestMarshaller().stream(req).readBytes()
         assertTrue(bytes.isEmpty())
     }
 
     // Favorites response parse empty
 
     @Test
-    fun addFavoriteResponse_parseEmpty() {
-        val parsed = AddFavoriteResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+    fun addSavedMessageResponse_parseEmpty() {
+        val parsed = AddSavedMessageResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
         assertFalse(parsed.success)
         assertEquals("", parsed.message)
     }
 
     @Test
-    fun removeFavoriteResponse_parseEmpty() {
-        val parsed = RemoveFavoriteResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+    fun removeSavedMessageResponse_parseEmpty() {
+        val parsed = RemoveSavedMessageResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
         assertFalse(parsed.success)
     }
 
     @Test
-    fun getFavoritesResponse_parseEmpty() {
-        val parsed = GetFavoritesResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+    fun getSavedMessagesResponse_parseEmpty() {
+        val parsed = GetSavedMessagesResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
         assertTrue(parsed.messages.isEmpty())
     }
 
     // Favorites Proto defaults
 
     @Test
-    fun addFavoriteRequestProto_defaults() {
-        val req = AddFavoriteRequestProto()
+    fun addSavedMessageRequestProto_defaults() {
+        val req = AddSavedMessageRequestProto()
         assertEquals("", req.userId)
         assertEquals("", req.messageId)
     }
 
     @Test
-    fun removeFavoriteRequestProto_defaults() {
-        val req = RemoveFavoriteRequestProto()
+    fun removeSavedMessageRequestProto_defaults() {
+        val req = RemoveSavedMessageRequestProto()
         assertEquals("", req.userId)
         assertEquals("", req.messageId)
     }
 
     @Test
-    fun getFavoritesRequestProto_defaults() {
-        val req = GetFavoritesRequestProto()
+    fun getSavedMessagesRequestProto_defaults() {
+        val req = GetSavedMessagesRequestProto()
         assertEquals("", req.userId)
     }
 

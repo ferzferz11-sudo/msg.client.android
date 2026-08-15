@@ -174,7 +174,7 @@ class ForwardMessageSheet(
 
     @Suppress("Unused")
     fun loadChats(chats: List<ChatInfo>) {
-        val filtered = chats.filter { it.id != activity.getString(R.string.favorites) }
+        val filtered = chats.filter { it.id != activity.getString(R.string.saved_messages) }
         adapter?.submitList(filtered)
     }
 
@@ -276,7 +276,7 @@ class ForwardMessageSheet(
             private fun loadAvatar(chat: ChatInfo) {
                 val context = itemView.context
 
-                if (chat.type == "favorites") {
+                if (chat.type == "saved_messages") {
                     val avatar = ImageView(context).apply {
                         layoutParams = LinearLayout.LayoutParams(48.dpToPx(), 48.dpToPx())
                         scaleType = ImageView.ScaleType.CENTER_INSIDE

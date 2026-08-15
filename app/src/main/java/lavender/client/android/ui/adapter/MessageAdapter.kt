@@ -307,7 +307,7 @@ class MessageAdapter(
         }
 
         private fun bindReadStatus(message: Message, secColor: Int, ctx: android.content.Context) {
-            readStatusIcon.isVisible = true; val isRead = message.isRead || chatId.startsWith("favorites_")
+            readStatusIcon.isVisible = true; val isRead = message.isRead || chatId.startsWith("saved_messages_")
             val isTimedOut = !message.isSent && (System.currentTimeMillis() - message.timestamp > 60 * 1000)
             val icon = when { isTimedOut -> R.drawable.ic_loading_renew; isRead -> R.drawable.ic_message_read; message.isSent -> R.drawable.ic_message_sent; else -> R.drawable.ic_message_pending }
             readStatusIcon.setImageResource(icon)

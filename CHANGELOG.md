@@ -2,6 +2,15 @@
 
 ## [1.4.0.13] - 2026-08-14
 
+### Изменено
+
+**Favorites → Saved Messages: полное переименование (High):**
+- Все клиентские классы, методы, roomId prefix (`favorites_` → `saved_messages_`), тип чата (`"favorites"` → `"saved_messages"`), строки (EN+RU: "Saved Messages" / "Сохранённые сообщения")
+- Proto wire format НЕ изменён — серверные RPC остаются `AddFavorite`/`RemoveFavorite`/`GetFavorites`
+- Чат "Saved Messages" скрыт из списка чатов (доступ через звёздочку на тулбаре и шторку профиля)
+- Sticker favorites и AI agent favorites НЕ затронуты
+- Обновлены все тесты под новые имена
+
 ### Исправлено
 
 **ChatV2 stream не переподключался после UNAUTHENTICATED (Critical):**

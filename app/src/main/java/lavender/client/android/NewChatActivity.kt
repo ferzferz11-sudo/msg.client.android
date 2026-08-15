@@ -468,7 +468,7 @@ class NewChatActivity : AppCompatActivity() {
                 grpcClient.connectionStatus.collect { status ->
                     if (status == ConnectionStatus.READY) {
                         val m = newChatViewModel.metadata.value
-                        if (m.avatarUrl.isEmpty() && m.participantsJson == "[]" && data.roomId.startsWith("favorites_").not()) {
+                        if (m.avatarUrl.isEmpty() && m.participantsJson == "[]" && data.roomId.startsWith("saved_messages_").not()) {
                             chatViewModel.fetchChatMetadata(data.username, data.roomId, data.isDirect, data.participantsJson, data.chatName) { meta ->
                                 lifecycleScope.launch {
                                     if (isFinishing || isDestroyed) return@launch
@@ -665,17 +665,17 @@ class NewChatActivity : AppCompatActivity() {
         val selfDestructItem = menu.findItem(R.id.action_self_destruct)
         val clearItem = menu.findItem(R.id.action_clear_history)
         val deleteItem = menu.findItem(R.id.action_delete_chat)
-        val isFavorites = data.roomId.startsWith("favorites_")
-        callItem?.isVisible = !inSelection && !inSearch && data.isDirect && !isFavorites && !data.isSecret
+        val isSavedMessages = data.roomId.startsWith("saved_messages_")
+        callItem?.isVisible = !inSelection && !inSearch && data.isDirect && !isSavedMessages && !data.isSecret
         conferenceItem?.isVisible = false
         searchItem?.isVisible = !inSelection && !inSearch
         pinnedItem?.isVisible = !inSelection && !inSearch && chatViewModel.pinnedMessageIds.value.isNotEmpty()
-        muteItem?.isVisible = !inSelection && !inSearch && !isFavorites
+        muteItem?.isVisible = !inSelection && !inSearch && !isSavedMessages
         muteItem?.setTitle(if (isChatMuted) R.string.unmute_chat else R.string.mute_chat)
-        selfDestructItem?.isVisible = !inSelection && !inSearch && !isFavorites
+        selfDestructItem?.isVisible = !inSelection && !inSearch && !isSavedMessages
         selfDestructItem?.setTitle(getSelfDestructLabel(selfDestructTimer))
-        clearItem?.isVisible = !inSelection && !inSearch && !isFavorites
-        deleteItem?.isVisible = !inSelection && !inSearch && !isFavorites
+        clearItem?.isVisible = !inSelection && !inSearch && !isSavedMessages
+        deleteItem?.isVisible = !inSelection && !inSearch && !isSavedMessages
         return true
     }
 

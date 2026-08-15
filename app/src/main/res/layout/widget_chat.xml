@@ -390,7 +390,7 @@
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_star"
-                android:contentDescription="@string/add_to_favorites"
+                android:contentDescription="@string/save_message"
                 android:padding="8dp"
                 app:tint="?attr/colorOnPrimary" />
         </LinearLayout>

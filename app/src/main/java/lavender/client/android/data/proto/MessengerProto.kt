@@ -720,22 +720,22 @@ data class GetUserIdResponseProto(
     val found: Boolean = false
 )
 
-data class AddFavoriteRequestProto(
+data class AddSavedMessageRequestProto(
     val userId: String = "",
     val messageId: String = ""
 )
 
-data class AddFavoriteResponseProto(
+data class AddSavedMessageResponseProto(
     val success: Boolean = false,
     val message: String = ""
 )
 
-data class RemoveFavoriteRequestProto(
+data class RemoveSavedMessageRequestProto(
     val userId: String = "",
     val messageId: String = ""
 )
 
-data class RemoveFavoriteResponseProto(
+data class RemoveSavedMessageResponseProto(
     val success: Boolean = false
 )
 
@@ -784,11 +784,11 @@ data class DeleteDeviceResponseProto(
     val message: String = ""
 )
 
-data class GetFavoritesRequestProto(
+data class GetSavedMessagesRequestProto(
     val userId: String = ""
 )
 
-data class GetFavoritesResponseProto(
+data class GetSavedMessagesResponseProto(
     val messages: List<MessageV2Proto> = emptyList()
 )
 
