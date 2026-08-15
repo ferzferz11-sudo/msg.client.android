@@ -24,6 +24,11 @@
 **GrpcConnectionManager: scheduleReconnect() стал публичным:**
 - Stream failure handler из RealGrpcClient может теперь триггерить reconnect через backoff strategy
 
+**Connection status debounce — подавление FAILED→CONNECTING→FAILED flapping (Medium):**
+- При быстром цикле FAILED→CONNECTING→FAILED промежуточный CONNECTING подавляется (1s cooldown)
+- `setConnectionStatus()` в RealGrpcClient + `statusSetter` callback в GrpcConnectionManager
+- UI больше не мерцает между "не в сети" и "подключение"
+
 ## [1.4.0.12] - 2026-08-14
 
 ### Исправлено

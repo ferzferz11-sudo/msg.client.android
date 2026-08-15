@@ -70,6 +70,23 @@ object RealGrpcClient {
     private val _connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
     val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus
 
+    // Status debounce: suppress CONNECTING if we just came from FAILED within 1s
+    private var lastFailedAt = 0L
+    private const val STATUS_DEBOUNCE_MS = 1000L
+    private fun setConnectionStatus(status: ConnectionStatus) {
+        if (status == ConnectionStatus.CONNECTING || status == ConnectionStatus.RECONNECTING) {
+            val elapsed = System.currentTimeMillis() - lastFailedAt
+            if (elapsed < STATUS_DEBOUNCE_MS) {
+                Log.d(TAG, "Suppressing $status — FAILED was ${elapsed}ms ago (debounce)")
+                return
+            }
+        }
+        if (status == ConnectionStatus.FAILED) {
+            lastFailedAt = System.currentTimeMillis()
+        }
+        _connectionStatus.value = status
+    }
+
     private val _messages = MutableStateFlow<List<Message>>(emptyList())
     val messages: StateFlow<List<Message>> = _messages
 
@@ -173,7 +190,8 @@ object RealGrpcClient {
             lastChatRequest?.let {
                 startChatV2(it.roomId, it.cb)
             }
-        }
+        },
+        statusSetter = { setConnectionStatus(it) }
     )
 
     fun getChannel(): ManagedChannel? = connectionManager.channel
@@ -463,7 +481,7 @@ object RealGrpcClient {
         }
 
         if (_connectionStatus.value == ConnectionStatus.FAILED || _connectionStatus.value == ConnectionStatus.DISCONNECTED) {
-            _connectionStatus.value = ConnectionStatus.CONNECTING
+            setConnectionStatus(ConnectionStatus.CONNECTING)
         }
 
         val methodDescriptor = MethodDescriptor.newBuilder<ChatV2MessageProto, ChatV2MessageProto>()
@@ -496,7 +514,7 @@ object RealGrpcClient {
         val responseObserver = object : StreamObserver<ChatV2MessageProto> {
             override fun onNext(value: ChatV2MessageProto) {
                 if (_connectionStatus.value != ConnectionStatus.READY) {
-                    _connectionStatus.value = ConnectionStatus.READY
+                    setConnectionStatus(ConnectionStatus.READY)
                     fetchAdminStatus()
                     if (callClient.callRequestObserver == null && currentUsername != null) startCallSession()
                 }
@@ -532,7 +550,7 @@ object RealGrpcClient {
                         }
                         "SERVER_SHUTTINGDOWN" -> {
                             _serverShuttingDown.value = true
-                            _connectionStatus.value = ConnectionStatus.RECONNECTING
+                            setConnectionStatus(ConnectionStatus.RECONNECTING)
                         }
                         "SET_SUPER_ADMIN" -> {
                             if (!_isSuperAdmin.value) {
@@ -747,7 +765,7 @@ object RealGrpcClient {
 
             override fun onCompleted() {
                 synchronized(chatV2Lock) { chatV2RequestObserver = null }
-                _connectionStatus.value = ConnectionStatus.DISCONNECTED
+                setConnectionStatus(ConnectionStatus.DISCONNECTED)
             }
         }
 
@@ -756,7 +774,7 @@ object RealGrpcClient {
             override fun onClose(status: Status, trailers: Metadata) {
                 synchronized(chatV2Lock) { chatV2RequestObserver = null }
                 if (status.isOk) {
-                    _connectionStatus.value = ConnectionStatus.DISCONNECTED
+                    setConnectionStatus(ConnectionStatus.DISCONNECTED)
                 } else {
                     Log.w(TAG, "ChatV2 stream closed: ${status.code} ${status.description ?: ""}")
                     handleStreamCloseStatus(status)
@@ -781,7 +799,7 @@ object RealGrpcClient {
             io.grpc.Status.Code.UNAUTHENTICATED -> {
                 Log.w(TAG, "ChatV2 stream: UNAUTHENTICATED — refreshing token and reconnecting")
                 connectionManager.isAuthFailure = true
-                _connectionStatus.value = ConnectionStatus.RECONNECTING
+                setConnectionStatus(ConnectionStatus.RECONNECTING)
                 scope.launch(Dispatchers.IO) {
                     val refreshed = try {
                         appContext?.let { ctx ->
@@ -793,17 +811,17 @@ object RealGrpcClient {
                         connectionManager.isAuthFailure = false
                         scope.launch { connectionManager.reconnect() }
                     } else {
-                        _connectionStatus.value = ConnectionStatus.FAILED
+                        setConnectionStatus(ConnectionStatus.FAILED)
                         _authStatus.value = "AUTH_FAILED"
                     }
                 }
             }
             io.grpc.Status.Code.UNAVAILABLE, io.grpc.Status.Code.DEADLINE_EXCEEDED -> {
-                _connectionStatus.value = ConnectionStatus.RECONNECTING
+                setConnectionStatus(ConnectionStatus.RECONNECTING)
                 connectionManager.scheduleReconnect()
             }
             else -> {
-                _connectionStatus.value = ConnectionStatus.FAILED
+                setConnectionStatus(ConnectionStatus.FAILED)
                 connectionManager.scheduleReconnect()
             }
         }
@@ -814,7 +832,7 @@ object RealGrpcClient {
             io.grpc.Status.Code.UNAUTHENTICATED -> {
                 Log.w(TAG, "ChatV2 stream closed: UNAUTHENTICATED — refreshing token and reconnecting")
                 connectionManager.isAuthFailure = true
-                _connectionStatus.value = ConnectionStatus.RECONNECTING
+                setConnectionStatus(ConnectionStatus.RECONNECTING)
                 scope.launch(Dispatchers.IO) {
                     val refreshed = try {
                         appContext?.let { ctx ->
@@ -826,17 +844,17 @@ object RealGrpcClient {
                         connectionManager.isAuthFailure = false
                         scope.launch { connectionManager.reconnect() }
                     } else {
-                        _connectionStatus.value = ConnectionStatus.FAILED
+                        setConnectionStatus(ConnectionStatus.FAILED)
                         _authStatus.value = "AUTH_FAILED"
                     }
                 }
             }
             io.grpc.Status.Code.UNAVAILABLE, io.grpc.Status.Code.DEADLINE_EXCEEDED -> {
-                _connectionStatus.value = ConnectionStatus.RECONNECTING
+                setConnectionStatus(ConnectionStatus.RECONNECTING)
                 connectionManager.scheduleReconnect()
             }
             else -> {
-                _connectionStatus.value = ConnectionStatus.FAILED
+                setConnectionStatus(ConnectionStatus.FAILED)
                 connectionManager.scheduleReconnect()
             }
         }

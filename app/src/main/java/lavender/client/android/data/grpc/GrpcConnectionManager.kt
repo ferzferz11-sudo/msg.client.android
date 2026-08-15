@@ -23,7 +23,8 @@ class GrpcConnectionManager(
     private val scope: CoroutineScope,
     private val connectionStatus: MutableStateFlow<ConnectionStatus>,
     private val onFetchServerInfo: (String, Int, Context) -> Unit,
-    private val onAutoResumeChat: () -> Unit
+    private val onAutoResumeChat: () -> Unit,
+    private val statusSetter: ((ConnectionStatus) -> Unit)? = null
 ) {
     companion object {
         private const val TAG = "GrpcConnectionManager"
@@ -106,7 +107,7 @@ class GrpcConnectionManager(
         reconnectStrategy.resetBackoff()
         channel?.shutdown()
         channel = null
-        connectionStatus.value = ConnectionStatus.DISCONNECTED
+        setStatus(ConnectionStatus.DISCONNECTED)
     }
 
     fun resetReconnectBackoff() {
@@ -114,6 +115,11 @@ class GrpcConnectionManager(
     }
 
     // ====== Private helpers ======
+
+    private fun setStatus(status: ConnectionStatus) {
+        if (statusSetter != null) statusSetter.invoke(status)
+        else connectionStatus.value = status
+    }
 
     private fun shouldConnect(serverAddress: String, forceReconnect: Boolean): Boolean {
         val channelDead = channel?.isShutdown == true || channel?.isTerminated == true
@@ -139,7 +145,7 @@ class GrpcConnectionManager(
 
     private fun updateConnectionStatus(isReconnecting: Boolean) {
         Log.d(TAG, "Connecting to $currentServerAddress:$currentServerPort")
-        connectionStatus.value = if (isReconnecting) ConnectionStatus.RECONNECTING else ConnectionStatus.CONNECTING
+        setStatus(if (isReconnecting) ConnectionStatus.RECONNECTING else ConnectionStatus.CONNECTING)
     }
 
     private fun buildChannel(
@@ -215,7 +221,7 @@ class GrpcConnectionManager(
     }
 
     private fun scheduleReconnect(serverAddress: String, useTls: Boolean, port: Int) {
-        connectionStatus.value = ConnectionStatus.RECONNECTING
+        setStatus(ConnectionStatus.RECONNECTING)
         reconnectStrategy.schedule {
             val appCtx = appContext
             connect(serverAddress, useTls, port, appCtx)
