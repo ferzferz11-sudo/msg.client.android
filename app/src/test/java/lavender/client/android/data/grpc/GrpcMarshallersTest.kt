@@ -720,6 +720,25 @@ class GrpcMarshallersTest {
     }
 
     @Test
+    fun updateUserSettingsRequest_stream_withCustomMap_fieldOrder() {
+        val req = UpdateUserSettingsRequestProto(custom = mapOf("chat_list_mode" to "fast"))
+        val bytes = UpdateUserSettingsRequestMarshaller().stream(req).readBytes()
+        val fields = readFieldNumbers(bytes)
+        // field 4 (custom map entry)
+        assertTrue("Should contain field 4", 4 in fields)
+    }
+
+    @Test
+    fun updateUserSettingsRequest_stream_withCustomMap_containsKeyValue() {
+        val req = UpdateUserSettingsRequestProto(custom = mapOf("chat_list_mode" to "fast"))
+        val bytes = UpdateUserSettingsRequestMarshaller().stream(req).readBytes()
+        assertTrue("Serialized bytes should not be empty", bytes.isNotEmpty())
+        val serialized = String(bytes, Charsets.UTF_8)
+        assertTrue("Should contain key", serialized.contains("chat_list_mode"))
+        assertTrue("Should contain value", serialized.contains("fast"))
+    }
+
+    @Test
     fun updateUserSettingsResponse_parseEmpty() {
         val parsed = UpdateUserSettingsResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
         assertFalse(parsed.success)
