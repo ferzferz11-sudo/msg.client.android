@@ -1,5 +1,38 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.15] - 2026-08-16
+
+### Добавлено
+
+**Fast Mode — быстрый режим чат-листа (Feature):**
+- Пункт "Режим: Полный/Быстрый" в overflow menu (ниже Поиска)
+- Быстрый режим: отключает аватары (нет Glide), анимации (нет DefaultItemAnimator + layout animation), обводку аватаров
+- Настройка сохраняется в SharedPreferences + синхронизация на сервер через `UpdateUserSettings.custom` map
+- Восстановление настройки с сервера при входе
+- Строки EN+RU для пункта меню и toast
+
+### Исправлено
+
+**Подвисание поля ввода чата (Performance):**
+- `handleMention()` парсил `JSONArray(participantsJson)` на каждое нажатие клавиши
+- Исправлено: participants парсится один раз в `configure()`, кэшируется на время жизни чата
+- Mention detection debounce 150ms — не обрабатывает каждый keystroke
+- Draft сохраняется ТОЛЬКО в `onPause()`, не при вводе текста
+
+**GrpcSavedMessagesClient — молчаливые потери callback (High):**
+- `getSavedMessages`: `getChannel() ?: return` — callback не вызывался, UI зависал в loading
+- `addSavedMessage`/`removeSavedMessage`: аналогичная проблема с пустым `onClose`
+- Исправлено: все callback'и теперь вызываются при ошибках, добавлен UNAUTHENTICATED retry
+
+**UpdateUserSettingsRequestMarshaller — custom map не сериализовался (Medium):**
+- Поле 4 (`custom: Map<String, String>`) не записывалось в wire format
+- Исправлено: сериализация map entries (key=field 1, value=field 2) в field 4
+
+### Тесты
+
+- 2 новых теста для `UpdateUserSettingsRequest` с custom map
+- Все 625+ тестов проходят
+
 ## [1.4.0.14] - 2026-08-16
 
 ### Исправлено
