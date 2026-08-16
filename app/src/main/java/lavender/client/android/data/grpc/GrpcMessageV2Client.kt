@@ -37,7 +37,8 @@ class GrpcMessageV2Client(
     private val scope: CoroutineScope,
     private val appContext: () -> Context?,
     @Suppress("UNUSED_PARAMETER") private val onReadReceipt: ((String, String) -> Unit)? = null,
-    private val reconnect: (() -> Unit)? = null
+    private val reconnect: (() -> Unit)? = null,
+    private val refreshToken: (() -> Unit)? = null
 ) {
     companion object {
         private const val TAG = "GrpcMsgV2"
@@ -389,6 +390,11 @@ class GrpcMessageV2Client(
                     // Don't log CANCELLED as error if we cancelled it ourselves
                     if (status.code == Status.Code.CANCELLED) {
                         Log.d(TAG, "loadHistoryV2: cancelled (superseded or channel closed)")
+                    } else if (status.code == Status.Code.UNAUTHENTICATED) {
+                        Log.w(TAG, "loadHistoryV2: UNAUTHENTICATED — refreshing token and retrying")
+                        refreshToken?.invoke()
+                        loadHistoryV2(roomId, cursor, limit, onCompletion)
+                        return
                     } else {
                         ErrorHandler.handle("$TAG.loadHistoryV2", StatusRuntimeException(status))
                     }

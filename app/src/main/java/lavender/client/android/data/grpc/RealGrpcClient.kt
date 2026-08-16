@@ -292,7 +292,12 @@ object RealGrpcClient {
         onReadReceipt = { roomId, reader ->
             scope.launch { _readReceiptEvent.emit(Pair(roomId, reader)) }
         },
-        reconnect = { connectionManager.reconnect() }
+        reconnect = { connectionManager.reconnect() },
+        refreshToken = {
+            appContext?.let { ctx ->
+                lavender.client.android.data.session.SessionManager.ensureFreshToken(ctx)
+            }
+        }
     )
 
     // ====== Module: Server Discovery Client ======
@@ -943,6 +948,10 @@ object RealGrpcClient {
     }
 
     fun markRead(rid: String, u: String, onComp: (() -> Unit)?) {
+        markReadInternal(rid, u, onComp, retryCount = 0)
+    }
+
+    private fun markReadInternal(rid: String, u: String, onComp: (() -> Unit)?, retryCount: Int) {
         appContext?.let { lavender.client.android.data.fcm.LavenderMessagingService.dismissNotificationsForRoom(it, rid) }
         val channel = getChannel()
         if (channel == null) {
@@ -955,6 +964,14 @@ object RealGrpcClient {
             override fun onMessage(response: MarkReadResponseProto) {}
             override fun onClose(status: Status, trailers: Metadata) {
                 if (!status.isOk) {
+                    if (status.code == Status.Code.UNAUTHENTICATED && retryCount < 1) {
+                        Log.w(TAG, "markRead: UNAUTHENTICATED — refreshing token and retrying")
+                        appContext?.let { ctx ->
+                            lavender.client.android.data.session.SessionManager.ensureFreshToken(ctx)
+                        }
+                        markReadInternal(rid, u, onComp, retryCount + 1)
+                        return
+                    }
                     ErrorHandler.handle("$TAG.markRead", StatusRuntimeException(status))
                 }
                 onComp?.invoke()

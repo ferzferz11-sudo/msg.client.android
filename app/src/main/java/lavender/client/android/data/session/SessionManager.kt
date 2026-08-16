@@ -232,7 +232,23 @@ object SessionManager {
             }
 
             latch.await(5, java.util.concurrent.TimeUnit.SECONDS)
-            if (!refreshed) Log.w("SessionManager", "Sync token refresh timed out")
+            if (!refreshed && AuthManager.isRefreshTokenExpired(context)) {
+                Log.w("SessionManager", "Sync token refresh failed — refresh token expired, attempting re-login")
+                val username = AuthManager.getUsername(context)
+                val password = CredentialStore.getPassword(context)
+                val serverAddress = CredentialStore.getServerAddress(context)
+                if (username.isNotEmpty() && password.isNotEmpty() && serverAddress.isNotEmpty()) {
+                    // Release guard before async login (loginV2 doesn't use refresh guard)
+                    refreshGuard.set(false)
+                    notifyRefreshComplete()
+                    loginV2(context, username, password, serverAddress, false, "", {})
+                    return
+                } else {
+                    Log.w("SessionManager", "No saved credentials for re-login")
+                }
+            } else if (!refreshed) {
+                Log.w("SessionManager", "Sync token refresh timed out")
+            }
         } finally {
             refreshGuard.set(false)
             notifyRefreshComplete()
