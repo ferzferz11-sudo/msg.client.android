@@ -71,11 +71,13 @@ class ChatInputDelegate(
     private val selectedImageUris = mutableListOf<Uri>()
     private var typingJob: Job? = null
     private var isTypingSignalSent = false
+    private var mentionDebounceJob: Job? = null
 
     private var roomId: String = ""
     private var username: String = ""
     private var isDirect: Boolean = false
     private var participantsJson: String = "[]"
+    private var cachedParticipants: List<String> = emptyList()
     private var isSecret: Boolean = false
     private var secretKeyExchanged = false
     private var replyingTo: Message? = null
@@ -189,7 +191,16 @@ class ChatInputDelegate(
         this.username = username
         this.isDirect = isDirect
         this.participantsJson = participantsJson
+        this.cachedParticipants = parseParticipants(participantsJson)
         this.isSecret = isSecret
+    }
+
+    private fun parseParticipants(json: String): List<String> {
+        if (json.isEmpty()) return emptyList()
+        return try {
+            val arr = org.json.JSONArray(json)
+            (0 until arr.length()).map { arr.getString(it) }
+        } catch (_: Exception) { emptyList() }
     }
 
     fun setSecretState(exchanged: Boolean) {
@@ -223,7 +234,12 @@ class ChatInputDelegate(
         messageInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                handleMention(s)
+                // Debounce mention detection — avoid JSON/filter on every keystroke
+                mentionDebounceJob?.cancel()
+                mentionDebounceJob = activity.lifecycleScope.launch {
+                    delay(150)
+                    handleMention(s)
+                }
                 val text = s?.toString() ?: ""
                 val hasText = text.trim().isNotEmpty()
                 val hasImages = selectedImageUris.isNotEmpty()
@@ -286,20 +302,14 @@ class ChatInputDelegate(
         if (la == -1 && cp > 0 && t[cp - 1] == '@') { la = cp - 1 }
         if (la != -1) {
             val q = t.substring(la + 1, cp).lowercase()
-            if (participantsJson.isEmpty()) {
+            if (cachedParticipants.isEmpty()) {
                 mentionContainer.isVisible = false
                 return
             }
-            val participantsArray = try { JSONArray(participantsJson) } catch (_: Exception) { JSONArray() }
-            val matches = mutableListOf<String>()
-            val avatarCache = grpcClient.getAvatarCache()
-            for (i in 0 until participantsArray.length()) {
-                val participant = participantsArray.getString(i)
-                if (participant != username && participant.lowercase().contains(q)) {
-                    matches.add(participant)
-                }
-            }
+            // Use cached participants — no JSON parsing on every keystroke
+            val matches = cachedParticipants.filter { it != username && it.lowercase().contains(q) }
             if (matches.isNotEmpty() || q.isEmpty()) {
+                val avatarCache = grpcClient.getAvatarCache()
                 mentionAdapter.setUsers(matches, avatarCache)
                 mentionContainer.isVisible = true
             } else {
