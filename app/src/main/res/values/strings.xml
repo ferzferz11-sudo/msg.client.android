@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Lava</string>
     <string name="error">Error</string>
     
@@ -370,7 +370,7 @@
     <string name="chat_last_message_format">%1$s%2$s</string>
     <string name="plus_count_format">+%1$d</string>
     <string name="percent_format">Downloading: %1$d%%</string>
-    <string name="online_count_format">%1$d/%2$d online</string>
+    <string name="online_count_format" tools:ignore="PluralsCandidate">%1$d/%2$d online</string>
     <string name="download_complete">Download complete!</string>
     <string name="manual_install_hint">If the installation doesn\'t start automatically, please click the button below.</string>
     <string name="install_now">Install Now</string>
@@ -874,7 +874,7 @@
     <string name="ssh_timeout">Connection timeout to %1$s:%2$d. Check host and port.</string>
     <string name="ssh_connect_error">Failed to connect to %1$s:%2$d</string>
     <string name="ssh_error">SSH error: %s</string>
-    <string name="ssh_port_in_use">Local port %d already in use. Choose another port.</string>
+    <string name="ssh_port_in_use" tools:ignore="PluralsCandidate">Local port %d already in use. Choose another port.</string>
     <string name="ssh_unknown_host">Unknown host "%s". Enter IP address.</string>
     <string name="ssh_session_not_established">SSH session not established.</string>
 
