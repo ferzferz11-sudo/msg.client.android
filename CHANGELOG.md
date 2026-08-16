@@ -12,11 +12,11 @@
 **Системные сообщения в превью чат-листа (Medium):**
 - Таймер авто-удаления (🔥) и звонки (📹📞) показывались как last message в списке чатов
 - Исправлено: фильтрация системных сообщений в `ChatListViewModel.newMessageEvent` и `ChatAdapter`
-- Серверная задача: `TASK_LAST_MESSAGE_FILTER.md` — не обновлять `lastMessageText` для системных сообщений
+- Сервер v1.4.0.5: фильтр системных сообщений из `last_message_text` в `SendMessageV2`, `ChatV2` stream и call handlers
 
-**Saved Messages — сообщения не сохранялись на сервере (Investigating):**
-- Добавлено логирование в `sendMessageV2` для трассировки отправки
-- Серверная задача: `TASK_SAVED_MESSAGES_SEND_DEBUG.md` — отладка `handleSavedMessagesSend`
+**Saved Messages — сообщения не сохранялись на сервере (Fixed):**
+- Сервер v1.4.0.5: нормализация `saved_messages_{username}` → `saved_messages_{userId}` в `handleSavedMessagesSend`
+- Клиент: добавлено логирование в `sendMessageV2` для трассировки отправки
 
 ### Улучшено
 
