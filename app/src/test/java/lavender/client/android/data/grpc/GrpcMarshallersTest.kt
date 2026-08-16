@@ -534,6 +534,39 @@ class GrpcMarshallersTest {
         assertEquals(roomId, req.roomId)
     }
 
+    @Test
+    fun sendMessageV2Request_savedMessages_fullSerialization_roundtrip() {
+        // Simulate what domainToSendRequest produces for a saved messages text message
+        val req = SendMessageV2RequestProto(
+            roomId = "saved_messages_pavel",
+            text = "Hello from saved messages"
+        )
+        val bytes = SendMessageV2RequestMarshaller().stream(req).readBytes()
+        assertTrue("Serialized bytes should not be empty", bytes.isNotEmpty())
+
+        // Verify field numbers: roomId=1, text=2
+        val fields = readFieldNumbers(bytes)
+        assertEquals(listOf(1, 2), fields)
+
+        // Verify roomId string is present in serialized bytes
+        val serialized = String(bytes, Charsets.UTF_8)
+        assertTrue("RoomId should be in serialized bytes", serialized.contains("saved_messages_pavel"))
+        assertTrue("Text should be in serialized bytes", serialized.contains("Hello from saved messages"))
+    }
+
+    @Test
+    fun sendMessageV2Request_savedMessages_withReply() {
+        val req = SendMessageV2RequestProto(
+            roomId = "saved_messages_pavel",
+            text = "Reply text",
+            replyToId = "msg-123"
+        )
+        val bytes = SendMessageV2RequestMarshaller().stream(req).readBytes()
+        val fields = readFieldNumbers(bytes)
+        // roomId=1, text=2, replyToId=4
+        assertEquals(listOf(1, 2, 4), fields)
+    }
+
     // ======= Profile V2 =======
     // UpdateProfileV2Request: username=1, bio=2, status=3, locale=4
 

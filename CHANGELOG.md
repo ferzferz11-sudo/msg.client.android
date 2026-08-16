@@ -15,8 +15,10 @@
 - Сервер v1.4.0.5: фильтр системных сообщений из `last_message_text` в `SendMessageV2`, `ChatV2` stream и call handlers
 
 **Saved Messages — сообщения не сохранялись на сервере (Fixed):**
-- Сервер v1.4.0.5: нормализация `saved_messages_{username}` → `saved_messages_{userId}` в `handleSavedMessagesSend`
-- Клиент: добавлено логирование в `sendMessageV2` для трассировки отправки
+- Клиентский код корректен — `domainToSendRequest` передаёт `roomId=saved_messages_{username}` в `SendMessageV2`
+- Проблема была на сервере: `handleSavedMessagesSend` не нормализовал roomId (`saved_messages_{username}` → `saved_messages_{userId}`)
+- Сервер v1.4.0.5: нормализация roomId добавлена, сообщения теперь сохраняются
+- Клиент: добавлено логирование в `sendMessageV2` для диагностики
 
 ### Улучшено
 
