@@ -420,6 +420,8 @@ class GrpcMessageV2Client(
             return
         }
 
+        Log.d(TAG, "sendMessageV2: roomId=${message.roomId}, id=${message.id}, text=${message.text.take(50)}")
+
         val safeText = message.text.stripInvalidUtf8()
         val safeMessage = if (safeText != message.text) {
             Log.w(TAG, "stripped invalid UTF-8 bytes from text before sending")
@@ -432,6 +434,7 @@ class GrpcMessageV2Client(
                 if (response.success && response.message != null) {
                     val serverMsg = response.message
                     val serverId = serverMsg.id
+                    Log.d(TAG, "sendMessageV2: success, serverId=$serverId, roomId=${message.roomId}")
                     messages.update { current ->
                         val updated = current.map {
                             if (it.id == message.id) {
@@ -455,6 +458,7 @@ class GrpcMessageV2Client(
                     }
                     onResult?.invoke(serverMsg)
                 } else {
+                    Log.e(TAG, "sendMessageV2: server error: ${response.error.ifEmpty { "success=false" }}, roomId=${message.roomId}")
                     ErrorHandler.handle("$TAG.sendMessageV2", Exception(response.error.ifEmpty { "Server returned success=false" }))
                     onResult?.invoke(null)
                 }

@@ -509,6 +509,31 @@ class GrpcMarshallersTest {
         assertEquals("", req.userId)
     }
 
+    // ======= Send Message V2 (saved_messages roomId) =======
+
+    @Test
+    fun sendMessageV2Request_savedMessagesRoomId_fieldOrder() {
+        val req = SendMessageV2RequestProto(roomId = "saved_messages_testuser", text = "Hello saved")
+        val bytes = SendMessageV2RequestMarshaller().stream(req).readBytes()
+        val fields = readFieldNumbers(bytes)
+        // roomId=1, text=2
+        assertEquals(listOf(1, 2), fields)
+    }
+
+    @Test
+    fun sendMessageV2Request_savedMessagesRoomId_nonEmpty() {
+        val req = SendMessageV2RequestProto(roomId = "saved_messages_testuser", text = "Hello saved")
+        val bytes = SendMessageV2RequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isNotEmpty())
+    }
+
+    @Test
+    fun sendMessageV2Request_savedMessagesRoomId_preservesRoomId() {
+        val roomId = "saved_messages_testuser"
+        val req = SendMessageV2RequestProto(roomId = roomId, text = "test")
+        assertEquals(roomId, req.roomId)
+    }
+
     // ======= Profile V2 =======
     // UpdateProfileV2Request: username=1, bio=2, status=3, locale=4
 

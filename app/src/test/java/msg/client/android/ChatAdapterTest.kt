@@ -1,6 +1,8 @@
 package msg.client.android
 
 import lavender.client.android.data.models.ChatInfo
+import lavender.client.android.data.models.Message
+import lavender.client.android.ui.chatlist.ChatListViewModel
 import org.junit.Test
 import org.junit.Assert.*
 
@@ -213,5 +215,49 @@ class ChatAdapterTest {
             createChat(id = "2", name = "Bob")
         )
         assertNotEquals(old.size, new.size)
+    }
+
+    // ======= isSystemMessage =======
+
+    @Test
+    fun isSystemMessage_emptyUser_returnsTrue() {
+        val msg = Message(id = "msg-1", user = "", text = "Timer set", timestamp = 0, roomId = "room1")
+        assertTrue(ChatListViewModel.isSystemMessage(msg))
+    }
+
+    @Test
+    fun isSystemMessage_sdTimerId_returnsTrue() {
+        val msg = Message(id = "sd_timer_room1_123", user = "system", text = "Timer set", timestamp = 0, roomId = "room1")
+        assertTrue(ChatListViewModel.isSystemMessage(msg))
+    }
+
+    @Test
+    fun isSystemMessage_fireEmoji_returnsTrue() {
+        val msg = Message(id = "msg-2", user = "system", text = "\uD83D\uDD25 Timer set: 30s", timestamp = 0, roomId = "room1")
+        assertTrue(ChatListViewModel.isSystemMessage(msg))
+    }
+
+    @Test
+    fun isSystemMessage_videoCall_returnsTrue() {
+        val msg = Message(id = "msg-3", user = "system", text = "\uD83D\uDCF9Видеозвонок", timestamp = 0, roomId = "room1")
+        assertTrue(ChatListViewModel.isSystemMessage(msg))
+    }
+
+    @Test
+    fun isSystemMessage_audioCall_returnsTrue() {
+        val msg = Message(id = "msg-4", user = "system", text = "\uD83D\uDCDEЗвонок", timestamp = 0, roomId = "room1")
+        assertTrue(ChatListViewModel.isSystemMessage(msg))
+    }
+
+    @Test
+    fun isSystemMessage_normalMessage_returnsFalse() {
+        val msg = Message(id = "msg-5", user = "alice", text = "Hello!", timestamp = 0, roomId = "room1")
+        assertFalse(ChatListViewModel.isSystemMessage(msg))
+    }
+
+    @Test
+    fun isSystemMessage_imageMessage_returnsFalse() {
+        val msg = Message(id = "msg-6", user = "alice", text = "", timestamp = 0, roomId = "room1", imageUrl = "https://example.com/img.jpg")
+        assertFalse(ChatListViewModel.isSystemMessage(msg))
     }
 }

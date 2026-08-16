@@ -376,7 +376,7 @@ class ChatAdapter(
                 tvChatType.text = itemView.context.getString(R.string.conference)
                 tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
                 tvChatType.setTypeface(null, if (hasUnread) Typeface.BOLD else Typeface.NORMAL)
-            } else if (chat.lastMessageText.isNotEmpty()) {
+            } else if (chat.lastMessageText.isNotEmpty() && !isSystemMessagePreview(chat.lastMessageText)) {
                 tvChatType.text = translateMediaPreview(stripForwardPrefix(chat.lastMessageText))
                 tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
                 tvChatType.setTypeface(null, Typeface.NORMAL)
@@ -472,6 +472,16 @@ class ChatAdapter(
                 "Voice message" -> ctx.getString(R.string.chat_preview_voice)
                 else -> text
             }
+        }
+
+        /** Returns true if the lastMessageText is a system message that should not be shown in chat list. */
+        private fun isSystemMessagePreview(text: String): Boolean {
+            if (text.startsWith("\uD83D\uDD25")) return true  // 🔥 self-destruct timer
+            if (text.startsWith("\uD83D\uDCF9")) return true  // 📹 video call
+            if (text.startsWith("\uD83D\uDCDE")) return true  // 📞 audio call
+            if (text.startsWith("\uD83D\uDCDE\u2B05\uFE0F")) return true  // 📞↩️ missed call
+            if (text.startsWith("\uD83D\uDCDE\u2B06\uFE0F")) return true  // 📞⬆️ ended call
+            return false
         }
 
         private fun stripForwardPrefix(text: String): String {

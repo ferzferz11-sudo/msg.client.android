@@ -42,6 +42,16 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
 
     companion object {
         private const val TAG = "ChatListViewModel"
+
+        /** Returns true if the message is a system message that should not appear in chat list preview. */
+        fun isSystemMessage(message: lavender.client.android.data.models.Message): Boolean {
+            if (message.user.isEmpty()) return true
+            if (message.id.startsWith("sd_timer_")) return true
+            val text = message.text
+            if (text.startsWith("\uD83D\uDD25")) return true  // 🔥 self-destruct timer
+            if (text.startsWith("\uD83D\uDCF9") || text.startsWith("\uD83D\uDCDE")) return true  // 📹 📞 call messages
+            return false
+        }
     }
 
     private val _error = MutableStateFlow<String?>(null)
@@ -138,6 +148,9 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
         // Listen for new messages in other rooms — update chat list in real-time
         viewModelScope.launch {
             GrpcClient.newMessageEvent.collect { message ->
+                // Skip system messages (self-destruct timer, call messages) — don't show in chat list preview
+                if (isSystemMessage(message)) return@collect
+
                 val currentUsername = SessionManager.session.value.username
                 val isFromOther = message.user != currentUsername
                 val ctx = getApplication<Application>()
