@@ -1,5 +1,38 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.14] - 2026-08-16
+
+### Исправлено
+
+**UNAUTHENTICATED cascade — токен не обновлялся при протухании (Critical):**
+- `markRead` и `loadHistoryV2` не ретраили при UNAUTHENTICATED — ошибка шла 10+ минут без восстановления
+- Исправлено: retry-once с `ensureFreshToken()` при UNAUTHENTICATED для `markRead` и `loadHistoryV2`
+- `ensureFreshToken()` теперь делает fallback на re-login с сохранённым паролем если refresh token протух
+
+**Системные сообщения в превью чат-листа (Medium):**
+- Таймер авто-удаления (🔥) и звонки (📹📞) показывались как last message в списке чатов
+- Исправлено: фильтрация системных сообщений в `ChatListViewModel.newMessageEvent` и `ChatAdapter`
+- Серверная задача: `TASK_LAST_MESSAGE_FILTER.md` — не обновлять `lastMessageText` для системных сообщений
+
+**Saved Messages — сообщения не сохранялись на сервере (Investigating):**
+- Добавлено логирование в `sendMessageV2` для трассировки отправки
+- Серверная задача: `TASK_SAVED_MESSAGES_SEND_DEBUG.md` — отладка `handleSavedMessagesSend`
+
+### Улучшено
+
+**Accessibility — touch targets (P2):**
+- 22 интерактивных элемента увеличены до 48dp minimum в 14 layout файлах
+- Включая: кнопки редактирования, удаления, отмены, выбора цвета, навигации
+
+**PluralsCandidate lint (P2):**
+- 2 false positive подавлены (`tools:ignore`) — `online_count_format` и `ssh_port_in_use`
+- Все 28 plurals уже были сконвертированы в предыдущих сессиях
+
+### Тесты
+
+- 7 новых тестов для `isSystemMessage` (ChatAdapterTest)
+- 3 новых теста для `SendMessageV2RequestProto` с `saved_messages_*` roomId (GrpcMarshallersTest)
+
 ## [1.4.0.13] - 2026-08-14
 
 ### Изменено
