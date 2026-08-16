@@ -354,8 +354,9 @@ object GrpcClient {
         ProfileClient.getUserSettings(context)
 
     suspend fun updateUserSettingsV2(
-        context: Context, locale: String = "", themeId: String = "", pushEnabled: Boolean? = null
-    ): Boolean = ProfileClient.updateUserSettings(context, locale, themeId, pushEnabled)
+        context: Context, locale: String = "", themeId: String = "", pushEnabled: Boolean? = null,
+        custom: Map<String, String> = emptyMap()
+    ): Boolean = ProfileClient.updateUserSettings(context, locale, themeId, pushEnabled, custom)
 
     // ======= Theme Operations =======
 

@@ -5,4 +5,8 @@
         android:id="@+id/action_search"
         android:title="@string/search"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/action_fast_mode"
+        android:title="@string/mode_full"
+        app:showAsAction="never" />
 </menu>

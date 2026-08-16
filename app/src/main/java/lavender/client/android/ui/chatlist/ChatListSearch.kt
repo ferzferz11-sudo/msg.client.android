@@ -27,15 +27,43 @@ internal fun setupSearchMenu(activity: ChatListActivity) {
         }
     } catch (_: Exception) {}
 
+    // Update fast mode menu item title
+    updateFastModeMenuItem(activity)
+
     activity.toolbar?.setOnMenuItemClickListener { menuItem ->
         when (menuItem.itemId) {
             R.id.action_search -> {
                 showSearchView(activity)
                 true
             }
+            R.id.action_fast_mode -> {
+                toggleFastMode(activity)
+                true
+            }
             else -> false
         }
     }
+}
+
+private fun updateFastModeMenuItem(activity: ChatListActivity) {
+    val isFast = FastModeManager.isFastMode(activity)
+    val titleRes = if (isFast) R.string.mode_fast else R.string.mode_full
+    activity.toolbar?.menu?.findItem(R.id.action_fast_mode)?.setTitle(titleRes)
+}
+
+private fun toggleFastMode(activity: ChatListActivity) {
+    val current = FastModeManager.isFastMode(activity)
+    val newValue = !current
+    FastModeManager.setFastMode(activity, newValue)
+
+    val toastRes = if (newValue) R.string.fast_mode_enabled else R.string.full_mode_enabled
+    android.widget.Toast.makeText(activity, toastRes, android.widget.Toast.LENGTH_SHORT).show()
+
+    // Update menu title
+    updateFastModeMenuItem(activity)
+
+    // Apply changes immediately
+    activity.applyFastMode(newValue)
 }
 
 private fun showSearchView(activity: ChatListActivity) {

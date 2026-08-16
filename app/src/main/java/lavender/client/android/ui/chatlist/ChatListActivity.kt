@@ -574,12 +574,16 @@ class ChatListActivity : AppCompatActivity() {
             layoutManager = LinearLayoutManager(context)
             adapter = chatAdapter
             setHasFixedSize(true)
-            // Smooth item animations
-            itemAnimator = androidx.recyclerview.widget.DefaultItemAnimator().apply {
-                addDuration = 200
-                removeDuration = 150
-                changeDuration = 150
-                moveDuration = 200
+            // Smooth item animations — disabled in fast mode
+            val isFast = FastModeManager.isFastMode(this@ChatListActivity)
+            chatAdapter.fastModeEnabled = isFast
+            if (!isFast) {
+                itemAnimator = androidx.recyclerview.widget.DefaultItemAnimator().apply {
+                    addDuration = 200
+                    removeDuration = 150
+                    changeDuration = 150
+                    moveDuration = 200
+                }
             }
             addOnScrollListener(object : RecyclerView.OnScrollListener() {
                 override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
@@ -605,13 +609,16 @@ class ChatListActivity : AppCompatActivity() {
                 val firstVisible = layoutManager?.findFirstCompletelyVisibleItemPosition() ?: 0
                 val wasNearTop = firstVisible <= 1
                 chatAdapter.setSections(sections)
-                // Apply layout animation only on first load
-                if (isFirstLoad && sections.isNotEmpty()) {
+                // Apply layout animation only on first load and not in fast mode
+                val isFast = FastModeManager.isFastMode(this@ChatListActivity)
+                if (isFirstLoad && sections.isNotEmpty() && !isFast) {
                     isFirstLoad = false
                     rvChatList?.layoutAnimation = android.view.animation.AnimationUtils.loadLayoutAnimation(
                         this@ChatListActivity, R.anim.layout_animation_fall_down
                     )
                     rvChatList?.scheduleLayoutAnimation()
+                } else if (isFirstLoad && sections.isNotEmpty()) {
+                    isFirstLoad = false
                 }
                 // Update dynamic tabs (AI, per-company, Archive)
                 updateDynamicTabs(this@ChatListActivity, viewModel.getChats())
@@ -821,5 +828,26 @@ class ChatListActivity : AppCompatActivity() {
     private fun applyTheme() {
         ThemeStore.init(this)
         ThemeApplier.apply(this, ThemeStore.currentTheme())
+    }
+
+    /** Applies fast mode changes: disables animations and avatar loading. */
+    fun applyFastMode(enabled: Boolean) {
+        if (::chatAdapter.isInitialized) {
+            chatAdapter.fastModeEnabled = enabled
+        }
+        rvChatList?.itemAnimator = if (enabled) {
+            null
+        } else {
+            androidx.recyclerview.widget.DefaultItemAnimator().apply {
+                addDuration = 200
+                removeDuration = 150
+                changeDuration = 150
+                moveDuration = 200
+            }
+        }
+        // Reload to apply visual changes immediately
+        if (::chatAdapter.isInitialized) {
+            chatAdapter.notifyDataSetChanged()
+        }
     }
 }

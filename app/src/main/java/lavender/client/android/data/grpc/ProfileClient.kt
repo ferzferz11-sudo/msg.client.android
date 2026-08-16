@@ -166,11 +166,12 @@ object ProfileClient {
         context: Context,
         locale: String = "",
         themeId: String = "",
-        pushEnabled: Boolean? = null
+        pushEnabled: Boolean? = null,
+        custom: Map<String, String> = emptyMap()
     ): Boolean = withContext(Dispatchers.IO) {
         try {
             val request = UpdateUserSettingsRequestProto(
-                locale = locale, themeId = themeId, pushEnabled = pushEnabled
+                locale = locale, themeId = themeId, pushEnabled = pushEnabled, custom = custom
             )
             val response = unaryCall(
                 fullMethod = "messenger.ProfileService/UpdateUserSettings",

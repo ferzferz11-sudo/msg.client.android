@@ -1473,6 +1473,18 @@ class UpdateUserSettingsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<
         if (v.locale.isNotEmpty()) cos.writeString(1, v.locale)
         if (v.themeId.isNotEmpty()) cos.writeString(2, v.themeId)
         v.pushEnabled?.let { cos.writeBool(3, it) }
+        // Serialize custom map entries (field 4, repeated message with key=1, value=2)
+        for ((key, value) in v.custom) {
+            cos.writeTag(4, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+            val entryBaos = java.io.ByteArrayOutputStream()
+            val entryCos = com.google.protobuf.CodedOutputStream.newInstance(entryBaos)
+            entryCos.writeString(1, key)
+            entryCos.writeString(2, value)
+            entryCos.flush()
+            val entryBytes = entryBaos.toByteArray()
+            cos.writeUInt32NoTag(entryBytes.size)
+            cos.writeRawBytes(entryBytes)
+        }
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): UpdateUserSettingsRequestProto = UpdateUserSettingsRequestProto()

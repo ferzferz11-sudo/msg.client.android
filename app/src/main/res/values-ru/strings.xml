@@ -1344,4 +1344,10 @@
         <item quantity="other">Переслать в %d</item>
     </plurals>
 
+    <!-- Fast Mode -->
+    <string name="mode_full">Режим: Полный</string>
+    <string name="mode_fast">Режим: Быстрый</string>
+    <string name="fast_mode_enabled">Быстрый режим включён</string>
+    <string name="full_mode_enabled">Полный режим включён</string>
+
 </resources>

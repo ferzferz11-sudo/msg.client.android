@@ -1297,4 +1297,10 @@
         <item quantity="other">Forward to %d</item>
     </plurals>
 
+    <!-- Fast Mode -->
+    <string name="mode_full">Mode: Full</string>
+    <string name="mode_fast">Mode: Fast</string>
+    <string name="fast_mode_enabled">Fast mode enabled</string>
+    <string name="full_mode_enabled">Full mode enabled</string>
+
 </resources>

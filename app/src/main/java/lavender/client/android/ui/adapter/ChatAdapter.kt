@@ -73,6 +73,9 @@ class ChatAdapter(
     private var selectionMode = false
     private val selectedIds = mutableSetOf<String>()
 
+    // Fast mode — disables avatars and heavy graphics
+    var fastModeEnabled: Boolean = false
+
     // Performance caches
     private var onlineUsersSet: Set<String> = onlineUsersList.toSet()
     private var allUsersMap: Map<String, lavender.client.android.data.proto.UserInfoProto> =
@@ -207,7 +210,7 @@ class ChatAdapter(
         when (val item = getItem(position)) {
             is FlatItem.SectionHeader -> (holder as SectionHeaderViewHolder).bind(item)
             is FlatItem.ChatItem -> (holder as ChatViewHolder).bind(
-                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedUnreadColor, cachedPrimaryColor, cachedIsLightTheme, selectionMode, selectedIds.contains(item.chat.id), currentUsername, onlineUsersSet, allUsersMap, avatarUrlCache, otherParticipantCache
+                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedUnreadColor, cachedPrimaryColor, cachedIsLightTheme, selectionMode, selectedIds.contains(item.chat.id), currentUsername, onlineUsersSet, allUsersMap, avatarUrlCache, otherParticipantCache, fastModeEnabled
             )
             null -> {}
         }
@@ -323,46 +326,53 @@ class ChatAdapter(
         private val cardView: com.google.android.material.card.MaterialCardView =
             itemView as com.google.android.material.card.MaterialCardView
 
-        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, unreadColor: Int, primaryColor: Int, isLightTheme: Boolean, selectionMode: Boolean, isSelected: Boolean, currentUsername: String, onlineUsers: Set<String>, allUsersMap: Map<String, lavender.client.android.data.proto.UserInfoProto>, avatarCache: Map<String, String>, otherParticipantCache: MutableMap<String, String>) {
+        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, unreadColor: Int, primaryColor: Int, isLightTheme: Boolean, selectionMode: Boolean, isSelected: Boolean, currentUsername: String, onlineUsers: Set<String>, allUsersMap: Map<String, lavender.client.android.data.proto.UserInfoProto>, avatarCache: Map<String, String>, otherParticipantCache: MutableMap<String, String>, fastMode: Boolean) {
             val hasUnread = chat.unreadCount > 0
             tvChatName.text = chat.getDisplayName(currentUsername)
             tvChatName.setTextColor(if (hasUnread) primaryColor else textPrimary)
             tvChatName.setTypeface(null, if (hasUnread) Typeface.BOLD else Typeface.NORMAL)
 
-            // Avatar
-            val avatarUrl = if (chat.type == "direct" || chat.isSecret) {
-                val otherUser = getOrComputeOtherParticipant(chat, currentUsername, otherParticipantCache)
-                avatarCache[otherUser] ?: ""
-            } else chat.avatarUrl
-            try {
-                val currentTag = ivChatAvatar.tag as? String
-                if (avatarUrl.isNotEmpty() && avatarUrl != currentTag) {
-                    ivChatAvatar.tag = avatarUrl
-                    val sizePx = (48 * itemView.resources.displayMetrics.density).toInt()
-                    ivChatAvatar.clearColorFilter()
-                    com.bumptech.glide.Glide.with(itemView.context).load(avatarUrl)
-                        .placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar)
-                        .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
-                        .override(sizePx, sizePx).circleCrop().into(ivChatAvatar)
-                } else if (avatarUrl.isEmpty()) {
-                    if (currentTag != null) {
-                        ivChatAvatar.tag = null
-                        com.bumptech.glide.Glide.with(itemView.context).clear(ivChatAvatar)
+            // Avatar — skip in fast mode for performance
+            if (!fastMode) {
+                val avatarUrl = if (chat.type == "direct" || chat.isSecret) {
+                    val otherUser = getOrComputeOtherParticipant(chat, currentUsername, otherParticipantCache)
+                    avatarCache[otherUser] ?: ""
+                } else chat.avatarUrl
+                try {
+                    val currentTag = ivChatAvatar.tag as? String
+                    if (avatarUrl.isNotEmpty() && avatarUrl != currentTag) {
+                        ivChatAvatar.tag = avatarUrl
+                        val sizePx = (48 * itemView.resources.displayMetrics.density).toInt()
+                        ivChatAvatar.clearColorFilter()
+                        com.bumptech.glide.Glide.with(itemView.context).load(avatarUrl)
+                            .placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar)
+                            .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
+                            .override(sizePx, sizePx).circleCrop().into(ivChatAvatar)
+                    } else if (avatarUrl.isEmpty()) {
+                        if (currentTag != null) {
+                            ivChatAvatar.tag = null
+                            com.bumptech.glide.Glide.with(itemView.context).clear(ivChatAvatar)
+                        }
+                        try {
+                            val currentTheme = lavender.client.android.theme.ThemeStore.currentTheme()
+                            lavender.client.android.theme.ThemeUtils.applyDefaultAvatar(ivChatAvatar, currentTheme)
+                        } catch (_: Exception) { ivChatAvatar.setImageResource(R.drawable.ic_default_avatar) }
                     }
-                    try {
-                        val currentTheme = lavender.client.android.theme.ThemeStore.currentTheme()
-                        lavender.client.android.theme.ThemeUtils.applyDefaultAvatar(ivChatAvatar, currentTheme)
-                    } catch (_: Exception) { ivChatAvatar.setImageResource(R.drawable.ic_default_avatar) }
-                }
-            } catch (_: Exception) { ivChatAvatar.setImageResource(R.drawable.ic_default_avatar) }
+                } catch (_: Exception) { ivChatAvatar.setImageResource(R.drawable.ic_default_avatar) }
 
-            // Avatar border — Primary color outline on light themes only
-            if (isLightTheme) {
-                val borderPx = (1.5f * itemView.resources.displayMetrics.density).toInt()
-                ivChatAvatar.borderWidth = borderPx
-                ivChatAvatar.borderColor = primaryColor
+                // Avatar border — Primary color outline on light themes only
+                if (isLightTheme) {
+                    val borderPx = (1.5f * itemView.resources.displayMetrics.density).toInt()
+                    ivChatAvatar.borderWidth = borderPx
+                    ivChatAvatar.borderColor = primaryColor
+                } else {
+                    ivChatAvatar.borderWidth = 0
+                }
             } else {
+                // Fast mode: static default avatar, no Glide, no border
+                ivChatAvatar.setImageResource(R.drawable.ic_default_avatar)
                 ivChatAvatar.borderWidth = 0
+                ivChatAvatar.tag = null
             }
 
             // Company badge
