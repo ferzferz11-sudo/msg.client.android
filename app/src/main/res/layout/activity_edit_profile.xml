@@ -319,13 +319,15 @@
 
                     <ImageButton
                         android:id="@+id/btnCompanyAction"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
                         android:src="@drawable/ic_settings"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:contentDescription="@string/my_company"
                         android:layout_gravity="center_vertical"
-                        android:layout_marginStart="8dp" />
+                        android:layout_marginStart="8dp"
+                        android:padding="12dp"
+                        android:scaleType="centerInside" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

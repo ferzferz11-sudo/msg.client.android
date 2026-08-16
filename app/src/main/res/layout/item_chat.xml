@@ -172,13 +172,14 @@
 
                 <ImageView
                     android:id="@+id/btnEnterLobby"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:layout_marginStart="2dp"
-                    android:padding="4dp"
+                    android:padding="14dp"
                     android:src="@drawable/ic_conference_lobby"
                     android:background="@drawable/circle_button"
                     android:backgroundTint="?attr/colorPrimary"
+                    android:scaleType="centerInside"
                     app:tint="?attr/colorOnPrimary"
                     android:visibility="gone"
                     tools:visibility="visible"

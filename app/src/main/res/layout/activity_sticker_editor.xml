@@ -71,63 +71,63 @@
 
             <ImageView
                 android:id="@+id/ivColorWhite"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_margin="4dp"
                 android:background="@drawable/circle_shape"
                 android:backgroundTint="#FFFFFF"
                 android:contentDescription="@string/color_white"
-                android:padding="4dp" />
+                android:padding="10dp" />
 
             <ImageView
                 android:id="@+id/ivColorBlack"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_margin="4dp"
                 android:background="@drawable/circle_shape"
                 android:backgroundTint="#000000"
                 android:contentDescription="@string/color_black"
-                android:padding="4dp" />
+                android:padding="10dp" />
 
             <ImageView
                 android:id="@+id/ivColorRed"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_margin="4dp"
                 android:background="@drawable/circle_shape"
                 android:backgroundTint="#FF0000"
                 android:contentDescription="@string/color_red"
-                android:padding="4dp" />
+                android:padding="10dp" />
 
             <ImageView
                 android:id="@+id/ivColorYellow"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_margin="4dp"
                 android:background="@drawable/circle_shape"
                 android:backgroundTint="#FFD700"
                 android:contentDescription="@string/color_yellow"
-                android:padding="4dp" />
+                android:padding="10dp" />
 
             <ImageView
                 android:id="@+id/ivColorGreen"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_margin="4dp"
                 android:background="@drawable/circle_shape"
                 android:backgroundTint="#4CAF50"
                 android:contentDescription="@string/color_green"
-                android:padding="4dp" />
+                android:padding="10dp" />
 
             <ImageView
                 android:id="@+id/ivColorBlue"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_margin="4dp"
                 android:background="@drawable/circle_shape"
                 android:backgroundTint="#2196F3"
                 android:contentDescription="@string/color_blue"
-                android:padding="4dp" />
+                android:padding="10dp" />
         </LinearLayout>
     </FrameLayout>
 

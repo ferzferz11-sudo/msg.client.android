@@ -383,11 +383,13 @@
 
             <ImageButton
                 android:id="@+id/cancelReply"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/cancel_reply"
                 android:src="@drawable/ic_close"
+                android:padding="12dp"
+                android:scaleType="centerInside"
                 app:tint="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>

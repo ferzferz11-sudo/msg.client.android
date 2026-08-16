@@ -9,13 +9,14 @@
 
     <ImageView
         android:id="@+id/cancelButton"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:src="@drawable/ic_close"
         android:background="@drawable/cancel_button_background"
-        android:padding="12dp"
+        android:padding="14dp"
         android:alpha="0.5"
         android:contentDescription="Cancel recording"
+        android:scaleType="centerInside"
         android:visibility="visible" />
 
     <LinearLayout

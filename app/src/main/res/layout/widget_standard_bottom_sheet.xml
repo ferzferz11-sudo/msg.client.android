@@ -33,12 +33,13 @@
 
             <ImageView
                 android:id="@+id/backButton"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_marginEnd="12dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="4dp"
                 android:src="@drawable/ic_arrow_back"
                 android:contentDescription="Back"
                 android:visibility="gone"
+                android:padding="12dp"
                 android:scaleType="centerInside" />
 
             <TextView

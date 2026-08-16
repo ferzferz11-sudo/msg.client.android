@@ -49,12 +49,14 @@
 
                 <ImageButton
                     android:id="@+id/btnEditTopic"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_edit"
                     android:visibility="gone"
                     tools:visibility="visible"
+                    android:padding="12dp"
+                    android:scaleType="centerInside"
                     app:tint="@color/white"
                     android:contentDescription="@string/edit_topic" />
             </LinearLayout>

@@ -67,7 +67,8 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnShare"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="48dp"
+                android:minHeight="48dp"
                 android:text="@string/company_code_share"
                 android:textSize="12sp"
                 style="@style/Widget.Material3.Button.TextButton" />
@@ -75,7 +76,8 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnRevoke"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="48dp"
+                android:minHeight="48dp"
                 android:text="@string/company_code_revoke"
                 android:textSize="12sp"
                 android:textColor="?attr/colorError"
