@@ -276,7 +276,12 @@ object RealGrpcClient {
         getUserId = { currentUserId },
         getUsername = { currentUsername },
         scope = scope,
-        allUsers = { _allUsers.value }
+        allUsers = { _allUsers.value },
+        refreshToken = {
+            appContext?.let { ctx ->
+                lavender.client.android.data.session.SessionManager.ensureFreshToken(ctx)
+            }
+        }
     )
 
     // ====== Module: Message V2 Client ======

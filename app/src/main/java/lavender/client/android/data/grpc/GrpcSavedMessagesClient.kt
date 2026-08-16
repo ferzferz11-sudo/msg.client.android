@@ -1,5 +1,6 @@
 package lavender.client.android.data.grpc
 
+import android.util.Log
 import lavender.client.android.data.models.ErrorHandler
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.Reaction
@@ -15,9 +16,11 @@ class GrpcSavedMessagesClient(
     @Suppress("UNUSED_PARAMETER") private val getUserId: () -> String?,
     @Suppress("UNUSED_PARAMETER") private val getUsername: () -> String?,
     @Suppress("UNUSED_PARAMETER") private val scope: kotlinx.coroutines.CoroutineScope,
-    private val allUsers: () -> List<UserInfoProto> = { emptyList() }
+    private val allUsers: () -> List<UserInfoProto> = { emptyList() },
+    private val refreshToken: (() -> Unit)? = null
 ) {
     companion object {
+        private const val TAG = "GrpcSavedMsgClient"
         private const val REMOVED = "Removed"
         private const val FAILED = "Failed"
     }
@@ -81,7 +84,16 @@ class GrpcSavedMessagesClient(
     }
 
     fun getSavedMessages(userId: String, callback: (List<Message>) -> Unit) {
-        val currentChannel = getChannel() ?: return
+        getSavedMessagesInternal(userId, callback, retryCount = 0)
+    }
+
+    private fun getSavedMessagesInternal(userId: String, callback: (List<Message>) -> Unit, retryCount: Int) {
+        val currentChannel = getChannel()
+        if (currentChannel == null) {
+            ErrorHandler.handle("$TAG.getSavedMessages", Exception("No channel available"))
+            callback(emptyList())
+            return
+        }
         val call = currentChannel.newCall(
             io.grpc.MethodDescriptor.newBuilder<GetSavedMessagesRequestProto, GetSavedMessagesResponseProto>()
                 .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -120,9 +132,22 @@ class GrpcSavedMessagesClient(
                         userId = proto.senderId
                     )
                 }
+                Log.d(TAG, "GetFavorites: received ${msgs.size} messages for userId=$userId")
                 callback(msgs)
             }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    if (status.code == io.grpc.Status.Code.UNAUTHENTICATED && retryCount < 1) {
+                        Log.w(TAG, "GetFavorites: UNAUTHENTICATED — refreshing token and retrying")
+                        refreshToken?.invoke()
+                        getSavedMessagesInternal(userId, callback, retryCount + 1)
+                        return
+                    }
+                    Log.e(TAG, "GetFavorites: error ${status.code} — ${status.description}")
+                    ErrorHandler.handle("$TAG.getSavedMessages", "Status: ${status.code} — ${status.description}")
+                    callback(emptyList())
+                }
+            }
         }, io.grpc.Metadata())
         call.sendMessage(GetSavedMessagesRequestProto(userId))
         call.halfClose()
