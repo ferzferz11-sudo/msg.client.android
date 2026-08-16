@@ -26,7 +26,11 @@ class GrpcSavedMessagesClient(
     }
 
     fun addSavedMessage(userId: String, messageId: String, callback: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
+        val currentChannel = getChannel()
+        if (currentChannel == null) {
+            callback(false, "No channel available")
+            return
+        }
         val call = currentChannel.newCall(
             io.grpc.MethodDescriptor.newBuilder<AddSavedMessageRequestProto, AddSavedMessageResponseProto>()
                 .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -38,7 +42,12 @@ class GrpcSavedMessagesClient(
         )
         call.start(object : io.grpc.ClientCall.Listener<AddSavedMessageResponseProto>() {
             override fun onMessage(message: AddSavedMessageResponseProto) { callback(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    Log.e(TAG, "AddFavorite: error ${status.code} — ${status.description}")
+                    callback(false, status.description ?: FAILED)
+                }
+            }
         }, io.grpc.Metadata())
         call.sendMessage(AddSavedMessageRequestProto(userId, messageId))
         call.halfClose()
@@ -46,7 +55,11 @@ class GrpcSavedMessagesClient(
     }
 
     fun removeSavedMessage(userId: String, messageId: String, callback: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
+        val currentChannel = getChannel()
+        if (currentChannel == null) {
+            callback(false, "No channel available")
+            return
+        }
         val call = currentChannel.newCall(
             io.grpc.MethodDescriptor.newBuilder<RemoveSavedMessageRequestProto, RemoveSavedMessageResponseProto>()
                 .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -58,7 +71,12 @@ class GrpcSavedMessagesClient(
         )
         call.start(object : io.grpc.ClientCall.Listener<RemoveSavedMessageResponseProto>() {
             override fun onMessage(message: RemoveSavedMessageResponseProto) { callback(message.success, if (message.success) REMOVED else FAILED) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    Log.e(TAG, "RemoveFavorite: error ${status.code} — ${status.description}")
+                    callback(false, status.description ?: FAILED)
+                }
+            }
         }, io.grpc.Metadata())
         call.sendMessage(RemoveSavedMessageRequestProto(userId, messageId))
         call.halfClose()
