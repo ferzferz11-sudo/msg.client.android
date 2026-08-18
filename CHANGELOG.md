@@ -1,5 +1,27 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.16] - 2026-08-18
+
+### Оптимизировано
+
+**Производительность прокрутки чат-листа (High):**
+- `getDisplayName()` парсил `JSONArray(participants)` на каждый вызов bind/sort/search — кэшируется один раз при `setSections()`
+- `messagePreview` (system message check + stripForwardPrefix) — вычисляется один раз, не на каждый bind
+- `updateOnlineUsers()` уведомляла ВСЕ direct чаты — теперь только те, чей статус реально изменился
+- `setSelectionMode()`/`clearSelection()` вызывали `notifyDataSetChanged()` — теперь `notifyItemChanged()` только для изменённых элементов
+- `setHasStableIds(true)` — RecyclerView эффективнее переиспользует ViewHolder'ы
+- `scheduleBuildSections()` debounce увеличен с50ms до100ms — меньше пересортировок при серии событий
+
+### Исправлено
+
+**gRPC deadlock: приложение не переподключалось после ночной паузы (Critical):**
+- `isAuthFailure` блокировал ВСЕ попытки переподключения в `GrpcReconnectStrategy.schedule()`
+- Сценарий: токен протухал → UNAUTHENTICATED → `isAuthFailure=true` → `forceTokenRefresh()` не мог обновить (канал мёртв) → deadlock навсегда
+- Исправлено (3 файла):
+  - `GrpcReconnectStrategy`: `schedule()` больше не пропускает reconnect при `isAuthFailure` — канал пересоздаётся, потом UNAUTHENTICATED retry обновит токен
+  - `RealGrpcClient`: при неудачном refresh — `isAuthFailure=false` + `scheduleReconnect()` вместо молчаливого FAILED
+  - `GrpcConnectionManager`: `activateChannel()` сбрасывает `isAuthFailure=false` при создании нового канала
+
 ## [1.4.0.15] - 2026-08-16
 
 ### Добавлено

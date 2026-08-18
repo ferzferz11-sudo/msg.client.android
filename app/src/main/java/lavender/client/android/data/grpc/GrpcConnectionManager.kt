@@ -200,6 +200,7 @@ class GrpcConnectionManager(
         channel = newChannel
         // Stay at CONNECTING — READY is confirmed by first ChatV2 response in RealGrpcClient
         reconnectStrategy.resetBackoff()
+        isAuthFailure = false // New channel — allow UNAUTHENTICATED retry from clean state
         Log.d(TAG, "Channel activated — CONNECTING (waiting for stream confirmation): $serverAddress")
         RealGrpcClient.clearServerShuttingDown()
 

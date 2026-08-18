@@ -821,8 +821,12 @@ object RealGrpcClient {
                         connectionManager.isAuthFailure = false
                         scope.launch { connectionManager.reconnect() }
                     } else {
+                        // Clear auth failure flag so reconnect strategy can retry.
+                        // Without this, isAuthFailure blocks ALL future reconnect attempts → deadlock.
+                        connectionManager.isAuthFailure = false
                         setConnectionStatus(ConnectionStatus.FAILED)
                         _authStatus.value = "AUTH_FAILED"
+                        connectionManager.scheduleReconnect()
                     }
                 }
             }
@@ -854,8 +858,12 @@ object RealGrpcClient {
                         connectionManager.isAuthFailure = false
                         scope.launch { connectionManager.reconnect() }
                     } else {
+                        // Clear auth failure flag so reconnect strategy can retry.
+                        // Without this, isAuthFailure blocks ALL future reconnect attempts → deadlock.
+                        connectionManager.isAuthFailure = false
                         setConnectionStatus(ConnectionStatus.FAILED)
                         _authStatus.value = "AUTH_FAILED"
+                        connectionManager.scheduleReconnect()
                     }
                 }
             }

@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * Owns:
  * - reconnectDelayMs (backoff state)
  * - reconnectJob (scheduled reconnect)
- * - isAuthFailure guard (skips reconnect on auth failures)
+ * - isAuthFailure flag (informational, cleared on reconnect)
  *
  * Does NOT own: channel, connectionStatus, server address — those stay in GrpcConnectionManager.
  */
@@ -33,8 +33,7 @@ class GrpcReconnectStrategy(
 
     fun schedule(reconnectAction: suspend () -> Unit) {
         if (isAuthFailure) {
-            Log.w(TAG, "Skipping reconnect: auth failure")
-            return
+            Log.w(TAG, "Auth failure — proceeding with reconnect to rebuild channel")
         }
         reconnectJob?.cancel()
         reconnectJob = scope.launch {

@@ -1,7 +1,7 @@
 # Lavender Messenger — Android Client
 
 **Author:** Pavel Davydov (ferz)
-**Version:** 1.4.0.11
+**Version:** 1.4.0.16
 **Language:** Kotlin 2.4.0
 
 Native Android client for Lavender Messenger with gRPC bidirectional streaming, E2EE, Material Design 3, AI v2 chat integration, Marketplace, Reve Image Generation, and Remote Agent.
@@ -17,6 +17,7 @@ Native Android client for Lavender Messenger with gRPC bidirectional streaming, 
 ./gradlew assembleDebug       # Debug build
 ./gradlew assembleRelease     # Release build (signed)
 ./gradlew clean assembleRelease  # Clean release
+./gradlew testDebugUnitTest   # Unit tests (625+)
 ```
 
 **Note:** ProGuard is disabled (`isMinifyEnabled = false`).
@@ -43,18 +44,28 @@ app/src/main/java/lavender/client/android/
 │   ├── grpc/                                      # gRPC clients
 │   │   ├── GrpcClient.kt                          # Facade
 │   │   ├── RealGrpcClient.kt                      # Orchestrator
+│   │   ├── GrpcConnectionManager.kt               # Channel lifecycle + reconnect
+│   │   ├── GrpcReconnectStrategy.kt               # Exponential backoff
 │   │   ├── GrpcAuthClient.kt                       # JWT auth
 │   │   ├── GrpcChatClient.kt                       # Chat CRUD
 │   │   ├── GrpcChatListV2Client.kt                 # Pin/archive/search
 │   │   ├── GrpcChatAuxClient.kt                    # Users/FCM/mute
+│   │   ├── GrpcMessageV2Client.kt                  # Messages v2 + history
+│   │   ├── GrpcSavedMessagesClient.kt              # Saved Messages (ex-Favorites)
 │   │   ├── GrpcAIv2Client.kt                       # AI v2 (streaming + CRUD + marketplace)
 │   │   ├── GrpcProfileClient.kt                    # Contacts/themes
 │   │   ├── ProfileClient.kt                        # Profile v2 (JWT)
+│   │   ├── GrpcTypingClient.kt                     # Typing indicators
+│   │   ├── GrpcDraftClient.kt                      # Draft messages
+│   │   ├── GrpcCompanyClient.kt                    # Company access control
+│   │   ├── GrpcStickerClient.kt                    # Sticker CRUD (13 RPCs)
+│   │   ├── GrpcServerDiscoveryClient.kt            # Server discovery
 │   │   ├── GrpcMarshallers.kt                      # Custom proto marshallers
 │   │   ├── GrpcAIv2Marshallers.kt                  # AI v2 marshallers
 │   │   ├── SecretChatGrpc.kt                       # E2EE chats
 │   │   ├── NotificationsGrpc.kt                    # Notifications
 │   │   ├── RemoteAgentGrpc.kt                      # Remote Agent
+│   │   ├── ChatKeepAliveService.kt                 # Foreground service for stream
 │   │   └── BearerTokenInterceptor.kt               # JWT interceptor
 │   ├── ai/                                         # AI v2 domain
 │   │   ├── AiV2ChatUseCase.kt                      # Chat + tool calling loop
@@ -63,7 +74,7 @@ app/src/main/java/lavender/client/android/
 │   │   ├── AiV2DomainExtensions.kt                 # Proto → Domain
 │   │   └── RateLimitCache.kt                       # Client rate limit
 │   ├── auth/AuthManager.kt                         # Token storage
-│   ├── session/SessionManager.kt                   # Session lifecycle
+│   ├── session/SessionManager.kt                   # Session lifecycle + token refresh
 │   ├── db/                                         # Room database
 │   ├── fcm/                                        # Firebase messaging
 │   ├── calls/                                      # WebRTC calls
@@ -118,7 +129,7 @@ app/src/main/java/lavender/client/android/
 - E2EE secret chats (ECDH key exchange)
 - AI v2 chat: streaming + tool calling + 7 provider types (openrouter, local, mimo, webhook, websocket, subprocess, mcp)
 - AI Marketplace: rate, review, install, share agents + search/pagination/sort/filter
-- **Reve Image Generation:** generate/edit/remix images via Reve 2.0 API (image_url in chat responses)
+- Reve Image Generation: generate/edit/remix images via Reve 2.0 API
 - Rate limit: client-side cache with countdown timer
 - Graceful shutdown: SERVER_SHUTTINGDOWN signal + health check + backoff
 - Remote Agent: SSH tunnel + shell/git/build/deploy/file/docker/AI tasks
@@ -126,16 +137,40 @@ app/src/main/java/lavender/client/android/
 - Push notifications with chat navigation
 - Voice messages with waveform
 - File/image attachments
-- Message reactions & replies
-- Server-side history clear (ClearRoomHistory RPC)
+- Message reactions, replies, and edits
 - Self-destruct timer per chat (auto-delete messages)
 - Voice/video calls (WebRTC)
 - Background APK updates via WorkManager
 - Localization (RU/English, RU default)
+- Fast Mode: toggle avatars/animations off for performance
+- Saved Messages: private notes synced across devices
+- System message filtering (timer/call messages hidden from chat list)
+- Company access control with per-company position lookup
+
+## Connection & Auth Architecture
+
+### gRPC Channel Lifecycle
+- `GrpcConnectionManager` — owns channel, reconnect scheduling, keepalive
+- `GrpcReconnectStrategy` — exponential backoff (5s → 30s cap)
+- `ChatKeepAliveService` — foreground service monitoring connection status
+- `BearerTokenInterceptor` — attaches JWT to every non-auth RPC
+
+### Token Refresh
+- `SessionManager.ensureFreshToken()` — synchronous refresh before gRPC calls
+- `SessionManager.forceTokenRefresh()` — forced refresh (ignores expiry check)
+- `SessionManager.performTokenRefresh()` — periodic (60s) background refresh
+- Fallback: re-login with saved password when refresh token expired
+- UNAUTHENTICATED retry on unary calls: markRead, loadHistoryV2, getSavedMessages, getAdminUserList, etc.
+
+### Connection Resilience
+- ChatV2 stream auto-reconnect on UNAVAILABLE/DEADLINE_EXCEEDED
+- UNAUTHENTICATED → token refresh + retry (not permanent failure)
+- Status debounce (1s) prevents UI flapping
+- `isAuthFailure` flag never blocks reconnection — always allows channel rebuild
 
 ## Versioning
 
-Format: `MAJOR.MINOR.PATCH.BUILD` (e.g., `1.3.0.5`)
+Format: `MAJOR.MINOR.PATCH.BUILD` (e.g., `1.4.0.16`)
 Stored in `version.txt`.
 `versionCode = major*1000000 + minor*10000 + patch*100 + build`
 
@@ -146,9 +181,14 @@ Stored in `version.txt`.
 
 ## Documentation
 
-- `doc/INDEX.md` — project overview
-- `doc/PATTERNS.md` — code patterns and rules
-- `doc/PROMPT_NEXT_SESSION.md` — current plan and backlog
-- `doc/AI_V2_TESTING.md` — AI v2 test scenarios
-- `doc/REMOTE_AGENT.md` — Remote Agent reference
-- `doc/CODE_AUDIT.md` — unused code and import audit
+- `.mimocode/doc/INDEX.md` — project overview
+- `.mimocode/doc/PATTERNS.md` — code patterns and rules
+- `.mimocode/doc/PROMPT_NEXT_SESSION.md` — current plan and backlog
+- `.mimocode/doc/GOTCHAS.md` — discovered knowledge, gotchas, edge cases
+- `CHANGELOG.md` — full version history
+
+## Tests
+
+- **625+ unit tests** across 36 test files
+- Run: `./gradlew testDebugUnitTest`
+- Coverage: gRPC marshallers, session management, connection logic, chat adapters, system message filtering

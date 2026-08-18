@@ -720,7 +720,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     private fun scheduleBuildSections() {
         buildSectionsJob?.cancel()
         buildSectionsJob = viewModelScope.launch {
-            kotlinx.coroutines.delay(50.milliseconds)
+            kotlinx.coroutines.delay(100.milliseconds)
             buildSections(allChats)
         }
     }

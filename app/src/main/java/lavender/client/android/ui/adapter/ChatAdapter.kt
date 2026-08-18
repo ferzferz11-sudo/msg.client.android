@@ -23,14 +23,13 @@ import lavender.client.android.theme.ThemeUtils
 /**
  * ChatAdapter — ListAdapter with DiffUtil for animated updates.
  *
- * ViewType:
- * - SECTION_HEADER — section header
- * - CHAT_ITEM — chat item
- *
- * Selection Mode:
- * - CheckBox on each item when enabled
- * - Multiple selection via tap (toggle)
- * - Visual highlight for selected items
+ * Performance optimizations:
+ * - Stable IDs for efficient ViewHolder reuse
+ * - Cached display names (JSON parsed once, not per-bind)
+ * - Cached message previews (system message check + strip done once)
+ * - updateOnlineUsers: only notifies items whose status actually changed
+ * - setSelectionMode/clearSelection: uses partial notify instead of notifyDataSetChanged
+ * - Fast mode: skips all heavy work (Glide, borders, text processing)
  */
 interface ChatListAdapter {
     fun getItemAtPosition(position: Int): FlatItem?
@@ -64,6 +63,42 @@ class ChatAdapter(
             cache[chat.id] = result
             return result
         }
+
+        /** Pre-compute display name once (avoids JSON parse on every bind/sort). */
+        private fun computeDisplayName(chat: ChatInfo, currentUsername: String, otherCache: MutableMap<String, String>): String {
+            if (chat.isSecret) {
+                val other = getOrComputeOtherParticipant(chat, currentUsername, otherCache)
+                return if (other.isNotEmpty()) "\uD83D\uDD12 $other" else chat.name.replace(currentUsername, "").trim().trim(',')
+            }
+            if (chat.type != "direct") return chat.name
+            val other = getOrComputeOtherParticipant(chat, currentUsername, otherCache)
+            return if (other.isNotEmpty()) other else chat.name
+        }
+
+        /** Pre-compute message preview once (avoids string ops on every bind). */
+        private fun computeMessagePreview(chat: ChatInfo): String? {
+            if (chat.isSecret) return null
+            val text = chat.lastMessageText
+            if (text.isEmpty()) return null
+            if (isSystemMessagePreviewRaw(text)) return null
+            return stripForwardPrefixRaw(text)
+        }
+
+        private fun isSystemMessagePreviewRaw(text: String): Boolean {
+            if (text.startsWith("\uD83D\uDD25")) return true  // 🔥
+            if (text.startsWith("\uD83D\uDCF9")) return true  // 📹
+            if (text.startsWith("\uD83D\uDCDE")) return true  // 📞
+            return false
+        }
+
+        private fun stripForwardPrefixRaw(text: String): String {
+            val prefix = "\u200B\u2709"
+            if (!text.startsWith(prefix)) return text
+            val endIdx = text.indexOf('\u200B', prefix.length)
+            if (endIdx <= prefix.length) return text
+            val after = text.substring(endIdx + 1)
+            return if (after.startsWith("\n")) after.substring(1) else after
+        }
     }
 
     private var sections: List<SectionItem> = emptyList()
@@ -78,10 +113,15 @@ class ChatAdapter(
 
     // Performance caches
     private var onlineUsersSet: Set<String> = onlineUsersList.toSet()
+    private var previousOnlineUsersSet: Set<String> = onlineUsersList.toSet()
     private var allUsersMap: Map<String, lavender.client.android.data.proto.UserInfoProto> =
         allUsersList.associateBy { it.username }
     private var avatarUrlCache: Map<String, String> = allUsersList.associate { it.username to it.avatarUrl }
     private var otherParticipantCache: MutableMap<String, String> = mutableMapOf()
+
+    // Pre-computed caches (populated on setSections)
+    private var displayNameCache: MutableMap<String, String> = mutableMapOf()
+    private var messagePreviewCache: MutableMap<String, String?> = mutableMapOf()
 
     // Theme colors — single cache for entire adapter
     private var cachedPrimaryColor: Int = 0
@@ -92,6 +132,19 @@ class ChatAdapter(
     private var cachedUnreadColor: Int = 0
     private var cachedIsLightTheme: Boolean = false
     private var colorsInitialized = false
+
+    // Enable stable IDs for efficient ViewHolder reuse
+    init {
+        setHasStableIds(true)
+    }
+
+    override fun getItemId(position: Int): Long {
+        return when (val item = getItem(position)) {
+            is FlatItem.ChatItem -> item.chat.id.hashCode().toLong()
+            is FlatItem.SectionHeader -> (0x7FFFFFF0 - item.section.ordinal).toLong()
+            null -> RecyclerView.NO_ID
+        }
+    }
 
     private fun initColors(view: View) {
         if (colorsInitialized) return
@@ -113,11 +166,19 @@ class ChatAdapter(
 
     // ======= Public API =======
 
-    /**
-     * Update sections with DiffUtil for animated changes.
-     */
     fun setSections(newSections: List<SectionItem>) {
         sections = newSections
+        // Pre-compute display names and message previews for all chats
+        for (section in newSections) {
+            for (chat in section.chats) {
+                if (!displayNameCache.containsKey(chat.id)) {
+                    displayNameCache[chat.id] = computeDisplayName(chat, currentUsername, otherParticipantCache)
+                }
+                if (!messagePreviewCache.containsKey(chat.id)) {
+                    messagePreviewCache[chat.id] = computeMessagePreview(chat)
+                }
+            }
+        }
         val newFlat = buildFlatList(newSections)
         submitList(newFlat)
     }
@@ -139,7 +200,8 @@ class ChatAdapter(
         if (!enabled) {
             selectedIds.clear()
         }
-        notifyDataSetChanged()
+        // Use partial update instead of notifyDataSetChanged — only rebind visible ChatItems
+        notifyChatItemsChanged()
     }
 
     fun toggleSelection(chatId: String) {
@@ -154,10 +216,18 @@ class ChatAdapter(
     }
 
     fun clearSelection() {
+        val previousSelection = selectedIds.toSet()
         selectedIds.clear()
         selectionMode = false
         onSelectionChanged(0)
-        notifyDataSetChanged()
+        // Only notify items that were actually selected
+        val items = currentList
+        for (i in items.indices) {
+            val item = items[i]
+            if (item is FlatItem.ChatItem && previousSelection.contains(item.chat.id)) {
+                notifyItemChanged(i)
+            }
+        }
     }
 
     fun isSelectionMode(): Boolean = selectionMode
@@ -178,6 +248,16 @@ class ChatAdapter(
             }
         }
         return result
+    }
+
+    /** Notify only ChatItem positions (skip SectionHeaders). */
+    private fun notifyChatItemsChanged() {
+        val items = currentList
+        for (i in items.indices) {
+            if (items[i] is FlatItem.ChatItem) {
+                notifyItemChanged(i)
+            }
+        }
     }
 
     // ======= ListAdapter overrides =======
@@ -209,9 +289,19 @@ class ChatAdapter(
         initColors(holder.itemView)
         when (val item = getItem(position)) {
             is FlatItem.SectionHeader -> (holder as SectionHeaderViewHolder).bind(item)
-            is FlatItem.ChatItem -> (holder as ChatViewHolder).bind(
-                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedUnreadColor, cachedPrimaryColor, cachedIsLightTheme, selectionMode, selectedIds.contains(item.chat.id), currentUsername, onlineUsersSet, allUsersMap, avatarUrlCache, otherParticipantCache, fastModeEnabled
-            )
+            is FlatItem.ChatItem -> {
+                val chat = item.chat
+                val displayName = displayNameCache[chat.id] ?: computeDisplayName(chat, currentUsername, otherParticipantCache)
+                val messagePreview = messagePreviewCache[chat.id] ?: computeMessagePreview(chat)
+                (holder as ChatViewHolder).bind(
+                    chat, displayName, messagePreview,
+                    cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor,
+                    cachedSelectedColor, cachedUnreadColor, cachedPrimaryColor,
+                    cachedIsLightTheme, selectionMode, selectedIds.contains(chat.id),
+                    currentUsername, onlineUsersSet, allUsersMap, avatarUrlCache,
+                    otherParticipantCache, fastModeEnabled
+                )
+            }
             null -> {}
         }
     }
@@ -224,17 +314,24 @@ class ChatAdapter(
     }
 
     fun updateOnlineUsers(users: List<String>) {
-        onlineUsersSet = users.toSet()
+        val newSet = users.toSet()
+        // Only notify items whose online status actually changed
+        val added = newSet - previousOnlineUsersSet
+        val removed = previousOnlineUsersSet - newSet
+        if (added.isEmpty() && removed.isEmpty()) return
+
+        onlineUsersSet = newSet
+        previousOnlineUsersSet = newSet
+
         val currentItems = currentList
-        val changedPositions = mutableListOf<Int>()
         for (i in currentItems.indices) {
             val item = currentItems[i]
             if (item is FlatItem.ChatItem && item.chat.type == "direct" && !item.chat.isSecret && !item.chat.id.startsWith("saved_messages_")) {
-                changedPositions.add(i)
+                val otherUser = getOrComputeOtherParticipant(item.chat, currentUsername, otherParticipantCache)
+                if (otherUser in added || otherUser in removed) {
+                    notifyItemChanged(i)
+                }
             }
-        }
-        for (pos in changedPositions) {
-            notifyItemChanged(pos)
         }
     }
 
@@ -242,6 +339,9 @@ class ChatAdapter(
         val oldAvatarCache = avatarUrlCache
         allUsersMap = users.associateBy { it.username }
         avatarUrlCache = users.associate { it.username to it.avatarUrl }
+        // Invalidate display name cache for direct chats (name might change)
+        displayNameCache.clear()
+        messagePreviewCache.clear()
         val currentItems = currentList
         val changedPositions = mutableListOf<Int>()
         for (i in currentItems.indices) {
@@ -265,7 +365,8 @@ class ChatAdapter(
                 section.chats
             } else {
                 section.chats.filter { chat ->
-                    chat.getDisplayName(currentUsername).lowercase().contains(currentFilter) ||
+                    val displayName = displayNameCache[chat.id] ?: chat.getDisplayName(currentUsername)
+                    displayName.lowercase().contains(currentFilter) ||
                     chat.lastMessageText.lowercase().contains(currentFilter)
                 }
             }
@@ -326,9 +427,21 @@ class ChatAdapter(
         private val cardView: com.google.android.material.card.MaterialCardView =
             itemView as com.google.android.material.card.MaterialCardView
 
-        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, unreadColor: Int, primaryColor: Int, isLightTheme: Boolean, selectionMode: Boolean, isSelected: Boolean, currentUsername: String, onlineUsers: Set<String>, allUsersMap: Map<String, lavender.client.android.data.proto.UserInfoProto>, avatarCache: Map<String, String>, otherParticipantCache: MutableMap<String, String>, fastMode: Boolean) {
+        fun bind(
+            chat: ChatInfo,
+            displayName: String,
+            messagePreview: String?,
+            textPrimary: Int, textSecondary: Int, surfaceColor: Int,
+            selectedColor: Int, unreadColor: Int, primaryColor: Int,
+            isLightTheme: Boolean, selectionMode: Boolean, isSelected: Boolean,
+            currentUsername: String, onlineUsers: Set<String>,
+            allUsersMap: Map<String, lavender.client.android.data.proto.UserInfoProto>,
+            avatarCache: Map<String, String>,
+            otherParticipantCache: MutableMap<String, String>,
+            fastMode: Boolean
+        ) {
             val hasUnread = chat.unreadCount > 0
-            tvChatName.text = chat.getDisplayName(currentUsername)
+            tvChatName.text = displayName
             tvChatName.setTextColor(if (hasUnread) primaryColor else textPrimary)
             tvChatName.setTypeface(null, if (hasUnread) Typeface.BOLD else Typeface.NORMAL)
 
@@ -378,6 +491,7 @@ class ChatAdapter(
             // Company badge
             tvCompanyBadge.isVisible = chat.companyId.isNotEmpty()
 
+            // Message preview — use pre-computed value
             if (chat.isSecret) {
                 tvChatType.text = itemView.context.getString(R.string.e2ee_verified)
                 tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
@@ -386,8 +500,8 @@ class ChatAdapter(
                 tvChatType.text = itemView.context.getString(R.string.conference)
                 tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
                 tvChatType.setTypeface(null, if (hasUnread) Typeface.BOLD else Typeface.NORMAL)
-            } else if (chat.lastMessageText.isNotEmpty() && !isSystemMessagePreview(chat.lastMessageText)) {
-                tvChatType.text = translateMediaPreview(stripForwardPrefix(chat.lastMessageText))
+            } else if (messagePreview != null) {
+                tvChatType.text = translateMediaPreview(messagePreview)
                 tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
                 tvChatType.setTypeface(null, Typeface.NORMAL)
             } else {
@@ -482,25 +596,6 @@ class ChatAdapter(
                 "Voice message" -> ctx.getString(R.string.chat_preview_voice)
                 else -> text
             }
-        }
-
-        /** Returns true if the lastMessageText is a system message that should not be shown in chat list. */
-        private fun isSystemMessagePreview(text: String): Boolean {
-            if (text.startsWith("\uD83D\uDD25")) return true  // 🔥 self-destruct timer
-            if (text.startsWith("\uD83D\uDCF9")) return true  // 📹 video call
-            if (text.startsWith("\uD83D\uDCDE")) return true  // 📞 audio call
-            if (text.startsWith("\uD83D\uDCDE\u2B05\uFE0F")) return true  // 📞↩️ missed call
-            if (text.startsWith("\uD83D\uDCDE\u2B06\uFE0F")) return true  // 📞⬆️ ended call
-            return false
-        }
-
-        private fun stripForwardPrefix(text: String): String {
-            val prefix = "\u200B\u2709"
-            if (!text.startsWith(prefix)) return text
-            val endIdx = text.indexOf('\u200B', prefix.length)
-            if (endIdx <= prefix.length) return text
-            val after = text.substring(endIdx + 1)
-            return if (after.startsWith("\n")) after.substring(1) else after
         }
 
         private fun getTimeAgo(timestampMillis: Long, context: android.content.Context): String {
