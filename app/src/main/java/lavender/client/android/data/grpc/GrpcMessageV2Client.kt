@@ -272,8 +272,17 @@ class GrpcMessageV2Client(
             extractMentions(safeText)
         }
 
+        // Normalize saved_messages roomId for server: client uses saved_messages_$username,
+        // but server expects saved_messages_$userId (UUID)
+        val normalizedRoomId = if (message.roomId.startsWith("saved_messages_")) {
+            val userId = getUserId()
+            if (userId != null) "saved_messages_$userId" else message.roomId
+        } else {
+            message.roomId
+        }
+
         return SendMessageV2RequestProto(
-            roomId = message.roomId,
+            roomId = normalizedRoomId,
             text = safeText,
             media = media,
             replyToId = message.repliedToMessageId,
@@ -414,7 +423,16 @@ class GrpcMessageV2Client(
                 }
             }
         }, Metadata())
-        call.sendMessage(GetHistoryV2RequestProto(roomId = roomId, limit = limit, cursor = cursor))
+        // Normalize saved_messages roomId for server: client uses saved_messages_$username,
+        // but server expects saved_messages_$userId (UUID)
+        val serverRoomId = if (roomId.startsWith("saved_messages_")) {
+            val userId = getUserId()
+            if (userId != null) "saved_messages_$userId" else roomId
+        } else {
+            roomId
+        }
+
+        call.sendMessage(GetHistoryV2RequestProto(roomId = serverRoomId, limit = limit, cursor = cursor))
         call.halfClose()
         call.request(1)
     }
@@ -560,7 +578,16 @@ class GrpcMessageV2Client(
                 }
             }
         }, Metadata())
-        call.sendMessage(ClearRoomHistoryRequestProto(roomId, getUsername() ?: ""))
+        // Normalize saved_messages roomId for server: client uses saved_messages_$username,
+        // but server expects saved_messages_$userId (UUID)
+        val serverRoomId = if (roomId.startsWith("saved_messages_")) {
+            val userId = getUserId()
+            if (userId != null) "saved_messages_$userId" else roomId
+        } else {
+            roomId
+        }
+
+        call.sendMessage(ClearRoomHistoryRequestProto(serverRoomId, getUsername() ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -630,6 +657,13 @@ class GrpcMessageV2Client(
 
     suspend fun searchMessages(roomId: String = "", query: String, limit: Int = 20): List<SearchResultProto> {
         val channel = getChannel() ?: return emptyList()
+        val serverRoomId = if (roomId.startsWith("saved_messages_")) {
+            val userId = getUserId()
+            if (userId != null) "saved_messages_$userId" else roomId
+        } else {
+            roomId
+        }
+
         return kotlinx.coroutines.suspendCancellableCoroutine { cont ->
             val call = channel.newCall(METHOD_SEARCH_MESSAGES, CallOptions.DEFAULT)
             call.start(object : ClientCall.Listener<SearchMessagesResponseProto>() {
@@ -643,7 +677,7 @@ class GrpcMessageV2Client(
                     }
                 }
             }, Metadata())
-            call.sendMessage(SearchMessagesRequestProto(roomId = roomId, query = query, limit = limit))
+            call.sendMessage(SearchMessagesRequestProto(roomId = serverRoomId, query = query, limit = limit))
             call.halfClose()
             call.request(1)
         }

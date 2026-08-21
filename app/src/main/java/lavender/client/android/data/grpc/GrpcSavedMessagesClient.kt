@@ -34,7 +34,7 @@ class GrpcSavedMessagesClient(
         val call = currentChannel.newCall(
             io.grpc.MethodDescriptor.newBuilder<AddSavedMessageRequestProto, AddSavedMessageResponseProto>()
                 .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-                .setFullMethodName("messenger.ChatService/AddFavorite")
+                .setFullMethodName("messenger.ChatService/AddSavedMessage")
                 .setRequestMarshaller(AddSavedMessageRequestMarshaller())
                 .setResponseMarshaller(AddSavedMessageResponseMarshaller())
                 .build(),
@@ -63,7 +63,7 @@ class GrpcSavedMessagesClient(
         val call = currentChannel.newCall(
             io.grpc.MethodDescriptor.newBuilder<RemoveSavedMessageRequestProto, RemoveSavedMessageResponseProto>()
                 .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-                .setFullMethodName("messenger.ChatService/RemoveFavorite")
+                .setFullMethodName("messenger.ChatService/RemoveSavedMessage")
                 .setRequestMarshaller(RemoveSavedMessageRequestMarshaller())
                 .setResponseMarshaller(RemoveSavedMessageResponseMarshaller())
                 .build(),
@@ -115,7 +115,7 @@ class GrpcSavedMessagesClient(
         val call = currentChannel.newCall(
             io.grpc.MethodDescriptor.newBuilder<GetSavedMessagesRequestProto, GetSavedMessagesResponseProto>()
                 .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-                .setFullMethodName("messenger.ChatService/GetFavorites")
+                .setFullMethodName("messenger.ChatService/GetSavedMessages")
                 .setRequestMarshaller(GetSavedMessagesRequestMarshaller())
                 .setResponseMarshaller(GetSavedMessagesResponseMarshaller())
                 .build(),

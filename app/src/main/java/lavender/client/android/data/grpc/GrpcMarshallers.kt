@@ -356,25 +356,21 @@ class GetSavedMessagesRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Ge
 class GetSavedMessagesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetSavedMessagesResponseProto> {
     override fun stream(v: GetSavedMessagesResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
     override fun parse(s: java.io.InputStream): GetSavedMessagesResponseProto {
-        val cis = com.google.protobuf.CodedInputStream.newInstance(s); val msgs = mutableListOf<MessageV2Proto>()
-        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) { val len = cis.readUInt32(); val v1 = MessageProtoMarshaller().parse(java.io.ByteArrayInputStream(cis.readRawBytes(len))); msgs.add(v1ToV2(v1)) } else cis.skipField(tag) }
-        return GetSavedMessagesResponseProto(msgs)
-    }
-    private fun v1ToV2(v1: MessageProto): MessageV2Proto {
-        if (v1.createdAt != null && v1.createdAt.seconds != 0L) { }
-        val senderId = v1.userId.ifEmpty { v1.user }
-        val media = when {
-            v1.imageUrl.isNotEmpty() -> MessageMediaProto(type = "image", url = v1.imageUrl, urls = v1.imageUrls)
-            v1.voiceUrl.isNotEmpty() -> MessageMediaProto(type = "voice", url = v1.voiceUrl, duration = v1.duration)
-            else -> null
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        val msgs = mutableListOf<MessageV2Proto>()
+        val v2Marshaller = MessageV2ProtoMarshaller()
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
+                val len = cis.readUInt32()
+                val bytes = cis.readRawBytes(len)
+                msgs.add(v2Marshaller.parse(java.io.ByteArrayInputStream(bytes)))
+            } else {
+                cis.skipField(tag)
+            }
         }
-        val reply = if (v1.repliedToMessageId.isNotEmpty()) MessageReplyProto(messageId = v1.repliedToMessageId, preview = v1.repliedToText, senderId = v1.repliedToUser) else null
-        val reactionsJson = if (v1.reactions.isNotEmpty()) {
-            val obj = org.json.JSONObject()
-            for (r in v1.reactions) { if (r.user.isNotEmpty() && r.emoji.isNotEmpty()) obj.put(r.user, r.emoji) }
-            obj.toString().toByteArray()
-        } else byteArrayOf()
-        return MessageV2Proto(id = v1.id, senderId = senderId, roomId = v1.roomId, text = v1.text, media = media, reply = reply, edited = v1.edited, isRead = v1.isRead, createdAt = v1.createdAt, reactions = reactionsJson, isE2EE = v1.isE2Ee, e2eePayload = v1.e2EePayload)
+        return GetSavedMessagesResponseProto(msgs)
     }
 }
 

@@ -1,5 +1,22 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.18] - 2026-08-21
+
+### Исправлено
+
+**Share Receiver: краш при открытии (Critical):**
+- java.lang.NullPointerException: findViewById(...) must not be null в ShareChatAdapter.ViewHolder
+- Причина: несоответствие ID в разметке (`item_share_chat.xml`: `chatName`, `chatType`) и коде (`tvChatName`, `tvChatType`)
+- Исправлено: ID в ViewHolder синхронизированы с XML-разметкой
+
+### Обновлено
+
+**Saved Messages API & Room ID Normalization (High):**
+- gRPC методы переименованы в соответствии с обновлением сервера: `AddFavorite` -> `AddSavedMessage`, `RemoveFavorite` -> `RemoveSavedMessage`, `GetFavorites` -> `GetSavedMessages`
+- Реализована нормализация `roomId` при отправке: клиентский `saved_messages_{username}` автоматически преобразуется в серверный `saved_messages_{userId}` (UUID)
+- Это исправляет ошибки доставки и синхронизации сообщений в "Сохранённом" при использовании V2 протокола
+- `GetSavedMessagesResponseMarshaller` обновлён для прямой поддержки `MessageV2Proto`
+
 ## [1.4.0.17] - 2026-08-21
 
 ### Исправлено

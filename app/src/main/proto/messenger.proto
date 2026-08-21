@@ -529,30 +529,30 @@ message GetUserIdResponse {
   bool found = 2;
 }
 
-message AddFavoriteRequest {
+message AddSavedMessageRequest {
   string user_id = 1;
   string message_id = 2;
 }
 
-message AddFavoriteResponse {
+message AddSavedMessageResponse {
   bool success = 1;
   string message = 2;
 }
 
-message RemoveFavoriteRequest {
+message RemoveSavedMessageRequest {
   string user_id = 1;
   string message_id = 2;
 }
 
-message RemoveFavoriteResponse {
+message RemoveSavedMessageResponse {
   bool success = 1;
 }
 
-message GetFavoritesRequest {
+message GetSavedMessagesRequest {
   string user_id = 1;
 }
 
-message GetFavoritesResponse {
+message GetSavedMessagesResponse {
   repeated Message messages = 1;
 }
 
@@ -691,10 +691,10 @@ service ChatService {
   rpc GetMutedChats(GetMutedChatsRequest) returns (GetMutedChatsResponse);
   rpc SetMutedChat(SetMutedChatRequest) returns (SetMutedChatResponse);
   rpc GetUserId(GetUserIdRequest) returns (GetUserIdResponse);
-  rpc AddFavorite(AddFavoriteRequest) returns (AddFavoriteResponse);
-  rpc RemoveFavorite(RemoveFavoriteRequest) returns (RemoveFavoriteResponse);
-  rpc GetFavorites(GetFavoritesRequest) returns (GetFavoritesResponse);
-  rpc SaveFavoriteMessage(Message) returns (AddFavoriteResponse);
+  rpc AddSavedMessage(AddSavedMessageRequest) returns (AddSavedMessageResponse);
+  rpc RemoveSavedMessage(RemoveSavedMessageRequest) returns (RemoveSavedMessageResponse);
+  rpc GetSavedMessages(GetSavedMessagesRequest) returns (GetSavedMessagesResponse);
+  rpc SaveFavoriteMessage(Message) returns (AddSavedMessageResponse);
   rpc GetDevices(GetDevicesRequest) returns (GetDevicesResponse);
   rpc DeleteDevice(DeleteDeviceRequest) returns (DeleteDeviceResponse);
   rpc DeleteOtherDevices(DeleteDeviceRequest) returns (DeleteDeviceResponse);

@@ -302,8 +302,8 @@ class ShareReceiverActivity : AppCompatActivity() {
         override fun getItemCount() = chats.size
 
         inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-            private val chatName: TextView = itemView.findViewById(R.id.tvChatName)
-            private val chatType: TextView = itemView.findViewById(R.id.tvChatType)
+            private val chatName: TextView = itemView.findViewById(R.id.chatName)
+            private val chatType: TextView = itemView.findViewById(R.id.chatType)
             private val selectedIndicator: ImageView = itemView.findViewById(R.id.selectedIndicator)
             private val avatarView: ImageView = itemView.findViewById(R.id.chatAvatar)
 
