@@ -148,14 +148,25 @@ class ChatAdapter(
 
     private fun initColors(view: View) {
         if (colorsInitialized) return
-        val theme = ThemeStore.currentTheme()
-        cachedPrimaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
-        cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
-        cachedTextSecondary = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.LTGRAY)
-        cachedSurfaceColor = ThemeUtils.parseSafeColor(theme.incomingBubbleColor, Color.DKGRAY)
-        cachedSelectedColor = Color.argb(48, Color.red(cachedPrimaryColor), Color.green(cachedPrimaryColor), Color.blue(cachedPrimaryColor))
-        cachedUnreadColor = Color.argb(40, Color.red(cachedPrimaryColor), Color.green(cachedPrimaryColor), Color.blue(cachedPrimaryColor))
-        cachedIsLightTheme = ThemeUtils.isLight(ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK))
+        if (fastModeEnabled) {
+            // Fast mode: skip theme parsing, use standard dark theme colors
+            cachedPrimaryColor = Color.parseColor("#BB86FC")
+            cachedTextPrimary = Color.WHITE
+            cachedTextSecondary = Color.LTGRAY
+            cachedSurfaceColor = Color.parseColor("#1E1E1E")
+            cachedSelectedColor = Color.argb(48, 187, 134, 252)
+            cachedUnreadColor = Color.argb(40, 187, 134, 252)
+            cachedIsLightTheme = false
+        } else {
+            val theme = ThemeStore.currentTheme()
+            cachedPrimaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
+            cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+            cachedTextSecondary = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.LTGRAY)
+            cachedSurfaceColor = ThemeUtils.parseSafeColor(theme.incomingBubbleColor, Color.DKGRAY)
+            cachedSelectedColor = Color.argb(48, Color.red(cachedPrimaryColor), Color.green(cachedPrimaryColor), Color.blue(cachedPrimaryColor))
+            cachedUnreadColor = Color.argb(40, Color.red(cachedPrimaryColor), Color.green(cachedPrimaryColor), Color.blue(cachedPrimaryColor))
+            cachedIsLightTheme = ThemeUtils.isLight(ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK))
+        }
         colorsInitialized = true
     }
 

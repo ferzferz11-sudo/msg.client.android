@@ -26,6 +26,8 @@ import lavender.client.android.data.session.SessionManager
 import lavender.client.android.databinding.ActivityShareReceiverBinding
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
+import lavender.client.android.theme.ui.ThemeApplier
+import lavender.client.android.theme.ui.ThemeUi
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -48,11 +50,19 @@ class ShareReceiverActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         try {
-            val currentTheme = try { ThemeStore.currentTheme() } catch (_: Exception) { lavender.client.android.theme.BuiltInThemes.dark }
-            try { ThemeUtils.applyThemeToActivity(this, currentTheme) } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
-
             binding = ActivityShareReceiverBinding.inflate(layoutInflater)
             setContentView(binding.root)
+
+            // Apply full theme (not just background color)
+            try {
+                ThemeUi.bind(this, "")
+            } catch (e: Exception) {
+                Log.w(TAG, "ThemeUi.bind failed, falling back: ${e.message}")
+                try {
+                    val currentTheme = ThemeStore.currentTheme()
+                    ThemeApplier.apply(this, currentTheme)
+                } catch (_: Exception) {}
+            }
 
             viewModel = ViewModelProvider(this)[ShareReceiverViewModel::class.java]
 
@@ -69,26 +79,9 @@ class ShareReceiverActivity : AppCompatActivity() {
                 viewModel.loadChats()
             }
         } catch (e: Exception) {
-            Log.e("ShareReceiver", "Fatal error in onCreate", e)
-            try {
-                binding = ActivityShareReceiverBinding.inflate(layoutInflater)
-                setContentView(binding.root)
-                viewModel = ViewModelProvider(this)[ShareReceiverViewModel::class.java]
-                handleSharedIntent()
-                setupUI()
-                observeViewModel()
-                lifecycleScope.launch(errorHandler) {
-                    withContext(Dispatchers.IO) {
-                        SessionManager.initFromPrefs(this@ShareReceiverActivity)
-                    }
-                    username = SessionManager.session.value.username
-                    viewModel.ensureConnection()
-                    viewModel.loadChats()
-                }
-            } catch (_: Exception) {
-                Toast.makeText(this, getString(R.string.error) + ": ${e.message}", Toast.LENGTH_LONG).show()
-                finish()
-            }
+            Log.e(TAG, "Fatal error in onCreate", e)
+            Toast.makeText(this, getString(R.string.error) + ": ${e.message}", Toast.LENGTH_LONG).show()
+            finish()
         }
     }
 
@@ -96,26 +89,31 @@ class ShareReceiverActivity : AppCompatActivity() {
         try {
             if (intent.action == Intent.ACTION_SEND) {
                 val type = intent.type
+                var hasContent = false
                 if (type == "text/plain") {
                     val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
                     binding.sharedTextView.text = sharedText
                     binding.sharedContentCard.isVisible = sharedText.isNotEmpty()
+                    if (sharedText.isNotEmpty()) hasContent = true
                     viewModel.setSharedText(sharedText)
                 } else if (type != null && (type.startsWith("image/") || type.startsWith("video/"))) {
                     val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
                     binding.sharedTextView.text = sharedText
                     binding.sharedContentCard.isVisible = sharedText.isNotEmpty()
+                    if (sharedText.isNotEmpty()) hasContent = true
 
                     sharedUri = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
                     sharedMimeType = type
                     if (sharedUri != null) {
                         showFilePreview(sharedUri!!, type)
                         viewModel.setSharedUri(sharedUri!!, type)
+                        hasContent = true
                     }
                 }
+                binding.previewScrollView.isVisible = hasContent
             }
         } catch (e: Exception) {
-            android.util.Log.e("ShareReceiver", "Error handling shared intent", e)
+            Log.e(TAG, "Error handling shared intent", e)
             Toast.makeText(this, getString(R.string.error) + ": ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
@@ -235,6 +233,7 @@ class ShareReceiverActivity : AppCompatActivity() {
         binding.chatsRecyclerView.apply {
             layoutManager = LinearLayoutManager(this@ShareReceiverActivity)
             adapter = chatAdapter
+            setHasFixedSize(true)
         }
     }
 

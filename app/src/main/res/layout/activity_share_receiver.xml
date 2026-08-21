@@ -16,10 +16,13 @@
         app:navigationIcon="@drawable/ic_close"
         app:navigationIconTint="?attr/colorOnPrimary" />
 
+    <!-- Preview area: scrollable, takes only needed space -->
     <ScrollView
+        android:id="@+id/previewScrollView"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_height="wrap_content"
+        android:maxHeight="280dp"
+        android:visibility="gone">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -33,6 +36,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
+                android:visibility="gone"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="2dp"
                 app:cardBackgroundColor="?attr/colorSurface">
@@ -65,7 +69,7 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Video Preview Card (visible only when video detected) -->
+            <!-- Video Preview Card (visible only when video/image detected) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/videoPreviewCard"
                 android:layout_width="match_parent"
@@ -156,52 +160,57 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Selected Chat -->
-            <TextView
-                android:id="@+id/selectedChatLabel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/select_chat_to_send"
-                android:textSize="14sp"
-                android:textColor="?attr/colorPrimary"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/selectedChatText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textColor="?attr/colorOnSurface"
-                android:textStyle="bold"
-                android:padding="12dp"
-                android:background="?attr/colorSurfaceContainer"
-                android:layout_marginBottom="8dp"
-                android:visibility="gone" />
-
-            <!-- No chats text -->
-            <TextView
-                android:id="@+id/noChatsText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/no_chats_available"
-                android:textSize="16sp"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:gravity="center"
-                android:padding="24dp"
-                android:visibility="gone" />
-
-            <!-- Chats RecyclerView -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/chatsRecyclerView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:clipToPadding="false" />
-
         </LinearLayout>
 
     </ScrollView>
+
+    <!-- Selected Chat label + name -->
+    <TextView
+        android:id="@+id/selectedChatLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/select_chat_to_send"
+        android:textSize="14sp"
+        android:textColor="?attr/colorPrimary"
+        android:textStyle="bold"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="16dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/selectedChatText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:textColor="?attr/colorOnSurface"
+        android:textStyle="bold"
+        android:padding="12dp"
+        android:background="?attr/colorSurfaceContainer"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone" />
+
+    <!-- No chats text -->
+    <TextView
+        android:id="@+id/noChatsText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/no_chats_available"
+        android:textSize="16sp"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:gravity="center"
+        android:padding="24dp"
+        android:visibility="gone" />
+
+    <!-- Chats RecyclerView — takes remaining space -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/chatsRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false" />
 
     <!-- Send Button -->
     <com.google.android.material.button.MaterialButton

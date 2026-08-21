@@ -23,7 +23,18 @@ import lavender.client.android.theme.ThemeUtils
 
 object ThemeApplier {
     fun apply(activity: AppCompatActivity, theme: Theme) {
-        val bgColor = parseSafeColor(theme.backgroundColor, Color.BLACK)
+        // Fast mode: apply minimal standard dark theme, skip images and heavy effects
+        val isFastMode = try {
+            lavender.client.android.ui.chatlist.FastModeManager.isFastMode(activity)
+        } catch (_: Exception) { false }
+
+        val effectiveTheme = if (isFastMode) {
+            lavender.client.android.theme.BuiltInThemes.dark
+        } else {
+            theme
+        }
+
+        val bgColor = parseSafeColor(effectiveTheme.backgroundColor, Color.BLACK)
         val isLightMode = ThemeUtils.isLight(bgColor)
 
         val customPrimary = parseSafeColor(theme.primaryColor, Color.BLUE)
@@ -158,35 +169,41 @@ object ThemeApplier {
         }
 
         try {
-
-            activity.findViewById<ImageView>(R.id.chatBackground)?.let { bgImageView ->
-                val url = theme.chatBackgroundImageUrl
-                if (url.isNotEmpty()) {
-                    bgImageView.visibility = View.VISIBLE
-                    Glide.with(activity)
-                        .load(url)
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .centerCrop()
-                        .into(bgImageView)
-                    root?.setBackgroundColor(Color.TRANSPARENT)
-                } else {
-                    bgImageView.visibility = View.GONE
+            // Skip background images in fast mode for maximum performance
+            if (!isFastMode) {
+                activity.findViewById<ImageView>(R.id.chatBackground)?.let { bgImageView ->
+                    val url = effectiveTheme.chatBackgroundImageUrl
+                    if (url.isNotEmpty()) {
+                        bgImageView.visibility = View.VISIBLE
+                        Glide.with(activity)
+                            .load(url)
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .centerCrop()
+                            .into(bgImageView)
+                        root?.setBackgroundColor(Color.TRANSPARENT)
+                    } else {
+                        bgImageView.visibility = View.GONE
+                    }
                 }
-            }
 
-            activity.findViewById<ImageView>(R.id.chatListBackground)?.let { chatListBgView ->
-                val url = theme.chatListBackgroundImageUrl
-                if (url.isNotEmpty()) {
-                    chatListBgView.visibility = View.VISIBLE
-                    Glide.with(activity)
-                        .load(url)
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .centerCrop()
-                        .into(chatListBgView)
-                    root?.setBackgroundColor(Color.TRANSPARENT)
-                } else {
-                    chatListBgView.visibility = View.GONE
+                activity.findViewById<ImageView>(R.id.chatListBackground)?.let { chatListBgView ->
+                    val url = effectiveTheme.chatListBackgroundImageUrl
+                    if (url.isNotEmpty()) {
+                        chatListBgView.visibility = View.VISIBLE
+                        Glide.with(activity)
+                            .load(url)
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .centerCrop()
+                            .into(chatListBgView)
+                        root?.setBackgroundColor(Color.TRANSPARENT)
+                    } else {
+                        chatListBgView.visibility = View.GONE
+                    }
                 }
+            } else {
+                // Fast mode: hide background images
+                activity.findViewById<ImageView>(R.id.chatBackground)?.visibility = View.GONE
+                activity.findViewById<ImageView>(R.id.chatListBackground)?.visibility = View.GONE
             }
         } catch (e: Exception) {
             android.util.Log.e("ThemeApplier", "Background image theming failed: ${e.message}")

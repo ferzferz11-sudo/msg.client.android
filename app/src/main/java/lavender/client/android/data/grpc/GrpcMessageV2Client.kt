@@ -210,6 +210,15 @@ class GrpcMessageV2Client(
             proto.text
         }
 
+        // Normalize saved_messages roomId: server sends saved_messages_{userId},
+        // but client uses saved_messages_{username} everywhere
+        val normalizedRoomId = if (proto.roomId.startsWith("saved_messages_")) {
+            val uname = getUsername()
+            if (uname != null) "saved_messages_$uname" else proto.roomId
+        } else {
+            proto.roomId
+        }
+
         return Message(
             id = proto.id,
             user = username,
@@ -219,7 +228,7 @@ class GrpcMessageV2Client(
             repliedToMessageId = repliedToMessageId,
             repliedToUser = repliedToUser,
             repliedToText = repliedToText,
-            roomId = proto.roomId,
+            roomId = normalizedRoomId,
             isRead = proto.isRead,
             imageUrl = imageUrl,
             imageUrls = imageUrls,

@@ -428,9 +428,9 @@ class ChatListActivity : AppCompatActivity() {
         super.onResume()
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
 
-        ThemeStore.init(this)
-        ThemeApplier.apply(this, ThemeStore.currentTheme())
-        if (::chatAdapter.isInitialized) chatAdapter.updateTheme()
+        // Theme is applied via ThemeUi.bind() StateFlow collector — no manual init() needed.
+        // Manual init() + syncNightMode() caused theme toggling when followSystemDarkMode was on.
+
         // Register update prefs listener
         updateCoordinator?.let { coord ->
             getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
@@ -684,6 +684,12 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun setupSwipeActions() {
+        // Cache swipe colors and drawables once (not per-frame)
+        val swipeDeleteBg = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().primaryColor, Color.RED).toDrawable()
+        val swipePinBg = "#4CAF50".toColorInt().toDrawable()
+        val swipeTrashIcon = androidx.core.content.ContextCompat.getDrawable(this, android.R.drawable.ic_menu_delete)?.mutate()?.apply { setTint(Color.WHITE) }
+        val swipePinIcon = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.ic_pin)?.mutate()?.apply { setTint(Color.WHITE) }
+
         val swipeCallback = object : androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(0, androidx.recyclerview.widget.ItemTouchHelper.LEFT or androidx.recyclerview.widget.ItemTouchHelper.RIGHT) {
             override fun onMove(rv: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder) = false
 
@@ -772,35 +778,27 @@ class ChatListActivity : AppCompatActivity() {
                 val itemView = viewHolder.itemView
 
                 if (dX < 0) {
-                    val deleteColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().primaryColor, Color.RED)
-                    val bg = deleteColor.toDrawable()
-                    bg.setBounds(itemView.right + dX.toInt(), itemView.top, itemView.right, itemView.bottom)
-                    bg.draw(c)
+                    swipeDeleteBg.setBounds(itemView.right + dX.toInt(), itemView.top, itemView.right, itemView.bottom)
+                    swipeDeleteBg.draw(c)
 
-                    val trashIcon = androidx.core.content.ContextCompat.getDrawable(this@ChatListActivity, android.R.drawable.ic_menu_delete)
-                    trashIcon?.mutate()?.setTint(Color.WHITE)
-                    val iconMargin = (itemView.height - (trashIcon?.intrinsicHeight ?: 0)) / 2
-                    val iconTop = itemView.top + iconMargin
-                    val iconBottom = iconTop + (trashIcon?.intrinsicHeight ?: 0)
-                    val iconLeft = itemView.right - iconMargin - (trashIcon?.intrinsicWidth ?: 0)
-                    val iconRight = itemView.right - iconMargin
-                    trashIcon?.setBounds(iconLeft, iconTop, iconRight, iconBottom)
-                    trashIcon?.draw(c)
+                    swipeTrashIcon?.let { icon ->
+                        val iconMargin = (itemView.height - icon.intrinsicHeight) / 2
+                        val iconTop = itemView.top + iconMargin
+                        val iconLeft = itemView.right - iconMargin - icon.intrinsicWidth
+                        icon.setBounds(iconLeft, iconTop, iconLeft + icon.intrinsicWidth, iconTop + icon.intrinsicHeight)
+                        icon.draw(c)
+                    }
                 } else if (dX > 0) {
-                    val pinColor = "#4CAF50".toColorInt()
-                    val bg = pinColor.toDrawable()
-                    bg.setBounds(itemView.left, itemView.top, itemView.left + dX.toInt(), itemView.bottom)
-                    bg.draw(c)
+                    swipePinBg.setBounds(itemView.left, itemView.top, itemView.left + dX.toInt(), itemView.bottom)
+                    swipePinBg.draw(c)
 
-                    val pinIcon = androidx.core.content.ContextCompat.getDrawable(this@ChatListActivity, R.drawable.ic_pin)
-                    pinIcon?.mutate()?.setTint(Color.WHITE)
-                    val iconMargin = (itemView.height - (pinIcon?.intrinsicHeight ?: 0)) / 2
-                    val iconTop = itemView.top + iconMargin
-                    val iconBottom = iconTop + (pinIcon?.intrinsicHeight ?: 0)
-                    val iconLeft = itemView.left + iconMargin
-                    val iconRight = iconLeft + (pinIcon?.intrinsicWidth ?: 0)
-                    pinIcon?.setBounds(iconLeft, iconTop, iconRight, iconBottom)
-                    pinIcon?.draw(c)
+                    swipePinIcon?.let { icon ->
+                        val iconMargin = (itemView.height - icon.intrinsicHeight) / 2
+                        val iconTop = itemView.top + iconMargin
+                        val iconLeft = itemView.left + iconMargin
+                        icon.setBounds(iconLeft, iconTop, iconLeft + icon.intrinsicWidth, iconTop + icon.intrinsicHeight)
+                        icon.draw(c)
+                    }
                 }
 
                 if (dX == 0f) {
@@ -830,10 +828,11 @@ class ChatListActivity : AppCompatActivity() {
         ThemeApplier.apply(this, ThemeStore.currentTheme())
     }
 
-    /** Applies fast mode changes: disables animations and avatar loading. */
+    /** Applies fast mode changes: disables animations, theme effects, and avatar loading. */
     fun applyFastMode(enabled: Boolean) {
         if (::chatAdapter.isInitialized) {
             chatAdapter.fastModeEnabled = enabled
+            chatAdapter.updateTheme() // resets color cache + notifyDataSetChanged
         }
         rvChatList?.itemAnimator = if (enabled) {
             null
@@ -844,10 +843,6 @@ class ChatListActivity : AppCompatActivity() {
                 changeDuration = 150
                 moveDuration = 200
             }
-        }
-        // Reload to apply visual changes immediately
-        if (::chatAdapter.isInitialized) {
-            chatAdapter.notifyDataSetChanged()
         }
     }
 }

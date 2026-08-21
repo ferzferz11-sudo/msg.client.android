@@ -1,5 +1,36 @@
 # Lava Messenger — Android Changelog
 
+## [1.4.0.17] - 2026-08-21
+
+### Исправлено
+
+**Share Receiver: предпросмотр не адаптирован к темам + краш при отправке (Critical):**
+- RecyclerView был внутри ScrollView с `wrap_content` — список чатов не отображался
+- Использовался только `ThemeUtils.applyThemeToActivity()` (фон окна) вместо полного `ThemeApplier.apply()`
+- Исправлено: RecyclerView вынесен из ScrollView с `layout_height="0dp, weight=1"`, применяется полная тема через `ThemeUi.bind()`
+- Preview area показывается/скрывается в зависимости от наличия контента
+
+**Тема переключается при входе/выходе из чата (High):**
+- `onResume()` в ChatListActivity вызывал `ThemeStore.init()` → `syncNightMode()` → `AppCompatDelegate.setDefaultNightMode()` → рекреация Activity
+- При включённом "Следовать системной теме" — рекурсивное переключение тёмной/светлой темы
+- Исправлено: убран ручной `ThemeStore.init()` + `ThemeApplier.apply()` из `onResume()` — `ThemeUi.bind()` StateFlow collector делает это корректно
+
+**Тормоза при прокрутке чат-листа (Performance):**
+- `onChildDraw` в swipe callback создавал `GradientDrawable` + парсил цвет на каждый кадр анимации
+- `updateTheme()` в `onResume()` вызывал `notifyDataSetChanged()` при каждом возврате
+- Исправлено: цвета и drawable кэшируются один раз при `setupSwipeActions()`, ручной `updateTheme()` убран из `onResume()`
+
+**Быстрый режим: эффекты темы не отключались (Performance):**
+- `ThemeApplier.apply()` загружал фоновые изображения и применял кастомные цвета даже в быстром режиме
+- Адаптер парсил hex-цвета темы на каждый bind
+- Исправлено: в быстром режиме `ThemeApplier` применяет стандартную тёмную тему без изображений, адаптер использует предопределённые цвета без парсинга
+
+**Saved Messages: отправленное сообщение пропадало (High):**
+- Сервер сохранял сообщение с `roomId=saved_messages_{userId}`, а ChatV2 stream присылал его обратно с тем же roomId
+- Клиент сравнивал с `currentRoomId=saved_messages_{username}` — не совпадало → сообщение не добавлялось в UI
+- `messageV2ToDomain()` брал `roomId` из proto напрямую без нормализации
+- Исправлено: `messageV2ToDomain()` нормализует `saved_messages_{userId}` → `saved_messages_{username}`
+
 ## [1.4.0.16] - 2026-08-18
 
 ### Оптимизировано
