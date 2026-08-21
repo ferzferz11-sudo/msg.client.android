@@ -34,7 +34,9 @@ import lavender.client.android.ui.widget.StandardBottomSheet
 class SecurityActivity : AppCompatActivity() {
 
     private lateinit var username: String
+    private lateinit var userId: String
     private lateinit var switchBiometric: MaterialSwitch
+    private lateinit var switchBackgroundConnection: MaterialSwitch
     private lateinit var devicesRecyclerView: RecyclerView
     private lateinit var deviceAdapter: DeviceAdapter
     private lateinit var btnTerminateAll: MaterialButton
@@ -56,8 +58,12 @@ class SecurityActivity : AppCompatActivity() {
         setContentView(R.layout.activity_security)
 
         username = SessionManager.session.value.username
+        userId = SessionManager.session.value.userId
         if (username.isEmpty()) {
             username = lavender.client.android.data.session.CredentialStore.getUsername(this)
+        }
+        if (userId.isEmpty()) {
+            userId = lavender.client.android.data.session.CredentialStore.getUserId(this)
         }
         
         if (username.isEmpty()) return finish()
@@ -87,7 +93,9 @@ class SecurityActivity : AppCompatActivity() {
 
         switchBiometric = findViewById(R.id.switchBiometric)
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        switchBiometric.isChecked = prefs.getBoolean("biometric_enabled_$username", false)
+        // Try userId first, fallback to username for legacy migration
+        val biometricKey = if (userId.isNotEmpty()) "biometric_enabled_$userId" else "biometric_enabled_$username"
+        switchBiometric.isChecked = prefs.getBoolean(biometricKey, false)
 
         val biometricManager = BiometricManager.from(this)
         val canAuthenticate = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
@@ -96,17 +104,37 @@ class SecurityActivity : AppCompatActivity() {
             switchBiometric.isEnabled = false
             if (switchBiometric.isChecked) {
                 switchBiometric.isChecked = false
-                prefs.edit().putBoolean("biometric_enabled_$username", false).apply()
+                prefs.edit().putBoolean(biometricKey, false).apply()
             }
         } else {
             switchBiometric.setOnCheckedChangeListener { _, isChecked ->
-                prefs.edit().putBoolean("biometric_enabled_$username", isChecked).apply()
+                val key = if (userId.isNotEmpty()) "biometric_enabled_$userId" else "biometric_enabled_$username"
+                prefs.edit().putBoolean(key, isChecked).apply()
                 Toast.makeText(
                     this,
                     if (isChecked) getString(R.string.biometric_login_enabled) else getString(R.string.biometric_login_disabled),
                     Toast.LENGTH_SHORT
                 ).show()
             }
+        }
+
+        switchBackgroundConnection = findViewById(R.id.switchBackgroundConnection)
+        val backgroundKey = if (userId.isNotEmpty()) "background_connection_enabled_$userId" else "background_connection_enabled_$username"
+        val isBackgroundEnabled = prefs.getBoolean(backgroundKey, false)
+        switchBackgroundConnection.isChecked = isBackgroundEnabled
+        switchBackgroundConnection.setOnCheckedChangeListener { _, isChecked ->
+            val key = if (userId.isNotEmpty()) "background_connection_enabled_$userId" else "background_connection_enabled_$username"
+            prefs.edit().putBoolean(key, isChecked).apply()
+            if (isChecked) {
+                lavender.client.android.data.grpc.ChatKeepAliveService.start(this)
+            } else {
+                lavender.client.android.data.grpc.ChatKeepAliveService.stop(this)
+            }
+            Toast.makeText(
+                this,
+                if (isChecked) getString(R.string.background_connection_enabled) else getString(R.string.background_connection_disabled),
+                Toast.LENGTH_SHORT
+            ).show()
         }
 
         setupDevices()
@@ -128,6 +156,7 @@ class SecurityActivity : AppCompatActivity() {
         val textSecondaryColor = theme.textSecondaryColor.toColorInt()
 
         findViewById<com.google.android.material.card.MaterialCardView>(R.id.biometricCard)?.setCardBackgroundColor(surfaceColor)
+        findViewById<com.google.android.material.card.MaterialCardView>(R.id.backgroundConnectionCard)?.setCardBackgroundColor(surfaceColor)
         findViewById<com.google.android.material.card.MaterialCardView>(R.id.devicesCard)?.setCardBackgroundColor(surfaceColor)
 
         // Theme biometric section elements
@@ -136,15 +165,27 @@ class SecurityActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.biometricTitle)?.setTextColor(textPrimaryColor)
         findViewById<TextView>(R.id.biometricDescription)?.setTextColor(textSecondaryColor)
 
+        // Theme background connection section
+        findViewById<android.widget.ImageView>(R.id.backgroundConnectionIcon)?.imageTintList = 
+            android.content.res.ColorStateList.valueOf(primaryColor)
+        findViewById<TextView>(R.id.backgroundConnectionTitle)?.setTextColor(textPrimaryColor)
+        findViewById<TextView>(R.id.backgroundConnectionDescription)?.setTextColor(textSecondaryColor)
+
         findViewById<TextView>(R.id.activeSessionsTitle)?.setTextColor(primaryColor)
         btnTerminateAll = findViewById(R.id.btnTerminateAll)
         btnTerminateAll.setTextColor("#FF5252".toColorInt())
 
-        // Update biometric switch colors
-        switchBiometric.thumbTintList = android.content.res.ColorStateList.valueOf(primaryColor)
-        switchBiometric.trackTintList = android.content.res.ColorStateList.valueOf(
+        // Update switch colors
+        val switchThumbColors = android.content.res.ColorStateList.valueOf(primaryColor)
+        val switchTrackColors = android.content.res.ColorStateList.valueOf(
             lavender.client.android.theme.ThemeUtils.adjustAlpha(primaryColor, 0.5f)
         )
+        
+        switchBiometric.thumbTintList = switchThumbColors
+        switchBiometric.trackTintList = switchTrackColors
+        
+        switchBackgroundConnection.thumbTintList = switchThumbColors
+        switchBackgroundConnection.trackTintList = switchTrackColors
 
         // Handle background image like in ChatListActivity
         findViewById<android.widget.ImageView>(R.id.securityBackground)?.let { bgView ->

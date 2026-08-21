@@ -575,9 +575,14 @@
     <string name="notif_disconnect">Отключить</string>
     <string name="chat_keepalive_channel_name">Подключение чата</string>
     <string name="chat_keepalive_channel_desc">Поддерживает соединение для получения новых сообщений</string>
-    <string name="chat_keepalive_connected">Подключено — получение сообщений</string>
+    <string name="chat_keepalive_connected">Подключено</string>
     <string name="chat_keepalive_connecting">Подключение…</string>
     <string name="chat_keepalive_reconnecting">Переподключение…</string>
+    <string name="background_connection">Фоновое соединение</string>
+    <string name="background_connection_description">Поддерживать связь, когда приложение свернуто</string>
+    <string name="background_connection_enabled">Фоновое соединение включено</string>
+    <string name="background_connection_disabled">Фоновое соединение выключено</string>
+    <string name="unread_count_format"> (%1$d новых)</string>
     <string name="error_exit_code">Ошибка (exit=%1$d): %2$s</string>
     <string name="direct_chat_type">Личный чат</string>
     <string name="group_chat_type">Групповой чат</string>

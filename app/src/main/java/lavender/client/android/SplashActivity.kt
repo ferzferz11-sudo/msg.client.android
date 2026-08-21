@@ -18,6 +18,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import lavender.client.android.data.session.SessionManager
+import kotlin.time.Duration.Companion.milliseconds
 
 @SuppressLint("CustomSplashScreen")
 class SplashActivity : AppCompatActivity() {
@@ -58,7 +59,7 @@ class SplashActivity : AppCompatActivity() {
                     if (!serverLocale.isNullOrEmpty() && serverLocale != prefs.getString("language", "ru")) {
                         prefs.edit { putString("language", serverLocale) }
                     }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     // Ignore - use local setting
                 }
             }
@@ -76,7 +77,7 @@ class SplashActivity : AppCompatActivity() {
         animateAndNavigate(shouldProceed, roomIdFromPush, callIdFromPush, session, prefs)
 
         lifecycleScope.launch {
-            delay(5000)
+            delay(5000.milliseconds)
             if (!isFinishing && !isDestroyed) {
                 Log.w("SplashActivity", "Splash timeout — force navigating")
                 navigateToTarget(shouldProceed, roomIdFromPush, callIdFromPush, session, prefs)
@@ -172,7 +173,7 @@ class SplashActivity : AppCompatActivity() {
                             .withEndAction {
                                 // Wait a bit, then navigate
                                 lifecycleScope.launch {
-                                    delay(400)
+                                    delay(400.milliseconds)
                                     if (!isFinishing && !isDestroyed) {
                                         navigateToTarget(shouldProceed, roomIdFromPush, callIdFromPush, session, prefs)
                                     }
@@ -239,7 +240,9 @@ class SplashActivity : AppCompatActivity() {
     private fun navigateToChatList(host: String) {
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val username = SessionManager.session.value.username
-        val biometricEnabled = prefs.getBoolean("biometric_enabled_$username", false)
+        val userId = SessionManager.session.value.userId
+        val key = if (userId.isNotEmpty()) "biometric_enabled_$userId" else "biometric_enabled_$username"
+        val biometricEnabled = prefs.getBoolean(key, false)
 
         if (biometricEnabled) {
             val biometricManager = BiometricManager.from(this)
@@ -279,9 +282,6 @@ class SplashActivity : AppCompatActivity() {
                     }
                 }
 
-                override fun onAuthenticationFailed() {
-                    super.onAuthenticationFailed()
-                }
             })
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
@@ -294,7 +294,7 @@ class SplashActivity : AppCompatActivity() {
         biometricPrompt.authenticate(promptInfo)
 
         lifecycleScope.launch {
-            delay(15000)
+            delay(15000.milliseconds)
             if (!isFinishing && !isDestroyed) {
                 Log.w("SplashActivity", "Biometric timeout — navigating anyway")
                 startActivity(Intent(this@SplashActivity, ChatListActivity::class.java))

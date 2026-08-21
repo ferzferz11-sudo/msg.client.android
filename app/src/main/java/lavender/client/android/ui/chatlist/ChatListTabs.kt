@@ -7,16 +7,23 @@ import lavender.client.android.data.models.ChatInfo
 /**
  * Tab setup for ChatListActivity.
  * Fixed tabs: All, Groups (always visible).
- * Dynamic tabs: AI (if AI chats exist), per-company, Archive (always rightmost if it has archived).
+ * Dynamic tabs: AI (if non-archived AI chats exist), per-company, Archive (always rightmost if archived exist).
  */
+
+private var isUpdatingTabs = false
+
 internal fun setupTabs(activity: ChatListActivity) {
     activity.tabLayout?.let { tabs ->
-        tabs.addTab(tabs.newTab().setText(R.string.tab_all))
-        tabs.addTab(tabs.newTab().setText(R.string.tab_groups))
+        // Clear existing to avoid duplicates on recreation
+        tabs.removeAllTabs()
+        
+        tabs.addTab(tabs.newTab().setText(R.string.tab_all).setTag("all"))
+        tabs.addTab(tabs.newTab().setText(R.string.tab_groups).setTag("groups"))
 
         tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
-                val filter = resolveTabFilter(tab, tabs)
+                if (isUpdatingTabs) return
+                val filter = resolveTabFilter(tab)
                 activity.viewModel.setTabFilter(filter)
             }
 
@@ -26,83 +33,74 @@ internal fun setupTabs(activity: ChatListActivity) {
     }
 }
 
-/**
- * Resolve tab text to filter string.
- * Company tabs store "company:<id>" as tag.
- */
-private fun resolveTabFilter(tab: TabLayout.Tab?, tabs: TabLayout): String {
+private fun resolveTabFilter(tab: TabLayout.Tab?): String {
     val tag = tab?.tag as? String
-    if (tag != null && tag.startsWith("company:")) return tag
-
-    val tabText = tab?.text?.toString() ?: return "all"
-    return when (tabText) {
-        tabs.context.getString(R.string.tab_all) -> "all"
-        tabs.context.getString(R.string.tab_groups) -> "groups"
-        tabs.context.getString(R.string.tab_ai) -> "ai"
-        tabs.context.getString(R.string.tab_archive) -> "archive"
-        else -> "all"
-    }
+    return tag ?: "all"
 }
 
 /**
  * Update all dynamic tabs: AI, per-company, Archive.
- * Order: All, Groups, AI, Company1..., Archive.
- * Archive is always the rightmost tab.
+ * Robust implementation that avoids constant removal/addition if nothing changed.
  */
 internal fun updateDynamicTabs(activity: ChatListActivity, chats: List<ChatInfo>) {
-    activity.tabLayout?.let { tabs ->
-        // 1. Remove all dynamic tabs (AI, company, archive)
-        removeDynamicTabs(tabs)
+    val tabs = activity.tabLayout ?: return
+    
+    // 1. Determine required dynamic tabs (only show AI if there are non-archived AI chats)
+    val hasAiChats = chats.any { (it.type == "owl" || it.type == "hermes") && !it.isArchived }
+    val hasArchived = chats.any { it.isArchived }
+    val companies = chats
+        .filter { it.companyId.isNotEmpty() && !it.isArchived }
+        .groupBy { it.companyId }
+        .keys
+        .sorted()
 
-        // 2. Calculate what dynamic tabs are needed
-        val hasAiChats = chats.any { it.type == "owl" || it.type == "hermes" }
-        val hasArchived = chats.any { it.isArchived }
-        val companies = chats
-            .filter { it.companyId.isNotEmpty() }
-            .groupBy { it.companyId }
-            .keys
-            .sorted()
+    val currentTags = mutableListOf<String>()
+    for (i in 0 until tabs.tabCount) {
+        (tabs.getTabAt(i)?.tag as? String)?.let { currentTags.add(it) }
+    }
 
-        // 3. Add dynamic tabs in order: AI, companies..., Archive (rightmost)
+    val requiredTags = mutableListOf("all", "groups")
+    if (hasAiChats) requiredTags.add("ai")
+    for (companyId in companies) requiredTags.add("company:$companyId")
+    if (hasArchived) requiredTags.add("archive")
+
+    // If tabs already match, do nothing to avoid selection resets
+    if (currentTags == requiredTags) return
+
+    isUpdatingTabs = true
+    try {
+        val selectedTag = tabs.getTabAt(tabs.selectedTabPosition)?.tag as? String ?: "all"
+        
+        // Use a more surgical update instead of removeAllTabs to keep state better
+        // But for simplicity and correctness of order, we'll rebuild if tags don't match
+        tabs.removeAllTabs()
+        
+        tabs.addTab(tabs.newTab().setText(R.string.tab_all).setTag("all"))
+        tabs.addTab(tabs.newTab().setText(R.string.tab_groups).setTag("groups"))
+
         val companyNameCache = activity.viewModel.companyNameCache
-        var insertAt = 2 // after All(0), Groups(1)
-
+        
         if (hasAiChats) {
-            val aiTab = tabs.newTab().setText(R.string.tab_ai)
-            aiTab.tag = "ai"
-            tabs.addTab(aiTab, insertAt)
-            insertAt++
+            tabs.addTab(tabs.newTab().setText(R.string.tab_ai).setTag("ai"))
         }
 
         for (companyId in companies) {
             val name = companyNameCache[companyId] ?: companyId
-            val tab = tabs.newTab().setText(name)
-            tab.tag = "company:$companyId"
-            tabs.addTab(tab, insertAt)
-            insertAt++
+            tabs.addTab(tabs.newTab().setText(name).setTag("company:$companyId"))
         }
 
-        // Archive always last
         if (hasArchived) {
-            val archiveTab = tabs.newTab().setText(R.string.tab_archive)
-            archiveTab.tag = "archive"
-            tabs.addTab(archiveTab, insertAt)
+            tabs.addTab(tabs.newTab().setText(R.string.tab_archive).setTag("archive"))
         }
-    }
-}
 
-/**
- * Remove all dynamic tabs (identified by tag: "AI", "company:*", "archive").
- */
-private fun removeDynamicTabs(tabs: TabLayout) {
-    val toRemove = mutableListOf<Int>()
-    for (i in 0 until tabs.tabCount) {
-        val tag = tabs.getTabAt(i)?.tag as? String
-        if (tag != null && (tag == "ai" || tag.startsWith("company:") || tag == "archive")) {
-            toRemove.add(i)
+        // Restore selection
+        for (i in 0 until tabs.tabCount) {
+            if (tabs.getTabAt(i)?.tag == selectedTag) {
+                tabs.getTabAt(i)?.select()
+                break
+            }
         }
-    }
-    for (i in toRemove.reversed()) {
-        tabs.removeTabAt(i)
+    } finally {
+        isUpdatingTabs = false
     }
 }

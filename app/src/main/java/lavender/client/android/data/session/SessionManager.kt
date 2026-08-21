@@ -453,7 +453,12 @@ object SessionManager {
                     GrpcClient.connect(host, useTls = false, port = port, context = context)
                 }
 
-                ChatKeepAliveService.start(context)
+                val prefs = context.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
+                val backgroundKey = if (userId.isNotEmpty()) "background_connection_enabled_$userId" else "background_connection_enabled_$username"
+                val isBackgroundEnabled = prefs.getBoolean(backgroundKey, false)
+                if (isBackgroundEnabled) {
+                    ChatKeepAliveService.start(context)
+                }
 
                 if (AuthManager.isTokenExpiredOrExpiring(context) && password.isNotEmpty()) {
                     waitForConnectionAndReLogin(context, username, password, serverAddress)
@@ -668,7 +673,12 @@ object SessionManager {
 
                     startTokenRefresh(context)
 
-                    ChatKeepAliveService.start(context)
+                    val prefs = context.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
+                    val backgroundKey = if (authResponse.userId.isNotEmpty()) "background_connection_enabled_${authResponse.userId}" else "background_connection_enabled_$username"
+            val isBackgroundEnabled = prefs.getBoolean(backgroundKey, false)
+                    if (isBackgroundEnabled) {
+                        ChatKeepAliveService.start(context)
+                    }
 
                     onComplete("SUCCESS")
                 } else {

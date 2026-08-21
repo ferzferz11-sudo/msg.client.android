@@ -653,9 +653,14 @@
     <string name="notif_disconnect">Disconnect</string>
     <string name="chat_keepalive_channel_name">Chat Connection</string>
     <string name="chat_keepalive_channel_desc">Maintains connection to receive new messages</string>
-    <string name="chat_keepalive_connected">Connected — receiving messages</string>
+    <string name="chat_keepalive_connected">Connected</string>
     <string name="chat_keepalive_connecting">Connecting…</string>
     <string name="chat_keepalive_reconnecting">Reconnecting…</string>
+    <string name="background_connection">Background Connection</string>
+    <string name="background_connection_description">Keep connection active when app is in background</string>
+    <string name="background_connection_enabled">Background connection enabled</string>
+    <string name="background_connection_disabled">Background connection disabled</string>
+    <string name="unread_count_format"> (%1$d new)</string>
     <string name="error_exit_code">Error (exit=%1$d): %2$s</string>
     <string name="direct_chat_type">Direct Chat</string>
     <string name="group_chat_type">Group Chat</string>

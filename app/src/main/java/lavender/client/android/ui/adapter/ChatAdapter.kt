@@ -19,6 +19,9 @@ import lavender.client.android.ui.chatlist.SectionItem
 import lavender.client.android.ui.chatlist.Section
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
+import java.util.Locale
+import java.text.SimpleDateFormat
+import java.util.Date
 
 /**
  * ChatAdapter — ListAdapter with DiffUtil for animated updates.
@@ -26,7 +29,7 @@ import lavender.client.android.theme.ThemeUtils
  * Performance optimizations:
  * - Stable IDs for efficient ViewHolder reuse
  * - Cached display names (JSON parsed once, not per-bind)
- * - Cached message previews (system message check + strip done once)
+ * - Cached message previews (system message check + strip + translation done once)
  * - updateOnlineUsers: only notifies items whose status actually changed
  * - setSelectionMode/clearSelection: uses partial notify instead of notifyDataSetChanged
  * - Fast mode: skips all heavy work (Glide, borders, text processing)
@@ -46,8 +49,8 @@ class ChatAdapter(
 ) : ListAdapter<FlatItem, RecyclerView.ViewHolder>(FlatItemDiffCallback()), ChatListAdapter {
 
     companion object {
-        private const val TYPE_SECTION_HEADER = 0
-        private const val TYPE_CHAT_ITEM = 1
+        const val TYPE_SECTION_HEADER = 0
+        const val TYPE_CHAT_ITEM = 1
 
         fun getOrComputeOtherParticipant(chat: ChatInfo, currentUsername: String, cache: MutableMap<String, String>): String {
             cache[chat.id]?.let { return it }
@@ -76,12 +79,22 @@ class ChatAdapter(
         }
 
         /** Pre-compute message preview once (avoids string ops on every bind). */
-        private fun computeMessagePreview(chat: ChatInfo): String? {
+        private fun computeMessagePreview(chat: ChatInfo, context: android.content.Context): String? {
             if (chat.isSecret) return null
             val text = chat.lastMessageText
             if (text.isEmpty()) return null
             if (isSystemMessagePreviewRaw(text)) return null
-            return stripForwardPrefixRaw(text)
+            
+            val stripped = stripForwardPrefixRaw(text)
+            return translateMediaPreviewRaw(stripped, context)
+        }
+
+        private fun translateMediaPreviewRaw(text: String, context: android.content.Context): String {
+            return when (text) {
+                "Image" -> context.getString(R.string.chat_preview_image)
+                "Voice message" -> context.getString(R.string.chat_preview_voice)
+                else -> text
+            }
         }
 
         private fun isSystemMessagePreviewRaw(text: String): Boolean {
@@ -177,16 +190,18 @@ class ChatAdapter(
 
     // ======= Public API =======
 
-    fun setSections(newSections: List<SectionItem>) {
+    fun setSections(newSections: List<SectionItem>, context: android.content.Context) {
         sections = newSections
         // Pre-compute display names and message previews for all chats
         for (section in newSections) {
             for (chat in section.chats) {
-                if (!displayNameCache.containsKey(chat.id)) {
-                    displayNameCache[chat.id] = computeDisplayName(chat, currentUsername, otherParticipantCache)
+                val nameKey = chat.id
+                if (!displayNameCache.containsKey(nameKey)) {
+                    displayNameCache[nameKey] = computeDisplayName(chat, currentUsername, otherParticipantCache)
                 }
-                if (!messagePreviewCache.containsKey(chat.id)) {
-                    messagePreviewCache[chat.id] = computeMessagePreview(chat)
+                val previewKey = chat.id + "_" + chat.lastMessageTime
+                if (!messagePreviewCache.containsKey(previewKey)) {
+                    messagePreviewCache[previewKey] = computeMessagePreview(chat, context)
                 }
             }
         }
@@ -303,7 +318,8 @@ class ChatAdapter(
             is FlatItem.ChatItem -> {
                 val chat = item.chat
                 val displayName = displayNameCache[chat.id] ?: computeDisplayName(chat, currentUsername, otherParticipantCache)
-                val messagePreview = messagePreviewCache[chat.id] ?: computeMessagePreview(chat)
+                val previewKey = chat.id + "_" + chat.lastMessageTime
+                val messagePreview = messagePreviewCache[previewKey] ?: computeMessagePreview(chat, holder.itemView.context)
                 (holder as ChatViewHolder).bind(
                     chat, displayName, messagePreview,
                     cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor,
@@ -383,7 +399,8 @@ class ChatAdapter(
             }
             section.copy(chats = filteredChats)
         }
-        setSections(filteredSections)
+        val rv = (scope as? androidx.fragment.app.FragmentActivity)?.findViewById<RecyclerView>(R.id.rvChatList)
+        setSections(filteredSections, rv?.context ?: return)
     }
 
     // ======= DiffUtil callback =======
@@ -438,6 +455,8 @@ class ChatAdapter(
         private val cardView: com.google.android.material.card.MaterialCardView =
             itemView as com.google.android.material.card.MaterialCardView
 
+        private val dayFormat = SimpleDateFormat("dd.MM.yy", Locale.getDefault())
+
         fun bind(
             chat: ChatInfo,
             displayName: String,
@@ -452,9 +471,18 @@ class ChatAdapter(
             fastMode: Boolean
         ) {
             val hasUnread = chat.unreadCount > 0
-            tvChatName.text = displayName
+            
+            // Performance: Only update text if it actually changed
+            if (tvChatName.text != displayName) {
+                tvChatName.text = displayName
+            }
+            
+            // Performance: Only update typeface if unread status changed
+            val targetStyle = if (hasUnread) Typeface.BOLD else Typeface.NORMAL
+            if (tvChatName.typeface?.style != targetStyle) {
+                tvChatName.setTypeface(null, targetStyle)
+            }
             tvChatName.setTextColor(if (hasUnread) primaryColor else textPrimary)
-            tvChatName.setTypeface(null, if (hasUnread) Typeface.BOLD else Typeface.NORMAL)
 
             // Avatar — skip in fast mode for performance
             if (!fastMode) {
@@ -512,18 +540,26 @@ class ChatAdapter(
                 tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
                 tvChatType.setTypeface(null, if (hasUnread) Typeface.BOLD else Typeface.NORMAL)
             } else if (messagePreview != null) {
-                tvChatType.text = translateMediaPreview(messagePreview)
+                if (tvChatType.text != messagePreview) {
+                    tvChatType.text = messagePreview
+                }
                 tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
                 tvChatType.setTypeface(null, Typeface.NORMAL)
             } else {
-                tvChatType.text = itemView.context.getString(R.string.no_messages)
+                val noMsgs = itemView.context.getString(R.string.no_messages)
+                if (tvChatType.text != noMsgs) {
+                    tvChatType.text = noMsgs
+                }
                 tvChatType.setTextColor(textSecondary)
             }
 
             // Unread badge
             if (chat.unreadCount > 0 && !selectionMode) {
                 tvUnreadCount.isVisible = true
-                tvUnreadCount.text = if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString()
+                val unreadText = if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString()
+                if (tvUnreadCount.text != unreadText) {
+                    tvUnreadCount.text = unreadText
+                }
                 tvUnreadCount.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
                 tvUnreadCount.setTextColor(if (ThemeUtils.isLight(primaryColor)) Color.BLACK else Color.WHITE)
             } else {
@@ -531,25 +567,39 @@ class ChatAdapter(
             }
 
             // Conference lobby button
-            btnEnterLobby.isVisible = chat.type == "conference" && !selectionMode
-            btnEnterLobby.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
-            btnEnterLobby.setOnClickListener { v ->
-                val ctx = v.context
-                val intent = android.content.Intent(ctx, lavender.client.android.ConferenceLobbyActivity::class.java).apply {
-                    putExtra("ROOM_ID", chat.id)
-                    putExtra("CHAT_NAME", chat.name)
-                    putExtra("PARTICIPANTS", chat.participants)
-                    putExtra("CREATOR", chat.creator)
+            val showLobby = chat.type == "conference" && !selectionMode
+            if (btnEnterLobby.isVisible != showLobby) {
+                btnEnterLobby.isVisible = showLobby
+                if (showLobby) {
+                    btnEnterLobby.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
                 }
-                ctx.startActivity(intent)
+            }
+            if (showLobby) {
+                btnEnterLobby.setOnClickListener { v ->
+                    val ctx = v.context
+                    val intent = android.content.Intent(ctx, lavender.client.android.ConferenceLobbyActivity::class.java).apply {
+                        putExtra("ROOM_ID", chat.id)
+                        putExtra("CHAT_NAME", chat.name)
+                        putExtra("PARTICIPANTS", chat.participants)
+                        putExtra("CREATOR", chat.creator)
+                    }
+                    ctx.startActivity(intent)
+                }
             }
 
-            ivMuteIndicator.isVisible = chat.isMuted && !selectionMode
+            val showMute = chat.isMuted && !selectionMode
+            if (ivMuteIndicator.isVisible != showMute) {
+                ivMuteIndicator.isVisible = showMute
+            }
 
             // Selection mode
-            cbChatSelect.isVisible = selectionMode
-            cbChatSelect.isChecked = isSelected
-            cbChatSelect.buttonTintList = android.content.res.ColorStateList.valueOf(primaryColor)
+            if (cbChatSelect.isVisible != selectionMode) {
+                cbChatSelect.isVisible = selectionMode
+            }
+            if (selectionMode) {
+                cbChatSelect.isChecked = isSelected
+                cbChatSelect.buttonTintList = android.content.res.ColorStateList.valueOf(primaryColor)
+            }
 
             // Background
             val bgColor = when {
@@ -557,8 +607,9 @@ class ChatAdapter(
                 chat.unreadCount > 0 -> unreadColor
                 else -> surfaceColor
             }
-            cbChatSelect.backgroundTintList = android.content.res.ColorStateList.valueOf(bgColor)
-            cardView.setCardBackgroundColor(bgColor)
+            if (cardView.cardBackgroundColor.defaultColor != bgColor) {
+                cardView.setCardBackgroundColor(bgColor)
+            }
 
             // Online status + last seen
             if (chat.type == "direct" && !chat.isSecret && !chat.id.startsWith("saved_messages_")) {
@@ -566,14 +617,20 @@ class ChatAdapter(
                 if (otherUser.isNotEmpty()) {
                     val isOnline = onlineUsers.contains(otherUser)
                     statusIndicator.isVisible = true
-                    statusIndicator.setBackgroundResource(if (isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot)
+                    val targetRes = if (isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot
+                    if (statusIndicator.tag != targetRes) {
+                        statusIndicator.setBackgroundResource(targetRes)
+                        statusIndicator.tag = targetRes
+                    }
 
                     if (!isOnline) {
                         val userInfo = allUsersMap[otherUser]
                         val lastSeenStr = userInfo?.lastSeenAt?.let { getTimeAgo(it.seconds * 1000, itemView.context) }
                         if (lastSeenStr != null) {
                             tvLastSeen.isVisible = true
-                            tvLastSeen.text = lastSeenStr
+                            if (tvLastSeen.text != lastSeenStr) {
+                                tvLastSeen.text = lastSeenStr
+                            }
                             tvLastSeen.setTextColor(textSecondary)
                         } else {
                             tvLastSeen.isVisible = false
@@ -600,15 +657,6 @@ class ChatAdapter(
             }
         }
 
-        private fun translateMediaPreview(text: String): String {
-            val ctx = itemView.context
-            return when (text) {
-                "Image" -> ctx.getString(R.string.chat_preview_image)
-                "Voice message" -> ctx.getString(R.string.chat_preview_voice)
-                else -> text
-            }
-        }
-
         private fun getTimeAgo(timestampMillis: Long, context: android.content.Context): String {
             val now = System.currentTimeMillis()
             val diff = now - timestampMillis
@@ -621,10 +669,7 @@ class ChatAdapter(
                 minutes < 60 -> context.resources.getQuantityString(R.plurals.minutes_ago, minutes.toInt(), minutes.toInt())
                 hours < 24 -> context.resources.getQuantityString(R.plurals.hours_ago, hours.toInt(), hours.toInt())
                 days < 7 -> context.resources.getQuantityString(R.plurals.days_ago, days.toInt(), days.toInt())
-                else -> {
-                    val format = java.text.SimpleDateFormat("dd.MM.yy", java.util.Locale.getDefault())
-                    format.format(java.util.Date(timestampMillis))
-                }
+                else -> synchronized(dayFormat) { dayFormat.format(Date(timestampMillis)) }
             }
         }
 

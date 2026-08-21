@@ -10,10 +10,16 @@ import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.session.CredentialStore
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * ChatKeepAliveService — foreground service для поддержания gRPC chat stream в фоне.
@@ -96,40 +102,42 @@ class ChatKeepAliveService : Service() {
     private fun startMonitoring() {
         statusJob?.cancel()
         statusJob = serviceScope.launch {
-            GrpcClient.connectionStatus
-                .collect { status ->
-                    Log.d(TAG, "Connection status: $status")
-                    when (status) {
-                        ConnectionStatus.READY -> {
-                            updateNotification(getString(R.string.chat_keepalive_connected))
-                            reconnectJob?.cancel()
-                        }
-                        ConnectionStatus.DISCONNECTED -> {
-                            updateNotification(getString(R.string.chat_keepalive_reconnecting))
-                            scheduleReconnect()
-                        }
-                        ConnectionStatus.FAILED -> {
-                            updateNotification(getString(R.string.chat_keepalive_reconnecting))
-                            scheduleReconnect()
-                        }
-                        ConnectionStatus.RECONNECTING -> {
-                            updateNotification(getString(R.string.chat_keepalive_reconnecting))
-                        }
-                        ConnectionStatus.CONNECTING -> {
-                            updateNotification(getString(R.string.chat_keepalive_connecting))
-                        }
+            kotlinx.coroutines.flow.combine(
+                GrpcClient.connectionStatus,
+                GrpcClient.totalUnreadCount
+            ) { status, unread ->
+                val baseStatus = when (status) {
+                    ConnectionStatus.READY -> {
+                        reconnectJob?.cancel()
+                        getString(R.string.chat_keepalive_connected)
+                    }
+                    ConnectionStatus.DISCONNECTED, ConnectionStatus.FAILED, ConnectionStatus.RECONNECTING -> {
+                        if (status != ConnectionStatus.RECONNECTING) scheduleReconnect()
+                        getString(R.string.chat_keepalive_reconnecting)
+                    }
+                    ConnectionStatus.CONNECTING -> {
+                        getString(R.string.chat_keepalive_connecting)
                     }
                 }
+                
+                if (status == ConnectionStatus.READY && unread > 0) {
+                    baseStatus + getString(R.string.unread_count_format, unread)
+                } else {
+                    baseStatus
+                }
+            }.collect { statusText ->
+                updateNotification(statusText)
+            }
         }
     }
 
     private fun scheduleReconnect() {
         reconnectJob?.cancel()
         reconnectJob = serviceScope.launch {
-            delay(5000)
+            delay(5000.milliseconds)
             val ctx = applicationContext
             val serverAddress = CredentialStore.getServerAddress(ctx)
-            if (!serverAddress.isNullOrEmpty()) {
+            if (serverAddress.isNotEmpty()) {
                 val parts = serverAddress.split(":")
                 val host = parts[0]
                 val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
@@ -161,7 +169,7 @@ class ChatKeepAliveService : Service() {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Lavender Messenger")
+            .setContentTitle(getString(R.string.app_name))
             .setContentText(statusText)
             .setSmallIcon(R.drawable.ic_notification_small)
             .setContentIntent(contentIntent)

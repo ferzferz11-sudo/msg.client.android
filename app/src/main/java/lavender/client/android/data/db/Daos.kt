@@ -46,6 +46,9 @@ interface ChatDao {
     @Query("SELECT * FROM chats ORDER BY lastMessageTime DESC")
     suspend fun getAllChats(): List<ChatEntity>
 
+    @Query("SELECT SUM(unreadCount) FROM chats")
+    suspend fun getTotalUnreadCount(): Int?
+
     @Query("SELECT * FROM chats WHERE id = :chatId")
     suspend fun getChat(chatId: String): ChatEntity?
 

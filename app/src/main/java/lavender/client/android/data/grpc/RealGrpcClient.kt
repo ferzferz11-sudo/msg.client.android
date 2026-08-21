@@ -116,6 +116,9 @@ object RealGrpcClient {
     private val _authStatus = MutableStateFlow<String?>(null)
     val authStatus: StateFlow<String?> = _authStatus
 
+    private val _totalUnreadCount = MutableStateFlow(0)
+    val totalUnreadCount: StateFlow<Int> = _totalUnreadCount
+
     private val _serverShuttingDown = MutableStateFlow(false)
     val serverShuttingDown: StateFlow<Boolean> = _serverShuttingDown
 
@@ -389,6 +392,7 @@ object RealGrpcClient {
                 if (savedAdmin) _isSuperAdmin.value = true
             }
         }
+        refreshTotalUnreadCount()
         loadDeletedMessages()
         connectionManager.connect(serverAddress, useTls, port, context, forceReconnect)
     }
@@ -1068,6 +1072,9 @@ object RealGrpcClient {
         currentRoomId = roomId
         _messages.value = emptyList()
     }
+    fun setTotalUnreadCount(count: Int) {
+        _totalUnreadCount.value = count
+    }
     fun clearSystemNotification() { _systemNotification.value = null }
     fun setUserId(userId: String) { currentUserId = userId }
     fun setUsername(username: String) { currentUsername = username }
@@ -1144,6 +1151,15 @@ object RealGrpcClient {
         val d = AppDatabase.getDatabase(ctx)
         database = d
         return d
+    }
+
+    fun refreshTotalUnreadCount() {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val total = db()?.chatDao()?.getTotalUnreadCount() ?: 0
+                _totalUnreadCount.value = total
+            } catch (_: Exception) {}
+        }
     }
 
     fun loadUsers() {

@@ -33,6 +33,7 @@ object GrpcClient {
     val adminUserId: kotlinx.coroutines.flow.StateFlow<String?> = realGrpcClient.adminUserId
     val serverVersion: StateFlow<String> = realGrpcClient.serverVersion
     val authStatus: StateFlow<String?> = realGrpcClient.authStatus
+    val totalUnreadCount: StateFlow<Int> = realGrpcClient.totalUnreadCount
     val typingUsers: StateFlow<Map<String, Set<String>>> = realGrpcClient.typingUsers
     val chatDeletedEvent: StateFlow<String?> = realGrpcClient.chatDeletedEvent
     val selfDestructTimer: StateFlow<Map<String, Int>> = realGrpcClient.selfDestructTimer
@@ -89,6 +90,8 @@ object GrpcClient {
     }
 
     fun setRoomId(roomId: String) = realGrpcClient.setRoomId(roomId)
+
+    fun setTotalUnreadCount(count: Int) = realGrpcClient.setTotalUnreadCount(count)
 
     fun loadUsers() = realGrpcClient.loadUsers()
 

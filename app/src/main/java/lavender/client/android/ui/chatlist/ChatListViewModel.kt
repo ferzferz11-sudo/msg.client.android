@@ -726,57 +726,65 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun buildSections(chats: List<ChatInfo>) {
-        val tab = _tabFilter.value
-        val userPositionLevel = lavender.client.android.data.session.SessionManager.session.value.positionLevel
-        val userCompanyId = lavender.client.android.data.session.SessionManager.session.value.companyId
+        viewModelScope.launch(Dispatchers.Default) {
+            // Update global unread count for background notification
+            val totalUnread = chats.sumOf { it.unreadCount }
+            GrpcClient.setTotalUnreadCount(totalUnread)
 
-        // Apply tab filter
-        val filteredChats = when {
-            tab == "ai" -> chats.filter { it.type == "owl" || it.type == "hermes" }
-            tab == "groups" -> chats.filter { it.type == "group" || it.type == "general" || it.type == "conference" }
-            tab == "company" -> chats.filter { it.companyId.isNotEmpty() }
-            tab.startsWith("company:") -> {
-                val targetCompanyId = tab.removePrefix("company:")
-                chats.filter { it.companyId == targetCompanyId }
-            }
-            tab == "archive" -> chats.filter { it.isArchived }
-            else -> chats // "all"
-        }.filter { chat ->
-            // Hide saved_messages chat — accessed via toolbar star button
-            chat.type != "saved_messages"
-        }.filter { chat ->
-            // Company chat access control (per-company)
-            if (chat.companyId.isNotEmpty()) {
-                // Look up position level from cache (populated by loadCompanyPositions)
-                val positionLevel = companyPositionCache[chat.companyId] ?: userPositionLevel
-                when {
-                    chat.companyMinPositionLevel > 0 -> positionLevel >= chat.companyMinPositionLevel
-                    chat.companyChatAccess == "management" -> positionLevel >= 1
-                    chat.companyChatAccess == "owner_only" -> positionLevel >= 3
-                    else -> true // "member" access — all company employees
+            val tab = _tabFilter.value
+            val userPositionLevel = lavender.client.android.data.session.SessionManager.session.value.positionLevel
+            val userCompanyId = lavender.client.android.data.session.SessionManager.session.value.companyId
+
+            // Apply tab filter
+            val filteredChats = when {
+                tab == "ai" -> chats.filter { it.type == "owl" || it.type == "hermes" }
+                tab == "groups" -> chats.filter { it.type == "group" || it.type == "general" || it.type == "conference" }
+                tab == "company" -> chats.filter { it.companyId.isNotEmpty() }
+                tab.startsWith("company:") -> {
+                    val targetCompanyId = tab.removePrefix("company:")
+                    chats.filter { it.companyId == targetCompanyId }
                 }
-            } else true
+                tab == "archive" -> chats.filter { it.isArchived }
+                else -> chats // "all"
+            }.filter { chat ->
+                // Hide saved_messages chat — accessed via toolbar star button
+                chat.type != "saved_messages"
+            }.filter { chat ->
+                // Company chat access control (per-company)
+                if (chat.companyId.isNotEmpty()) {
+                    // Look up position level from cache (populated by loadCompanyPositions)
+                    val positionLevel = companyPositionCache[chat.companyId] ?: userPositionLevel
+                    when {
+                        chat.companyMinPositionLevel > 0 -> positionLevel >= chat.companyMinPositionLevel
+                        chat.companyChatAccess == "management" -> positionLevel >= 1
+                        chat.companyChatAccess == "owner_only" -> positionLevel >= 3
+                        else -> true // "member" access — all company employees
+                    }
+                } else true
+            }
+
+            val maskedChats = filteredChats.map {
+                if (it.isSecret) it.copy(lastMessageText = "") else it
+            }
+
+            val isArchiveTab = tab == "archive"
+            val pinned = maskedChats.filter { it.isPinned && (isArchiveTab || !it.isArchived) }
+                .sortedByDescending { it.pinnedAt }
+            val allRegular = maskedChats.filter { !it.isPinned && (isArchiveTab || !it.isArchived) }
+                .sortedByDescending { it.lastMessageTime }
+
+            val sectionList = mutableListOf<SectionItem>()
+
+            if (pinned.isNotEmpty()) {
+                sectionList.add(SectionItem(Section.PINNED, pinned))
+            }
+            if (allRegular.isNotEmpty()) {
+                sectionList.add(SectionItem(Section.ALL_CHATS, allRegular))
+            }
+
+            withContext(Dispatchers.Main) {
+                _sections.value = sectionList
+            }
         }
-
-        val maskedChats = filteredChats.map {
-            if (it.isSecret) it.copy(lastMessageText = "") else it
-        }
-
-        val isArchiveTab = tab == "archive"
-        val pinned = maskedChats.filter { it.isPinned && (isArchiveTab || !it.isArchived) }
-            .sortedByDescending { it.pinnedAt }
-        val allRegular = maskedChats.filter { !it.isPinned && (isArchiveTab || !it.isArchived) }
-            .sortedByDescending { it.lastMessageTime }
-
-        val sectionList = mutableListOf<SectionItem>()
-
-        if (pinned.isNotEmpty()) {
-            sectionList.add(SectionItem(Section.PINNED, pinned))
-        }
-        if (allRegular.isNotEmpty()) {
-            sectionList.add(SectionItem(Section.ALL_CHATS, allRegular))
-        }
-
-        _sections.value = sectionList
     }
 }

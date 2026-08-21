@@ -238,29 +238,6 @@ class ChatListActivity : AppCompatActivity() {
         // Set title
         tvToolbarTitle?.text = getString(R.string.chats)
 
-        // Toolbar styling: solid background with bottom rounded corners
-        // Applied after ThemeApplier to layer on top of theme colors
-        toolbar?.let { tb ->
-            val bg = tb.background?.mutate()
-            if (bg != null) {
-                val color = when (bg) {
-                    is android.graphics.drawable.GradientDrawable -> bg.color?.defaultColor ?: 0
-                    else -> 0
-                }
-                if (color != 0) {
-                    val shape = android.graphics.drawable.GradientDrawable().apply {
-                        shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                        setColor(color)
-                    }
-                    tb.background = shape
-                }
-            }
-            tb.elevation = 6f
-        }
-
-        // Make AppBarLayout transparent so toolbar transparency shows through
-        findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.appBarLayout)?.setBackgroundColor(Color.TRANSPARENT)
-
         // Setup toolbar actions
         setupToolbarActions(this, username)
 
@@ -574,6 +551,11 @@ class ChatListActivity : AppCompatActivity() {
             layoutManager = LinearLayoutManager(context)
             adapter = chatAdapter
             setHasFixedSize(true)
+            
+            // Optimization: larger pool for chat items and section headers
+            recycledViewPool.setMaxRecycledViews(ChatAdapter.TYPE_CHAT_ITEM, 30)
+            recycledViewPool.setMaxRecycledViews(ChatAdapter.TYPE_SECTION_HEADER, 10)
+
             // Smooth item animations — disabled in fast mode
             val isFast = FastModeManager.isFastMode(this@ChatListActivity)
             chatAdapter.fastModeEnabled = isFast
@@ -608,7 +590,7 @@ class ChatListActivity : AppCompatActivity() {
                 val layoutManager = rvChatList?.layoutManager as? LinearLayoutManager
                 val firstVisible = layoutManager?.findFirstCompletelyVisibleItemPosition() ?: 0
                 val wasNearTop = firstVisible <= 1
-                chatAdapter.setSections(sections)
+                chatAdapter.setSections(sections, this@ChatListActivity)
                 // Apply layout animation only on first load and not in fast mode
                 val isFast = FastModeManager.isFastMode(this@ChatListActivity)
                 if (isFirstLoad && sections.isNotEmpty() && !isFast) {
