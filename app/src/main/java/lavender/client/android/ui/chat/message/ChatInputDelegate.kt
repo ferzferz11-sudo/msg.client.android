@@ -7,12 +7,14 @@ import android.net.Uri
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.View
 import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -43,7 +45,6 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
@@ -66,6 +67,10 @@ class ChatInputDelegate(
     lateinit var mentionList: RecyclerView
     lateinit var imagePreviewScroll: HorizontalScrollView
     lateinit var imagePreviewContainer: LinearLayout
+    lateinit var replyPreview: View
+    lateinit var replyUser: TextView
+    lateinit var replyText: TextView
+    lateinit var cancelReply: ImageButton
 
     private lateinit var mentionAdapter: MentionAdapter
     private val selectedImageUris = mutableListOf<Uri>()
@@ -82,7 +87,7 @@ class ChatInputDelegate(
     private var secretKeyExchanged = false
     private var replyingTo: Message? = null
 
-    var onSendMessage: ((text: String, imageUrl: String) -> Unit)? = null
+    var onSendMessage: ((text: String, imageUrl: String, replyTo: Message?) -> Unit)? = null
     var onTypingSignal: ((isTyping: Boolean) -> Unit)? = null
     var onReplyChanged: ((Message?) -> Unit)? = null
     var onStickerSent: (() -> Unit)? = null
@@ -164,7 +169,7 @@ class ChatInputDelegate(
             val lat = result.data?.getDoubleExtra("lat", 0.0) ?: 0.0
             val lng = result.data?.getDoubleExtra("lng", 0.0) ?: 0.0
             if (lat != 0.0 || lng != 0.0) {
-                onSendMessage?.invoke("geo:$lat,$lng", "")
+                onSendMessage?.invoke("geo:$lat,$lng", "", replyingTo)
             }
         }
     }
@@ -178,6 +183,10 @@ class ChatInputDelegate(
         mentionList = activity.findViewById(R.id.mentionList)
         imagePreviewScroll = activity.findViewById(R.id.imagePreviewScroll)
         imagePreviewContainer = activity.findViewById(R.id.imagePreviewContainer)
+        replyPreview = activity.findViewById(R.id.replyPreview)
+        replyUser = activity.findViewById(R.id.replyUser)
+        replyText = activity.findViewById(R.id.replyText)
+        cancelReply = activity.findViewById(R.id.cancelReply)
 
         sendButton.isVisible = false
 
@@ -214,14 +223,15 @@ class ChatInputDelegate(
     fun setupListeners(audioRecordHandler: ((File, Int) -> Unit)? = null) {
         onAudioRecord = audioRecordHandler
         sendButton.setOnClickListener {
+            Log.d(TAG, "sendButton clicked")
             if (selectedImageUris.isNotEmpty()) {
                 sendSelectedImages()
             } else {
                 val text = messageInput.text.toString().trim()
                 if (text.isNotEmpty()) {
-                    onSendMessage?.invoke(text, "")
-                    messageInput.text.clear()
-                    hideReplyPreview()
+                    Log.d(TAG, "calling onSendMessage for text: $text")
+                    onSendMessage?.invoke(text, "", replyingTo)
+                    resetInput()
                 }
             }
         }
@@ -230,6 +240,7 @@ class ChatInputDelegate(
         audioButton.setOnClickListener {
             showAudioRecordingView { file, dur -> file?.let { onAudioRecord?.invoke(it, dur) } }
         }
+        cancelReply.setOnClickListener { hideReplyPreview() }
 
         messageInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -605,7 +616,7 @@ class ChatInputDelegate(
                             uploadProgressBar.isVisible = false
                             if (url.isNotEmpty() && !url.contains("404")) {
                                 if (isImage) sendGalleryMessage("", listOf(url))
-                                else onSendMessage?.invoke("File: $fn\n$url", "")
+                                else onSendMessage?.invoke("File: $fn\n$url", "", replyingTo)
                             } else showToast("Upload failed")
                         }
                     }
@@ -651,11 +662,15 @@ class ChatInputDelegate(
 
     fun showReplyPreview(m: Message) {
         replyingTo = m
+        replyUser.text = m.user
+        replyText.text = m.text.ifEmpty { activity.getString(R.string.photo) }
+        replyPreview.isVisible = true
         onReplyChanged?.invoke(m)
     }
 
     fun hideReplyPreview() {
         replyingTo = null
+        replyPreview.isVisible = false
         onReplyChanged?.invoke(null)
     }
 

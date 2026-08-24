@@ -46,7 +46,7 @@ data class ColorItem(
     val fieldName: String
 )
 
-class ThemePaletteActivity : AppCompatActivity(),
+class ThemePaletteActivity : BaseActivity(),
     PaletteFragment.PaletteCallback,
     BackgroundsFragment.BackgroundsCallback {
 
@@ -67,17 +67,6 @@ class ThemePaletteActivity : AppCompatActivity(),
     private lateinit var viewPager: ViewPager2
     private lateinit var paletteFragment: PaletteFragment
     private lateinit var backgroundsFragment: BackgroundsFragment
-
-    override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val languageCode = prefs.getString("language", "ru") ?: "ru"
-        val locale = Locale.forLanguageTag(languageCode)
-        Locale.setDefault(locale)
-        val config = Configuration(newBase.resources.configuration)
-        config.setLocale(locale)
-        val context = newBase.createConfigurationContext(config)
-        super.attachBaseContext(context)
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)

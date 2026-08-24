@@ -1,19 +1,17 @@
 package lavender.client.android
 
-import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
-import android.text.TextWatcher
 import android.text.InputType
+import android.text.TextWatcher
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
@@ -30,11 +28,9 @@ import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.profile.EditProfileViewModel
-import java.util.Locale
-
 import lavender.client.android.ui.widget.StandardBottomSheet
 
-class EditProfileActivity : AppCompatActivity() {
+class EditProfileActivity : BaseActivity() {
 
     private lateinit var viewModel: EditProfileViewModel
     private var username: String = ""
@@ -55,17 +51,6 @@ class EditProfileActivity : AppCompatActivity() {
         if (result.resultCode == RESULT_OK) {
             reloadProfile()
         }
-    }
-
-    override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val languageCode = prefs.getString("language", "ru") ?: "ru"
-        val locale = Locale.forLanguageTag(languageCode)
-        Locale.setDefault(locale)
-        val config = newBase.resources.configuration
-        config.setLocale(locale)
-        val context = newBase.createConfigurationContext(config)
-        super.attachBaseContext(context)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

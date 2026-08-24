@@ -132,11 +132,15 @@ class GrpcMessageV2Client(
 
     private fun resolveUsername(senderId: String): String {
         if (senderId.isEmpty()) return ""
+        val myId = getUserId()
+        if (senderId == myId) return getUsername() ?: ""
         return allUsers().firstOrNull { it.userId == senderId }?.username ?: ""
     }
 
     private fun resolveAvatarUrl(senderId: String): String {
         if (senderId.isEmpty()) return ""
+        val myId = getUserId()
+        if (senderId == myId) return appContext()?.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)?.getString("avatar_url", "") ?: ""
         return allUsers().firstOrNull { it.userId == senderId }?.avatarUrl ?: ""
     }
 
@@ -199,12 +203,13 @@ class GrpcMessageV2Client(
         if (proto.reply != null) {
             repliedToMessageId = proto.reply.messageId
             repliedToText = proto.reply.preview
-            repliedToUser = resolveUsername(proto.reply.senderId)
+            repliedToUser = resolveUsername(proto.reply.senderId).ifEmpty { proto.reply.senderId }
         }
 
-        // Workaround: server overwrites Content=Text with Content=Reply in oneof,
-        // losing the text. Use reply.preview as text when text is empty.
-        val displayText = if (proto.text.isEmpty() && proto.reply != null && proto.reply.preview.isNotEmpty()) {
+        // Workaround: server overwrites Content=Text with Content=Reply in oneof, losing the text.
+        // Use reply.preview as main text ONLY if there is no other content (text or media).
+        val hasMedia = imageUrl.isNotEmpty() || voiceUrl.isNotEmpty() || stickerUrl.isNotEmpty()
+        val displayText = if (proto.text.isEmpty() && !hasMedia && proto.reply != null && proto.reply.preview.isNotEmpty()) {
             proto.reply.preview
         } else {
             proto.text

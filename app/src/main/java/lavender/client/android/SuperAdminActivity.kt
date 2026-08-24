@@ -36,7 +36,7 @@ import lavender.client.android.ui.adapter.SuperAdminAdapter
 import lavender.client.android.ui.widget.StandardBottomSheet
 import java.util.Locale
 
-class SuperAdminActivity : AppCompatActivity() {
+class SuperAdminActivity : BaseActivity() {
 
     private lateinit var viewModel: SuperAdminViewModel
     private lateinit var username: String
@@ -45,17 +45,6 @@ class SuperAdminActivity : AppCompatActivity() {
     private lateinit var searchLayout: View
     private lateinit var searchEditText: EditText
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
-
-    override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val languageCode = prefs.getString("language", "ru") ?: "ru"
-        val locale = Locale.forLanguageTag(languageCode)
-        Locale.setDefault(locale)
-        val config = newBase.resources.configuration
-        config.setLocale(locale)
-        val context = newBase.createConfigurationContext(config)
-        super.attachBaseContext(context)
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)

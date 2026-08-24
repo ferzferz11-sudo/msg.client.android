@@ -158,9 +158,8 @@ class ChatAdapter(
         }
     }
 
-    private fun initColors() {
+    private fun initColors(theme: lavender.client.android.theme.Theme) {
         if (colorsInitialized) return
-        val theme = ThemeStore.currentTheme()
         cachedPrimaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
         cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
         cachedTextSecondary = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.LTGRAY)
@@ -300,7 +299,8 @@ class ChatAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        initColors()
+        val theme = ThemeStore.currentTheme()
+        initColors(theme)
         when (val item = getItem(position)) {
             is FlatItem.SectionHeader -> (holder as SectionHeaderViewHolder).bind(item)
             is FlatItem.ChatItem -> {
@@ -314,7 +314,7 @@ class ChatAdapter(
                     cachedSelectedColor, cachedUnreadColor, cachedPrimaryColor,
                     cachedIsLightTheme, selectionMode, selectedIds.contains(chat.id),
                     currentUsername, onlineUsersSet, allUsersMap, avatarUrlCache,
-                    otherParticipantCache, fastModeEnabled
+                    otherParticipantCache, fastModeEnabled, theme
                 )
             }
             null -> {}
@@ -454,7 +454,8 @@ class ChatAdapter(
             allUsersMap: Map<String, lavender.client.android.data.proto.UserInfoProto>,
             avatarCache: Map<String, String>,
             otherParticipantCache: MutableMap<String, String>,
-            fastMode: Boolean
+            fastMode: Boolean,
+            theme: lavender.client.android.theme.Theme
         ) {
             val hasUnread = chat.unreadCount > 0
             
@@ -488,14 +489,13 @@ class ChatAdapter(
                             .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
                             .override(sizePx, sizePx).circleCrop().into(ivChatAvatar)
                     } else if (avatarUrl.isEmpty()) {
-                        if (currentTag != null) {
-                            ivChatAvatar.tag = null
+                        if (currentTag != "default") {
+                            ivChatAvatar.tag = "default"
                             com.bumptech.glide.Glide.with(itemView.context).clear(ivChatAvatar)
+                            try {
+                                ThemeUtils.applyDefaultAvatar(ivChatAvatar, theme)
+                            } catch (_: Exception) { ivChatAvatar.setImageResource(R.drawable.ic_default_avatar) }
                         }
-                        try {
-                            val currentTheme = ThemeStore.currentTheme()
-                            ThemeUtils.applyDefaultAvatar(ivChatAvatar, currentTheme)
-                        } catch (_: Exception) { ivChatAvatar.setImageResource(R.drawable.ic_default_avatar) }
                     }
                 } catch (_: Exception) { ivChatAvatar.setImageResource(R.drawable.ic_default_avatar) }
 

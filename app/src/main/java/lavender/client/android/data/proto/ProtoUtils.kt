@@ -166,7 +166,7 @@ object ProtoUtils {
 
         var imageUrl = ""; var imageUrls = emptyList<String>()
         var voiceUrl = ""; var duration = 0
-        var repliedToMessageId = ""; var repliedToText = ""
+        var repliedToMessageId = ""; var repliedToText = ""; var repliedToUser = ""
         var stickerUrl = ""; var stickerThumbnailUrl = ""
 
         if (proto.media != null) {
@@ -189,6 +189,7 @@ object ProtoUtils {
         if (proto.reply != null) {
             repliedToMessageId = proto.reply.messageId
             repliedToText = proto.reply.preview
+            repliedToUser = resolveUsername(proto.reply.senderId).ifEmpty { proto.reply.senderId }
         }
 
         val reactions = if (proto.reactions.isNotEmpty()) {
@@ -210,6 +211,7 @@ object ProtoUtils {
             timestamp = timestamp,
             reactions = reactions,
             repliedToMessageId = repliedToMessageId,
+            repliedToUser = repliedToUser,
             repliedToText = repliedToText,
             roomId = proto.roomId,
             isRead = proto.isRead,

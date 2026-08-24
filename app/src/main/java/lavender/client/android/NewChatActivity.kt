@@ -42,10 +42,18 @@ import lavender.client.android.ui.chat.message.*
 import lavender.client.android.ui.adapter.MessageAdapter
 import lavender.client.android.ui.adapter.MessageSwipeController
 import lavender.client.android.data.calls.CallMessageHelper
+import org.json.JSONArray
 import androidx.core.graphics.toColorInt
 import kotlin.time.Duration.Companion.seconds
 
-class NewChatActivity : AppCompatActivity() {
+private data class ChatState(
+    val onlineUsers: List<String>,
+    val status: ConnectionStatus,
+    val currentTypists: List<String>,
+    val otherUserLastSeenAt: com.google.protobuf.Timestamp?
+)
+
+class NewChatActivity : BaseActivity() {
 
     private lateinit var chatViewModel: ChatViewModel
     private lateinit var newChatViewModel: NewChatViewModel
@@ -69,17 +77,6 @@ class NewChatActivity : AppCompatActivity() {
 
     private val data: ChatIntentData
         get() = newChatViewModel.intentData.value
-
-    override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val languageCode = prefs.getString("language", "ru") ?: "ru"
-        val locale = java.util.Locale.forLanguageTag(languageCode)
-        java.util.Locale.setDefault(locale)
-        val config = newBase.resources.configuration
-        config.setLocale(locale)
-        val context = newBase.createConfigurationContext(config)
-        super.attachBaseContext(context)
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -141,9 +138,22 @@ class NewChatActivity : AppCompatActivity() {
                         )
                     )
                     val updated = newChatViewModel.metadata.value
+                    val lastSeen = if (updated.isDirect) {
+                        try {
+                            val arr = JSONArray(updated.participantsJson)
+                            var other = ""
+                            for (i in 0 until arr.length()) {
+                                val p = arr.getString(i)
+                                if (p != data.username) { other = p; break }
+                            }
+                            grpcClient.allUsers.value.find { it.username == other }?.lastSeenAt
+                        } catch (_: Exception) { null }
+                    } else null
+
                     toolbarDelegate.configure(
                         data.roomId, data.username, updated.chatName, updated.isDirect, updated.chatType,
-                        updated.participantsJson, updated.creator, updated.avatarUrl, updated.fullAvatarUrl, data.isSecret
+                        updated.participantsJson, updated.creator, updated.avatarUrl, updated.fullAvatarUrl, data.isSecret,
+                        initialLastSeen = lastSeen
                     )
                     toolbarDelegate.setup()
                     toolbarDelegate.refreshSubtitle()
@@ -174,9 +184,23 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun setupDelegates() {
         val d = newChatViewModel.intentData.value
+        
+        val lastSeen = if (d.isDirect) {
+            try {
+                val arr = JSONArray(d.participantsJson)
+                var other = ""
+                for (i in 0 until arr.length()) {
+                    val p = arr.getString(i)
+                    if (p != d.username) { other = p; break }
+                }
+                grpcClient.allUsers.value.find { it.username == other }?.lastSeenAt
+            } catch (_: Exception) { null }
+        } else null
+
         toolbarDelegate.configure(
             d.roomId, d.username, d.chatName, d.isDirect, d.chatType,
-            d.participantsJson, d.creator, d.chatAvatarUrl, d.chatFullAvatarUrl, d.isSecret
+            d.participantsJson, d.creator, d.chatAvatarUrl, d.chatFullAvatarUrl, d.isSecret,
+            initialLastSeen = lastSeen
         )
         toolbarDelegate.setup()
         toolbarDelegate.refreshSubtitle()
@@ -185,14 +209,38 @@ class NewChatActivity : AppCompatActivity() {
         adapter.adminUsername = d.creator
 
         inputDelegate.configure(d.roomId, d.username, d.isDirect, d.participantsJson, d.isSecret)
-        inputDelegate.initViews()
+        
+        inputDelegate.onSendMessage = { text, imageUrl, replyTo ->
+            android.util.Log.d(TAG, "onSendMessage callback triggered: text=$text")
+            val msg = Message(
+                id = java.util.UUID.randomUUID().toString(),
+                user = d.username,
+                text = text,
+                timestamp = System.currentTimeMillis(),
+                roomId = d.roomId,
+                imageUrl = imageUrl,
+                userId = grpcClient.getUserId() ?: "",
+                isSent = false,
+                repliedToMessageId = replyTo?.id ?: "",
+                repliedToUser = replyTo?.user ?: "",
+                repliedToText = replyTo?.text ?: ""
+            )
+            shouldScrollToBottom = true
+            chatViewModel.sendMessage(msg)
+            grpcClient.deleteDraft(d.roomId)
+        }
+        
+        inputDelegate.onTypingSignal = { isTyping ->
+            chatViewModel.sendTypingSignal(d.username, isTyping)
+        }
+
         inputDelegate.setupListeners { file, duration ->
             chatViewModel.uploadAudio(this, file, duration, d.roomId) { audioUrl ->
                 val msg = Message(
                     id = java.util.UUID.randomUUID().toString(),
                     user = d.username,
                     text = "",
-                    timestamp = System.currentTimeMillis() / 1000,
+                    timestamp = System.currentTimeMillis(),
                     roomId = d.roomId,
                     voiceUrl = audioUrl,
                     duration = duration,
@@ -300,18 +348,37 @@ class NewChatActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                combine(grpcClient.users, grpcClient.connectionStatus, grpcClient.typingUsers, grpcClient.allUsers) { onlineUsers, status, typingMap, _ ->
+                combine(
+                    grpcClient.users,
+                    grpcClient.connectionStatus,
+                    grpcClient.typingUsers,
+                    grpcClient.allUsers,
+                    newChatViewModel.metadata
+                ) { onlineUsers, status, typingMap, _, meta ->
                     val currentUserId = grpcClient.getUserId() ?: ""
                     val currentTypists = typingMap[data.roomId]?.filter { it != data.username && it != currentUserId } ?: emptyList()
-                    Triple(onlineUsers, status, currentTypists)
-                }.collect { (onlineUsers, status, currentTypists) ->
+                    val otherUser = if (meta.isDirect) {
+                        try {
+                            val arr = org.json.JSONArray(meta.participantsJson)
+                            var o = ""
+                            for (i in 0 until arr.length()) {
+                                val p = arr.getString(i)
+                                if (p != data.username) { o = p; break }
+                            }
+                            o
+                        } catch (_: Exception) { null }
+                    } else null
+                    
+                    val otherUserLastSeenAt = otherUser?.let { u ->
+                        grpcClient.allUsers.value.find { it.username == u }?.lastSeenAt
+                    }
+                    
+                    ChatState(onlineUsers, status, currentTypists, otherUserLastSeenAt)
+                }.collect { (onlineUsers, status, currentTypists, otherUserLastSeenAt) ->
                     try {
                         val isConnected = status == ConnectionStatus.READY
                         val isConnecting = status == ConnectionStatus.CONNECTING
-                        val otherUser = toolbarDelegate.getOtherParticipant()
-                        val otherUserLastSeenAt = otherUser?.let { u ->
-                            grpcClient.allUsers.value.find { it.username == u }?.lastSeenAt
-                        }
+                        
                         toolbarDelegate.updateSubtitle(onlineUsers, isConnected, currentTypists, otherUserLastSeenAt, grpcClient.serverShuttingDown.value)
                         inputDelegate.messageInput.isEnabled = !isConnecting
                         inputDelegate.sendButton.isEnabled = !isConnecting
@@ -417,7 +484,7 @@ class NewChatActivity : AppCompatActivity() {
             id = sysMsgId,
             user = "",
             text = text,
-            timestamp = lastTs + 1,
+            timestamp = lastTs + 10,
             roomId = data.roomId,
         )
         grpcClient.addLocalMessage(sysMsg)
@@ -431,10 +498,22 @@ class NewChatActivity : AppCompatActivity() {
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
             val isImeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+            
+            val wasNearBottom = isNearBottom()
+            
             bottomPanel.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                 bottomMargin = if (isImeVisible) imeInsets.bottom else systemBars.bottom
             }
             bottomPanelContent.updatePadding(bottom = 4.dpToPx())
+            
+            if (isImeVisible && wasNearBottom) {
+                messagesRecyclerView.postDelayed({
+                    if (!isFinishing && !isDestroyed) {
+                        messagesRecyclerView.scrollToPosition(adapter.itemCount - 1)
+                    }
+                }, 100)
+            }
+            
             insets
         }
     }

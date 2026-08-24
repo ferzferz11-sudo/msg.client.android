@@ -28,6 +28,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import lavender.client.android.BaseActivity
 import lavender.client.android.R
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
@@ -63,21 +64,11 @@ import androidx.core.graphics.toColorInt
  * - ChatListNavigation.kt — navigateToChat
  * - ChatListAuth.kt — auth dialogs (ServerAuth, Login, Register)
  */
-class ChatListActivity : AppCompatActivity() {
+class ChatListActivity : BaseActivity() {
 
     companion object {
         private const val TAG = "ChatListActivity"
         internal const val SEARCH_DEBOUNCE_MS = 300L
-    }
-
-    override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val lang = prefs.getString("language", "ru") ?: "ru"
-        val locale = java.util.Locale.forLanguageTag(lang)
-        java.util.Locale.setDefault(locale)
-        val config = Configuration(newBase.resources.configuration)
-        config.setLocale(locale)
-        super.attachBaseContext(newBase.createConfigurationContext(config))
     }
 
     internal lateinit var viewModel: ChatListViewModel

@@ -42,18 +42,7 @@ import androidx.appcompat.app.AlertDialog
 
 import lavender.client.android.ui.widget.SearchableListBottomSheet
 
-class ProfileActivity : AppCompatActivity() {
-
-    override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val languageCode = prefs.getString("language", "ru") ?: "ru"
-        val locale = Locale.forLanguageTag(languageCode)
-        Locale.setDefault(locale)
-        val config = android.content.res.Configuration(newBase.resources.configuration)
-        config.setLocale(locale)
-        val context = newBase.createConfigurationContext(config)
-        super.attachBaseContext(context)
-    }
+class ProfileActivity : BaseActivity() {
 
     private val grpcClient = GrpcClient
     private lateinit var viewModel: ProfileViewModel

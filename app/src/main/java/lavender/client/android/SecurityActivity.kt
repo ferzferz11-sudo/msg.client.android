@@ -1,13 +1,10 @@
 package lavender.client.android
 
-import android.content.Context
-import android.content.res.Configuration
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricManager
 import androidx.core.graphics.toColorInt
 import androidx.core.view.ViewCompat
@@ -27,9 +24,8 @@ import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.DeviceAdapter
 import lavender.client.android.ui.widget.StandardBottomSheet
-import java.util.Locale
 
-class SecurityActivity : AppCompatActivity() {
+class SecurityActivity : BaseActivity() {
 
     private lateinit var username: String
     private lateinit var userId: String
@@ -38,17 +34,6 @@ class SecurityActivity : AppCompatActivity() {
     private lateinit var devicesRecyclerView: RecyclerView
     private lateinit var deviceAdapter: DeviceAdapter
     private lateinit var btnTerminateAll: MaterialButton
-
-    override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val languageCode = prefs.getString("language", "ru") ?: "ru"
-        val locale = Locale.forLanguageTag(languageCode)
-        Locale.setDefault(locale)
-        val config = Configuration(newBase.resources.configuration)
-        config.setLocale(locale)
-        val context = newBase.createConfigurationContext(config)
-        super.attachBaseContext(context)
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -291,7 +276,7 @@ class SecurityActivity : AppCompatActivity() {
         sheet.findViewById<TextView>(R.id.tvLastActive)?.text = 
             lavender.client.android.data.proto.ProtoUtils.formatLastSeen(device.lastSeenAt, this)
 
-        val btnClose = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnClose)
+        val btnClose = sheet.findViewById<MaterialButton>(R.id.btnClose)
         btnClose?.setOnClickListener { sheet.dismiss() }
         
         sheet.show()

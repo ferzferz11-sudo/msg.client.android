@@ -21,7 +21,7 @@ import lavender.client.android.data.session.SessionManager
 import kotlin.time.Duration.Companion.milliseconds
 
 @SuppressLint("CustomSplashScreen")
-class SplashActivity : AppCompatActivity() {
+class SplashActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

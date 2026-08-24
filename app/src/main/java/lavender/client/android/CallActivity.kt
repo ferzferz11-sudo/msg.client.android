@@ -22,7 +22,7 @@ import lavender.client.android.ui.calls.CallViewModel
 import org.webrtc.*
 import org.json.JSONObject
 
-class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
+class CallActivity : BaseActivity(), WebRtcClient.Observer {
     private lateinit var binding: ActivityCallBinding
     private val viewModel: CallViewModel by viewModels()
     private var webRtcClient: WebRtcClient? = null

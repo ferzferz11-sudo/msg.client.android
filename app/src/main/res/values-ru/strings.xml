@@ -118,7 +118,7 @@
     <string name="location">Локация</string>
     <string name="cancel_dialog">Отмена</string>
     <string name="connected_status">подключен</string>
-    <string name="disconnected_status">офлайн</string>
+    <string name="disconnected_status">не в сети</string>
     <string name="username_empty">Имя пользователя не может быть пустым</string>
     <string name="logged_out">Вы успешно вышли из системы</string>
     <string name="exiting_app">Выход из приложения</string>
@@ -223,7 +223,7 @@
     <string name="group_creator">Создатель группы</string>
     <string name="cannot_delete_group">У вас нет прав для удаления этой группы. Только создатель группы или администратор может её удалить.</string>
     <string name="no_bio">О себе не заполнено</string>
-    <string name="offline">офлайн</string>
+    <string name="offline">не в сети</string>
     <string name="group_chat">Групповой чат</string>
     <string name="chat_id_format">ID чата: %s</string>
     <string name="participants">Участники</string>

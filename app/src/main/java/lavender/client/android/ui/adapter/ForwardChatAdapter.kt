@@ -40,6 +40,7 @@ class ForwardChatAdapter(
         private val chatName: TextView = view.findViewById(R.id.tvChatName)
         private val chatType: TextView = view.findViewById(R.id.tvChatType)
         private val participantAvatars: LinearLayout = view.findViewById(R.id.participantAvatars)
+        private val mainAvatar: ImageView = view.findViewById(R.id.ivChatAvatar)
         private val unreadCount: TextView = view.findViewById(R.id.tvUnreadCount)
 
         fun bind(chat: ChatInfo) {
@@ -52,6 +53,10 @@ class ForwardChatAdapter(
                 else -> chat.type.replaceFirstChar { it.uppercase() }
             }
             unreadCount.visibility = View.GONE
+            
+            // Hide main avatar and show container for overlapping ones
+            mainAvatar.visibility = View.GONE
+            participantAvatars.visibility = View.VISIBLE
             
             // Set colors from theme
             val theme = ThemeStore.currentTheme()

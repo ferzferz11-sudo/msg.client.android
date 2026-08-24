@@ -71,8 +71,9 @@ class ChatToolbarDelegate(
         roomId: String, username: String, chatName: String,
         isDirect: Boolean, chatType: String, participantsJson: String,
         creator: String, chatAvatarUrl: String, chatFullAvatarUrl: String,
-        isSecret: Boolean
+        isSecret: Boolean, initialLastSeen: com.google.protobuf.Timestamp? = null
     ) {
+        val isSameRoom = this.roomId == roomId
         this.roomId = roomId
         this.username = username
         this.chatName = chatName
@@ -84,12 +85,16 @@ class ChatToolbarDelegate(
         this.chatFullAvatarUrl = chatFullAvatarUrl
         this.isSecret = isSecret
         
-        // Reset dynamic state to avoid leakage from previous chat sessions
-        lastOnlineUsers = emptyList()
-        lastTypists = emptyList()
-        lastOtherUserLastSeenAt = null
-        cachedOtherUser = null
-        isE2eeInProgress = false
+        // Reset dynamic state only if switching to a different room
+        if (!isSameRoom) {
+            lastOnlineUsers = emptyList()
+            lastTypists = emptyList()
+            lastOtherUserLastSeenAt = initialLastSeen
+            cachedOtherUser = null
+            isE2eeInProgress = false
+        } else if (initialLastSeen != null) {
+            lastOtherUserLastSeenAt = initialLastSeen
+        }
     }
 
     fun setup() {
@@ -391,8 +396,12 @@ class ChatToolbarDelegate(
                     toolbarSubtitle.setTextColor(cg)
                 } else {
                     val lastSeen = lavender.client.android.data.proto.ProtoUtils.formatLastSeen(otherUserLastSeenAt, activity)
-                    toolbarSubtitle.text = if (lastSeen.isNotEmpty()) lastSeen else activity.getString(R.string.offline)
-                    toolbarSubtitle.setTextColor(cop)
+                    if (lastSeen.isNotEmpty()) {
+                        toolbarSubtitle.text = lastSeen
+                        toolbarSubtitle.setTextColor(cop)
+                    } else {
+                        toolbarSubtitle.isVisible = false
+                    }
                 }
             }
             else -> updateGroupSubtitle(onlineUsers)

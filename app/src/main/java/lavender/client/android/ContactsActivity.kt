@@ -30,24 +30,13 @@ import lavender.client.android.ui.widget.SearchableListBottomSheet
 import lavender.client.android.ui.adapter.UserAdapter
 import java.util.Locale
 
-class ContactsActivity : AppCompatActivity() {
+class ContactsActivity : BaseActivity() {
 
     private lateinit var binding: ActivityContactsBinding
     private lateinit var viewModel: ContactsViewModel
     private lateinit var adapter: UserAdapter
     private var username: String = ""
     private var password: String = ""
-
-    override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val languageCode = prefs.getString("language", "ru") ?: "ru"
-        val locale = Locale.forLanguageTag(languageCode)
-        Locale.setDefault(locale)
-        val config = newBase.resources.configuration
-        config.setLocale(locale)
-        val context = newBase.createConfigurationContext(config)
-        super.attachBaseContext(context)
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)

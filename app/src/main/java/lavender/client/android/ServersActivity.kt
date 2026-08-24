@@ -44,7 +44,7 @@ import java.util.UUID
  * По умолчанию предустановлены Lava Germany (prod) и Lava Germany dev.
  * При входе через сервер — prefill последнего логина + splash перед навигацией.
  */
-class ServersActivity : AppCompatActivity() {
+class ServersActivity : BaseActivity() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var emptyView: TextView
@@ -54,17 +54,6 @@ class ServersActivity : AppCompatActivity() {
 
     // Currently selected server address (host:port) from CredentialStore
     private var currentServerAddress: String = ""
-
-    override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val languageCode = prefs.getString("language", "ru") ?: "ru"
-        val locale = java.util.Locale.forLanguageTag(languageCode)
-        java.util.Locale.setDefault(locale)
-        val config = android.content.res.Configuration(newBase.resources.configuration)
-        config.setLocale(locale)
-        val context = newBase.createConfigurationContext(config)
-        super.attachBaseContext(context)
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)

@@ -704,8 +704,8 @@ object RealGrpcClient {
                                     "\uD83D\uDD25 $t"
                                 }
                                 // Use timestamp after the last message to ensure correct ordering
-                                val lastMsgTimestamp = _messages.value.lastOrNull { it.roomId == targetRoomId }?.timestamp ?: (System.currentTimeMillis() / 1000)
-                                val sysMsgTimestamp = lastMsgTimestamp + 1
+                                val lastMsgTimestamp = _messages.value.lastOrNull { it.roomId == targetRoomId }?.timestamp ?: System.currentTimeMillis()
+                                val sysMsgTimestamp = lastMsgTimestamp + 10
                                 val sysMsgId = "sd_timer_${targetRoomId}_current"
                                 val sysMsg = Message(
                                     id = sysMsgId,

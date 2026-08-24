@@ -480,7 +480,10 @@ class MessageAdapter(
 
         private fun bindReplyQuote(message: Message, isOutgoing: Boolean, theme: lavender.client.android.theme.Theme) {
             replyQuoteContainer.isVisible = message.repliedToUser.isNotEmpty()
-            if (message.repliedToUser.isNotEmpty()) { replyQuoteUser.text = message.repliedToUser; replyQuoteText.text = message.repliedToText
+            if (message.repliedToUser.isNotEmpty()) {
+                replyQuoteUser.text = message.repliedToUser
+                replyQuoteUser.setTypeface(null, Typeface.BOLD)
+                replyQuoteText.text = message.repliedToText
                 replyQuoteContainer.isClickable = true
                 replyQuoteContainer.isFocusable = true
                 replyQuoteContainer.setOnClickListener {
