@@ -78,9 +78,11 @@ class ThemesActivity : AppCompatActivity() {
 
         val switchSystemDarkMode = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchSystemDarkMode)
         switchSystemDarkMode.isChecked = ThemeStore.isFollowSystemDarkMode()
-        switchSystemDarkMode.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.setFollowSystemDarkMode(this, isChecked)
-            adapter.setCurrentThemeId(ThemeStore.currentTheme().id)
+        switchSystemDarkMode.setOnCheckedChangeListener { buttonView, isChecked ->
+            if (buttonView.isPressed) { // Only handle user-initiated changes
+                viewModel.setFollowSystemDarkMode(this, isChecked)
+                adapter.setCurrentThemeId(ThemeStore.currentTheme().id)
+            }
         }
     }
 
@@ -158,11 +160,16 @@ class ThemesActivity : AppCompatActivity() {
     }
 
     private fun setupObservers() {
+        val switchSystemDarkMode = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchSystemDarkMode)
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
                     adapter.setCurrentThemeId(state.currentThemeId)
                     adapter.setThemes(state.themes)
+                    
+                    if (switchSystemDarkMode.isChecked != state.followSystemDarkMode) {
+                        switchSystemDarkMode.isChecked = state.followSystemDarkMode
+                    }
 
                     if (state.themeApplied) {
                         viewModel.consumeThemeApplied()

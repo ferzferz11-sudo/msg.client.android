@@ -8,12 +8,12 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.biometric.BiometricManager
 import androidx.core.graphics.toColorInt
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
-import androidx.biometric.BiometricManager
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -23,13 +23,11 @@ import com.google.android.material.materialswitch.MaterialSwitch
 import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.session.SessionManager
-import lavender.client.android.ui.adapter.DeviceAdapter
 import lavender.client.android.theme.ThemeStore
-import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
-import java.util.Locale
-
+import lavender.client.android.ui.adapter.DeviceAdapter
 import lavender.client.android.ui.widget.StandardBottomSheet
+import java.util.Locale
 
 class SecurityActivity : AppCompatActivity() {
 

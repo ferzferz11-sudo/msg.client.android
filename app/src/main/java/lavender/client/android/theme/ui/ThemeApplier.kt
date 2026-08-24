@@ -23,16 +23,12 @@ import lavender.client.android.theme.ThemeUtils
 
 object ThemeApplier {
     fun apply(activity: AppCompatActivity, theme: Theme) {
-        // Fast mode: apply minimal standard dark theme, skip images and heavy effects
+        // Fast mode: skip images and heavy effects
         val isFastMode = try {
             lavender.client.android.ui.chatlist.FastModeManager.isFastMode(activity)
         } catch (_: Exception) { false }
 
-        val effectiveTheme = if (isFastMode) {
-            lavender.client.android.theme.BuiltInThemes.dark
-        } else {
-            theme
-        }
+        val effectiveTheme = theme
 
         val bgColor = parseSafeColor(effectiveTheme.backgroundColor, Color.BLACK)
         val isLightMode = ThemeUtils.isLight(bgColor)

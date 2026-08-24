@@ -90,13 +90,11 @@ class ThemesViewModel(application: Application) : AndroidViewModel(application) 
         grpcClient.setCurrentTheme(queryId, themeId) { success ->
             viewModelScope.launch {
                 if (success) {
-                    prefs.edit {
-                        putString("current_theme_id", themeId)
-                        commit()
-                    }
+                    ThemeStore.selectTheme(getApplication(), themeId)
                     _uiState.value = _uiState.value.copy(
                         currentThemeId = themeId,
-                        themeApplied = true
+                        themeApplied = true,
+                        followSystemDarkMode = false
                     )
                 } else {
                     _uiState.value = _uiState.value.copy(error = "Failed to apply theme")

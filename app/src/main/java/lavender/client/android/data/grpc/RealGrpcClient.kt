@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -121,6 +122,9 @@ object RealGrpcClient {
 
     private val _serverShuttingDown = MutableStateFlow(false)
     val serverShuttingDown: StateFlow<Boolean> = _serverShuttingDown
+
+    private val _historyClearedEvent = MutableSharedFlow<String>(extraBufferCapacity = 10)
+    val historyClearedEvent: SharedFlow<String> = _historyClearedEvent.asSharedFlow()
 
     private val _typingUsers = MutableStateFlow<Map<String, Set<String>>>(emptyMap())
     val typingUsers: StateFlow<Map<String, Set<String>>> = _typingUsers
@@ -680,8 +684,8 @@ object RealGrpcClient {
                             _selfDestructTimer.update { it + (targetRoomId to timerValue) }
                             if (targetRoomId.isNotEmpty()) {
                                 val ctx = appContext
-                                val timerLabel = if (ctx != null) {
-                                    val res = ctx.resources
+                                val timerLabel = ctx?.let {
+                                    val res = it.resources
                                     when (timerValue) {
                                         0 -> res.getString(lavender.client.android.R.string.self_destruct_off)
                                         30 -> res.getString(lavender.client.android.R.string.self_destruct_30s)
@@ -691,7 +695,7 @@ object RealGrpcClient {
                                         86400 -> res.getString(lavender.client.android.R.string.self_destruct_24h)
                                         else -> "${timerValue}s"
                                     }
-                                } else "${timerValue}s"
+                                } ?: "${timerValue}s"
                                 val text = if (timerValue == 0) {
                                     val d = ctx?.resources?.getString(lavender.client.android.R.string.self_destruct_disabled) ?: "Timer disabled"
                                     "\uD83D\uDD25 $d"
@@ -702,8 +706,9 @@ object RealGrpcClient {
                                 // Use timestamp after the last message to ensure correct ordering
                                 val lastMsgTimestamp = _messages.value.lastOrNull { it.roomId == targetRoomId }?.timestamp ?: (System.currentTimeMillis() / 1000)
                                 val sysMsgTimestamp = lastMsgTimestamp + 1
+                                val sysMsgId = "sd_timer_${targetRoomId}_current"
                                 val sysMsg = Message(
-                                    id = "sd_timer_${targetRoomId}_${System.currentTimeMillis()}",
+                                    id = sysMsgId,
                                     user = "",
                                     text = text,
                                     timestamp = sysMsgTimestamp,
@@ -711,8 +716,17 @@ object RealGrpcClient {
                                 )
                                 if (targetRoomId == currentRoomId) {
                                     _messages.update { current ->
-                                        if (current.any { it.id == sysMsg.id }) current
-                                        else current.toMutableList().apply { add(sysMsg) }
+                                        val list = current.toMutableList()
+                                        val idx = list.indexOfFirst { it.id == sysMsgId }
+                                        if (idx != -1) {
+                                            if (list[idx].text != text) {
+                                                list[idx] = sysMsg
+                                                list
+                                            } else current
+                                        } else {
+                                            list.add(sysMsg)
+                                            list
+                                        }
                                     }
                                 }
                                 // Persist system message to Room DB
@@ -945,7 +959,14 @@ object RealGrpcClient {
     fun clearMessages() { _messages.value = emptyList() }
 
     fun setMessages(msgs: List<Message>) { _messages.value = msgs }
-    fun clearRoomHistory(roomId: String, cb: (Boolean) -> Unit = {}) { messageV2Client.clearRoomHistory(roomId, cb) }
+    fun clearRoomHistory(roomId: String, cb: (Boolean) -> Unit = {}) {
+        messageV2Client.clearRoomHistory(roomId) { success ->
+            if (success) {
+                scope.launch { _historyClearedEvent.emit(roomId) }
+            }
+            cb(success)
+        }
+    }
 
     @Volatile private var markReadJob: kotlinx.coroutines.Job? = null
     @Volatile private var pendingMarkReadRoom: String? = null

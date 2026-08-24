@@ -52,6 +52,9 @@ interface ChatDao {
     @Query("SELECT * FROM chats WHERE id = :chatId")
     suspend fun getChat(chatId: String): ChatEntity?
 
+    @Query("UPDATE chats SET lastMessageText = :text, lastMessageTime = :time, lastMessageUsername = '', lastMessageHasImage = 0 WHERE id = :chatId")
+    suspend fun updateLastMessage(chatId: String, text: String, time: Long)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChats(chats: List<ChatEntity>)
 

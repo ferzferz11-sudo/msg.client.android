@@ -75,7 +75,7 @@ class ChatAdapter(
             }
             if (chat.type != "direct") return chat.name
             val other = getOrComputeOtherParticipant(chat, currentUsername, otherCache)
-            return if (other.isNotEmpty()) other else chat.name
+            return other.ifEmpty { chat.name }
         }
 
         /** Pre-compute message preview once (avoids string ops on every bind). */
@@ -98,10 +98,9 @@ class ChatAdapter(
         }
 
         private fun isSystemMessagePreviewRaw(text: String): Boolean {
-            if (text.startsWith("\uD83D\uDD25")) return true  // 🔥
-            if (text.startsWith("\uD83D\uDCF9")) return true  // 📹
-            if (text.startsWith("\uD83D\uDCDE")) return true  // 📞
-            return false
+            return text.startsWith("\uD83D\uDD25") || // 🔥
+                   text.startsWith("\uD83D\uDCF9") || // 📹
+                   text.startsWith("\uD83D\uDCDE")    // 📞
         }
 
         private fun stripForwardPrefixRaw(text: String): String {
@@ -129,7 +128,7 @@ class ChatAdapter(
     private var previousOnlineUsersSet: Set<String> = onlineUsersList.toSet()
     private var allUsersMap: Map<String, lavender.client.android.data.proto.UserInfoProto> =
         allUsersList.associateBy { it.username }
-    private var avatarUrlCache: Map<String, String> = allUsersList.associate { it.username to it.avatarUrl }
+    private var avatarUrlCache: Map<String, String> = allUsersList.associateBy({ it.username }, { it.avatarUrl })
     private var otherParticipantCache: MutableMap<String, String> = mutableMapOf()
 
     // Pre-computed caches (populated on setSections)
@@ -159,27 +158,16 @@ class ChatAdapter(
         }
     }
 
-    private fun initColors(view: View) {
+    private fun initColors() {
         if (colorsInitialized) return
-        if (fastModeEnabled) {
-            // Fast mode: skip theme parsing, use standard dark theme colors
-            cachedPrimaryColor = Color.parseColor("#BB86FC")
-            cachedTextPrimary = Color.WHITE
-            cachedTextSecondary = Color.LTGRAY
-            cachedSurfaceColor = Color.parseColor("#1E1E1E")
-            cachedSelectedColor = Color.argb(48, 187, 134, 252)
-            cachedUnreadColor = Color.argb(40, 187, 134, 252)
-            cachedIsLightTheme = false
-        } else {
-            val theme = ThemeStore.currentTheme()
-            cachedPrimaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
-            cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
-            cachedTextSecondary = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.LTGRAY)
-            cachedSurfaceColor = ThemeUtils.parseSafeColor(theme.incomingBubbleColor, Color.DKGRAY)
-            cachedSelectedColor = Color.argb(48, Color.red(cachedPrimaryColor), Color.green(cachedPrimaryColor), Color.blue(cachedPrimaryColor))
-            cachedUnreadColor = Color.argb(40, Color.red(cachedPrimaryColor), Color.green(cachedPrimaryColor), Color.blue(cachedPrimaryColor))
-            cachedIsLightTheme = ThemeUtils.isLight(ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK))
-        }
+        val theme = ThemeStore.currentTheme()
+        cachedPrimaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
+        cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+        cachedTextSecondary = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.LTGRAY)
+        cachedSurfaceColor = ThemeUtils.parseSafeColor(theme.incomingBubbleColor, Color.DKGRAY)
+        cachedSelectedColor = Color.argb(48, Color.red(cachedPrimaryColor), Color.green(cachedPrimaryColor), Color.blue(cachedPrimaryColor))
+        cachedUnreadColor = Color.argb(40, Color.red(cachedPrimaryColor), Color.green(cachedPrimaryColor), Color.blue(cachedPrimaryColor))
+        cachedIsLightTheme = ThemeUtils.isLight(ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK))
         colorsInitialized = true
     }
 
@@ -312,7 +300,7 @@ class ChatAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        initColors(holder.itemView)
+        initColors()
         when (val item = getItem(position)) {
             is FlatItem.SectionHeader -> (holder as SectionHeaderViewHolder).bind(item)
             is FlatItem.ChatItem -> {
@@ -335,9 +323,7 @@ class ChatAdapter(
 
     override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
         super.onViewRecycled(holder)
-        if (holder is ChatViewHolder) {
-            holder.clearAvatar()
-        }
+        (holder as? ChatViewHolder)?.clearAvatar()
     }
 
     fun updateOnlineUsers(users: List<String>) {
@@ -433,7 +419,7 @@ class ChatAdapter(
                 Section.ALL_CHATS -> itemView.context.getString(R.string.section_all_chats)
                 Section.ARCHIVED -> itemView.context.getString(R.string.section_archived)
             }
-            tvSectionCount.text = "(${item.count})"
+            tvSectionCount.text = itemView.context.getString(R.string.plus_count_format, item.count)
         }
     }
 
@@ -486,6 +472,7 @@ class ChatAdapter(
 
             // Avatar — skip in fast mode for performance
             if (!fastMode) {
+                ivChatAvatar.visibility = View.VISIBLE
                 val avatarUrl = if (chat.type == "direct" || chat.isSecret) {
                     val otherUser = getOrComputeOtherParticipant(chat, currentUsername, otherParticipantCache)
                     avatarCache[otherUser] ?: ""
@@ -506,8 +493,8 @@ class ChatAdapter(
                             com.bumptech.glide.Glide.with(itemView.context).clear(ivChatAvatar)
                         }
                         try {
-                            val currentTheme = lavender.client.android.theme.ThemeStore.currentTheme()
-                            lavender.client.android.theme.ThemeUtils.applyDefaultAvatar(ivChatAvatar, currentTheme)
+                            val currentTheme = ThemeStore.currentTheme()
+                            ThemeUtils.applyDefaultAvatar(ivChatAvatar, currentTheme)
                         } catch (_: Exception) { ivChatAvatar.setImageResource(R.drawable.ic_default_avatar) }
                     }
                 } catch (_: Exception) { ivChatAvatar.setImageResource(R.drawable.ic_default_avatar) }
@@ -521,9 +508,8 @@ class ChatAdapter(
                     ivChatAvatar.borderWidth = 0
                 }
             } else {
-                // Fast mode: static default avatar, no Glide, no border
-                ivChatAvatar.setImageResource(R.drawable.ic_default_avatar)
-                ivChatAvatar.borderWidth = 0
+                // Fast mode: completely hide avatar
+                ivChatAvatar.visibility = View.GONE
                 ivChatAvatar.tag = null
             }
 
@@ -612,7 +598,7 @@ class ChatAdapter(
             }
 
             // Online status + last seen
-            if (chat.type == "direct" && !chat.isSecret && !chat.id.startsWith("saved_messages_")) {
+            if (chat.type == "direct" && !chat.isSecret && !chat.id.startsWith("saved_messages_") && !fastMode) {
                 val otherUser = getOrComputeOtherParticipant(chat, currentUsername, otherParticipantCache)
                 if (otherUser.isNotEmpty()) {
                     val isOnline = onlineUsers.contains(otherUser)

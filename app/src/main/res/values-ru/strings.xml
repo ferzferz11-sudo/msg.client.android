@@ -247,6 +247,9 @@
     <string name="history_cleared">История очищена</string>
     <string name="clear_history">Очистить историю</string>
     <string name="clear_history_confirm">Очистить все сообщения в этом чате?</string>
+    <string name="failed_to_clear_history">Не удалось очистить историю</string>
+    <string name="delete_chat_confirm">Вы уверены, что хотите удалить этот чат?</string>
+    <string name="failed_to_delete_chat">Не удалось удалить чат</string>
     <string name="loading">Загрузка…</string>
     <string name="change_bio">Сохранить</string>
     <string name="bio_label">Кратко о себе</string>

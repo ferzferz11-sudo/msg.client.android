@@ -83,6 +83,13 @@ class ChatToolbarDelegate(
         this.chatAvatarUrl = chatAvatarUrl
         this.chatFullAvatarUrl = chatFullAvatarUrl
         this.isSecret = isSecret
+        
+        // Reset dynamic state to avoid leakage from previous chat sessions
+        lastOnlineUsers = emptyList()
+        lastTypists = emptyList()
+        lastOtherUserLastSeenAt = null
+        cachedOtherUser = null
+        isE2eeInProgress = false
     }
 
     fun setup() {

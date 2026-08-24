@@ -197,6 +197,28 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                 }
             }
         }
+        // Listen for history cleared event — refresh that chat locally and move to top
+        viewModelScope.launch {
+            GrpcClient.historyClearedEvent.collect { roomId ->
+                Log.d(TAG, "historyClearedEvent received for room: $roomId")
+                val chatIdx = allChats.indexOfFirst { it.id == roomId }
+                if (chatIdx >= 0) {
+                    val chat = allChats[chatIdx]
+                    val updatedChat = chat.copy(
+                        lastMessageText = "",
+                        lastMessageTime = System.currentTimeMillis(),
+                        lastMessageUsername = "",
+                        lastMessageHasImage = false,
+                        unreadCount = 0
+                    )
+                    val mutable = allChats.toMutableList()
+                    mutable.removeAt(chatIdx)
+                    mutable.add(0, updatedChat)
+                    allChats = mutable
+                    scheduleBuildSections()
+                }
+            }
+        }
         // Periodic sync: refresh chat list every 30s when connected
         viewModelScope.launch {
             GrpcClient.connectionStatus.collect { status ->

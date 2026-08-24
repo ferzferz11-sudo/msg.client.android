@@ -43,6 +43,7 @@ object GrpcClient {
     fun setSuperAdmin(value: Boolean) { realGrpcClient._isSuperAdmin.value = value }
     val newMessageEvent: SharedFlow<Message> = realGrpcClient.newMessageEvent
     val readReceiptEvent: SharedFlow<Pair<String, String>> = realGrpcClient.readReceiptEvent
+    val historyClearedEvent: SharedFlow<String> = realGrpcClient.historyClearedEvent
     val avatarCacheFlow = realGrpcClient.avatarCacheFlow
 
     // ====== Mutable State ======

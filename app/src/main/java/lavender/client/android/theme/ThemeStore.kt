@@ -3,6 +3,7 @@ package lavender.client.android.theme
 import android.content.Context
 import android.content.res.Configuration
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.graphics.toColorInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -27,32 +28,51 @@ object ThemeStore {
 
     /**
      * Quickly load theme from local cache to avoid flickering on startup.
-     * Also syncs AppCompatDelegate night mode with the stored preference.
      */
     fun init(context: Context) {
         val prefs = lavender.client.android.theme.data.ThemePreferences(context)
         val themeId = prefs.getCurrentThemeId()
         followSystemDarkMode = prefs.isFollowSystemDarkMode()
 
-        if (followSystemDarkMode) {
-            _theme.value = resolveSystemTheme(context)
-        } else if (themeId == "dark" || themeId == "builtin_dark_graphite") {
-            _theme.value = BuiltInThemes.dark
-        } else if (themeId == "light") {
-            _theme.value = BuiltInThemes.BASE_LIGHT
+        val targetTheme = if (followSystemDarkMode) {
+            resolveSystemTheme(context)
         } else {
             val builtIn = BuiltInThemes.findById(themeId)
             if (builtIn != null) {
-                _theme.value = builtIn
+                builtIn
             } else {
                 val cached = prefs.getCustomThemeCache()
                 if (cached != null && cached.id == themeId) {
-                    _theme.value = cached
+                    cached
+                } else {
+                    BuiltInThemes.dark
                 }
             }
         }
+        
+        _theme.value = targetTheme
+        syncNightMode()
+    }
 
-        syncNightMode(context)
+    /**
+     * Atomically select a theme, disabling "follow system" mode and updating preferences.
+     */
+    fun selectTheme(context: Context, themeId: String) {
+        followSystemDarkMode = false
+        val prefs = lavender.client.android.theme.data.ThemePreferences(context)
+        prefs.setFollowSystemDarkMode(false)
+        prefs.setCurrentThemeId(themeId)
+
+        val builtIn = BuiltInThemes.findById(themeId)
+        val newTheme = if (builtIn != null) {
+            builtIn
+        } else {
+            val cached = prefs.getCustomThemeCache()
+            if (cached != null && cached.id == themeId) cached else BuiltInThemes.dark
+        }
+        
+        _theme.value = newTheme
+        syncNightMode()
     }
 
     fun refresh(context: Context, username: String, force: Boolean = false): Job {
@@ -62,7 +82,11 @@ object ThemeStore {
 
         return scope.launch {
             val t = repo.loadCurrentTheme(context, username)
-            _theme.value = t
+            if (followSystemDarkMode) {
+                _theme.value = resolveSystemTheme(context)
+            } else {
+                _theme.value = t
+            }
         }.also { refreshJob = it }
     }
 
@@ -70,12 +94,13 @@ object ThemeStore {
         followSystemDarkMode = enabled
         val prefs = lavender.client.android.theme.data.ThemePreferences(context)
         prefs.setFollowSystemDarkMode(enabled)
-        syncNightMode(context)
+        
         if (enabled) {
             _theme.value = resolveSystemTheme(context)
         } else {
-            init(context)
+            // Keep current _theme.value but sync prefs
         }
+        syncNightMode()
     }
 
     fun isFollowSystemDarkMode(): Boolean = followSystemDarkMode
@@ -86,11 +111,7 @@ object ThemeStore {
         }
     }
 
-    /**
-     * Sync AppCompatDelegate night mode with the current follow-system preference.
-     * Called on init and when the preference changes.
-     */
-    private fun syncNightMode(context: Context) {
+    private fun syncNightMode() {
         val mode = if (followSystemDarkMode) {
             AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
         } else {
@@ -102,21 +123,22 @@ object ThemeStore {
 
     private fun isThemeDark(theme: Theme): Boolean {
         return try {
-            val bgColor = android.graphics.Color.parseColor(theme.backgroundColor)
+            val bgColor = theme.backgroundColor.toColorInt()
             val luminance = (0.299 * android.graphics.Color.red(bgColor) +
                     0.587 * android.graphics.Color.green(bgColor) +
                     0.114 * android.graphics.Color.blue(bgColor)) / 255
             luminance < 0.5
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             true
         }
     }
 
     private fun resolveSystemTheme(context: Context): Theme {
-        val nightModeFlags = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-        return when (nightModeFlags) {
-            Configuration.UI_MODE_NIGHT_YES -> BuiltInThemes.dark
-            else -> BuiltInThemes.BASE_LIGHT
+        val nightMode = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        return if (nightMode == Configuration.UI_MODE_NIGHT_NO) {
+            BuiltInThemes.BASE_LIGHT
+        } else {
+            BuiltInThemes.dark
         }
     }
 }

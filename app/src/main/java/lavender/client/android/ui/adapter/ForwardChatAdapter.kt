@@ -21,7 +21,7 @@ class ForwardChatAdapter(
     private val chats: List<ChatInfo>,
     private val currentUsername: String,
     private val avatarCache: Map<String, String>,
-    private val onChatSelected: (ChatInfo) -> Unit
+    private val onChatSelected: (ChatInfo) -> Unit,
 ) : RecyclerView.Adapter<ForwardChatAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -101,7 +101,7 @@ class ForwardChatAdapter(
                     val arr = JSONArray(chat.participants)
                     for (i in 0 until arr.length().coerceAtMost(if (chat.type == "direct") 1 else 3)) {
                         val u = arr.getString(i)
-                        if (chat.type == "direct" && u == currentUsername && arr.length() > 1) continue
+                        if ((chat.type == "direct" && u == currentUsername && arr.length() > 1)) continue
                         
                         val iv = CircleImageView(context).apply {
                             val size = 52.dpToPx()

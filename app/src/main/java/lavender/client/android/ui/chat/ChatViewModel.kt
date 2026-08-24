@@ -113,20 +113,27 @@ class ChatViewModel : ViewModel() {
         }
     }
 
-    fun fetchChatMetadata(username: String, roomId: String, isDirect: Boolean, participantsJson: String, chatName: String, onResult: (ChatMetadata) -> Unit) {
+    fun fetchChatMetadata(
+        username: String,
+        roomId: String,
+        @Suppress("UNUSED_PARAMETER") isDirect: Boolean,
+        @Suppress("UNUSED_PARAMETER") participantsJson: String,
+        @Suppress("UNUSED_PARAMETER") chatName: String,
+        onResult: (ChatMetadata) -> Unit
+    ) {
         if (roomId.startsWith("saved_messages_")) return
-        if (!isDirect || participantsJson == "[]" || chatName == "Chat") {
-            grpcClient.getChats(username) { page ->
-                val chat = page.chats.find { it.id == roomId }
-                if (chat != null) {
-                    val meta = ChatMetadata(
-                        chatName = chat.getDisplayName(username), isDirect = chat.type == "direct",
-                        chatType = chat.type, participantsJson = chat.participants, creator = chat.creator,
-                        avatarUrl = chat.avatarUrl, fullAvatarUrl = chat.fullAvatarUrl
-                    )
-                    _chatMetadata.value = meta
-                    onResult(meta)
-                }
+        
+        // Always attempt to fetch full metadata from cache/server to ensure up-to-date avatars and names
+        grpcClient.getChats(username) { page ->
+            val chat = page.chats.find { it.id == roomId }
+            if (chat != null) {
+                val meta = ChatMetadata(
+                    chatName = chat.getDisplayName(username), isDirect = chat.type == "direct",
+                    chatType = chat.type, participantsJson = chat.participants, creator = chat.creator,
+                    avatarUrl = chat.avatarUrl, fullAvatarUrl = chat.fullAvatarUrl
+                )
+                _chatMetadata.value = meta
+                onResult(meta)
             }
         }
     }
@@ -271,7 +278,10 @@ class ChatViewModel : ViewModel() {
     fun clearRoomMessages(context: Context) {
         viewModelScope.launch {
             try {
-                AppDatabase.getDatabase(context).messageDao().clearRoom(currentRoomId)
+                val db = AppDatabase.getDatabase(context)
+                db.messageDao().clearRoom(currentRoomId)
+                // Update chat timestamp to keep it at the top of the list
+                db.chatDao().updateLastMessage(currentRoomId, "", System.currentTimeMillis())
             } catch (e: Exception) { Log.w(TAG, "Caught: " + e.message) }
         }
     }

@@ -564,7 +564,12 @@ class GrpcMessageV2Client(
     fun clearRoomHistory(roomId: String, cb: (Boolean) -> Unit = {}) {
         messages.update { emptyList() }
         scope.launch(Dispatchers.IO) {
-            try { db()?.messageDao()?.clearRoom(roomId) } catch (_: Exception) {}
+            try {
+                val database = db()
+                database?.messageDao()?.clearRoom(roomId)
+                // Update chat timestamp to keep it at the top of the list after clearing
+                database?.chatDao()?.updateLastMessage(roomId, "", System.currentTimeMillis())
+            } catch (_: Exception) {}
         }
 
         val currentChannel = getChannel() ?: return

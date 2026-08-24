@@ -11,204 +11,193 @@
     android:clickable="true"
     android:focusable="true">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/item_chat_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
         android:padding="12dp"
-        android:gravity="top"
         android:clipChildren="false"
         android:clipToPadding="false">
 
-        <FrameLayout
+        <LinearLayout
+            android:id="@+id/participantAvatars"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
-            android:clipChildren="false"
-            android:clipToPadding="false">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
-            <LinearLayout
-                android:id="@+id/participantAvatars"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+            <de.hdodenhof.circleimageview.CircleImageView
+                android:id="@+id/ivChatAvatar"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_default_avatar" />
 
-                <de.hdodenhof.circleimageview.CircleImageView
-                    android:id="@+id/ivChatAvatar"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/ic_default_avatar" />
+        </LinearLayout>
 
-            </LinearLayout>
+        <View
+            android:id="@+id/statusIndicator"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:elevation="4dp"
+            android:background="@drawable/status_offline_dot"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="@id/participantAvatars"
+            app:layout_constraintEnd_toEndOf="@id/participantAvatars"
+            android:layout_margin="1dp" />
 
-            <View
-                android:id="@+id/statusIndicator"
-                android:layout_width="12dp"
-                android:layout_height="12dp"
-                android:layout_gravity="bottom|end"
-                android:layout_marginStart="1dp"
-                android:layout_marginTop="1dp"
-                android:layout_marginBottom="1dp"
-                android:layout_marginEnd="-1dp"
-                android:elevation="4dp"
-                android:background="@drawable/status_offline_dot"
-                android:visibility="gone" />
-
-        </FrameLayout>
-
-        <!-- Selection checkbox — visible only in selection mode -->
         <com.google.android.material.checkbox.MaterialCheckBox
             android:id="@+id/cbChatSelect"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:layout_marginEnd="8dp"
             android:visibility="gone"
             android:clickable="false"
             android:focusable="false"
             app:buttonTint="?attr/colorPrimary"
-            android:contentDescription="@string/selected_count" />
+            android:contentDescription="@string/selected_count"
+            app:layout_constraintStart_toEndOf="@id/participantAvatars"
+            app:layout_constraintTop_toTopOf="@id/participantAvatars"
+            app:layout_constraintBottom_toBottomOf="@id/participantAvatars"
+            android:layout_marginStart="8dp" />
 
-        <LinearLayout
-            android:id="@+id/llChatInfo"
+        <TextView
+            android:id="@+id/tvChatName"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_weight="1">
+            tools:text="Chat Name"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorOnSurface"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintStart_toEndOf="@id/cbChatSelect"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/tvLastSeen"
+            app:layout_goneMarginStart="12dp"
+            android:layout_marginStart="8dp" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+        <TextView
+            android:id="@+id/tvCompanyBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="2dp"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorPrimary"
+            android:background="@drawable/unread_count_background"
+            android:visibility="gone"
+            android:text="@string/company_badge"
+            android:contentDescription="@string/company_badge"
+            app:layout_constraintStart_toEndOf="@id/tvChatName"
+            app:layout_constraintTop_toTopOf="@id/tvChatName"
+            app:layout_constraintBottom_toBottomOf="@id/tvChatName"
+            android:layout_marginStart="6dp" />
 
-                <TextView
-                    android:id="@+id/tvChatName"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    tools:text="Chat Name"
-                    android:textSize="17sp"
-                    android:textStyle="bold"
-                    android:textColor="?attr/colorOnSurface"
-                    android:maxLines="1"
-                    android:ellipsize="end" />
+        <TextView
+            android:id="@+id/tvLastSeen"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:maxLines="1"
+            android:visibility="gone"
+            tools:text="5h"
+            tools:visibility="visible"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/tvChatName"
+            app:layout_constraintBottom_toBottomOf="@id/tvChatName" />
 
-                <TextView
-                    android:id="@+id/tvCompanyBadge"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:paddingHorizontal="6dp"
-                    android:paddingVertical="2dp"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:textColor="?attr/colorPrimary"
-                    android:background="@drawable/unread_count_background"
-                    android:visibility="gone"
-                    android:text="@string/company_badge"
-                    android:contentDescription="@string/company_badge" />
+        <TextView
+            android:id="@+id/tvChatType"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            tools:text="Message preview text that can be quite long..."
+            android:textSize="13sp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:layout_marginTop="2dp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintStart_toStartOf="@id/tvChatName"
+            app:layout_constraintTop_toBottomOf="@id/tvChatName"
+            app:layout_constraintEnd_toStartOf="@id/barrierEnd" />
 
-                <TextView
-                    android:id="@+id/tvLastSeen"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:textSize="12sp"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:maxLines="1"
-                    android:visibility="gone"
-                    tools:text="5h" />
-
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/tvChatType"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                tools:text="General"
-                android:textSize="13sp"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:layout_marginTop="2dp"
-                android:maxLines="1"
-                android:ellipsize="end" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="end|center_vertical"
-                android:minHeight="0dp">
-
-                <ImageView
-                    android:id="@+id/ivMuteIndicator"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_marginStart="2dp"
-                    android:padding="2dp"
-                    android:src="@drawable/ic_volume_off"
-                    app:tint="?attr/colorOnSurfaceVariant"
-                    android:visibility="gone"
-                    tools:visibility="visible"
-                    android:contentDescription="@string/muted_label"
-                    android:background="?attr/selectableItemBackgroundBorderless" />
-
-                <TextView
-                    android:id="@+id/tvUnreadCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:minWidth="20dp"
-                    android:minHeight="20dp"
-                    android:paddingHorizontal="5dp"
-                    android:layout_marginStart="2dp"
-                    android:background="@drawable/unread_count_background"
-                    android:gravity="center"
-                    tools:text="1"
-                    android:textColor="@android:color/white"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    android:visibility="gone" />
-
-                <ImageView
-                    android:id="@+id/btnEnterLobby"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_marginStart="2dp"
-                    android:padding="14dp"
-                    android:src="@drawable/ic_conference_lobby"
-                    android:background="@drawable/circle_button"
-                    android:backgroundTint="?attr/colorPrimary"
-                    android:scaleType="centerInside"
-                    app:tint="?attr/colorOnPrimary"
-                    android:visibility="gone"
-                    tools:visibility="visible"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:contentDescription="@string/conference" />
-
-                <ProgressBar
-                    android:id="@+id/pbDeleteChat"
-                    style="?android:attr/progressBarStyleSmall"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_marginStart="2dp"
-                    android:visibility="gone"
-                    tools:visibility="visible"
-                    android:contentDescription="@null"
-                    android:importantForAccessibility="no" />
-
-            </LinearLayout>
-
-        </LinearLayout>
+        <androidx.constraintlayout.widget.Barrier
+            android:id="@+id/barrierEnd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:barrierDirection="start"
+            app:constraint_referenced_ids="ivMuteIndicator,tvUnreadCount,btnEnterLobby,pbDeleteChat" />
 
         <ImageView
-            android:id="@+id/ivAdminIndicator"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:contentDescription="@string/admin_indicator"
-            android:visibility="gone" />
+            android:id="@+id/ivMuteIndicator"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:padding="2dp"
+            android:src="@drawable/ic_volume_off"
+            app:tint="?attr/colorOnSurfaceVariant"
+            android:visibility="gone"
+            tools:visibility="visible"
+            android:contentDescription="@string/muted_label"
+            app:layout_constraintEnd_toStartOf="@id/tvUnreadCount"
+            app:layout_constraintTop_toBottomOf="@id/tvChatName"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:layout_marginEnd="2dp" />
 
-    </LinearLayout>
+        <TextView
+            android:id="@+id/tvUnreadCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="20dp"
+            android:minHeight="20dp"
+            android:paddingHorizontal="5dp"
+            android:background="@drawable/unread_count_background"
+            android:gravity="center"
+            tools:text="1"
+            android:textColor="@android:color/white"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            tools:visibility="visible"
+            app:layout_constraintEnd_toStartOf="@id/btnEnterLobby"
+            app:layout_constraintTop_toTopOf="@id/ivMuteIndicator"
+            app:layout_constraintBottom_toBottomOf="@id/ivMuteIndicator"
+            android:layout_marginEnd="2dp" />
+
+        <ImageView
+            android:id="@+id/btnEnterLobby"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:padding="6dp"
+            android:src="@drawable/ic_conference_lobby"
+            android:background="@drawable/circle_button"
+            android:backgroundTint="?attr/colorPrimary"
+            android:scaleType="centerInside"
+            app:tint="?attr/colorOnPrimary"
+            android:visibility="gone"
+            tools:visibility="visible"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="@string/conference"
+            app:layout_constraintEnd_toStartOf="@id/pbDeleteChat"
+            app:layout_constraintTop_toTopOf="@id/ivMuteIndicator"
+            app:layout_constraintBottom_toBottomOf="@id/ivMuteIndicator"
+            android:layout_marginEnd="2dp" />
+
+        <ProgressBar
+            android:id="@+id/pbDeleteChat"
+            style="?android:attr/progressBarStyleSmall"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:visibility="gone"
+            tools:visibility="visible"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/ivMuteIndicator"
+            app:layout_constraintBottom_toBottomOf="@id/ivMuteIndicator" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </com.google.android.material.card.MaterialCardView>
